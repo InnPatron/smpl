@@ -1,0 +1,8 @@
+[package]
+name = "smpl"
+version = "0.1.0"
+authors = ["Random_Civvy <vomalexander@gmail.com>"]
+
+[dependencies]
+itertools = "0.6.3"
+ascii = "0.8.6"
