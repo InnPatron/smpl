@@ -76,10 +76,32 @@ pub struct If {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    Binary,
+    Bin(BinExpr),
     Uni(UniExpr),
     Literal(Literal),
     Block,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct BinExpr {
+    pub op: BinOp,
+    pub lhs: Box<Expr>,
+    pub rhs: Box<Expr>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum BinOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+}
+
+impl From<BinExpr> for Expr {
+    fn from(bin: BinExpr) -> Expr {
+        Expr::Bin(bin)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
