@@ -49,3 +49,12 @@ pub Path: Path = {
 		Path(p)
 	}
 };
+
+pub Keyword: Keyword = {
+	"return" => Keyword::Return,
+	"if" => Keyword::If,
+	"while" => Keyword::While,
+	"break" => Keyword::Break,
+	"struct" => Keyword::Struct,
+	"fn" => Keyword::Function,
+};
