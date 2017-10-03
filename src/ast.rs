@@ -1,11 +1,7 @@
 use super::Span;
 use ascii::AsciiString;
 
-pub struct Program(pub Vec<Statement>);
-
-pub struct Statement {
-    span: Span
-}
+pub struct Program(pub Vec<DeclStmt>);
 
 pub enum DeclStmt {
     Struct(Struct),
@@ -57,15 +53,18 @@ pub struct StructField {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
-    Exrp,
     ExprStmt(ExprStmt),
+    Expr(Expr),
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExprStmt {
-    If,
+    If(If),
     While,
-    LocalDecl,
+    LocalVarDecl,
+    Assignment,
+    Break,
+    Continue,
 }
 
 #[derive(Clone, Debug, PartialEq)]
