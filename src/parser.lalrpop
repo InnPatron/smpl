@@ -37,6 +37,24 @@ use ascii::*;
 
 grammar;
 
+pub StructDecl: Struct = {
+	"struct" <name: Ident> "{" <fields: (<StructField> ",")*> "}" => {
+		Struct {
+			name: name,
+			body: StructBody(fields)
+		}
+	}
+};
+
+StructField: StructField = {
+	<field_type: Ident> ":" <name: Ident> => {
+		StructField {
+			name: name,
+			field_type: field_type,
+		}
+	}
+};
+
 pub Ident: Ident = {
 	<ident: r"[A-Za-z][A-Za-z0-9]*"> => { Ident(AsciiString::from_str(ident).unwrap()) }
 };
