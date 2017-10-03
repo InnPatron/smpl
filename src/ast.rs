@@ -80,7 +80,20 @@ pub enum Expr {
     Uni(UniExpr),
     Literal(Literal),
     Ident(Ident),
+    FnCall(FnCall),
     Block,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct FnCall {
+    pub name: Ident,
+    pub args: Option<Vec<Expr>>
+}
+
+impl From<FnCall> for Expr {
+    fn from(call: FnCall) -> Expr {
+        Expr::FnCall(call)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
