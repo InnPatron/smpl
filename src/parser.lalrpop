@@ -75,7 +75,19 @@ StructField: StructField = {
 };
 
 pub Expr: Expr = {
-	<l: Literal> => { l.into() }
+	<l: Literal> => l.into(),
+	<u: UniExpr> => u.into(),
+};
+
+pub UniExpr: UniExpr = {
+	<op: UniOp> <e: Expr> => UniExpr { op: op, expr: Box::new(e) },
+};
+
+pub UniOp: UniOp = {
+	"-" => UniOp::Negate,
+	"!" => UniOp::LogicalInvert,
+	"&" => UniOp::Ref,
+	"*" => UniOp::Deref,
 };
 
 pub Literal: Literal = {
