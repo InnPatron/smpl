@@ -79,6 +79,7 @@ pub enum Expr {
     Bin(BinExpr),
     Uni(UniExpr),
     Literal(Literal),
+    Ident(Ident),
     Block,
 }
 
@@ -141,6 +142,12 @@ pub struct Block(pub Vec<Stmt>);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Ident(pub AsciiString);
+
+impl From<Ident> for Expr {
+    fn from(ident: Ident) -> Expr {
+        Expr::Ident(ident)
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Path(pub Vec<Ident>);

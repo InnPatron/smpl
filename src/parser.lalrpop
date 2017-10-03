@@ -75,6 +75,7 @@ StructField: StructField = {
 };
 
 pub Expr: Expr = {
+	<i: Ident> => i.into(),
 	<l: Literal> => l.into(),
 	<u: UniExpr> => u.into(),
 	"(" <e: Expr> ")" => e,
@@ -127,6 +128,7 @@ pub Factor: BinExpr = {
 
 pub Term: Expr = {
 	<l: Literal> => l.into(),
+	<i: Ident> => i.into(),
 	"(" <e: Expr> ")" => e.into(),
 };
 
