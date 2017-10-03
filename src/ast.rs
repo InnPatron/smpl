@@ -76,12 +76,8 @@ pub struct If {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    Assignment,
     Binary,
     Uni,
-    Return,
-    Break,
-    Continue,
     Literal(Literal),
     Block,
 }
