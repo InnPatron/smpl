@@ -80,6 +80,34 @@ pub Expr: Expr = {
 	<u: UniExpr> => u.into(),
 	"(" <e: Expr> ")" => e,
 	<b: BinExpr> => b.into(),
+	<f: FnCall> => f.into(),
+};
+
+pub FnCall: FnCall = {
+	<name: Ident> "(" <args: FnCallArgs?> ")" => {
+		FnCall {
+			name: name,
+			args: args,
+		}
+	}
+};
+
+FnCallArgs: Vec<Expr> = {
+	<first: Expr> <tail: FnCallArgsTail?> => {
+		let mut a = Vec::new();
+		a.push(first);
+		match tail {
+			None => a,
+			Some(t) => {
+				a.extend(t);
+				a
+			}
+		}
+	}
+};
+
+FnCallArgsTail: Vec<Expr> = {
+	<args: ("," <Expr>)+> => args
 };
 
 pub BinExpr: BinExpr = {
