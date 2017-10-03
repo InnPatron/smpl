@@ -1,0 +1,51 @@
+// program -> decl_stmt
+// decl_stmt -> fn_decl | struct_decl
+// fn_decl -> "fn" ident (arg_list) { stmt_seq }
+// struct_decl -> "struct" ident { field_list }
+// stmt_seq -> stmt+
+// stmt -> expr ";" | expr_stmt
+// expr -> bin_expr | uni_expr | return | break | continue | literal | ident
+// | "(" expr ")"
+// expr_stmt -> if_expr | while_expr | local_var_decl | assignment
+//
+// local_var_decl -> path assignment
+//
+// assignment -> ident "=" expr ";"
+//
+// bin_expr -> expr bin_op expr
+// bin_op -> "+" | "-" | "*" | "/" | "%"
+//
+// uni_expr -> uni_op expr
+// uni_op -> "-" | "*" | "&" | "!"
+//
+// if_expr -> if expr { stmt_seq }
+// while_expr while expr { stmt_seq }
+//
+// literal -> bool | number | string
+// bool -> "true | "false"
+//
+// return -> "return" expr
+// break -> "break" expr
+// continue -> "continue"
+// 
+// path -> ident path_tail
+// path_tail -> "." ident | path_tail | E
+
+use std::str::FromStr;
+use ast::*;
+use ascii::*;
+
+grammar;
+
+pub Ident: Ident = {
+	<ident: r"[A-Za-z][A-Za-z0-9]*"> => { Ident(AsciiString::from_str(ident).unwrap()) }
+};
+
+pub Path: Path = {
+	<first: Ident> <v:("." <Ident>)*> => {
+		let mut p = Vec::new();
+		p.push(first);
+		p.extend_from_slice(&v);
+		Path(p)
+	}
+};
