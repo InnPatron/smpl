@@ -37,6 +37,25 @@ use ascii::*;
 
 grammar;
 
+pub FnDecl: Function = {
+	"fn" <name: Ident> "(" <args: (<FnArg> ",")*> ")" => {
+		Function {
+			name: name,
+			args: args,
+			body: unimplemented!(),
+		}
+	}
+};
+
+pub FnArg: FnArg = {
+	<arg_type: Ident> <name: Ident> => {
+		FnArg {
+			name: name,
+			arg_type: arg_type,
+		}
+	}
+};
+
 pub StructDecl: Struct = {
 	"struct" <name: Ident> "{" <fields: (<StructField> ",")*> "}" => {
 		Struct {
