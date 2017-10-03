@@ -78,6 +78,64 @@ pub Expr: Expr = {
 	<l: Literal> => l.into(),
 	<u: UniExpr> => u.into(),
 	"(" <e: Expr> ")" => e,
+	<b: BinExpr> => b.into(),
+};
+
+pub BinExpr: BinExpr = {
+	<lhs: BinExpr> "+" <rhs: Factor> => {
+		BinExpr {
+			op: BinOp::Add,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs.into()),
+		}
+	},
+
+	<lhs: Factor> "-" <rhs: Term> => {
+		BinExpr {
+			op: BinOp::Sub,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs),
+		}
+	},
+};
+
+pub Factor: BinExpr = {
+	<lhs: Factor> "*" <rhs: Term> => {
+		BinExpr {
+			op: BinOp::Mul,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs),
+		}
+	},
+
+	<lhs: Factor> "/" <rhs: Term> => {
+		BinExpr {
+			op: BinOp::Div,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs),
+		}
+	},
+
+	<lhs: Factor> "%" <rhs: Term> => {
+		BinExpr {
+			op: BinOp::Mod,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs),
+		}
+	},
+};
+
+pub Term: Expr = {
+	<l: Literal> => l.into(),
+	"(" <e: Expr> ")" => e.into(),
+};
+
+BinOp: BinOp = {
+	"+" => BinOp::Add,
+	"-" => BinOp::Sub,
+	"*" => BinOp::Mul,
+	"/" => BinOp::Div,
+	"%" => BinOp::Mod,
 };
 
 pub UniExpr: UniExpr = {
