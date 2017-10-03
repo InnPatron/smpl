@@ -60,7 +60,7 @@ pub enum Stmt {
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExprStmt {
     If(If),
-    While,
+    While(While),
     LocalVarDecl,
     Assignment,
     Break,
@@ -69,6 +69,12 @@ pub enum ExprStmt {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct If {
+    pub conditional: Expr,
+    pub block: Block,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct While {
     pub conditional: Expr,
     pub block: Block,
 }

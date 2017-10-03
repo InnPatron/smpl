@@ -90,11 +90,21 @@ pub Block: Block = {
 
 pub ExprStmt: ExprStmt = {
 	<if_stmt: IfStmt> => ExprStmt::If(if_stmt),
+	<while_stmt: WhileStmt> => ExprStmt::While(while_stmt),
 };
 
 pub IfStmt: If = {
 	"if" <conditional: Expr> <block: Block> => {
 		If {
+			conditional: conditional,
+			block: block
+		}
+	},
+};
+
+pub WhileStmt: While = {
+	"while" <conditional: Expr> <block: Block> => {
+		While {
 			conditional: conditional,
 			block: block
 		}
