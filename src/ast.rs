@@ -65,6 +65,7 @@ pub enum Stmt {
 pub enum ExprStmt {
     If,
     While,
+    LocalDecl,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -81,8 +82,20 @@ pub enum Expr {
     Return,
     Break,
     Continue,
-    Literal,
+    Literal(Literal),
     Block,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Literal {
+    String(String),
+    Number(String),
+}
+
+impl From<Literal> for Expr {
+    fn from(literal: Literal) -> Expr {
+        Expr::Literal(literal)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

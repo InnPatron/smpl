@@ -74,6 +74,15 @@ StructField: StructField = {
 	}
 };
 
+pub Expr: Expr = {
+	<l: Literal> => { l.into() }
+};
+
+pub Literal: Literal = {
+	<number: r"[0-9]+[.[0-9]+]?"> => Literal::Number(number.to_string()),
+	"\"" <string: "r[.]*"> "\"" => Literal::String(string.to_string()),
+};
+
 pub Ident: Ident = {
 	<ident: r"[A-Za-z][A-Za-z0-9]*"> => { Ident(AsciiString::from_str(ident).unwrap()) }
 };
