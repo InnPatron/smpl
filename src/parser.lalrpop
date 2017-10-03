@@ -77,6 +77,7 @@ StructField: StructField = {
 pub Expr: Expr = {
 	<l: Literal> => l.into(),
 	<u: UniExpr> => u.into(),
+	"(" <e: Expr> ")" => e,
 };
 
 pub UniExpr: UniExpr = {
