@@ -77,9 +77,29 @@ pub struct If {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
     Binary,
-    Uni,
+    Uni(UniExpr),
     Literal(Literal),
     Block,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UniExpr {
+    pub op: UniOp,
+    pub expr: Box<Expr>
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum UniOp {
+    Ref,
+    Deref,
+    Negate,
+    LogicalInvert,
+}
+
+impl From<UniExpr> for Expr {
+    fn from(uni: UniExpr) -> Expr {
+        Expr::Uni(uni)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
