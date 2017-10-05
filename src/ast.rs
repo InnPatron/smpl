@@ -115,6 +115,13 @@ pub enum BinOp {
     Mul,
     Div,
     Mod,
+
+    GreaterEq,
+    LesserEq,
+    Greater,
+    Lesser,
+    Eq,
+    InEq,
 }
 
 impl From<BinExpr> for Expr {
