@@ -113,6 +113,57 @@ pub WhileStmt: While = {
 
 pub Expr: Expr = {	
 	<b: BinExpr> => b.into(),
+	<c: CmpExpr> => c,
+};
+
+pub CmpExpr: Expr = {
+	"(" <lhs: Expr> "==" <rhs: Expr> ")" => {
+		BinExpr {
+			op: BinOp::Eq,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs.into()),
+		}.into()
+	},
+
+	"(" <lhs: Expr> "!=" <rhs: Expr> ")" => {
+		BinExpr {
+			op: BinOp::InEq,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs.into()),
+		}.into()
+	},
+
+	"(" <lhs: Expr> "<" <rhs: Expr> ")" => {
+		BinExpr {
+			op: BinOp::Lesser,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs.into()),
+		}.into()
+	},
+
+	"(" <lhs: Expr> "<=" <rhs: Expr> ")" => {
+		BinExpr {
+			op: BinOp::LesserEq,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs.into()),
+		}.into()
+	},
+
+	"(" <lhs: Expr> ">" <rhs: Expr> ")" => {
+		BinExpr {
+			op: BinOp::Greater,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs.into()),
+		}.into()
+	},
+
+	"(" <lhs: Expr> ">=" <rhs: Expr> ")" => {
+		BinExpr {
+			op: BinOp::GreaterEq,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs.into()),
+		}.into()
+	},
 };
 
 pub BinExpr: Expr = {
@@ -127,54 +178,6 @@ pub BinExpr: Expr = {
 	<lhs: BinExpr> "-" <rhs: Factor> => {
 		BinExpr {
 			op: BinOp::Sub,
-			lhs: Box::new(lhs.into()),
-			rhs: Box::new(rhs.into()),
-		}.into()
-	},
-
-	<lhs: BinExpr> "<" <rhs: Factor> => {
-		BinExpr {
-			op: BinOp::Lesser,
-			lhs: Box::new(lhs.into()),
-			rhs: Box::new(rhs.into()),
-		}.into()
-	},
-
-	<lhs: BinExpr> "<=" <rhs: Factor> => {
-		BinExpr {
-			op: BinOp::LesserEq,
-			lhs: Box::new(lhs.into()),
-			rhs: Box::new(rhs.into()),
-		}.into()
-	},
-
-	<lhs: BinExpr> ">" <rhs: Factor> => {
-		BinExpr {
-			op: BinOp::Greater,
-			lhs: Box::new(lhs.into()),
-			rhs: Box::new(rhs.into()),
-		}.into()
-	},
-
-	<lhs: BinExpr> ">=" <rhs: Factor> => {
-		BinExpr {
-			op: BinOp::GreaterEq,
-			lhs: Box::new(lhs.into()),
-			rhs: Box::new(rhs.into()),
-		}.into()
-	},
-
-	<lhs: BinExpr> "==" <rhs: Factor> => {
-		BinExpr {
-			op: BinOp::Eq,
-			lhs: Box::new(lhs.into()),
-			rhs: Box::new(rhs.into()),
-		}.into()
-	},
-
-	<lhs: BinExpr> "!=" <rhs: Factor> => {
-		BinExpr {
-			op: BinOp::InEq,
 			lhs: Box::new(lhs.into()),
 			rhs: Box::new(rhs.into()),
 		}.into()
