@@ -1,5 +1,27 @@
 use super::Span;
+use smpl_type::SmplType;
 use ascii::AsciiString;
+
+pub struct AstNode<T: Clone + PartialEq + ::std::fmt::Debug> {
+    pub data: T,
+    pub d_type: Option<SmplType>,
+}
+
+impl<T> AstNode<T> where T: Clone + PartialEq + ::std::fmt::Debug {
+    pub fn no_type(data: T) -> AstNode<T> {
+        AstNode {
+            data: data,
+            d_type: None,
+        }
+    }
+
+    pub fn typed(data: T, d_type: SmplType) -> AstNode<T> {
+        AstNode {
+            data: data,
+            d_type: Some(d_type),
+        }
+    }
+}
 
 pub struct Program(pub Vec<DeclStmt>);
 
