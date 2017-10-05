@@ -117,57 +117,37 @@ pub Expr: Expr = {
 };
 
 pub CmpExpr: Expr = {
-	"(" <lhs: Expr> "==" <rhs: Expr> ")" => {
+	<lhs: CmpExpr> <op: CmpOpGreaterPrecedence> <rhs: BinExpr> => {
 		BinExpr {
-			op: BinOp::Eq,
+			op: op,
 			lhs: Box::new(lhs.into()),
 			rhs: Box::new(rhs.into()),
 		}.into()
 	},
 
-	"(" <lhs: Expr> "!=" <rhs: Expr> ")" => {
+	<lhs: CmpExpr> <op: CmpOpLowerPrecedence> <rhs: BinExpr> => {
 		BinExpr {
-			op: BinOp::InEq,
-			lhs: Box::new(lhs.into()),
-			rhs: Box::new(rhs.into()),
-		}.into()
-	},
-
-	"(" <lhs: Expr> "<" <rhs: Expr> ")" => {
-		BinExpr {
-			op: BinOp::Lesser,
-			lhs: Box::new(lhs.into()),
-			rhs: Box::new(rhs.into()),
-		}.into()
-	},
-
-	"(" <lhs: Expr> "<=" <rhs: Expr> ")" => {
-		BinExpr {
-			op: BinOp::LesserEq,
-			lhs: Box::new(lhs.into()),
-			rhs: Box::new(rhs.into()),
-		}.into()
-	},
-
-	"(" <lhs: Expr> ">" <rhs: Expr> ")" => {
-		BinExpr {
-			op: BinOp::Greater,
-			lhs: Box::new(lhs.into()),
-			rhs: Box::new(rhs.into()),
-		}.into()
-	},
-
-	"(" <lhs: Expr> ">=" <rhs: Expr> ")" => {
-		BinExpr {
-			op: BinOp::GreaterEq,
+			op: op,
 			lhs: Box::new(lhs.into()),
 			rhs: Box::new(rhs.into()),
 		}.into()
 	},
 };
 
+pub CmpOpGreaterPrecedence: BinOp = {
+	">" => BinOp::Greater,
+	"<" => BinOp::Lesser,
+	">=" => BinOp::GreaterEq,
+	"<=" => BinOp::LesserEq,
+};
+
+pub CmpOpLowerPrecedence: BinOp = {
+	"==" => BinOp::Eq,
+	"!=" => BinOp::InEq,
+};
+
 pub BinExpr: Expr = {
-	<lhs: Expr> "+" <rhs: Factor> => {
+	<lhs: BinExpr> "+" <rhs: Factor> => {
 		BinExpr {
 			op: BinOp::Add,
 			lhs: Box::new(lhs.into()),
@@ -175,7 +155,7 @@ pub BinExpr: Expr = {
 		}.into()
 	},
 
-	<lhs: Expr> "-" <rhs: Factor> => {
+	<lhs: BinExpr> "-" <rhs: Factor> => {
 		BinExpr {
 			op: BinOp::Sub,
 			lhs: Box::new(lhs.into()),
