@@ -32,6 +32,7 @@
 // path_tail -> "." ident | path_tail | E
 
 use std::str::FromStr;
+use smpl_type::SmplType;
 use ast::*;
 use ascii::*;
 
@@ -202,7 +203,7 @@ pub Term: Expr = {
 pub ExprLeaf: Expr = {
 	"(" <u: UniExpr> ")" => u.into(),
 	<i: Ident> => i.into(),
-	<l: Literal> => l.into(),
+	<l: Literal> => Expr::Literal(l),
 	<f: FnCall> => f.into(),
 };
 
@@ -252,9 +253,10 @@ pub UniOp: UniOp = {
 	"*" => UniOp::Deref,
 };
 
-pub Literal: Literal = {
-	<number: r"[0-9]+[.[0-9]+]?"> => Literal::Number(number.to_string()),
-	"\"" <string: "r[.]*"> "\"" => Literal::String(string.to_string()),
+pub Literal: AstNode<Literal> = {
+	<number: r"[0-9]+[.[0-9]+]?"> => AstNode::untyped(Literal::Number(number.to_string())),
+	"\"" <string: "r[.]*"> "\"" => AstNode::typed(Literal::String(string.to_string()), 
+					SmplType::String),
 };
 
 pub Ident: Ident = {

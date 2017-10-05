@@ -106,7 +106,7 @@ pub struct While {
 pub enum Expr {
     Bin(BinExpr),
     Uni(UniExpr),
-    Literal(Literal),
+    Literal(AstNode<Literal>),
     Ident(Ident),
     FnCall(FnCall),
     Block,
@@ -177,12 +177,6 @@ impl From<UniExpr> for Expr {
 pub enum Literal {
     String(String),
     Number(String),
-}
-
-impl From<Literal> for Expr {
-    fn from(literal: Literal) -> Expr {
-        Expr::Literal(literal)
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
