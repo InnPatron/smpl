@@ -111,12 +111,66 @@ pub WhileStmt: While = {
 	},
 };
 
-pub Expr: Expr = {
+pub Expr: Expr = {	
+	<b: BinExpr> => b.into(),
+};
+
+pub BinExpr: Expr = {
+	<lhs: BinExpr> "+" <rhs: Factor> => {
+		BinExpr {
+			op: BinOp::Add,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs.into()),
+		}.into()
+	},
+
+	<lhs: BinExpr> "-" <rhs: Factor> => {
+		BinExpr {
+			op: BinOp::Sub,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs.into()),
+		}.into()
+	},
+	Factor,
+};
+
+pub Factor: Expr = {
+	<lhs: Factor> "*" <rhs: Term> => {
+		BinExpr {
+			op: BinOp::Mul,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs),
+		}.into()
+	},
+
+	<lhs: Factor> "/" <rhs: Term> => {
+		BinExpr {
+			op: BinOp::Div,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs),
+		}.into()
+	},
+
+	<lhs: Factor> "%" <rhs: Term> => {
+		BinExpr {
+			op: BinOp::Mod,
+			lhs: Box::new(lhs.into()),
+			rhs: Box::new(rhs),
+		}.into()
+	},
+	<Term>
+};
+
+pub Term: Expr = {
+	"(" <e: Expr> ")" => e.into(),
+	<e: ExprLeaf> => e,
+};
+
+// end node rule which all other Expr related rules end in 
+pub ExprLeaf: Expr = {
+	"(" <u: UniExpr> ")" => u.into(),
 	<i: Ident> => i.into(),
 	<l: Literal> => l.into(),
-	<u: UniExpr> => u.into(),
-	"(" <e: Expr> ")" => e,
-	<b: BinExpr> => b.into(),
 	<f: FnCall> => f.into(),
 };
 
@@ -145,57 +199,6 @@ FnCallArgs: Vec<Expr> = {
 
 FnCallArgsTail: Vec<Expr> = {
 	<args: ("," <Expr>)+> => args
-};
-
-pub BinExpr: BinExpr = {
-	<lhs: BinExpr> "+" <rhs: Factor> => {
-		BinExpr {
-			op: BinOp::Add,
-			lhs: Box::new(lhs.into()),
-			rhs: Box::new(rhs.into()),
-		}
-	},
-
-	<lhs: BinExpr> "-" <rhs: Factor> => {
-		BinExpr {
-			op: BinOp::Sub,
-			lhs: Box::new(lhs.into()),
-			rhs: Box::new(rhs.into()),
-		}
-	},
-};
-
-pub Factor: BinExpr = {
-	<lhs: Factor> "*" <rhs: Term> => {
-		BinExpr {
-			op: BinOp::Mul,
-			lhs: Box::new(lhs.into()),
-			rhs: Box::new(rhs),
-		}
-	},
-
-	<lhs: Factor> "/" <rhs: Term> => {
-		BinExpr {
-			op: BinOp::Div,
-			lhs: Box::new(lhs.into()),
-			rhs: Box::new(rhs),
-		}
-	},
-
-	<lhs: Factor> "%" <rhs: Term> => {
-		BinExpr {
-			op: BinOp::Mod,
-			lhs: Box::new(lhs.into()),
-			rhs: Box::new(rhs),
-		}
-	},
-};
-
-pub Term: Expr = {
-	<f: FnCall> => f.into(),
-	<l: Literal> => l.into(),
-	<i: Ident> => i.into(),
-	"(" <e: Expr> ")" => e.into(),
 };
 
 BinOp: BinOp = {
