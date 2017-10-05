@@ -167,7 +167,7 @@ pub CmpExpr: Expr = {
 };
 
 pub BinExpr: Expr = {
-	<lhs: BinExpr> "+" <rhs: Factor> => {
+	<lhs: Expr> "+" <rhs: Factor> => {
 		BinExpr {
 			op: BinOp::Add,
 			lhs: Box::new(lhs.into()),
@@ -175,7 +175,7 @@ pub BinExpr: Expr = {
 		}.into()
 	},
 
-	<lhs: BinExpr> "-" <rhs: Factor> => {
+	<lhs: Expr> "-" <rhs: Factor> => {
 		BinExpr {
 			op: BinOp::Sub,
 			lhs: Box::new(lhs.into()),
