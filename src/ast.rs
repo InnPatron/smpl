@@ -121,8 +121,8 @@ pub struct FnCall {
 #[derive(Clone, Debug, PartialEq)]
 pub struct BinExpr {
     pub op: BinOp,
-    pub lhs: Box<Expr>,
-    pub rhs: Box<Expr>,
+    pub lhs: AstNode<Box<Expr>>,
+    pub rhs: AstNode<Box<Expr>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
