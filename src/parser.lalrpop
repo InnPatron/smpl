@@ -97,7 +97,7 @@ pub ExprStmt: ExprStmt = {
 pub IfStmt: If = {
 	"if" <conditional: Expr> <block: Block> => {
 		If {
-			conditional: conditional,
+			conditional: AstNode::untyped(conditional),
 			block: block
 		}
 	},
@@ -106,7 +106,7 @@ pub IfStmt: If = {
 pub WhileStmt: While = {
 	"while" <conditional: Expr> <block: Block> => {
 		While {
-			conditional: conditional,
+			conditional: AstNode::untyped(conditional),
 			block: block
 		}
 	},

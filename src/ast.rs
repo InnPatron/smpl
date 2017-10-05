@@ -92,13 +92,13 @@ pub enum ExprStmt {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct If {
-    pub conditional: Expr,
+    pub conditional: AstNode<Expr>,
     pub block: Block,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct While {
-    pub conditional: Expr,
+    pub conditional: AstNode<Expr>,
     pub block: Block,
 }
 
