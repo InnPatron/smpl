@@ -2,13 +2,14 @@ use super::Span;
 use smpl_type::SmplType;
 use ascii::AsciiString;
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct AstNode<T: Clone + PartialEq + ::std::fmt::Debug> {
     pub data: T,
     pub d_type: Option<SmplType>,
 }
 
 impl<T> AstNode<T> where T: Clone + PartialEq + ::std::fmt::Debug {
-    pub fn no_type(data: T) -> AstNode<T> {
+    pub fn untyped(data: T) -> AstNode<T> {
         AstNode {
             data: data,
             d_type: None,
@@ -155,7 +156,7 @@ impl From<BinExpr> for Expr {
 #[derive(Clone, Debug, PartialEq)]
 pub struct UniExpr {
     pub op: UniOp,
-    pub expr: Box<Expr>
+    pub expr: AstNode<Box<Expr>>
 }
 
 #[derive(Clone, Debug, PartialEq)]

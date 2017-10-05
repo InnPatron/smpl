@@ -259,7 +259,7 @@ BinOp: BinOp = {
 };
 
 pub UniExpr: UniExpr = {
-	<op: UniOp> <e: Expr> => UniExpr { op: op, expr: Box::new(e) },
+	<op: UniOp> <e: Expr> => UniExpr { op: op, expr: AstNode::untyped(Box::new(e)) },
 };
 
 pub UniOp: UniOp = {
