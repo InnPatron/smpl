@@ -92,6 +92,27 @@ pub Block: Block = {
 pub ExprStmt: ExprStmt = {
 	<if_stmt: IfStmt> => ExprStmt::If(if_stmt),
 	<while_stmt: WhileStmt> => ExprStmt::While(while_stmt),
+	<local_var_decl: LocalVarDecl> => ExprStmt::LocalVarDecl(local_var_decl),
+	<assignment: Assignment> => ExprStmt::Assignment(assignment),
+};
+
+pub LocalVarDecl: LocalVarDecl = {
+	<var_type: Path> <name: Ident> "=" <e: Expr> ";" => {
+		LocalVarDecl {
+			var_type: var_type,
+			var_name: name,
+			var_init: AstNode::untyped(e)
+		}
+	},
+};
+
+pub Assignment: Assignment = {
+	<name: Path> "=" <e: Expr> ";" => {
+		Assignment {
+			name: name,
+			value: AstNode::untyped(e),
+		}
+	}
 };
 
 pub IfStmt: If = {

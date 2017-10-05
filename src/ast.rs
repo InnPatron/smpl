@@ -84,10 +84,23 @@ pub enum Stmt {
 pub enum ExprStmt {
     If(If),
     While(While),
-    LocalVarDecl,
-    Assignment,
+    LocalVarDecl(LocalVarDecl),
+    Assignment(Assignment),
     Break,
     Continue,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Assignment {
+    pub name: Path,
+    pub value: AstNode<Expr>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LocalVarDecl {
+    pub var_type: Path,
+    pub var_name: Ident,
+    pub var_init: AstNode<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
