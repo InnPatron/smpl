@@ -104,7 +104,7 @@ pub struct While {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    Bin(BinExpr),
+    Bin(AstNode<BinExpr>),
     Uni(AstNode<UniExpr>),
     Literal(AstNode<Literal>),
     Ident(AstNode<Ident>),
@@ -139,12 +139,6 @@ pub enum BinOp {
     Lesser,
     Eq,
     InEq,
-}
-
-impl From<BinExpr> for Expr {
-    fn from(bin: BinExpr) -> Expr {
-        Expr::Bin(bin)
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -113,25 +113,25 @@ pub WhileStmt: While = {
 };
 
 pub Expr: Expr = {	
-	<b: BinExpr> => b.into(),
+	<b: BinExpr> => b,
 	<c: CmpExpr> => c,
 };
 
 pub CmpExpr: Expr = {
 	<lhs: CmpExpr> <op: CmpOpGreaterPrecedence> <rhs: BinExpr> => {
-		BinExpr {
+		Expr::Bin(AstNode::untyped(BinExpr {
 			op: op,
 			lhs: AstNode::untyped(Box::new(lhs.into())),
 			rhs: AstNode::untyped(Box::new(rhs.into())),
-		}.into()
+		}))
 	},
 
 	<lhs: CmpExpr> <op: CmpOpLowerPrecedence> <rhs: BinExpr> => {
-		BinExpr {
+		Expr::Bin(AstNode::untyped(BinExpr {
 			op: op,
 			lhs: AstNode::untyped(Box::new(lhs.into())),
 			rhs: AstNode::untyped(Box::new(rhs.into())),
-		}.into()
+		}))
 	},
 };
 
@@ -149,19 +149,19 @@ pub CmpOpLowerPrecedence: BinOp = {
 
 pub BinExpr: Expr = {
 	<lhs: BinExpr> "+" <rhs: Factor> => {
-		BinExpr {
+		Expr::Bin(AstNode::untyped(BinExpr {
 			op: BinOp::Add,
 			lhs: AstNode::untyped(Box::new(lhs.into())),
 			rhs: AstNode::untyped(Box::new(rhs.into())),
-		}.into()
+		}))
 	},
 
 	<lhs: BinExpr> "-" <rhs: Factor> => {
-		BinExpr {
+		Expr::Bin(AstNode::untyped(BinExpr {
 			op: BinOp::Sub,
 			lhs: AstNode::untyped(Box::new(lhs.into())),
 			rhs: AstNode::untyped(Box::new(rhs.into())),
-		}.into()
+		}))
 	},
 
 	Factor,
@@ -169,27 +169,27 @@ pub BinExpr: Expr = {
 
 pub Factor: Expr = {
 	<lhs: Factor> "*" <rhs: Term> => {
-		BinExpr {
+		Expr::Bin(AstNode::untyped(BinExpr {
 			op: BinOp::Mul,
 			lhs: AstNode::untyped(Box::new(lhs.into())),
 			rhs: AstNode::untyped(Box::new(rhs)),
-		}.into()
+		}))
 	},
 
 	<lhs: Factor> "/" <rhs: Term> => {
-		BinExpr {
+		Expr::Bin(AstNode::untyped(BinExpr {
 			op: BinOp::Div,
 			lhs: AstNode::untyped(Box::new(lhs.into())),
 			rhs: AstNode::untyped(Box::new(rhs)),
-		}.into()
+		}))
 	},
 
 	<lhs: Factor> "%" <rhs: Term> => {
-		BinExpr {
+		Expr::Bin(AstNode::untyped(BinExpr {
 			op: BinOp::Mod,
 			lhs: AstNode::untyped(Box::new(lhs.into())),
 			rhs: AstNode::untyped(Box::new(rhs)),
-		}.into()
+		}))
 	},
 	<Term>
 };
