@@ -201,10 +201,10 @@ pub Term: Expr = {
 
 // end node rule which all other Expr related rules end in 
 pub ExprLeaf: Expr = {
-	"(" <u: UniExpr> ")" => u.into(),
-	<i: Ident> => i.into(),
+	"(" <u: UniExpr> ")" => Expr::Uni(AstNode::untyped(u)),
+	<i: Ident> => Expr::Ident(AstNode::untyped(i)),
 	<l: Literal> => Expr::Literal(l),
-	<f: FnCall> => f.into(),
+	<f: FnCall> => Expr::FnCall(AstNode::untyped(f)),
 };
 
 pub FnCall: FnCall = {

@@ -105,10 +105,10 @@ pub struct While {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
     Bin(BinExpr),
-    Uni(UniExpr),
+    Uni(AstNode<UniExpr>),
     Literal(AstNode<Literal>),
-    Ident(Ident),
-    FnCall(FnCall),
+    Ident(AstNode<Ident>),
+    FnCall(AstNode<FnCall>),
     Block,
 }
 
@@ -116,12 +116,6 @@ pub enum Expr {
 pub struct FnCall {
     pub name: Ident,
     pub args: Option<Vec<Expr>>
-}
-
-impl From<FnCall> for Expr {
-    fn from(call: FnCall) -> Expr {
-        Expr::FnCall(call)
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -167,12 +161,6 @@ pub enum UniOp {
     LogicalInvert,
 }
 
-impl From<UniExpr> for Expr {
-    fn from(uni: UniExpr) -> Expr {
-        Expr::Uni(uni)
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
     String(String),
@@ -184,12 +172,6 @@ pub struct Block(pub Vec<Stmt>);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Ident(pub AsciiString);
-
-impl From<Ident> for Expr {
-    fn from(ident: Ident) -> Expr {
-        Expr::Ident(ident)
-    }
-}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Path(pub Vec<Ident>);
