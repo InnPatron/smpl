@@ -109,7 +109,7 @@ pub LocalVarDecl: LocalVarDecl = {
 pub Assignment: Assignment = {
 	<name: Path> "=" <e: Expr> ";" => {
 		Assignment {
-			name: name,
+			name: AstNode::untyped(name),
 			value: AstNode::untyped(e),
 		}
 	}

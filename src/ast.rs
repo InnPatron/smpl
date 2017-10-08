@@ -92,7 +92,7 @@ pub enum ExprStmt {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Assignment {
-    pub name: Path,
+    pub name: AstNode<Path>,
     pub value: AstNode<Expr>,
 }
 
