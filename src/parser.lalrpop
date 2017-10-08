@@ -139,21 +139,58 @@ pub Expr: Expr = {
 };
 
 pub CmpExpr: Expr = {
-	<lhs: CmpExpr> <op: CmpOpGreaterPrecedence> <rhs: BinExpr> => {
+	<lhs: CmpExpr> <op: CmpOpLowestPrecedence> <rhs: RelativeCmpBranch> => {
 		Expr::Bin(AstNode::untyped(BinExpr {
 			op: op,
-			lhs: AstNode::untyped(Box::new(lhs.into())),
-			rhs: AstNode::untyped(Box::new(rhs.into())),
+			lhs: AstNode::untyped(Box::new(lhs)),
+			rhs: AstNode::untyped(Box::new(rhs)),
 		}))
 	},
 
-	<lhs: CmpExpr> <op: CmpOpLowerPrecedence> <rhs: BinExpr> => {
+	RelativeCmpBranch,
+};
+
+pub RelativeCmpBranch: Expr = {
+	<lhs: RelativeCmpBranch> <op: CmpOpLowPrecedence> <rhs: EqualityCmpBranch> => {
 		Expr::Bin(AstNode::untyped(BinExpr {
 			op: op,
-			lhs: AstNode::untyped(Box::new(lhs.into())),
-			rhs: AstNode::untyped(Box::new(rhs.into())),
+			lhs: AstNode::untyped(Box::new(lhs)),
+			rhs: AstNode::untyped(Box::new(rhs)),
 		}))
 	},
+
+	EqualityCmpBranch,
+};
+
+pub EqualityCmpBranch: Expr = {
+	<lhs: EqualityCmpBranch> <op: CmpOpGreaterPrecedence> <rhs: BinExpr> => {
+		Expr::Bin(AstNode::untyped(BinExpr {
+			op: op,
+			lhs: AstNode::untyped(Box::new(lhs)),
+			rhs: AstNode::untyped(Box::new(rhs)),
+		}))
+	},
+
+	<lhs: BinExpr> <op: CmpOpGreaterPrecedence> <rhs: BinExpr> => {
+		Expr::Bin(AstNode::untyped(BinExpr {
+			op: op,
+			lhs: AstNode::untyped(Box::new(lhs)),
+			rhs: AstNode::untyped(Box::new(rhs)),
+		}))
+	},
+
+	<Bool>,
+ 
+};
+
+pub Bool: Expr = {
+	"true" => Expr::Literal(AstNode::typed(Literal::Bool(true), SmplType::Bool)),
+	"false" => Expr::Literal(AstNode::typed(Literal::Bool(false), SmplType::Bool)),
+};
+
+pub CmpOpLowestPrecedence: BinOp = {
+	"&&" => BinOp::LogicalAnd,
+	"||" => BinOp::LogicalOr,
 };
 
 pub CmpOpGreaterPrecedence: BinOp = {
@@ -163,7 +200,7 @@ pub CmpOpGreaterPrecedence: BinOp = {
 	"<=" => BinOp::LesserEq,
 };
 
-pub CmpOpLowerPrecedence: BinOp = {
+pub CmpOpLowPrecedence: BinOp = {
 	"==" => BinOp::Eq,
 	"!=" => BinOp::InEq,
 };

@@ -146,6 +146,8 @@ pub enum BinOp {
     Div,
     Mod,
 
+    LogicalAnd,
+    LogicalOr,
     GreaterEq,
     LesserEq,
     Greater,
@@ -172,6 +174,7 @@ pub enum UniOp {
 pub enum Literal {
     String(String),
     Number(String),
+    Bool(bool),
 }
 
 #[derive(Clone, Debug, PartialEq)]
