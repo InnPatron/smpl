@@ -318,7 +318,7 @@ pub Literal: AstNode<Literal> = {
 };
 
 pub Ident: Ident = {
-	<ident: r"[A-Za-z][A-Za-z0-9]*"> => { Ident(AsciiString::from_str(ident).unwrap()) }
+	<ident: r"[A-Za-z_][_A-Za-z0-9]*"> => { Ident(AsciiString::from_str(ident).unwrap()) }
 };
 
 pub Path: Path = {
