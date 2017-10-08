@@ -46,7 +46,7 @@ impl From<Function> for DeclStmt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: Ident,
-    pub args: Vec<FnArg>,
+    pub args: Option<Vec<FnArg>>,
     pub body: FnBody,
 }
 

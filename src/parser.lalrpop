@@ -44,7 +44,7 @@ pub DeclStmt: DeclStmt = {
 };
 
 pub FnDecl: Function = {
-	"fn" <name: Ident> "(" <args: (<FnArg> ",")*> ")" => {
+	"fn" <name: Ident> "(" <args: FnArgList?> ")" => {
 		Function {
 			name: name,
 			args: args,
@@ -53,7 +53,22 @@ pub FnDecl: Function = {
 	}
 };
 
-pub FnArg: FnArg = {
+pub FnArgList: Vec<FnArg> = {
+	<first: FnArg> <tail: FnArgTail?> => {
+		let mut r = Vec::new();
+		r.push(first);
+		if let Some(v) = tail {
+			r.extend(v);
+		}
+		r
+	},
+};
+
+pub FnArgTail: Vec<FnArg> = {
+	<args: ("," <FnArg>)+> => args,
+};
+
+FnArg: FnArg = {
 	<arg_type: Ident> <name: Ident> => {
 		FnArg {
 			name: name,
