@@ -47,11 +47,8 @@ impl From<Function> for DeclStmt {
 pub struct Function {
     pub name: Ident,
     pub args: Option<Vec<FnArg>>,
-    pub body: FnBody,
+    pub body: AstNode<Block>,
 }
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct FnBody;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnArg {

@@ -44,11 +44,11 @@ pub DeclStmt: DeclStmt = {
 };
 
 pub FnDecl: Function = {
-	"fn" <name: Ident> "(" <args: FnArgList?> ")" => {
+	"fn" <name: Ident> "(" <args: FnArgList?> ")" <b: Block> => {
 		Function {
 			name: name,
 			args: args,
-			body: unimplemented!(),
+			body: AstNode::untyped(b),
 		}
 	}
 };
