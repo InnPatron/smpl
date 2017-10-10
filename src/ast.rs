@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use super::Span;
 use smpl_type::SmplType;
 use ascii::AsciiString;
@@ -179,6 +180,12 @@ pub struct Block(pub Vec<Stmt>);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Ident(pub AsciiString);
+
+impl Ident {
+    pub fn new(str: &str) -> Ident {
+        Ident(AsciiString::from_str(str).unwrap())
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Path(pub Vec<Ident>);
