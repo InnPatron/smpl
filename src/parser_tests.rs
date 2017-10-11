@@ -5,6 +5,20 @@ mod parser_tests {
     use ascii::*;
     use ast::*;
 
+    macro_rules! number {
+        ($str_num: expr) => {{
+            Literal::Number($str_num.to_string())
+        }};
+
+        ($str_num: expr => Expr) => {{
+            Expr::Literal(AstNode::untyped(number!($str_num)))
+        }};
+
+        ($str_num: expr => BoxExpr) => {{
+            Box::new(number!($str_num => Expr))
+        }}
+    }
+
     #[test]
     fn test_parse_FnDecl() {
         let input = "fn test_fn(i32 arg) { }";
@@ -43,9 +57,9 @@ struct TestStruct {
             let input = "1 + 2 * 5";
             let e = parse_MathExpr(input).unwrap();
             let root = Expr::Bin(AstNode::untyped({
-                let _1 = Box::new(Expr::Literal(AstNode::untyped(Literal::Number("1".to_string()))));
-                let _2 = Box::new(Expr::Literal(AstNode::untyped(Literal::Number("2".to_string()))));
-                let _5 = Box::new(Expr::Literal(AstNode::untyped(Literal::Number("5".to_string()))));
+                let _1 = number!("1" => BoxExpr);
+                let _2 = number!("2" => BoxExpr);
+                let _5 = number!("5" => BoxExpr);
                 let child = BinExpr {
                     op: BinOp::Mul,
                     lhs: AstNode::untyped(_2),
