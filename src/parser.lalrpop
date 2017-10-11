@@ -87,7 +87,7 @@ pub StructDecl: Struct = {
 };
 
 StructField: StructField = {
-	<field_type: Ident> ":" <name: Ident> => {
+	<name: Ident> ":" <field_type: Ident> => {
 		StructField {
 			name: name,
 			field_type: field_type,
