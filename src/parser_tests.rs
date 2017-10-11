@@ -19,12 +19,26 @@ mod parser_tests {
         }}
     }
 
+    macro_rules! ident {
+        ($ident: expr) => {{
+            Ident(AsciiString::from_str($ident).unwrap())
+        }};
+
+        ($ident: expr => Expr) => {{ 
+            Expr::Ident(AstNode::untyped(ident!($ident)))
+        }};
+
+        ($ident: expr => BoxExpr) => {{
+            Box::new(ident!($ident => Expr))
+        }}
+    }
+
     #[test]
     fn test_parse_FnDecl() {
         let input = "fn test_fn(i32 arg) { }";
         let func = parse_FnDecl(input).unwrap();
-        assert_eq!(func.name, Ident::new("test_fn"));
-        assert_eq!(func.args, Some(vec![FnArg { name: Ident::new("arg"), arg_type: Ident::new("i32")}]));
+        assert_eq!(func.name, ident!("test_fn"));
+        assert_eq!(func.args, Some(vec![FnArg { name: ident!("arg"), arg_type: ident!("i32")}]));
         assert_eq!(func.body, AstNode::untyped(Block(Vec::new())));
     }
 
@@ -37,16 +51,16 @@ struct TestStruct {
 }";
         let _struct = parse_StructDecl(input).unwrap();
 
-        assert_eq!(_struct.name, Ident::new("TestStruct"));
+        assert_eq!(_struct.name, ident!("TestStruct"));
         assert_eq!(_struct.body, StructBody(vec![
             StructField {
-                name: Ident::new("field1"),
-                field_type: Ident::new("Type1"),
+                name: ident!("field1"),
+                field_type: ident!("Type1"),
             },
 
             StructField {
-                name: Ident::new("field2"),
-                field_type: Ident::new("Type2"),
+                name: ident!("field2"),
+                field_type: ident!("Type2"),
             },
         ]));
     }
