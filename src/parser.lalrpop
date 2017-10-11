@@ -149,7 +149,7 @@ pub WhileStmt: While = {
 };
 
 pub Expr: Expr = {	
-	<b: BinExpr> => b,
+	<b: MathExpr> => b,
 	<c: CmpExpr> => c,
 };
 
@@ -178,7 +178,7 @@ pub RelativeCmpBranch: Expr = {
 };
 
 pub EqualityCmpBranch: Expr = {
-	<lhs: EqualityCmpBranch> <op: CmpOpGreaterPrecedence> <rhs: BinExpr> => {
+	<lhs: EqualityCmpBranch> <op: CmpOpGreaterPrecedence> <rhs: MathExpr> => {
 		Expr::Bin(AstNode::untyped(BinExpr {
 			op: op,
 			lhs: AstNode::untyped(Box::new(lhs)),
@@ -186,7 +186,7 @@ pub EqualityCmpBranch: Expr = {
 		}))
 	},
 
-	<lhs: BinExpr> <op: CmpOpGreaterPrecedence> <rhs: BinExpr> => {
+	<lhs: MathExpr> <op: CmpOpGreaterPrecedence> <rhs: MathExpr> => {
 		Expr::Bin(AstNode::untyped(BinExpr {
 			op: op,
 			lhs: AstNode::untyped(Box::new(lhs)),
@@ -220,8 +220,8 @@ pub CmpOpLowPrecedence: BinOp = {
 	"!=" => BinOp::InEq,
 };
 
-pub BinExpr: Expr = {
-	<lhs: BinExpr> "+" <rhs: Factor> => {
+pub MathExpr: Expr = {
+	<lhs: MathExpr> "+" <rhs: Factor> => {
 		Expr::Bin(AstNode::untyped(BinExpr {
 			op: BinOp::Add,
 			lhs: AstNode::untyped(Box::new(lhs.into())),
@@ -229,7 +229,7 @@ pub BinExpr: Expr = {
 		}))
 	},
 
-	<lhs: BinExpr> "-" <rhs: Factor> => {
+	<lhs: MathExpr> "-" <rhs: Factor> => {
 		Expr::Bin(AstNode::untyped(BinExpr {
 			op: BinOp::Sub,
 			lhs: AstNode::untyped(Box::new(lhs.into())),
