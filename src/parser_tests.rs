@@ -33,6 +33,24 @@ mod parser_tests {
         }}
     }
 
+    macro_rules! bin_expr {
+        ($lhs: expr, $op: expr, $rhs: expr) => {{
+            BinExpr {
+                op: $op,
+                lhs: AstNode::untyped($lhs),
+                rhs: AstNode::untyped($rhs),
+            }
+        }};
+
+        (($lhs: expr, $op: expr, $rhs: expr) => Expr) => {{
+            Expr::Bin(AstNode::untyped(bin_expr!($lhs, $op, $rhs)))
+        }};
+
+        (($lhs: expr, $op: expr, $rhs: expr) => BinExpr) => {{
+            Box::new(bin_expr!(($lhs, $op, $rhs) => Expr))
+        }};
+    }
+
     #[test]
     fn test_parse_FnDecl() {
         let input = "fn test_fn(i32 arg) { }";
@@ -70,25 +88,15 @@ struct TestStruct {
         {
             let input = "1 + 2 * 5";
             let e = parse_MathExpr(input).unwrap();
-            let root = Expr::Bin(AstNode::untyped({
+            let root = {
                 let _1 = number!("1" => BoxExpr);
                 let _2 = number!("2" => BoxExpr);
                 let _5 = number!("5" => BoxExpr);
-                let child = BinExpr {
-                    op: BinOp::Mul,
-                    lhs: AstNode::untyped(_2),
-                    rhs: AstNode::untyped(_5),
-                };
+                let child = bin_expr!((_2, BinOp::Mul, _5) => BinExpr);
 
-                let child = Expr::Bin(AstNode::untyped(child));
-
-                let parent = BinExpr {
-                    op: BinOp::Add,
-                    lhs: AstNode::untyped(_1),
-                    rhs: AstNode::untyped(Box::new(child)),
-                };
+                let parent = bin_expr!((_1, BinOp::Add, child) => Expr);
                 parent
-            }));
+            };
             assert_eq!(e, root);
         }
     }
