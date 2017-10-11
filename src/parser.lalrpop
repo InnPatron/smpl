@@ -149,7 +149,6 @@ pub WhileStmt: While = {
 };
 
 pub Expr: Expr = {	
-	<b: MathExpr> => b,
 	<c: CmpExpr> => c,
 };
 
@@ -186,21 +185,7 @@ pub EqualityCmpBranch: Expr = {
 		}))
 	},
 
-	<lhs: MathExpr> <op: CmpOpGreaterPrecedence> <rhs: MathExpr> => {
-		Expr::Bin(AstNode::untyped(BinExpr {
-			op: op,
-			lhs: AstNode::untyped(Box::new(lhs)),
-			rhs: AstNode::untyped(Box::new(rhs)),
-		}))
-	},
-
-	<Bool>,
- 
-};
-
-pub Bool: Expr = {
-	"true" => Expr::Literal(AstNode::typed(Literal::Bool(true), SmplType::Bool)),
-	"false" => Expr::Literal(AstNode::typed(Literal::Bool(false), SmplType::Bool)),
+	<MathExpr>,
 };
 
 pub CmpOpLowestPrecedence: BinOp = {
@@ -278,6 +263,12 @@ pub ExprLeaf: Expr = {
 	<i: Ident> => Expr::Ident(AstNode::untyped(i)),
 	<l: Literal> => Expr::Literal(l),
 	<f: FnCall> => Expr::FnCall(AstNode::untyped(f)),
+	<b: Bool> => b,
+};
+
+pub Bool: Expr = {
+	"true" => Expr::Literal(AstNode::typed(Literal::Bool(true), SmplType::Bool)),
+	"false" => Expr::Literal(AstNode::typed(Literal::Bool(false), SmplType::Bool)),
 };
 
 pub FnCall: FnCall = {
