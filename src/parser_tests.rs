@@ -35,6 +35,33 @@ struct TestStruct {
                 field_type: Ident::new("Type2"),
             },
         ]));
+    }
 
+    #[test]
+    fn test_parse_MathExpr() {
+        {
+            let input = "1 + 2 * 5";
+            let e = parse_MathExpr(input).unwrap();
+            let root = Expr::Bin(AstNode::untyped({
+                let _1 = Box::new(Expr::Literal(AstNode::untyped(Literal::Number("1".to_string()))));
+                let _2 = Box::new(Expr::Literal(AstNode::untyped(Literal::Number("2".to_string()))));
+                let _5 = Box::new(Expr::Literal(AstNode::untyped(Literal::Number("5".to_string()))));
+                let child = BinExpr {
+                    op: BinOp::Mul,
+                    lhs: AstNode::untyped(_2),
+                    rhs: AstNode::untyped(_5),
+                };
+
+                let child = Expr::Bin(AstNode::untyped(child));
+
+                let parent = BinExpr {
+                    op: BinOp::Add,
+                    lhs: AstNode::untyped(_1),
+                    rhs: AstNode::untyped(Box::new(child)),
+                };
+                parent
+            }));
+            assert_eq!(e, root);
+        }
     }
 }
