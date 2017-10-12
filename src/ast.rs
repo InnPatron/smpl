@@ -48,6 +48,7 @@ impl From<Function> for DeclStmt {
 pub struct Function {
     pub name: Ident,
     pub args: Option<Vec<FnArg>>,
+    pub return_type: Option<Path>,
     pub body: AstNode<Block>,
 }
 
