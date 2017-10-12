@@ -168,4 +168,23 @@ struct TestStruct {
             assert_eq!(e, root);
         }
     }
+
+    #[test]
+    fn test_parse_CmpExpr() {
+        {
+            let input = "true && true || false";
+            let e = parse_CmpExpr(input).unwrap();
+            
+            let root = {
+                let _true = boolean!(true => BoxExpr);
+                let _false = boolean!(false => BoxExpr);
+
+                let lhs_child = bin_expr!((_true.clone(), BinOp::LogicalAnd, _true) => BinExpr);
+                let parent = bin_expr!((lhs_child, BinOp::LogicalOr, _false) => Expr);
+                parent
+            };
+
+            assert_eq!(e, root);
+        }
+    }
 }
