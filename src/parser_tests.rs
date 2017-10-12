@@ -61,7 +61,7 @@ mod parser_tests {
             Expr::Bin(AstNode::untyped(bin_expr!($lhs, $op, $rhs)))
         }};
 
-        (($lhs: expr, $op: expr, $rhs: expr) => BinExpr) => {{
+        (($lhs: expr, $op: expr, $rhs: expr) => BoxExpr) => {{
             Box::new(bin_expr!(($lhs, $op, $rhs) => Expr))
         }};
     }
@@ -123,7 +123,7 @@ struct TestStruct {
                 let _1 = number!("1" => BoxExpr);
                 let _2 = number!("2" => BoxExpr);
                 let _5 = number!("5" => BoxExpr);
-                let child = bin_expr!((_2, BinOp::Mul, _5) => BinExpr);
+                let child = bin_expr!((_2, BinOp::Mul, _5) => BoxExpr);
 
                 let parent = bin_expr!((_1, BinOp::Add, child) => Expr);
                 parent
@@ -138,7 +138,7 @@ struct TestStruct {
                 let _1 = number!("1" => BoxExpr);
                 let _2 = number!("2" => BoxExpr);
                 let _5 = number!("5" => BoxExpr);
-                let child = bin_expr!((_1, BinOp::Add, _2) => BinExpr);
+                let child = bin_expr!((_1, BinOp::Add, _2) => BoxExpr);
 
                 let parent = bin_expr!((_5, BinOp::Mul, child) => Expr);
                 parent
@@ -157,10 +157,10 @@ struct TestStruct {
                 let _321 = number!("321" => BoxExpr);
                 let _8 = number!("8" => BoxExpr);
 
-                let lhs_child = bin_expr!((_5.clone(), BinOp::Mod, _5) => BinExpr);
-                let lhs_child = bin_expr!((lhs_child, BinOp::Mul, _10) => BinExpr);
+                let lhs_child = bin_expr!((_5.clone(), BinOp::Mod, _5) => BoxExpr);
+                let lhs_child = bin_expr!((lhs_child, BinOp::Mul, _10) => BoxExpr);
                 
-                let rhs_child = bin_expr!((_321, BinOp::Div, _8) => BinExpr);
+                let rhs_child = bin_expr!((_321, BinOp::Div, _8) => BoxExpr);
 
                 let parent = bin_expr!((lhs_child, BinOp::Sub, rhs_child) => Expr);
                 parent
@@ -179,7 +179,7 @@ struct TestStruct {
                 let _true = boolean!(true => BoxExpr);
                 let _false = boolean!(false => BoxExpr);
 
-                let lhs_child = bin_expr!((_true.clone(), BinOp::LogicalAnd, _true) => BinExpr);
+                let lhs_child = bin_expr!((_true.clone(), BinOp::LogicalAnd, _true) => BoxExpr);
                 let parent = bin_expr!((lhs_child, BinOp::LogicalOr, _false) => Expr);
                 parent
             };
@@ -198,9 +198,9 @@ struct TestStruct {
                 let _4 = number!("4" => BoxExpr);
                 let _5 = number!("5" => BoxExpr);
 
-                let lhs_child = bin_expr!((_1, BinOp::Add, _5) => BinExpr);
-                let lhs_child = bin_expr!((lhs_child, BinOp::Eq, _2) => BinExpr);
-                let rhs_child = bin_expr!((_3, BinOp::InEq, _4) => BinExpr);
+                let lhs_child = bin_expr!((_1, BinOp::Add, _5) => BoxExpr);
+                let lhs_child = bin_expr!((lhs_child, BinOp::Eq, _2) => BoxExpr);
+                let rhs_child = bin_expr!((_3, BinOp::InEq, _4) => BoxExpr);
 
                 let parent = bin_expr!((lhs_child, BinOp::LogicalAnd, rhs_child) => Expr);
                 parent
