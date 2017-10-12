@@ -131,5 +131,26 @@ struct TestStruct {
             assert_eq!(e, root);
 
         }
+
+        {
+            let input = "5 % 5 * 10 - 321 / 8";
+            let e = parse_MathExpr(input).unwrap();
+
+            let root = {
+                let _5 = number!("5" => BoxExpr);
+                let _10 = number!("10" => BoxExpr);
+                let _321 = number!("321" => BoxExpr);
+                let _8 = number!("8" => BoxExpr);
+
+                let lhs_child = bin_expr!((_5.clone(), BinOp::Mod, _5) => BinExpr);
+                let lhs_child = bin_expr!((lhs_child, BinOp::Mul, _10) => BinExpr);
+                
+                let rhs_child = bin_expr!((_321, BinOp::Div, _8) => BinExpr);
+
+                let parent = bin_expr!((lhs_child, BinOp::Sub, rhs_child) => Expr);
+                parent
+            };
+            assert_eq!(e, root);
+        }
     }
 }
