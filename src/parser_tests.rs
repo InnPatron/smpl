@@ -84,6 +84,22 @@ struct TestStruct {
     }
 
     #[test]
+    #[ignore]
+    fn test_parse_MathExpr_no_spaces() {
+        {
+            let input = "1+2";
+            let e = parse_MathExpr(input).unwrap();
+            let root = {
+                let _1 = number!("1" => BoxExpr);
+                let _2 = number!("2" => BoxExpr);
+
+                let parent = bin_expr!((_1, BinOp::Add, _2) => Expr);
+                parent
+            };
+        }
+    }
+
+    #[test]
     fn test_parse_MathExpr() {
         {
             let input = "1 + 2 * 5";
