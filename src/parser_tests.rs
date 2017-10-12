@@ -208,5 +208,29 @@ struct TestStruct {
 
             assert_eq!(e, root);
         }
+
+        {
+            let input = "(1 + 5) * 6 == 2 && 3 != 4";
+            let e = parse_CmpExpr(input).unwrap();
+
+            let root = {
+                let _1 = number!("1" => BoxExpr);
+                let _2 = number!("2" => BoxExpr);
+                let _3 = number!("3" => BoxExpr);
+                let _4 = number!("4" => BoxExpr);
+                let _5 = number!("5" => BoxExpr);
+                let _6 = number!("6" => BoxExpr);
+
+                let lhs_child = bin_expr!((_1, BinOp::Add, _5) => BoxExpr);
+                let lhs_child = bin_expr!((lhs_child, BinOp::Mul, _6) => BoxExpr);
+                let lhs_child = bin_expr!((lhs_child, BinOp::Eq, _2) => BoxExpr);
+                let rhs_child = bin_expr!((_3, BinOp::InEq, _4) => BoxExpr);
+
+                let parent = bin_expr!((lhs_child, BinOp::LogicalAnd, rhs_child) => Expr);
+                parent
+            };
+
+            assert_eq!(e, root);
+        }
     }
 }
