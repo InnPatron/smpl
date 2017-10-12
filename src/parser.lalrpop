@@ -70,7 +70,7 @@ pub FnArgTail: Vec<FnArg> = {
 };
 
 FnArg: FnArg = {
-	<arg_type: Ident> <name: Ident> => {
+	<arg_type: Path> <name: Ident> => {
 		FnArg {
 			name: name,
 			arg_type: arg_type,
@@ -88,7 +88,7 @@ pub StructDecl: Struct = {
 };
 
 StructField: StructField = {
-	<name: Ident> ":" <field_type: Ident> => {
+	<name: Ident> ":" <field_type: Path> => {
 		StructField {
 			name: name,
 			field_type: field_type,

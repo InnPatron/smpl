@@ -55,7 +55,7 @@ pub struct Function {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnArg {
     pub name: Ident,
-    pub arg_type: Ident,
+    pub arg_type: Path,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -70,7 +70,7 @@ pub struct StructBody(pub Vec<StructField>);
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructField {
     pub name: Ident,
-    pub field_type: Ident,
+    pub field_type: Path,
 }
 
 #[derive(Clone, Debug, PartialEq)]
