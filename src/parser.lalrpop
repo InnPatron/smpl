@@ -44,11 +44,11 @@ pub DeclStmt: DeclStmt = {
 };
 
 pub FnDecl: Function = {
-	"fn" <name: Ident> "(" <args: FnArgList?> ")" <return_type: ("->" Path?)> <b: Block> => {
+	"fn" <name: Ident> "(" <args: FnArgList?> ")" <return_type: ("->" Path)?> <b: Block> => {
 		Function {
 			name: name,
 			args: args,
-			return_type: return_type.1,
+			return_type: return_type.map(|r| r.1),
 			body: AstNode::untyped(b),
 		}
 	}
