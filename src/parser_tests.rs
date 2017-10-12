@@ -99,5 +99,21 @@ struct TestStruct {
             };
             assert_eq!(e, root);
         }
+
+        {
+            let input = "5 * (1 + 2)";
+            let e = parse_MathExpr(input).unwrap();
+            let root = {
+                let _1 = number!("1" => BoxExpr);
+                let _2 = number!("2" => BoxExpr);
+                let _5 = number!("5" => BoxExpr);
+                let child = bin_expr!((_1, BinOp::Add, _2) => BinExpr);
+
+                let parent = bin_expr!((_5, BinOp::Mul, child) => Expr);
+                parent
+            };
+            assert_eq!(e, root);
+
+        }
     }
 }
