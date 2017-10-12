@@ -4,6 +4,21 @@ mod parser_tests {
     use parser::*;
     use ascii::*;
     use ast::*;
+    use smpl_type::*;
+
+    macro_rules! boolean {
+        ($val: expr) => {{
+            Literal::Bool($val)
+        }};
+
+        ($val: expr => Expr) => {{
+            Expr::Literal(AstNode::typed(boolean!($val), SmplType::Bool))
+        }};
+
+        ($val: expr => BoxExpr) => {{
+            Box::new(boolean!($val => Expr))
+        }}
+    }
 
     macro_rules! number {
         ($str_num: expr) => {{
