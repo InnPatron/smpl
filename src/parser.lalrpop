@@ -61,18 +61,11 @@ pub FnDecl: Function = {
 };
 
 FnArgList: Vec<FnArg> = {
-	<first: FnArg> <tail: FnArgTail?> => {
-		let mut r = Vec::new();
-		r.push(first);
-		if let Some(v) = tail {
-			r.extend(v);
-		}
-		r
-	},
-};
-
-FnArgTail: Vec<FnArg> = {
-	<args: ("," <FnArg>)+> => args,
+	<first: FnArg> <tail: ("," <FnArg>)*> => {
+		let mut v = vec![first];
+		v.extend(tail);
+		v
+	}
 };
 
 FnArg: FnArg = {
@@ -288,21 +281,11 @@ FnCall: FnCall = {
 };
 
 FnCallArgs: Vec<Expr> = {
-	<first: Expr> <tail: FnCallArgsTail?> => {
-		let mut a = Vec::new();
-		a.push(first);
-		match tail {
-			None => a,
-			Some(t) => {
-				a.extend(t);
-				a
-			}
-		}
+	<first: Expr> <tail: ("," <Expr>)*> => {
+		let mut v = vec![first];
+		v.extend(tail);
+		v
 	}
-};
-
-FnCallArgsTail: Vec<Expr> = {
-	<args: ("," <Expr>)+> => args
 };
 
 BinOp: BinOp = {
