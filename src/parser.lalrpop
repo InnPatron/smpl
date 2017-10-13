@@ -38,6 +38,12 @@ use ascii::*;
 
 grammar;
 
+pub Program: Program = {
+	<decl: DeclStmt+> => {
+		Program(decl)
+	}
+};
+
 DeclStmt: DeclStmt = {
 	<f: FnDecl> => f.into(),
 	<s: StructDecl> => s.into(),
