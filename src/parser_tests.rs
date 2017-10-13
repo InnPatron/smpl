@@ -88,12 +88,12 @@ mod parser_tests {
         let input = "
 struct TestStruct {
     field1: Type1,
-    field2: Type2,
+    field2: Type2
 }";
         let _struct = parse_StructDecl(input).unwrap();
 
         assert_eq!(_struct.name, ident!("TestStruct"));
-        assert_eq!(_struct.body, StructBody(vec![
+        assert_eq!(_struct.body, StructBody(Some(vec![
             StructField {
                 name: ident!("field1"),
                 field_type: path!("Type1"),
@@ -103,7 +103,7 @@ struct TestStruct {
                 name: ident!("field2"),
                 field_type: path!("Type2"),
             },
-        ]));
+        ])));
     }
 
     #[test]

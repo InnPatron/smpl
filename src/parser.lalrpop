@@ -78,11 +78,19 @@ FnArg: FnArg = {
 };
 
 pub StructDecl: Struct = {
-	"struct" <name: Ident> "{" <fields: (<StructField> ",")*> "}" => {
+	"struct" <name: Ident> "{" <fields: StructFieldList?>"}" => {
 		Struct {
 			name: name,
 			body: StructBody(fields)
 		}
+	}
+};
+
+StructFieldList: Vec<StructField> = {
+	<first: StructField> <tail: ("," <StructField>)*> => {
+		let mut v = vec![first];
+		v.extend(tail);
+		v
 	}
 };
 

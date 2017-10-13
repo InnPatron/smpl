@@ -65,7 +65,7 @@ pub struct Struct {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct StructBody(pub Vec<StructField>);
+pub struct StructBody(pub Option<Vec<StructField>>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructField {
