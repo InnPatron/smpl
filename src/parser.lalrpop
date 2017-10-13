@@ -60,17 +60,20 @@ use ascii::*;
 
 grammar;
 
+/// program -> decl_stmt+
 pub Program: Program = {
 	<decl: DeclStmt+> => {
 		Program(decl)
 	}
 };
 
+/// decl_stmt -> fn_decl | struct_decl
 DeclStmt: DeclStmt = {
 	<f: FnDecl> => f.into(),
 	<s: StructDecl> => s.into(),
 };
 
+/// fn_decl -> "fn" ident "(" [arg_list]? ")" ["->" path]? block
 pub FnDecl: Function = {
 	"fn" <name: Ident> "(" <args: FnArgList?> ")" <return_type: ("->" Path)?> <b: Block> => {
 		Function {
@@ -82,6 +85,7 @@ pub FnDecl: Function = {
 	}
 };
 
+/// arg_list -> arg ["," arg]*
 FnArgList: Vec<FnArg> = {
 	<first: FnArg> <tail: ("," <FnArg>)*> => {
 		let mut v = vec![first];
@@ -90,6 +94,7 @@ FnArgList: Vec<FnArg> = {
 	}
 };
 
+/// arg -> path ident
 FnArg: FnArg = {
 	<arg_type: Path> <name: Ident> => {
 		FnArg {
@@ -99,6 +104,7 @@ FnArg: FnArg = {
 	}
 };
 
+/// struct_decl -> "struct" ident "{" struct_fields "}"
 pub StructDecl: Struct = {
 	"struct" <name: Ident> "{" <fields: StructFieldList?>"}" => {
 		Struct {
@@ -108,6 +114,7 @@ pub StructDecl: Struct = {
 	}
 };
 
+/// struct_fields -> struct_field  ["," struct_field]*
 StructFieldList: Vec<StructField> = {
 	<first: StructField> <tail: ("," <StructField>)*> => {
 		let mut v = vec![first];
@@ -116,6 +123,7 @@ StructFieldList: Vec<StructField> = {
 	}
 };
 
+/// struct_field -> ident ":" path
 StructField: StructField = {
 	<name: Ident> ":" <field_type: Path> => {
 		StructField {
@@ -125,15 +133,18 @@ StructField: StructField = {
 	}
 };
 
+/// stmt -> expr ";" | expr_stmt
 pub Stmt: Stmt = {
 	<e: Expr> ";" => Stmt::Expr(e),
 	<e: ExprStmt> => Stmt::ExprStmt(e),
 };
 
+/// block -> "{" [stmt]*  "}"
 Block: Block = {
 	"{" <s: Stmt*> "}" => Block(s)
 };
 
+/// expr_stmt -> if_stmt | while_stmt | local_var_decl | assignment
 pub ExprStmt: ExprStmt = {
 	<if_stmt: IfStmt> => ExprStmt::If(if_stmt),
 	<while_stmt: WhileStmt> => ExprStmt::While(while_stmt),
@@ -141,6 +152,7 @@ pub ExprStmt: ExprStmt = {
 	<assignment: Assignment> => ExprStmt::Assignment(assignment),
 };
 
+/// local_var_decl -> path ident "=" expr ";"
 LocalVarDecl: LocalVarDecl = {
 	<var_type: Path> <name: Ident> "=" <e: Expr> ";" => {
 		LocalVarDecl {
@@ -151,6 +163,7 @@ LocalVarDecl: LocalVarDecl = {
 	},
 };
 
+/// assignment -> path "=" expr ";"
 Assignment: Assignment = {
 	<name: Path> "=" <e: Expr> ";" => {
 		Assignment {
@@ -160,6 +173,7 @@ Assignment: Assignment = {
 	}
 };
 
+/// if_stmt -> "if" expr block
 IfStmt: If = {
 	"if" <conditional: Expr> <block: Block> => {
 		If {
@@ -169,6 +183,7 @@ IfStmt: If = {
 	},
 };
 
+/// while_stmt -> "while" expr block
 WhileStmt: While = {
 	"while" <conditional: Expr> <block: Block> => {
 		While {
@@ -178,10 +193,12 @@ WhileStmt: While = {
 	},
 };
 
+/// expr -> cmp_expr
 pub Expr: Expr = {	
 	<c: CmpExpr> => c,
 };
 
+/// cmp_expr -> cmp_expr ["&&" | "||"] relative_cmp | relative_cmp
 pub CmpExpr: Expr = {
 	<lhs: CmpExpr> <op: CmpOpLowestPrecedence> <rhs: RelativeCmpBranch> => {
 		Expr::Bin(AstNode::untyped(BinExpr {
@@ -194,6 +211,7 @@ pub CmpExpr: Expr = {
 	RelativeCmpBranch,
 };
 
+/// relative_cmp -> relative_cmp [">" | ">=" | "<" | "<="] equality_cmp | equality_cmp
 RelativeCmpBranch: Expr = {
 	<lhs: RelativeCmpBranch> <op: CmpOpLowPrecedence> <rhs: EqualityCmpBranch> => {
 		Expr::Bin(AstNode::untyped(BinExpr {
@@ -206,6 +224,7 @@ RelativeCmpBranch: Expr = {
 	EqualityCmpBranch,
 };
 
+/// equality_cmp -> equality_cmp ["==" | "!="] math_expr | math_expr
 EqualityCmpBranch: Expr = {
 	<lhs: EqualityCmpBranch> <op: CmpOpGreaterPrecedence> <rhs: MathExpr> => {
 		Expr::Bin(AstNode::untyped(BinExpr {
@@ -235,6 +254,7 @@ CmpOpLowPrecedence: BinOp = {
 	"!=" => BinOp::InEq,
 };
 
+/// math_expr -> math_expr ["+" | "-"] factor | factor
 pub MathExpr: Expr = {
 	<lhs: MathExpr> "+" <rhs: Factor> => {
 		Expr::Bin(AstNode::untyped(BinExpr {
@@ -255,6 +275,7 @@ pub MathExpr: Expr = {
 	Factor,
 };
 
+/// factor -> factor ["*" | "/" | "%"] term | term
 Factor: Expr = {
 	<lhs: Factor> "*" <rhs: Term> => {
 		Expr::Bin(AstNode::untyped(BinExpr {
@@ -282,12 +303,13 @@ Factor: Expr = {
 	<Term>
 };
 
+/// term -> "(" expr ")" | expr_leaf
 Term: Expr = {
 	"(" <e: Expr> ")" => e.into(),
 	<e: ExprLeaf> => e,
 };
 
-// end node rule which all other Expr related rules end in 
+/// expr_leaf -> "(" uni_expr ")" | literal | fn_call
 ExprLeaf: Expr = {
 	"(" <u: UniExpr> ")" => Expr::Uni(AstNode::untyped(u)),
 	<i: Ident> => Expr::Ident(AstNode::untyped(i)),
@@ -295,8 +317,7 @@ ExprLeaf: Expr = {
 	<f: FnCall> => Expr::FnCall(AstNode::untyped(f)),
 };
 
-
-
+/// fn_call -> ident "(" fn_call_args ")"
 FnCall: FnCall = {
 	<name: Ident> "(" <args: FnCallArgs?> ")" => {
 		FnCall {
@@ -306,6 +327,7 @@ FnCall: FnCall = {
 	}
 };
 
+/// fn_call_args -> expr ["," expr]*
 FnCallArgs: Vec<Expr> = {
 	<first: Expr> <tail: ("," <Expr>)*> => {
 		let mut v = vec![first];
@@ -322,6 +344,7 @@ BinOp: BinOp = {
 	"%" => BinOp::Mod,
 };
 
+/// uni_expr -> ["-" | "!" | "&" | "*"] expr
 UniExpr: UniExpr = {
 	<op: UniOp> <e: Expr> => UniExpr { op: op, expr: AstNode::untyped(Box::new(e)) },
 };
@@ -333,6 +356,7 @@ UniOp: UniOp = {
 	"*" => UniOp::Deref,
 };
 
+/// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "\"" [.] "\""
 Literal: AstNode<Literal> = {
 	<number: r"[0-9]+[.[0-9]+]?"> => AstNode::untyped(Literal::Number(number.to_string())),
 	"\"" <string: "r[.]*"> "\"" => AstNode::typed(Literal::String(string.to_string()), 
@@ -342,10 +366,12 @@ Literal: AstNode<Literal> = {
 
 };
 
+/// ident -> [a-zA-Z_] [a-zA-Z0-9_]*
 Ident: Ident = {
 	<ident: r"[A-Za-z_][_A-Za-z0-9]*"> => { Ident(AsciiString::from_str(ident).unwrap()) }
 };
 
+/// path -> ident ["." ident]*
 Path: Path = {
 	<first: Ident> <v:("." <Ident>)*> => {
 		let mut p = Vec::new();
