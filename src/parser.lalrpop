@@ -336,14 +336,6 @@ FnCallArgs: Vec<Expr> = {
 	}
 };
 
-BinOp: BinOp = {
-	"+" => BinOp::Add,
-	"-" => BinOp::Sub,
-	"*" => BinOp::Mul,
-	"/" => BinOp::Div,
-	"%" => BinOp::Mod,
-};
-
 /// uni_expr -> ["-" | "!" | "&" | "*"] expr
 UniExpr: UniExpr = {
 	<op: UniOp> <e: Expr> => UniExpr { op: op, expr: AstNode::untyped(Box::new(e)) },
