@@ -271,13 +271,9 @@ ExprLeaf: Expr = {
 	<i: Ident> => Expr::Ident(AstNode::untyped(i)),
 	<l: Literal> => Expr::Literal(l),
 	<f: FnCall> => Expr::FnCall(AstNode::untyped(f)),
-	<b: Bool> => b,
 };
 
-Bool: Expr = {
-	"true" => Expr::Literal(AstNode::typed(Literal::Bool(true), SmplType::Bool)),
-	"false" => Expr::Literal(AstNode::typed(Literal::Bool(false), SmplType::Bool)),
-};
+
 
 FnCall: FnCall = {
 	<name: Ident> "(" <args: FnCallArgs?> ")" => {
@@ -319,6 +315,9 @@ Literal: AstNode<Literal> = {
 	<number: r"[0-9]+[.[0-9]+]?"> => AstNode::untyped(Literal::Number(number.to_string())),
 	"\"" <string: "r[.]*"> "\"" => AstNode::typed(Literal::String(string.to_string()), 
 					SmplType::String),
+	"true" => AstNode::typed(Literal::Bool(true), SmplType::Bool),
+	"false" => AstNode::typed(Literal::Bool(false), SmplType::Bool),
+
 };
 
 Ident: Ident = {
