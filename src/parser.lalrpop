@@ -1,0 +1,374 @@
+/// --------------SMPL Grammar----------------
+///
+///
+/// program -> decl_stmt+
+/// decl_stmt -> fn_decl | struct_decl
+///
+///
+/// fn_decl -> "fn" ident "(" [arg_list]? ")" ["->" path]? block
+/// arg_list -> arg ["," arg]*
+/// arg -> path ident
+///
+///
+/// struct_decl -> "struct" ident "{" struct_fields "}"
+/// struct_fields -> struct_field  ["," struct_field]*
+/// struct_field -> ident ":" path
+///
+///
+/// block -> "{" [stmt]*  "}"
+/// stmt -> expr ";" | expr_stmt
+///
+///
+/// expr_stmt -> if_stmt | while_stmt | local_var_decl | assignment
+/// if_stmt -> "if" expr block
+/// while_stmt -> "while" expr block
+/// local_var_decl -> path ident "=" expr ";"
+/// assignment -> path "=" expr ";"
+///
+///
+/// expr -> cmp_expr
+///
+///
+/// cmp_expr -> cmp_expr ["&&" | "||"] relative_cmp | relative_cmp
+/// relative_cmp -> relative_cmp [">" | ">=" | "<" | "<="] equality_cmp | equality_cmp
+/// equality_cmp -> equality_cmp ["==" | "!="] math_expr | math_expr
+///
+///
+/// math_expr -> math_expr ["+" | "-"] factor | factor
+/// factor -> factor ["*" | "/" | "%"] term | term
+/// term -> "(" expr ")" | expr_leaf
+/// expr_leaf -> "(" uni_expr ")" | literal | fn_call | ident
+///
+/// 
+/// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "\"" [.] "\""
+///
+///
+/// fn_call -> ident "(" fn_call_args ")"
+/// fn_call_args -> expr ["," expr]*
+///
+///
+/// uni_expr -> ["-" | "!" | "&" | "*"] expr
+///
+///
+/// ident -> [a-zA-Z_] [a-zA-Z0-9_]*
+/// path -> ident ["." ident]*
+
+use std::str::FromStr;
+use smpl_type::SmplType;
+use ast::*;
+use ascii::*;
+
+grammar;
+
+/// program -> decl_stmt+
+pub Program: Program = {
+	<decl: DeclStmt+> => {
+		Program(decl)
+	}
+};
+
+/// decl_stmt -> fn_decl | struct_decl
+DeclStmt: DeclStmt = {
+	<f: FnDecl> => f.into(),
+	<s: StructDecl> => s.into(),
+};
+
+/// fn_decl -> "fn" ident "(" [arg_list]? ")" ["->" path]? block
+pub FnDecl: Function = {
+	"fn" <name: Ident> "(" <args: FnArgList?> ")" <return_type: ("->" Path)?> <b: Block> => {
+		Function {
+			name: name,
+			args: args,
+			return_type: return_type.map(|r| r.1),
+			body: AstNode::untyped(b),
+		}
+	}
+};
+
+/// arg_list -> arg ["," arg]*
+FnArgList: Vec<FnArg> = {
+	<first: FnArg> <tail: ("," <FnArg>)*> => {
+		let mut v = vec![first];
+		v.extend(tail);
+		v
+	}
+};
+
+/// arg -> path ident
+FnArg: FnArg = {
+	<arg_type: Path> <name: Ident> => {
+		FnArg {
+			name: name,
+			arg_type: arg_type,
+		}
+	}
+};
+
+/// struct_decl -> "struct" ident "{" struct_fields "}"
+pub StructDecl: Struct = {
+	"struct" <name: Ident> "{" <fields: StructFieldList?>"}" => {
+		Struct {
+			name: name,
+			body: StructBody(fields)
+		}
+	}
+};
+
+/// struct_fields -> struct_field  ["," struct_field]*
+StructFieldList: Vec<StructField> = {
+	<first: StructField> <tail: ("," <StructField>)*> => {
+		let mut v = vec![first];
+		v.extend(tail);
+		v
+	}
+};
+
+/// struct_field -> ident ":" path
+StructField: StructField = {
+	<name: Ident> ":" <field_type: Path> => {
+		StructField {
+			name: name,
+			field_type: field_type,
+		}
+	}
+};
+
+/// stmt -> expr ";" | expr_stmt
+pub Stmt: Stmt = {
+	<e: Expr> ";" => Stmt::Expr(e),
+	<e: ExprStmt> => Stmt::ExprStmt(e),
+};
+
+/// block -> "{" [stmt]*  "}"
+Block: Block = {
+	"{" <s: Stmt*> "}" => Block(s)
+};
+
+/// expr_stmt -> if_stmt | while_stmt | local_var_decl | assignment
+pub ExprStmt: ExprStmt = {
+	<if_stmt: IfStmt> => ExprStmt::If(if_stmt),
+	<while_stmt: WhileStmt> => ExprStmt::While(while_stmt),
+	<local_var_decl: LocalVarDecl> => ExprStmt::LocalVarDecl(local_var_decl),
+	<assignment: Assignment> => ExprStmt::Assignment(assignment),
+};
+
+/// local_var_decl -> path ident "=" expr ";"
+LocalVarDecl: LocalVarDecl = {
+	<var_type: Path> <name: Ident> "=" <e: Expr> ";" => {
+		LocalVarDecl {
+			var_type: var_type,
+			var_name: name,
+			var_init: AstNode::untyped(e)
+		}
+	},
+};
+
+/// assignment -> path "=" expr ";"
+Assignment: Assignment = {
+	<name: Path> "=" <e: Expr> ";" => {
+		Assignment {
+			name: AstNode::untyped(name),
+			value: AstNode::untyped(e),
+		}
+	}
+};
+
+/// if_stmt -> "if" expr block
+IfStmt: If = {
+	"if" <conditional: Expr> <block: Block> => {
+		If {
+			conditional: AstNode::untyped(conditional),
+			block: block
+		}
+	},
+};
+
+/// while_stmt -> "while" expr block
+WhileStmt: While = {
+	"while" <conditional: Expr> <block: Block> => {
+		While {
+			conditional: AstNode::untyped(conditional),
+			block: block
+		}
+	},
+};
+
+/// expr -> cmp_expr
+pub Expr: Expr = {	
+	<c: CmpExpr> => c,
+};
+
+/// cmp_expr -> cmp_expr ["&&" | "||"] relative_cmp | relative_cmp
+pub CmpExpr: Expr = {
+	<lhs: CmpExpr> <op: CmpOpLowestPrecedence> <rhs: RelativeCmpBranch> => {
+		Expr::Bin(AstNode::untyped(BinExpr {
+			op: op,
+			lhs: AstNode::untyped(Box::new(lhs)),
+			rhs: AstNode::untyped(Box::new(rhs)),
+		}))
+	},
+
+	RelativeCmpBranch,
+};
+
+/// relative_cmp -> relative_cmp [">" | ">=" | "<" | "<="] equality_cmp | equality_cmp
+RelativeCmpBranch: Expr = {
+	<lhs: RelativeCmpBranch> <op: CmpOpLowPrecedence> <rhs: EqualityCmpBranch> => {
+		Expr::Bin(AstNode::untyped(BinExpr {
+			op: op,
+			lhs: AstNode::untyped(Box::new(lhs)),
+			rhs: AstNode::untyped(Box::new(rhs)),
+		}))
+	},
+
+	EqualityCmpBranch,
+};
+
+/// equality_cmp -> equality_cmp ["==" | "!="] math_expr | math_expr
+EqualityCmpBranch: Expr = {
+	<lhs: EqualityCmpBranch> <op: CmpOpGreaterPrecedence> <rhs: MathExpr> => {
+		Expr::Bin(AstNode::untyped(BinExpr {
+			op: op,
+			lhs: AstNode::untyped(Box::new(lhs)),
+			rhs: AstNode::untyped(Box::new(rhs)),
+		}))
+	},
+
+	<MathExpr>,
+};
+
+CmpOpLowestPrecedence: BinOp = {
+	"&&" => BinOp::LogicalAnd,
+	"||" => BinOp::LogicalOr,
+};
+
+CmpOpGreaterPrecedence: BinOp = {
+	">" => BinOp::Greater,
+	"<" => BinOp::Lesser,
+	">=" => BinOp::GreaterEq,
+	"<=" => BinOp::LesserEq,
+};
+
+CmpOpLowPrecedence: BinOp = {
+	"==" => BinOp::Eq,
+	"!=" => BinOp::InEq,
+};
+
+/// math_expr -> math_expr ["+" | "-"] factor | factor
+pub MathExpr: Expr = {
+	<lhs: MathExpr> "+" <rhs: Factor> => {
+		Expr::Bin(AstNode::untyped(BinExpr {
+			op: BinOp::Add,
+			lhs: AstNode::untyped(Box::new(lhs.into())),
+			rhs: AstNode::untyped(Box::new(rhs.into())),
+		}))
+	},
+
+	<lhs: MathExpr> "-" <rhs: Factor> => {
+		Expr::Bin(AstNode::untyped(BinExpr {
+			op: BinOp::Sub,
+			lhs: AstNode::untyped(Box::new(lhs.into())),
+			rhs: AstNode::untyped(Box::new(rhs.into())),
+		}))
+	},
+
+	Factor,
+};
+
+/// factor -> factor ["*" | "/" | "%"] term | term
+Factor: Expr = {
+	<lhs: Factor> "*" <rhs: Term> => {
+		Expr::Bin(AstNode::untyped(BinExpr {
+			op: BinOp::Mul,
+			lhs: AstNode::untyped(Box::new(lhs.into())),
+			rhs: AstNode::untyped(Box::new(rhs)),
+		}))
+	},
+
+	<lhs: Factor> "/" <rhs: Term> => {
+		Expr::Bin(AstNode::untyped(BinExpr {
+			op: BinOp::Div,
+			lhs: AstNode::untyped(Box::new(lhs.into())),
+			rhs: AstNode::untyped(Box::new(rhs)),
+		}))
+	},
+
+	<lhs: Factor> "%" <rhs: Term> => {
+		Expr::Bin(AstNode::untyped(BinExpr {
+			op: BinOp::Mod,
+			lhs: AstNode::untyped(Box::new(lhs.into())),
+			rhs: AstNode::untyped(Box::new(rhs)),
+		}))
+	},
+	<Term>
+};
+
+/// term -> "(" expr ")" | expr_leaf
+Term: Expr = {
+	"(" <e: Expr> ")" => e.into(),
+	<e: ExprLeaf> => e,
+};
+
+/// expr_leaf -> "(" uni_expr ")" | literal | fn_call
+ExprLeaf: Expr = {
+	"(" <u: UniExpr> ")" => Expr::Uni(AstNode::untyped(u)),
+	<i: Ident> => Expr::Ident(AstNode::untyped(i)),
+	<l: Literal> => Expr::Literal(l),
+	<f: FnCall> => Expr::FnCall(AstNode::untyped(f)),
+};
+
+/// fn_call -> ident "(" fn_call_args ")"
+FnCall: FnCall = {
+	<name: Ident> "(" <args: FnCallArgs?> ")" => {
+		FnCall {
+			name: name,
+			args: args,
+		}
+	}
+};
+
+/// fn_call_args -> expr ["," expr]*
+FnCallArgs: Vec<Expr> = {
+	<first: Expr> <tail: ("," <Expr>)*> => {
+		let mut v = vec![first];
+		v.extend(tail);
+		v
+	}
+};
+
+/// uni_expr -> ["-" | "!" | "&" | "*"] expr
+UniExpr: UniExpr = {
+	<op: UniOp> <e: Expr> => UniExpr { op: op, expr: AstNode::untyped(Box::new(e)) },
+};
+
+UniOp: UniOp = {
+	"-" => UniOp::Negate,
+	"!" => UniOp::LogicalInvert,
+	"&" => UniOp::Ref,
+	"*" => UniOp::Deref,
+};
+
+/// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "\"" [.] "\""
+Literal: AstNode<Literal> = {
+	<number: r"[0-9]+[.[0-9]+]?"> => AstNode::untyped(Literal::Number(number.to_string())),
+	"\"" <string: "r[.]*"> "\"" => AstNode::typed(Literal::String(string.to_string()), 
+					SmplType::String),
+	"true" => AstNode::typed(Literal::Bool(true), SmplType::Bool),
+	"false" => AstNode::typed(Literal::Bool(false), SmplType::Bool),
+
+};
+
+/// ident -> [a-zA-Z_] [a-zA-Z0-9_]*
+Ident: Ident = {
+	<ident: r"[A-Za-z_][_A-Za-z0-9]*"> => { Ident(AsciiString::from_str(ident).unwrap()) }
+};
+
+/// path -> ident ["." ident]*
+Path: Path = {
+	<first: Ident> <v:("." <Ident>)*> => {
+		let mut p = Vec::new();
+		p.push(first);
+		p.extend_from_slice(&v);
+		Path(p)
+	}
+};

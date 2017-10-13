@@ -3,6 +3,11 @@ name = "smpl"
 version = "0.1.0"
 authors = ["Random_Civvy <vomalexander@gmail.com>"]
 
+[build-dependencies]
+lalrpop = "0.13.1"
+
 [dependencies]
 itertools = "0.6.3"
 ascii = "0.8.6"
+lalrpop-util = "0.13.1"
+regex = "0.2.1"
