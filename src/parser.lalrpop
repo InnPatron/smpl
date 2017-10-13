@@ -1,35 +1,57 @@
-// program -> decl_stmt
-// decl_stmt -> fn_decl | struct_decl
-// fn_decl -> "fn" ident (arg_list) { stmt_seq }
-// struct_decl -> "struct" ident { field_list }
-// stmt_seq -> stmt+
-// stmt -> expr ";" | expr_stmt
-// expr -> bin_expr | uni_expr | return | break | continue | literal | ident
-// | "(" expr ")"
-// expr_stmt -> if_expr | while_expr | local_var_decl | assignment
-//
-// local_var_decl -> path assignment
-//
-// assignment -> ident "=" expr ";"
-//
-// bin_expr -> expr bin_op expr
-// bin_op -> "+" | "-" | "*" | "/" | "%"
-//
-// uni_expr -> uni_op expr
-// uni_op -> "-" | "*" | "&" | "!"
-//
-// if_expr -> if expr { stmt_seq }
-// while_expr while expr { stmt_seq }
-//
-// literal -> bool | number | string
-// bool -> "true | "false"
-//
-// return -> "return" expr
-// break -> "break" expr
-// continue -> "continue"
-// 
-// path -> ident path_tail
-// path_tail -> "." ident | path_tail | E
+/// --------------SMPL Grammar----------------
+///
+///
+/// program -> decl_stmt+
+/// decl_stmt -> fn_decl | struct_decl
+///
+///
+/// fn_decl -> "fn" ident "(" [arg_list]? ")" ["->" path]? block
+/// arg_list -> arg ["," arg]*
+/// arg -> path ident
+///
+///
+/// struct_decl -> "struct" ident "{" struct_fields "}"
+/// struct_fields -> struct_field  ["," struct_field]*
+/// struct_field -> ident ":" path
+///
+///
+/// block -> "{" [stmt]*  "}"
+/// stmt -> expr ";" | expr_stmt
+///
+///
+/// expr_stmt -> if_stmt | while_stmt | local_var_decl | assignment
+/// if_stmt -> "if" expr block
+/// while_stmt -> "while" expr block
+/// local_var_decl -> path ident "=" expr ";"
+/// assignment -> path "=" expr ";"
+///
+///
+/// expr -> cmp_expr
+///
+///
+/// cmp_expr -> cmp_expr ["&&" | "||"] relative_cmp | relative_cmp
+/// relative_cmp -> relative_cmp [">" | ">=" | "<" | "<="] equality_cmp | equality_cmp
+/// equality_cmp -> equality_cmp ["==" | "!="] math_expr | math_expr
+///
+///
+/// math_expr -> math_expr ["+" | "-"] factor | factor
+/// factor -> factor ["*" | "/" | "%"] term | term
+/// term -> "(" expr ")" | expr_leaf
+/// expr_leaf -> "(" uni_expr ")" | literal | fn_call | ident
+///
+/// 
+/// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "\"" [.] "\""
+///
+///
+/// fn_call -> ident "(" fn_call_args ")"
+/// fn_call_args -> expr ["," expr]*
+///
+///
+/// uni_expr -> ["-" | "!" | "&" | "*"] expr
+///
+///
+/// ident -> [a-zA-Z_] [a-zA-Z0-9_]*
+/// path -> ident ["." ident]*
 
 use std::str::FromStr;
 use smpl_type::SmplType;
