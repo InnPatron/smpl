@@ -4,6 +4,7 @@ extern crate ascii;
 mod parser;
 mod ast;
 mod smpl_type;
+mod type_ck;
 #[cfg(test)]
 mod parser_tests;
 
