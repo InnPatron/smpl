@@ -186,7 +186,7 @@ pub enum Literal {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Block(pub Vec<Stmt>);
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Ident(pub AsciiString);
 
 impl Ident {
