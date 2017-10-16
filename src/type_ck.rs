@@ -30,20 +30,15 @@ impl TypeMap {
 
 pub fn type_check(program: &mut Program) -> Result {
     let mut type_map = TypeMap::std();
-    let mut queue = Vec::new();
 
     // Walk the tree and assign types
     for (index, decl_stmt) in program.0.iter_mut().enumerate() {
         match *decl_stmt {
             DeclStmt::Struct(ref struct_def) => {
-                match gen_struct_type(struct_def, &type_map) {
-                    Ok(t) => {
-                        let previous = type_map.map.insert(t.name.clone(), SmplType::Struct(t));
-                        //TODO: how to handle type definition overrides?
-                    }
-                    Err(_) => queue.push(index),
-                }
-            }
+                let def = gen_struct_type(struct_def, &type_map)?;
+                let previous = type_map.map.insert(def.name.clone(), SmplType::Struct(def));
+                //TODO: how to handle type definition overrides?      
+            },
 
             _ => unimplemented!(),
         }
@@ -51,12 +46,11 @@ pub fn type_check(program: &mut Program) -> Result {
     unimplemented!();
 }
 
-fn gen_struct_type(struct_def: &Struct, type_map: &TypeMap) -> ::std::result::Result<StructType, Vec<MissingType>> {
+fn gen_struct_type(struct_def: &Struct, type_map: &TypeMap) -> ::std::result::Result<StructType, Err> {
     let name = struct_def.name.clone();
     let body = &struct_def.body;
 
     let mut struct_fields = HashMap::new();
-    let mut missing_types = Vec::new();
 
     let body = match body.0 {
         Some(ref b) => b,
@@ -80,16 +74,13 @@ fn gen_struct_type(struct_def: &Struct, type_map: &TypeMap) -> ::std::result::Re
                     unimplemented!("Found field with duplicate names");
                 }
             },
-            None => missing_types.push(MissingType(field.field_type.clone())),
+            None => unimplemented!("Could not find field type for {}.{}", type_name, field_name),
         }
     }
 
-    if missing_types.len() > 0 {
-        Err(missing_types)
-    } else {
-        Ok(StructType {
-            name: name,
-            fields: struct_fields,
-        })
-    }
+    Ok(StructType {
+        name: name,
+        fields: struct_fields,
+    })
+    
 }
