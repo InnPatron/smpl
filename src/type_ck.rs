@@ -41,11 +41,55 @@ pub fn type_check(program: &mut Program) -> Result {
                     None => (),
                 }
             },
-
-            _ => unimplemented!(),
+            
+            DeclStmt::Function(ref fn_def) => {
+                let fn_type = gen_fn_type(fn_def, &type_map)?;
+            }
         }
     }
     unimplemented!();
+}
+
+fn gen_fn_type(fn_def: &Function, type_map: &TypeMap) -> ::std::result::Result<FunctionType, Err> {
+
+    let return_type = {
+        match fn_def.return_type {
+            Some(ref path) => {
+                // TODO: ignore full paths until modules are maybe added
+                let type_name = path.0.last().unwrap();
+                match type_map.map.get(type_name) {
+                    Some(t) => t.clone(),
+                    None => unimplemented!("could not find field type for {}.{}", type_name, fn_def.name),
+                }
+            }
+
+            None => SmplType::Unit,
+        }
+    };
+
+    let arg_types = {
+        match fn_def.args {
+            Some(ref arg_list) => {
+                let mut arg_types = Vec::new();
+                for arg in arg_list.iter() {
+                    let type_name = arg.arg_type.0.last().unwrap();
+                    match type_map.map.get(type_name) {
+                        Some(t) => arg_types.push(t.clone()),
+                        None => unimplemented!("could not find field type for {}.{}", type_name, fn_def.name),
+                    }
+                }
+
+                arg_types
+            },
+
+            None => Vec::new(),
+        }
+    };
+
+    Ok(FunctionType {
+        args: arg_types,
+        return_type: Box::new(return_type),
+    })
 }
 
 fn gen_struct_type(struct_def: &Struct, type_map: &TypeMap) -> ::std::result::Result<StructType, Err> {
