@@ -36,8 +36,10 @@ pub fn type_check(program: &mut Program) -> Result {
         match *decl_stmt {
             DeclStmt::Struct(ref struct_def) => {
                 let def = gen_struct_type(struct_def, &type_map)?;
-                let previous = type_map.map.insert(def.name.clone(), SmplType::Struct(def));
-                //TODO: how to handle type definition overrides?      
+                match type_map.map.insert(def.name.clone(), SmplType::Struct(def)) {
+                    Some(_) => unimplemented!("How to handle type definiion overrides?"),
+                    None => (),
+                }
             },
 
             _ => unimplemented!(),
