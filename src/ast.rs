@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::fmt;
 use super::Span;
 use smpl_type::SmplType;
 use ascii::AsciiString;
@@ -192,6 +193,12 @@ pub struct Ident(pub AsciiString);
 impl Ident {
     pub fn new(str: &str) -> Ident {
         Ident(AsciiString::from_str(str).unwrap())
+    }
+}
+
+impl fmt::Display for Ident {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
