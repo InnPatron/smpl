@@ -72,6 +72,7 @@ macro_rules! bin_expr {
 mod parser;
 mod ast;
 mod smpl_type;
+mod semantic_ck;
 mod type_ck;
 #[cfg(test)]
 mod parser_tests;
