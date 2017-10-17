@@ -79,7 +79,7 @@ impl SemanticChecker {
                          SmplType::Struct(struct_type))
     }
 
-    fn gen_fn_type(&mut self, fn_def: &Function) -> ::std::result::Result<(), Err> {
+    pub fn gen_fn_type(&mut self, fn_def: &Function) -> ::std::result::Result<(), Err> {
 
         let return_type = {
             match fn_def.return_type {
