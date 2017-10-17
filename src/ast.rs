@@ -202,8 +202,25 @@ impl fmt::Display for Ident {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Path(pub Vec<Ident>);
+
+impl From<Ident> for Path {
+    fn from(ident: Ident) -> Path {
+        Path(vec![ident])
+    }
+}
+
+impl fmt::Display for Path {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let buffer = self.0.iter().fold(AsciiString::new(), 
+                                        |mut buffer, ref item| {
+                                            buffer.push_str(&item.0); 
+                                            buffer
+                                        });
+        write!(f, "{}", buffer)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Keyword {
