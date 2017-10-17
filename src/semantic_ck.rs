@@ -120,7 +120,10 @@ impl SemanticChecker {
             return_type: Box::new(return_type),
         };
  
-        unimplemented!("Insert fn type into bindings or type map?");
+        match self.binding_.insert(fn_def.name.clone(), fn_type) {
+            Some(_) => unimplemented!("TODO: Handle binding overrides"),
+            None => Ok(()),
+        }
     }
 
     fn insert_type<T: Into<Path>>(&mut self, name: T, smpl_type: SmplType) -> Result<(), Err> {
