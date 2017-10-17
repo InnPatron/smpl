@@ -120,7 +120,7 @@ impl SemanticChecker {
             return_type: Box::new(return_type),
         };
  
-        match self.binding_.insert(fn_def.name.clone(), fn_type) {
+        match self.binding_map.insert(fn_def.name.clone(), SmplType::Function(fn_type)) {
             Some(_) => unimplemented!("TODO: Handle binding overrides"),
             None => Ok(()),
         }
