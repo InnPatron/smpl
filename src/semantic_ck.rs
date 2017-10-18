@@ -33,9 +33,16 @@ impl SemanticChecker {
         }
     }
 
+    fn map_type<T: Into<Path>>(&mut self, name: T, def: SmplType) -> Option<SmplType> {
+        self.type_map.insert(name.into(), def)
+    }
+
     pub fn accept_struct_def(&mut self, struct_def: &Struct) -> Result<(), Err> {
         let def = self.gen_struct_type(struct_def)?;
-        unimplemented!();
+        match self.map_type(struct_def.name.clone(), SmplType::Struct(def)) {
+            Some(_) => unimplemented!("TODO: Handle type override"),
+            None => Ok(())
+        }
     }
 
     fn gen_struct_type(&self, struct_def: &Struct) -> ::std::result::Result<StructType, Err> {
