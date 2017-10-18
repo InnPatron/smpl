@@ -37,6 +37,10 @@ impl SemanticChecker {
         self.type_map.insert(name.into(), def)
     }
 
+    fn bind(&mut self, name: Ident, binding_type: SmplType) -> Option<SmplType> {
+        self.binding_map.insert(name, binding_type)
+    }
+
     pub fn accept_struct_def(&mut self, struct_def: &Struct) -> Result<(), Err> {
         let def = self.gen_struct_type(struct_def)?;
         match self.map_type(struct_def.name.clone(), SmplType::Struct(def)) {
@@ -85,7 +89,10 @@ impl SemanticChecker {
 
     pub fn accept_fn_def(&mut self, fn_def: &Function) -> Result<(), Err> {
         let fn_type = self.gen_fn_type(fn_def)?;
-        unimplemented!();
+        match self.bind(fn_def.name.clone(), SmplType::Function(fn_type)) {
+            Some(_) => unimplemented!("TODO: Handle binding override"),
+            None => Ok(())
+        }
     }
 
     fn gen_fn_type(&self, fn_def: &Function) -> Result<FunctionType, Err> {
