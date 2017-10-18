@@ -136,11 +136,4 @@ impl SemanticChecker {
             return_type: Box::new(return_type),
         })      
     }
-
-    fn insert_type<T: Into<Path>>(&mut self, name: T, smpl_type: SmplType) -> Result<(), Err> {
-        match self.type_map.insert(name.into(), smpl_type) {
-            Some(_) => unimplemented!("TODO: Handle type overrides"),
-            None => Ok(())
-        }
-    }
 }
