@@ -33,7 +33,12 @@ impl SemanticChecker {
         }
     }
 
-    pub fn gen_struct_type(&mut self, struct_def: &Struct) -> ::std::result::Result<(), Err> {
+    pub fn accept_struct_def(&mut self, struct_def: &Struct) -> Result<(), Err> {
+        let def = self.gen_struct_type(struct_def)?;
+        unimplemented!();
+    }
+
+    fn gen_struct_type(&self, struct_def: &Struct) -> ::std::result::Result<StructType, Err> {
         let name = struct_def.name.clone();
         let body = &struct_def.body;
 
@@ -42,14 +47,10 @@ impl SemanticChecker {
         let body = match body.0 {
             Some(ref b) => b,
             None => {
-                // insert struct type into type map
-                let struct_type = StructType {
+                return Ok(StructType {
                     name: name,
                     fields: struct_fields,
-                };
-
-                return self.insert_type(struct_type.name.clone(),
-                                        SmplType::Struct(struct_type));
+                });
             }
         };
 
@@ -69,17 +70,18 @@ impl SemanticChecker {
             }
         }
 
-        // insert struct type into type map
-        let struct_type = StructType {
-            name: name,
-            fields: struct_fields,
-        };
-
-        self.insert_type(struct_type.name.clone(), 
-                         SmplType::Struct(struct_type))
+        Ok(StructType {
+                    name: name,
+                    fields: struct_fields,
+        })
     }
 
-    pub fn gen_fn_type(&mut self, fn_def: &Function) -> ::std::result::Result<(), Err> {
+    pub fn accept_fn_def(&mut self, fn_def: &Function) -> Result<(), Err> {
+        let fn_type = self.gen_fn_type(fn_def)?;
+        unimplemented!();
+    }
+
+    fn gen_fn_type(&self, fn_def: &Function) -> Result<FunctionType, Err> {
 
         let return_type = {
             match fn_def.return_type {
@@ -115,15 +117,10 @@ impl SemanticChecker {
             }
         };
 
-        let fn_type = FunctionType {
+        Ok(FunctionType {
             args: arg_types,
             return_type: Box::new(return_type),
-        };
- 
-        match self.binding_map.insert(fn_def.name.clone(), SmplType::Function(fn_type)) {
-            Some(_) => unimplemented!("TODO: Handle binding overrides"),
-            None => Ok(()),
-        }
+        })      
     }
 
     fn insert_type<T: Into<Path>>(&mut self, name: T, smpl_type: SmplType) -> Result<(), Err> {
