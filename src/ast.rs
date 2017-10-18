@@ -129,7 +129,6 @@ pub enum Expr {
     Literal(AstNode<Literal>),
     Ident(AstNode<Ident>),
     FnCall(AstNode<FnCall>),
-    Block,
 }
 
 #[derive(Clone, Debug, PartialEq)]
