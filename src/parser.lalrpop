@@ -349,10 +349,10 @@ FnCall: FnCall = {
 };
 
 /// fn_call_args -> expr ["," expr]*
-FnCallArgs: Vec<Expr> = {
+FnCallArgs: Vec<AstNode<Expr>> = {
 	<first: Expr> <tail: ("," <Expr>)*> => {
-		let mut v = vec![first];
-		v.extend(tail);
+		let mut v = vec![AstNode::untyped(first)];
+		v.extend(tail.into_iter().map(|e| AstNode::untyped(e)).collect::<Vec<_>>());
 		v
 	}
 };

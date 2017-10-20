@@ -134,7 +134,7 @@ pub enum Expr {
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
     pub name: Ident,
-    pub args: Option<Vec<Expr>>
+    pub args: Option<Vec<AstNode<Expr>>>
 }
 
 #[derive(Clone, Debug, PartialEq)]
