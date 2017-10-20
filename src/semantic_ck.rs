@@ -1,6 +1,8 @@
 #[macro_use]
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::borrow::BorrowMut;
+use std::fmt::Debug;
 
 use ascii::*;
 
@@ -135,5 +137,95 @@ impl SemanticChecker {
             args: arg_types,
             return_type: Box::new(return_type),
         })      
+    }
+
+    fn typify_expr<T: BorrowMut<Expr> + PartialEq + Clone + Debug>(&self, expr: &mut AstNode<T>) -> Result<(), Err> {
+        use ast::Expr::*;
+        match *expr.data.borrow_mut() {
+            Literal(ref mut node_l) => self.typify_literal(node_l)?,
+
+            Ident(ref mut node_id) => {
+                match self.binding_map.get(&node_id.data) {
+                    Some(smpl_type) => node_id.d_type = Some(smpl_type.clone()),
+                    None => unimplemented!("Binding does not exist"),
+                }
+            },
+
+            Bin(ref mut node_bin) => {
+                self.typify_expr(&mut node_bin.data.lhs)?;
+                self.typify_expr(&mut node_bin.data.rhs)?;
+                if node_bin.data.lhs.d_type == node_bin.data.rhs.d_type {
+                    node_bin.d_type = node_bin.data.lhs.d_type.clone();
+                } else {
+                    unimplemented!("lhs and rhs must be the same type");
+                }
+            },
+
+            FnCall(ref mut fn_call) => {
+                let smpl_type = self.binding_map.get(&fn_call.data.name)
+                                                .ok_or(unimplemented!("Did not find fn in binding map"))?;
+                if let &SmplType::Function(ref fn_type) = smpl_type {
+
+                    // Verify arg types matches types in fn call
+                    match fn_call.data.args {
+                        Some(ref mut call_args) => {
+                            if call_args.len() != fn_type.args.len() {
+                                unimplemented!("Arg lengths do not match.");
+                            }
+
+                            for (ref mut call_arg, fn_type_arg) in call_args.iter_mut()
+                                                                            .zip(fn_type.args.iter()) {
+                                self.typify_expr(call_arg)?;
+                                if call_arg.d_type.as_ref() != Some(fn_type_arg) {
+                                    unimplemented!("Arg types do not match");
+                                }
+                            }
+                        },
+
+                        None => {
+                            if fn_type.args.len() != 0 {
+                                unimplemented!("Arg lengths do not match.");
+                            }
+                        }
+                    }
+
+                    fn_call.d_type = Some(*fn_type.return_type.clone());
+                } else {
+                    unimplemented!("Binding does not map to a function type");
+                }
+            },
+
+            Uni(ref mut uni_expr) => {
+                self.typify_expr(&mut uni_expr.data.expr)?;
+                unimplemented!("Handle uni op potential type transformation");
+            },
+        }
+
+        Ok(())
+    }
+
+    fn typify_literal(&self, literal: &mut AstNode<Literal>) -> Result<(), Err> {
+        use ast::Literal::*;
+        if literal.d_type.is_some() {
+            return Ok(());
+        }
+
+        match literal.data {
+            String(_) => literal.d_type = Some(SmplType::String),
+            Bool(_) => literal.d_type = Some(SmplType::Bool),
+            Number(ref num) => {
+                let int_result = num.parse::<i64>();
+                let float_result = num.parse::<f64>();
+
+                match (int_result.is_ok(), float_result.is_ok()) {
+                    (true, true) => literal.d_type = Some(SmplType::Int),
+                    (true, false) => literal.d_type = Some(SmplType::Int),
+                    (false, true) => literal.d_type = Some(SmplType::Float),
+                    (false, false) => unimplemented!("Should not have parsed"),
+                }
+            },
+        }
+
+        Ok(())
     }
 }
