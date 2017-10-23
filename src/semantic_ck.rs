@@ -13,10 +13,13 @@ pub enum Err {
 
 }
 
-pub trait SemanticData {
+/// Generic data useful for semantic checking
+pub trait SemanticData: Debug {
+    /// Could return Option<LoopId> if such references are needed...
     fn is_loop(&self) -> bool;
     fn semantic_ck(&self) -> &SemanticChecker;
     fn semantic_ck_mut(&mut self) -> &mut SemanticChecker;
+    /// NOTE: None is NOT semantically equivalent to SmplType::Unit
     fn return_type(&self) -> Option<&SmplType>;
 }
 
@@ -262,12 +265,12 @@ impl SemanticChecker {
 }
 
 #[derive(Debug)]
-pub struct TypeExpector<'a, 'b> {
+pub struct FunctionChecker<'a, 'b> {
     pub semantic_ck: &'a mut SemanticChecker,
     expect: &'b SmplType,
 }
 
-impl<'a, 'b> SemanticData for TypeExpector<'a, 'b> {
+impl<'a, 'b> SemanticData for FunctionChecker<'a, 'b> {
     fn is_loop(&self) -> bool {
         false
     }
@@ -285,15 +288,52 @@ impl<'a, 'b> SemanticData for TypeExpector<'a, 'b> {
     }
 }
 
-impl<'a, 'b> TypeExpector<'a, 'b> {
-    fn new(ck: &'a mut SemanticChecker, return_type: &'b SmplType) -> TypeExpector<'a, 'b> {
-        TypeExpector {
+impl<'a, 'b> FunctionChecker<'a, 'b> {
+    fn new(ck: &'a mut SemanticChecker, return_type: &'b SmplType) -> FunctionChecker<'a, 'b> {
+        FunctionChecker {
             semantic_ck: ck,
             expect: return_type,
         }
     }
+}
 
-    pub fn accept_expr_stmt(&mut self, expr_stmt: &mut ExprStmt) -> Result<(), Err> {
+impl<'a, 'b> StmtCk for FunctionChecker<'a, 'b> {}
+
+#[derive(Debug)]
+pub struct LoopChecker<'a> {
+    pub stmt_checker: &'a mut (SemanticData + 'a),
+}
+
+impl<'a> LoopChecker<'a> {
+    fn new(stmt_checker: &'a mut SemanticData) -> LoopChecker<'a> {
+        LoopChecker {
+            stmt_checker: stmt_checker
+        }
+    }
+}
+
+impl<'a> SemanticData for LoopChecker<'a> {
+    fn is_loop(&self) -> bool {
+        true 
+    }
+
+    fn semantic_ck(&self) -> &SemanticChecker {
+        self.stmt_checker.semantic_ck()
+    }
+
+    fn semantic_ck_mut(&mut self) -> &mut SemanticChecker {
+        self.stmt_checker.semantic_ck_mut()
+    }
+
+    fn return_type(&self) -> Option<&SmplType> {
+        self.stmt_checker.return_type()
+    }
+}
+
+impl<'a> StmtCk for LoopChecker<'a> {}
+
+pub trait StmtCk: SemanticData + Debug {
+    fn accept_expr_stmt(&mut self, expr_stmt: &mut ExprStmt) -> Result<(), Err> {
         match *expr_stmt {
             ExprStmt::LocalVarDecl(ref mut decl) => {
                 /*
@@ -302,15 +342,15 @@ impl<'a, 'b> TypeExpector<'a, 'b> {
                  * 3) Check if init expr type == variable type
                  * 4) Insert binding
                  */
-                let v_type = self.semantic_ck.type_map.get(&decl.var_type)
+                let v_type = self.semantic_ck().type_map.get(&decl.var_type)
                                  .ok_or(unimplemented!("Could not find variable type"))?;
-                self.semantic_ck.typify_expr(&mut decl.var_init)?;
+                self.semantic_ck().typify_expr(&mut decl.var_init)?;
                 if decl.var_init.d_type.as_ref() != Some(v_type) {
                    unimplemented!("LHS and RHS types do not match"); 
                 }
 
                 // Ignore any name overrides (ALLOW shadowing).
-                self.semantic_ck.bind(decl.var_name.clone(), v_type.clone());
+                self.semantic_ck_mut().bind(decl.var_name.clone(), v_type.clone());
             },
 
             ExprStmt::Assignment(ref mut asgmnt) => {
@@ -323,7 +363,7 @@ impl<'a, 'b> TypeExpector<'a, 'b> {
                     unimplemented!("Walk path; going from binding through struct defs");
                 };
 
-                self.semantic_ck.typify_expr(&mut asgmnt.value)?;
+                self.semantic_ck().typify_expr(&mut asgmnt.value)?;
                 if Some(destination_type) != asgmnt.value.d_type.as_ref() {
                     unimplemented!("LHS and RHS types do not match");
                 }
@@ -335,13 +375,13 @@ impl<'a, 'b> TypeExpector<'a, 'b> {
                  * 2) Generate new scope & typify block
                  */
 
-                self.semantic_ck.typify_expr(&mut if_stmt.conditional)?;
+                self.semantic_ck().typify_expr(&mut if_stmt.conditional)?;
                 if if_stmt.conditional.d_type != Some(SmplType::Bool) {
                     unimplemented!("Condition must evaluate to a boolean.");
                 }
 
-                let mut scoped_semantic_ck = self.semantic_ck.clone();
-                let mut scoped_expector = TypeExpector::new(&mut scoped_semantic_ck, self.expect);
+                let mut scoped_semantic_ck = self.semantic_ck().clone();
+                let mut scoped_expector = LoopChecker::new(&mut scoped_semantic_ck);
                 for stmt in if_stmt.block.0.iter_mut() {
                     stmt.visit(&mut scoped_expector)?;
                 }
@@ -353,13 +393,13 @@ impl<'a, 'b> TypeExpector<'a, 'b> {
                  * 2) Generate new scope & typify block
                  */
 
-                self.semantic_ck.typify_expr(&mut while_stmt.conditional)?;
+                self.semantic_ck().typify_expr(&mut while_stmt.conditional)?;
                 if while_stmt.conditional.d_type != Some(SmplType::Bool) {
                     unimplemented!("Condition must evaluate to a boolean.");
                 }
 
-                let mut scoped_semantic_ck = self.semantic_ck.clone();
-                let mut scoped_expector = TypeExpector::new(&mut scoped_semantic_ck, self.expect);
+                let mut scoped_semantic_ck = self.semantic_ck().clone();
+                let mut scoped_expector = LoopChecker::new(&mut scoped_semantic_ck);
                 for stmt in while_stmt.block.0.iter_mut() {
                     stmt.visit(&mut scoped_expector)?;
                 }

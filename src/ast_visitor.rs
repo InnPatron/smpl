@@ -27,7 +27,7 @@ impl DeclStmt {
 
 impl Stmt {
     pub fn visit(&mut self, 
-                 expector: &mut semantic_ck::TypeExpector) -> Result<(), semantic_ck::Err> {
+                 expector: &mut semantic_ck::StmtCk) -> Result<(), semantic_ck::Err> {
         match *self {
             Stmt::ExprStmt(ref mut expr_stmt) => { expector.accept_expr_stmt(expr_stmt)?; },
             Stmt::Expr(ref expr) => unimplemented!(),
