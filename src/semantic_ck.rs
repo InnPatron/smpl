@@ -13,10 +13,35 @@ pub enum Err {
 
 }
 
+pub trait SemanticData {
+    fn is_loop(&self) -> bool;
+    fn semantic_ck(&self) -> &SemanticChecker;
+    fn semantic_ck_mut(&mut self) -> &mut SemanticChecker;
+    fn return_type(&self) -> Option<&SmplType>;
+}
+
 #[derive(Clone, Debug)]
 pub struct SemanticChecker {
     pub type_map: HashMap<Path, SmplType>,
     pub binding_map: HashMap<Ident, SmplType>,
+}
+
+impl SemanticData for SemanticChecker {
+    fn is_loop(&self) -> bool {
+        false
+    }
+
+    fn semantic_ck(&self) -> &SemanticChecker {
+        self
+    }
+
+    fn semantic_ck_mut(&mut self) -> &mut SemanticChecker {
+        self
+    }
+
+    fn return_type(&self) -> Option<&SmplType> {
+        None
+    }
 }
 
 impl SemanticChecker {
@@ -240,6 +265,24 @@ impl SemanticChecker {
 pub struct TypeExpector<'a, 'b> {
     pub semantic_ck: &'a mut SemanticChecker,
     expect: &'b SmplType,
+}
+
+impl<'a, 'b> SemanticData for TypeExpector<'a, 'b> {
+    fn is_loop(&self) -> bool {
+        false
+    }
+
+    fn semantic_ck(&self) -> &SemanticChecker {
+        &self.semantic_ck
+    }
+
+    fn semantic_ck_mut(&mut self) -> &mut SemanticChecker {
+        &mut self.semantic_ck
+    }
+
+    fn return_type(&self) -> Option<&SmplType> {
+        Some(self.expect)
+    }
 }
 
 impl<'a, 'b> TypeExpector<'a, 'b> {
