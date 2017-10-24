@@ -405,8 +405,17 @@ pub trait StmtCk: SemanticData + Debug {
                 }
             },
 
-            ExprStmt::Continue => unimplemented!(),
-            ExprStmt::Break => unimplemented!(),
+            ExprStmt::Continue => {
+                if self.is_loop() == false {
+                    unimplemented!("Continue should only appear in loop");
+                }
+            },
+
+            ExprStmt::Break => {
+                if self.is_loop() == false {
+                    unimplemented!("Break should only appear in loop");
+                }
+            },
         }
 
         Ok(())
