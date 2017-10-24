@@ -416,6 +416,13 @@ pub trait StmtCk: SemanticData + Debug {
                     unimplemented!("Break should only appear in loop");
                 }
             },
+
+            ExprStmt::Return(ref mut expr) => {
+                self.semantic_ck().typify_expr(expr)?;
+                if expr.d_type.as_ref() != self.semantic_ck().return_type() {
+                    unimplemented!("Return type does not match funciton type");
+                }
+            },
         }
 
         Ok(())
