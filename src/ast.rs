@@ -85,6 +85,7 @@ pub enum ExprStmt {
     While(While),
     LocalVarDecl(LocalVarDecl),
     Assignment(Assignment),
+    Return(AstNode<Expr>),
     Break,
     Continue,
 }
