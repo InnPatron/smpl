@@ -9,6 +9,7 @@ use ascii::*;
 use smpl_type::*;
 use ast::*;
 
+#[derive(Debug, Clone)]
 pub enum Err {
 
 }
