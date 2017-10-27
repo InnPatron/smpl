@@ -446,3 +446,20 @@ pub trait StmtCk: SemanticData + Debug {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod semantic_tests {
+    use super::*;
+    use parser::*;
+
+    #[test]
+    fn test_typify_expr() {
+        {
+            let input = "123 - 532 / 2";
+            let mut expr = AstNode::untyped(parse_Expr(input).unwrap());
+            let sck = SemanticChecker::new();
+            sck.typify_expr(&mut expr).unwrap();
+            assert_eq!(expr.d_type, Some(SmplType::Int));
+        }
+    }
+}
