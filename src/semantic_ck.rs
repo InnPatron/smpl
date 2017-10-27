@@ -180,13 +180,17 @@ impl SemanticChecker {
     fn typify_expr<T: BorrowMut<Expr> + PartialEq + Clone + Debug>(&self, expr: &mut AstNode<T>) -> Result<(), Err> {
         use ast::Expr::*;
         match *expr.data.borrow_mut() {
-            Literal(ref mut node_l) => self.typify_literal(node_l)?,
+            Literal(ref mut node_l) => {
+                self.typify_literal(node_l)?;
+                expr.d_type = node_l.d_type.clone();
+            }
 
             Ident(ref mut node_id) => {
                 match self.binding_map.get(&node_id.data) {
                     Some(smpl_type) => node_id.d_type = Some(smpl_type.clone()),
                     None => unimplemented!("Binding does not exist"),
                 }
+                expr.d_type = node_id.d_type.clone();
             },
 
             Bin(ref mut node_bin) => {
@@ -197,6 +201,7 @@ impl SemanticChecker {
                 } else {
                     unimplemented!("lhs and rhs must be the same type");
                 }
+                expr.d_type = node_bin.d_type.clone()
             },
 
             FnCall(ref mut fn_call) => {
@@ -228,6 +233,7 @@ impl SemanticChecker {
                     }
 
                     fn_call.d_type = Some(*fn_type.return_type.clone());
+                    expr.d_type = fn_call.d_type.clone();
                 } else {
                     unimplemented!("Binding does not map to a function type");
                 }
