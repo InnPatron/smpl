@@ -118,16 +118,20 @@ impl SemanticChecker {
         })
     }
 
-    pub fn accept_fn_def(&mut self, fn_def: &Function) -> Result<(), Err> {
+    pub fn accept_fn_def(&mut self, fn_def: &mut Function) -> Result<(), Err> {
         let fn_type = self.gen_fn_type(fn_def)?;
+        let return_type = fn_type.return_type.clone();
         match self.bind(fn_def.name.clone(), SmplType::Function(fn_type)) {
             Some(_) => unimplemented!("TODO: Handle binding override"),
             None => (), 
         }
         
-        // typify and check fn body
-        
+        let mut fn_checker = FunctionChecker::new(self, &*return_type);
 
+        for stmt in fn_def.body.data.0.iter_mut() {
+            fn_checker.accept_stmt(stmt)?;
+        }
+        
         Ok(())
     }
 
@@ -333,6 +337,14 @@ impl<'a> SemanticData for LoopChecker<'a> {
 impl<'a> StmtCk for LoopChecker<'a> {}
 
 pub trait StmtCk: SemanticData + Debug {
+
+    fn accept_stmt(&mut self, stmt: &mut Stmt) -> Result<(), Err> {
+        match *stmt {
+            Stmt::ExprStmt(ref mut expr_stmt) => self.accept_expr_stmt(expr_stmt),
+            Stmt::Expr(ref mut expr) => self.semantic_ck().typify_expr(expr),
+        }
+    }
+
     fn accept_expr_stmt(&mut self, expr_stmt: &mut ExprStmt) -> Result<(), Err> {
         match *expr_stmt {
             ExprStmt::LocalVarDecl(ref mut decl) => {
@@ -383,7 +395,7 @@ pub trait StmtCk: SemanticData + Debug {
                 let mut scoped_semantic_ck = self.semantic_ck().clone();
                 let mut scoped_expector = LoopChecker::new(&mut scoped_semantic_ck);
                 for stmt in if_stmt.block.0.iter_mut() {
-                    stmt.visit(&mut scoped_expector)?;
+                    scoped_expector.accept_stmt(stmt)?;
                 }
             },
 
@@ -401,7 +413,7 @@ pub trait StmtCk: SemanticData + Debug {
                 let mut scoped_semantic_ck = self.semantic_ck().clone();
                 let mut scoped_expector = LoopChecker::new(&mut scoped_semantic_ck);
                 for stmt in while_stmt.block.0.iter_mut() {
-                    stmt.visit(&mut scoped_expector)?;
+                    scoped_expector.accept_stmt(stmt)?;
                 }
             },
 
