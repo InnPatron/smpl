@@ -77,7 +77,7 @@ pub struct StructField {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
     ExprStmt(ExprStmt),
-    Expr(Expr),
+    Expr(AstNode<Expr>),
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -135,7 +135,7 @@ StructField: StructField = {
 
 /// stmt -> expr ";" | expr_stmt
 pub Stmt: Stmt = {
-	<e: Expr> ";" => Stmt::Expr(e),
+	<e: Expr> ";" => Stmt::Expr(AstNode::untyped(e)),
 	<e: ExprStmt> => Stmt::ExprStmt(e),
 };
 
