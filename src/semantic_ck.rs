@@ -493,4 +493,53 @@ mod semantic_tests {
             
         }
     }
+
+    #[test]
+    fn test_fn_type() {
+        {
+            let input = "fn test() {}";
+            let fn_def = parse_FnDecl(input).unwrap();
+            let sck = SemanticChecker::new();
+            
+            let fn_type = sck.gen_fn_type(&fn_def).unwrap();
+
+            assert_eq!(fn_type, FunctionType {
+                args: vec![],
+                return_type: Box::new(SmplType::Unit)
+            });
+        }
+
+        {
+            let input = "fn test(int arg1, bool arg2) {}";
+            let fn_def = parse_FnDecl(input).unwrap();
+            let sck = SemanticChecker::new();
+            
+            let fn_type = sck.gen_fn_type(&fn_def).unwrap();
+            assert_eq!(fn_type, FunctionType {
+                args: vec![
+                           SmplType::Int,
+                           SmplType::Bool,
+                ],
+
+                return_type: Box::new(SmplType::Unit),
+            });
+        }
+
+        {
+            let input = "fn test(int arg1, bool arg2, float arg3) -> String {}";
+            let fn_def = parse_FnDecl(input).unwrap();
+            let sck = SemanticChecker::new();
+            
+            let fn_type = sck.gen_fn_type(&fn_def).unwrap();
+            assert_eq!(fn_type, FunctionType {
+                args: vec![
+                           SmplType::Int,
+                           SmplType::Bool,
+                           SmplType::Float,
+                ],
+
+                return_type: Box::new(SmplType::String),
+            });
+        }
+    }
 }
