@@ -542,4 +542,17 @@ mod semantic_tests {
             });
         }
     }
+
+    #[test]
+    fn test_full_fn_type_check() {
+        {
+            let input =
+"fn test(int arg) -> int {
+    return arg;
+}";
+            let mut fn_def = parse_FnDecl(input).unwrap();
+            let mut sck = SemanticChecker::new();
+            sck.accept_fn_def(&mut fn_def).unwrap();
+        }
+    }
 }
