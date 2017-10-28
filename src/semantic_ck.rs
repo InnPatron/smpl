@@ -462,5 +462,13 @@ mod semantic_tests {
             sck.typify_expr(&mut expr).unwrap();
             assert_eq!(expr.d_type, Some(SmplType::Int));
         }
+
+        {
+            let input = "true && (false == false)";
+            let mut expr = AstNode::untyped(parse_Expr(input).unwrap());
+            let sck = SemanticChecker::new();
+            sck.typify_expr(&mut expr).unwrap();
+            assert_eq!(expr.d_type, Some(SmplType::Bool));
+        }
     }
 }
