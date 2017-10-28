@@ -450,6 +450,7 @@ pub trait StmtCk: SemanticData + Debug {
 
 #[cfg(test)]
 mod semantic_tests {
+    use std::collections::HashMap;
     use super::*;
     use parser::*;
 
@@ -469,6 +470,27 @@ mod semantic_tests {
             let sck = SemanticChecker::new();
             sck.typify_expr(&mut expr).unwrap();
             assert_eq!(expr.d_type, Some(SmplType::Bool));
+        }
+    }
+
+    #[test]
+    fn test_struct_type() {
+        {
+            let input = "struct Test { foo: int, bar: float }";
+            let struct_def = parse_StructDecl(input).unwrap();
+            let sck = SemanticChecker::new();
+            
+            let s_type = sck.gen_struct_type(&struct_def).unwrap();
+            assert_eq!(s_type, StructType {
+                name: ident!("Test"),
+                fields: {
+                    let mut map = HashMap::new();
+                    map.insert(ident!("foo"), SmplType::Int);
+                    map.insert(ident!("bar"), SmplType::Float);
+                    map
+                }
+            });
+            
         }
     }
 }
