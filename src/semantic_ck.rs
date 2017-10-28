@@ -447,7 +447,9 @@ pub trait StmtCk: SemanticData + Debug {
             ExprStmt::Return(ref mut expr) => {
                 self.semantic_ck().typify_expr(expr)?;
                 if expr.d_type.as_ref() != self.semantic_ck().return_type() {
-                    unimplemented!("Return type does not match funciton type");
+                    unimplemented!("Return type [{:?}] does not match expr type [{:?}]", 
+                                   expr.d_type,
+                                   self.semantic_ck().return_type());
                 }
             },
         }
