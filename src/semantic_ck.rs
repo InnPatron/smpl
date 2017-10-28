@@ -121,6 +121,7 @@ impl SemanticChecker {
 
     pub fn accept_fn_def(&mut self, fn_def: &mut Function) -> Result<(), Err> {
         let fn_type = self.gen_fn_type(fn_def)?;
+        let arg_types = fn_type.args.clone();
         let return_type = fn_type.return_type.clone();
         match self.bind(fn_def.name.clone(), SmplType::Function(fn_type)) {
             Some(_) => unimplemented!("TODO: Handle binding override"),
@@ -128,6 +129,13 @@ impl SemanticChecker {
         }
         
         let mut fn_checker = FunctionChecker::new(self, &*return_type);
+
+        if let Some(ref args) = fn_def.args {   
+            // add bindings for args
+            for (arg, arg_type) in args.iter().zip(arg_types.iter()) {
+                fn_checker.semantic_ck_mut().bind(arg.name.clone(), arg_type.clone());
+            }
+        }
 
         for stmt in fn_def.body.data.0.iter_mut() {
             fn_checker.accept_stmt(stmt)?;
