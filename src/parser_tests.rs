@@ -7,6 +7,16 @@ mod parser_tests {
     use smpl_type::*;
 
     #[test]
+    fn test_parse_local_var_decl() {
+        let input = "int a = 10;";
+        let stmt = parse_ExprStmt(input).unwrap();
+        if let ExprStmt::LocalVarDecl(ref decl) = stmt {
+            assert_eq!(decl.var_type, path!("int"));
+            assert_eq!(decl.var_name, ident!("a"));
+        }
+    }
+
+    #[test]
     fn test_parse_FnDecl() {
         let input = "fn test_fn(i32 arg) { }";
         let func = parse_FnDecl(input).unwrap();
