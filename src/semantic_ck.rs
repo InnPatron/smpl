@@ -331,17 +331,28 @@ pub trait StmtCk: Debug {
                  * 3) Check if init expr type == variable type
                  * 4) Insert binding
                  */
-
-                let v_type = self.semantic_data().type_map.get(&decl.var_type)
-                    .ok_or(unimplemented!("Failed to find [{:?}]", decl.var_type))?;
-                                 
-                self.semantic_data().typify_expr(&mut decl.var_init)?;
-                if decl.var_init.d_type.as_ref() != Some(v_type) {
-                   unimplemented!("LHS and RHS types do not match"); 
+                
+                {
+                    self.semantic_data().typify_expr(&mut decl.var_init)?;
                 }
 
+                let v_type = {
+                    let v_type = {
+                        match self.semantic_data().type_map.get(&decl.var_type) {
+                            Some(t) => t,
+                            None => unimplemented!("Failed to find [{:?}]", decl.var_type),
+                            //TODO: Found out why Option::ok_or makes test_full_fn_type_check fail
+                        }
+                    };
+
+                    if decl.var_init.d_type.as_ref() != Some(v_type) {
+                       unimplemented!("LHS and RHS types do not match"); 
+                    }
+                    v_type.clone()
+                };
+
                 // Ignore any name overrides (ALLOW shadowing).
-                self.semantic_data_mut().bind(decl.var_name.clone(), v_type.clone());
+                self.semantic_data_mut().bind(decl.var_name.clone(), v_type);
             },
 
             ExprStmt::Assignment(ref mut asgmnt) => {
