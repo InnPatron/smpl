@@ -14,42 +14,16 @@ pub enum Err {
 
 }
 
-/// Generic data useful for semantic checking
-pub trait SemanticData: Debug {
-    /// Could return Option<LoopId> if such references are needed...
-    fn is_loop(&self) -> bool;
-    fn semantic_ck(&self) -> &SemanticChecker;
-    fn semantic_ck_mut(&mut self) -> &mut SemanticChecker;
-    /// NOTE: None is NOT semantically equivalent to SmplType::Unit
-    fn return_type(&self) -> Option<&SmplType>;
-}
-
 #[derive(Clone, Debug)]
-pub struct SemanticChecker {
+pub struct SemanticData {
     pub type_map: HashMap<Path, SmplType>,
     pub binding_map: HashMap<Ident, SmplType>,
+    pub is_loop: bool,
+    pub return_type: Option<SmplType>,
 }
 
-impl SemanticData for SemanticChecker {
-    fn is_loop(&self) -> bool {
-        false
-    }
-
-    fn semantic_ck(&self) -> &SemanticChecker {
-        self
-    }
-
-    fn semantic_ck_mut(&mut self) -> &mut SemanticChecker {
-        self
-    }
-
-    fn return_type(&self) -> Option<&SmplType> {
-        None
-    }
-}
-
-impl SemanticChecker {
-    fn new() -> SemanticChecker {
+impl SemanticData {
+    fn new() -> SemanticData {
         let mut type_map = HashMap::new();
         type_map.insert(path!("int"), SmplType::Int);
         type_map.insert(path!("float"), SmplType::Float);
@@ -59,9 +33,11 @@ impl SemanticChecker {
 
         let mut binding_map = HashMap::new();
 
-        SemanticChecker {
+        SemanticData {
             type_map: type_map,
             binding_map: binding_map,
+            is_loop: false,
+            return_type: None,
         }
     }
 
@@ -133,7 +109,7 @@ impl SemanticChecker {
         if let Some(ref args) = fn_def.args {   
             // add bindings for args
             for (arg, arg_type) in args.iter().zip(arg_types.iter()) {
-                fn_checker.semantic_ck_mut().bind(arg.name.clone(), arg_type.clone());
+                fn_checker.semantic_data_mut().bind(arg.name.clone(), arg_type.clone());
             }
         }
 
@@ -284,81 +260,67 @@ impl SemanticChecker {
 }
 
 #[derive(Debug)]
-pub struct FunctionChecker<'a, 'b> {
-    pub semantic_ck: &'a mut SemanticChecker,
-    expect: &'b SmplType,
+pub struct FunctionChecker {
+    semantic_data: SemanticData,
 }
 
-impl<'a, 'b> SemanticData for FunctionChecker<'a, 'b> {
-    fn is_loop(&self) -> bool {
-        false
-    }
-
-    fn semantic_ck(&self) -> &SemanticChecker {
-        &self.semantic_ck
-    }
-
-    fn semantic_ck_mut(&mut self) -> &mut SemanticChecker {
-        &mut self.semantic_ck
-    }
-
-    fn return_type(&self) -> Option<&SmplType> {
-        Some(self.expect)
-    }
-}
-
-impl<'a, 'b> FunctionChecker<'a, 'b> {
-    fn new(ck: &'a mut SemanticChecker, return_type: &'b SmplType) -> FunctionChecker<'a, 'b> {
+impl FunctionChecker {
+    fn new(parent_data: &SemanticData, return_type: &SmplType) -> FunctionChecker {
+        let mut data = parent_data.clone();
+        data.is_loop = false;
+        data.return_type = Some(return_type.clone());
         FunctionChecker {
-            semantic_ck: ck,
-            expect: return_type,
+            semantic_data: data,
         }
     }
 }
 
-impl<'a, 'b> StmtCk for FunctionChecker<'a, 'b> {}
+impl StmtCk for FunctionChecker { 
+    fn semantic_data(&self) -> &SemanticData {
+        &self.semantic_data
+    }
+
+    fn semantic_data_mut(&mut self) -> &mut SemanticData {
+        &mut self.semantic_data
+    }
+}
 
 #[derive(Debug)]
-pub struct LoopChecker<'a> {
-    pub stmt_checker: &'a mut (SemanticData + 'a),
+pub struct LoopChecker {
+    semantic_data: SemanticData,
 }
 
-impl<'a> LoopChecker<'a> {
-    fn new(stmt_checker: &'a mut SemanticData) -> LoopChecker<'a> {
+impl LoopChecker {
+    fn new(parent_data: &SemanticData) -> LoopChecker {
+        let mut data = parent_data.clone();
+        data.is_loop = true;
         LoopChecker {
-            stmt_checker: stmt_checker
+           semantic_data: data, 
         }
     }
 }
 
-impl<'a> SemanticData for LoopChecker<'a> {
-    fn is_loop(&self) -> bool {
-        true 
+impl StmtCk for LoopChecker {
+    fn semantic_data(&self) -> &SemanticData {
+        &self.semantic_data
     }
 
-    fn semantic_ck(&self) -> &SemanticChecker {
-        self.stmt_checker.semantic_ck()
-    }
-
-    fn semantic_ck_mut(&mut self) -> &mut SemanticChecker {
-        self.stmt_checker.semantic_ck_mut()
-    }
-
-    fn return_type(&self) -> Option<&SmplType> {
-        self.stmt_checker.return_type()
+    fn semantic_data_mut(&mut self) -> &mut SemanticData {
+        &mut self.semantic_data
     }
 }
 
-impl<'a> StmtCk for LoopChecker<'a> {}
-
-pub trait StmtCk: SemanticData + Debug {
+pub trait StmtCk: Debug {
 
     fn accept_stmt(&mut self, stmt: &mut Stmt) -> Result<(), Err> {
         match *stmt {
             Stmt::ExprStmt(ref mut expr_stmt) => self.accept_expr_stmt(expr_stmt),
-            Stmt::Expr(ref mut expr) => self.semantic_ck().typify_expr(expr),
+            Stmt::Expr(ref mut expr) => self.semantic_data().typify_expr(expr),
         }
     }
+
+    fn semantic_data(&self) -> &SemanticData;
+    fn semantic_data_mut(&mut self) -> &mut SemanticData;
 
     fn accept_expr_stmt(&mut self, expr_stmt: &mut ExprStmt) -> Result<(), Err> {
         match *expr_stmt {
@@ -369,15 +331,15 @@ pub trait StmtCk: SemanticData + Debug {
                  * 3) Check if init expr type == variable type
                  * 4) Insert binding
                  */
-                let v_type = self.semantic_ck().type_map.get(&decl.var_type)
+                let v_type = self.semantic_data().type_map.get(&decl.var_type)
                                  .ok_or(unimplemented!("Could not find variable type"))?;
-                self.semantic_ck().typify_expr(&mut decl.var_init)?;
+                self.semantic_data().typify_expr(&mut decl.var_init)?;
                 if decl.var_init.d_type.as_ref() != Some(v_type) {
                    unimplemented!("LHS and RHS types do not match"); 
                 }
 
                 // Ignore any name overrides (ALLOW shadowing).
-                self.semantic_ck_mut().bind(decl.var_name.clone(), v_type.clone());
+                self.semantic_data_mut().bind(decl.var_name.clone(), v_type.clone());
             },
 
             ExprStmt::Assignment(ref mut asgmnt) => {
@@ -390,7 +352,7 @@ pub trait StmtCk: SemanticData + Debug {
                     unimplemented!("Walk path; going from binding through struct defs");
                 };
 
-                self.semantic_ck().typify_expr(&mut asgmnt.value)?;
+                self.semantic_data().typify_expr(&mut asgmnt.value)?;
                 if Some(destination_type) != asgmnt.value.d_type.as_ref() {
                     unimplemented!("LHS and RHS types do not match");
                 }
@@ -402,13 +364,13 @@ pub trait StmtCk: SemanticData + Debug {
                  * 2) Generate new scope & typify block
                  */
 
-                self.semantic_ck().typify_expr(&mut if_stmt.conditional)?;
+                self.semantic_data().typify_expr(&mut if_stmt.conditional)?;
                 if if_stmt.conditional.d_type != Some(SmplType::Bool) {
                     unimplemented!("Condition must evaluate to a boolean.");
                 }
 
-                let mut scoped_semantic_ck = self.semantic_ck().clone();
-                let mut scoped_expector = LoopChecker::new(&mut scoped_semantic_ck);
+                let mut scoped_semantic_data = self.semantic_data().clone();
+                let mut scoped_expector = LoopChecker::new(&mut scoped_semantic_data);
                 for stmt in if_stmt.block.0.iter_mut() {
                     scoped_expector.accept_stmt(stmt)?;
                 }
@@ -420,36 +382,35 @@ pub trait StmtCk: SemanticData + Debug {
                  * 2) Generate new scope & typify block
                  */
 
-                self.semantic_ck().typify_expr(&mut while_stmt.conditional)?;
+                self.semantic_data().typify_expr(&mut while_stmt.conditional)?;
                 if while_stmt.conditional.d_type != Some(SmplType::Bool) {
                     unimplemented!("Condition must evaluate to a boolean.");
                 }
 
-                let mut scoped_semantic_ck = self.semantic_ck().clone();
-                let mut scoped_expector = LoopChecker::new(&mut scoped_semantic_ck);
+                let mut scoped_expector = LoopChecker::new(self.semantic_data());
                 for stmt in while_stmt.block.0.iter_mut() {
                     scoped_expector.accept_stmt(stmt)?;
                 }
             },
 
             ExprStmt::Continue => {
-                if self.is_loop() == false {
+                if self.semantic_data().is_loop == false {
                     unimplemented!("Continue should only appear in loop");
                 }
             },
 
             ExprStmt::Break => {
-                if self.is_loop() == false {
+                if self.semantic_data().is_loop == false {
                     unimplemented!("Break should only appear in loop");
                 }
             },
 
             ExprStmt::Return(ref mut expr) => {
-                self.semantic_ck().typify_expr(expr)?;
-                if expr.d_type.as_ref() != self.semantic_ck().return_type() {
+                self.semantic_data().typify_expr(expr)?;
+                if expr.d_type != self.semantic_data().return_type {
                     unimplemented!("Return type [{:?}] does not match expr type [{:?}]", 
                                    expr.d_type,
-                                   self.semantic_ck().return_type());
+                                   self.semantic_data().return_type.as_ref());
                 }
             },
         }
@@ -469,7 +430,7 @@ mod semantic_tests {
         {
             let input = "123 - 532 / 2";
             let mut expr = AstNode::untyped(parse_Expr(input).unwrap());
-            let sck = SemanticChecker::new();
+            let sck = SemanticData::new();
             sck.typify_expr(&mut expr).unwrap();
             assert_eq!(expr.d_type, Some(SmplType::Int));
         }
@@ -477,7 +438,7 @@ mod semantic_tests {
         {
             let input = "true && (false == false)";
             let mut expr = AstNode::untyped(parse_Expr(input).unwrap());
-            let sck = SemanticChecker::new();
+            let sck = SemanticData::new();
             sck.typify_expr(&mut expr).unwrap();
             assert_eq!(expr.d_type, Some(SmplType::Bool));
         }
@@ -488,7 +449,7 @@ mod semantic_tests {
         {
             let input = "struct Test { foo: int, bar: float }";
             let struct_def = parse_StructDecl(input).unwrap();
-            let sck = SemanticChecker::new();
+            let sck = SemanticData::new();
             
             let s_type = sck.gen_struct_type(&struct_def).unwrap();
             assert_eq!(s_type, StructType {
@@ -509,7 +470,7 @@ mod semantic_tests {
         {
             let input = "fn test() {}";
             let fn_def = parse_FnDecl(input).unwrap();
-            let sck = SemanticChecker::new();
+            let sck = SemanticData::new();
             
             let fn_type = sck.gen_fn_type(&fn_def).unwrap();
 
@@ -522,7 +483,7 @@ mod semantic_tests {
         {
             let input = "fn test(int arg1, bool arg2) {}";
             let fn_def = parse_FnDecl(input).unwrap();
-            let sck = SemanticChecker::new();
+            let sck = SemanticData::new();
             
             let fn_type = sck.gen_fn_type(&fn_def).unwrap();
             assert_eq!(fn_type, FunctionType {
@@ -538,7 +499,7 @@ mod semantic_tests {
         {
             let input = "fn test(int arg1, bool arg2, float arg3) -> String {}";
             let fn_def = parse_FnDecl(input).unwrap();
-            let sck = SemanticChecker::new();
+            let sck = SemanticData::new();
             
             let fn_type = sck.gen_fn_type(&fn_def).unwrap();
             assert_eq!(fn_type, FunctionType {
@@ -561,7 +522,7 @@ mod semantic_tests {
     return arg;
 }";
             let mut fn_def = parse_FnDecl(input).unwrap();
-            let mut sck = SemanticChecker::new();
+            let mut sck = SemanticData::new();
             sck.accept_fn_def(&mut fn_def).unwrap();
         }
     }
