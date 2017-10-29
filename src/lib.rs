@@ -7,7 +7,6 @@ mod parser;
 mod ast;
 mod smpl_type;
 mod semantic_ck;
-mod ast_visitor;
 #[cfg(test)]
 mod parser_tests;
 
