@@ -331,8 +331,10 @@ pub trait StmtCk: Debug {
                  * 3) Check if init expr type == variable type
                  * 4) Insert binding
                  */
+
                 let v_type = self.semantic_data().type_map.get(&decl.var_type)
-                                 .ok_or(unimplemented!("Could not find variable type"))?;
+                    .ok_or(unimplemented!("Failed to find [{:?}]", decl.var_type))?;
+                                 
                 self.semantic_data().typify_expr(&mut decl.var_init)?;
                 if decl.var_init.d_type.as_ref() != Some(v_type) {
                    unimplemented!("LHS and RHS types do not match"); 
@@ -407,10 +409,14 @@ pub trait StmtCk: Debug {
 
             ExprStmt::Return(ref mut expr) => {
                 self.semantic_data().typify_expr(expr)?;
-                if expr.d_type != self.semantic_data().return_type {
-                    unimplemented!("Return type [{:?}] does not match expr type [{:?}]", 
-                                   expr.d_type,
-                                   self.semantic_data().return_type.as_ref());
+                if let Some(ref return_type) = self.semantic_data().return_type {
+                    if expr.d_type.as_ref() != Some(return_type) {
+                        unimplemented!("Return type [{:?}] does not match expr type [{:?}]", 
+                                       expr.d_type,
+                                       self.semantic_data().return_type.as_ref());
+                    }
+                } else {
+                    panic!("Should have a return type");
                 }
             },
         }
@@ -528,12 +534,12 @@ mod semantic_tests {
 
     {
             let input =
-"fn test(int arg) -> int {
-    int bla = arg + 1;
-    return bla;
+"fn test(int arg) {
+    int a = 2;
 }";
             let mut fn_def = parse_FnDecl(input).unwrap();
             let mut sck = SemanticData::new();
+
             sck.accept_fn_def(&mut fn_def).unwrap();
         }
     }
