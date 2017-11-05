@@ -51,6 +51,27 @@ pub struct Function {
     pub args: Option<Vec<FnArg>>,
     pub return_type: Option<Path>,
     pub body: AstNode<Block>,
+    fn_id: Option<u64>
+}
+
+impl Function {
+    pub fn new(name: Ident, args: Option<Vec<FnArg>>, return_type: Option<Path>, body: Block) -> Function {
+        Function {
+            name: name,
+            args: args,
+            return_type: return_type,
+            body: AstNode::untyped(body),
+            fn_id: None,
+        }
+    }
+
+    pub fn fn_id(&self) -> Option<u64> {
+        self.fn_id
+    }
+
+    pub fn set_fn_id(&mut self, id: u64) {
+        self.fn_id = Some(id);
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -95,6 +116,25 @@ pub enum ExprStmt {
 pub struct Assignment {
     pub name: AstNode<Path>,
     pub value: AstNode<Expr>,
+    base_ident_id: Option<u64>,
+}
+
+impl Assignment {
+    pub fn new(name: Path, value: Expr) -> Assignment {
+        Assignment {
+            name: AstNode::untyped(name),
+            value: AstNode::untyped(value),
+            base_ident_id: None
+        }
+    }
+
+    pub fn base_ident_id(&self) -> Option<u64> {
+        self.base_ident_id
+    }
+
+    pub fn set_base_ident_id(&mut self, ident: u64) {
+        self.base_ident_id = Some(ident);
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -102,6 +142,26 @@ pub struct LocalVarDecl {
     pub var_type: Path,
     pub var_name: Ident,
     pub var_init: AstNode<Expr>,
+    var_id: Option<u64>,
+}
+
+impl LocalVarDecl {
+    pub fn new(var_type: Path, var_name: Ident, var_init: AstNode<Expr>) -> LocalVarDecl {
+        LocalVarDecl {
+            var_type: var_type,
+            var_name: var_name,
+            var_init: var_init,
+            var_id: None
+        }
+    }
+
+    pub fn var_id(&self) -> Option<u64> {
+        self.var_id
+    }
+
+    pub fn set_var_id(&mut self, id: u64) {
+        self.var_id = Some(id);
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -134,7 +194,26 @@ pub enum Expr {
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
     pub name: Ident,
-    pub args: Option<Vec<AstNode<Expr>>>
+    pub args: Option<Vec<AstNode<Expr>>>,
+    fn_id: Option<u64>
+}
+
+impl FnCall {
+    pub fn new(name: Ident, args: Option<Vec<AstNode<Expr>>>) -> FnCall {
+        FnCall {
+            name: name,
+            args: args, 
+            fn_id: None,
+        }
+    }
+
+    pub fn fn_id(&self) -> Option<u64> {
+        self.fn_id
+    }
+
+    pub fn set_fn_id(&mut self, id: u64) {
+        self.fn_id = Some(id);
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
