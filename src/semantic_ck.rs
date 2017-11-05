@@ -543,7 +543,7 @@ mod semantic_tests {
             sck.accept_fn_def(&mut fn_def).unwrap();
         }
 
-    {
+        {
             let input =
 "fn test(int arg) {
     int a = 2;
@@ -552,6 +552,18 @@ mod semantic_tests {
             let mut sck = SemanticData::new();
 
             sck.accept_fn_def(&mut fn_def).unwrap();
+        }
+
+        {
+            let input =
+"fn test(int arg) -> int {
+    int a = 2;
+    return a;
+}";
+            let mut fn_def = parse_FnDecl(input).unwrap();
+            let mut sck = SemanticData::new();
+
+            sck.accept_fn_def(&mut fn_def).unwrap(); 
         }
     }
 }
