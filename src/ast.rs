@@ -1,8 +1,41 @@
 use std::str::FromStr;
 use std::fmt;
+use std::ops::{Deref, DerefMut};
 use super::Span;
 use smpl_type::SmplType;
 use ascii::AsciiString;
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct FnId(pub u64);
+
+impl Deref for FnId {
+    type Target = u64;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for FnId {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct IdentId(pub u64);
+
+impl Deref for IdentId {
+    type Target = u64;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for IdentId {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AstNode<T: Clone + PartialEq + ::std::fmt::Debug> {
@@ -51,7 +84,7 @@ pub struct Function {
     pub args: Option<Vec<FnArg>>,
     pub return_type: Option<Path>,
     pub body: AstNode<Block>,
-    fn_id: Option<u64>
+    fn_id: Option<FnId>
 }
 
 impl Function {
@@ -65,12 +98,12 @@ impl Function {
         }
     }
 
-    pub fn fn_id(&self) -> Option<u64> {
+    pub fn fn_id(&self) -> Option<FnId> {
         self.fn_id
     }
 
     pub fn set_fn_id(&mut self, id: u64) {
-        self.fn_id = Some(id);
+        self.fn_id = Some(FnId(id));
     }
 }
 
@@ -116,7 +149,7 @@ pub enum ExprStmt {
 pub struct Assignment {
     pub name: AstNode<Path>,
     pub value: AstNode<Expr>,
-    base_ident_id: Option<u64>,
+    base_ident_id: Option<IdentId>,
 }
 
 impl Assignment {
@@ -128,12 +161,12 @@ impl Assignment {
         }
     }
 
-    pub fn base_ident_id(&self) -> Option<u64> {
+    pub fn base_ident_id(&self) -> Option<IdentId> {
         self.base_ident_id
     }
 
     pub fn set_base_ident_id(&mut self, ident: u64) {
-        self.base_ident_id = Some(ident);
+        self.base_ident_id = Some(IdentId(ident));
     }
 }
 
@@ -195,7 +228,7 @@ pub enum Expr {
 pub struct FnCall {
     pub name: Ident,
     pub args: Option<Vec<AstNode<Expr>>>,
-    fn_id: Option<u64>
+    fn_id: Option<FnId>
 }
 
 impl FnCall {
@@ -207,12 +240,12 @@ impl FnCall {
         }
     }
 
-    pub fn fn_id(&self) -> Option<u64> {
+    pub fn fn_id(&self) -> Option<FnId> {
         self.fn_id
     }
 
     pub fn set_fn_id(&mut self, id: u64) {
-        self.fn_id = Some(id);
+        self.fn_id = Some(FnId(id));
     }
 }
 
