@@ -102,8 +102,8 @@ impl Function {
         self.fn_id
     }
 
-    pub fn set_fn_id(&mut self, id: u64) {
-        self.fn_id = Some(FnId(id));
+    pub fn set_fn_id(&mut self, id: FnId) {
+        self.fn_id = Some(id);
     }
 }
 
@@ -111,6 +111,25 @@ impl Function {
 pub struct FnArg {
     pub name: Ident,
     pub arg_type: Path,
+    var_id: Option<IdentId>,
+}
+
+impl FnArg {
+    pub fn new(name: Ident, arg_type: Path) -> FnArg {
+        FnArg {
+            name: name,
+            arg_type: arg_type,
+            var_id: None,
+        }
+    }
+
+    pub fn set_var_id(&mut self, id: IdentId) {
+        self.var_id = Some(id)
+    }
+
+    pub fn var_id(&self) -> Option<IdentId> {
+        self.var_id
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -165,8 +184,8 @@ impl Assignment {
         self.base_ident_id
     }
 
-    pub fn set_base_ident_id(&mut self, ident: u64) {
-        self.base_ident_id = Some(IdentId(ident));
+    pub fn set_base_ident_id(&mut self, ident: IdentId) {
+        self.base_ident_id = Some(ident);
     }
 }
 
@@ -175,7 +194,7 @@ pub struct LocalVarDecl {
     pub var_type: Path,
     pub var_name: Ident,
     pub var_init: AstNode<Expr>,
-    var_id: Option<u64>,
+    var_id: Option<IdentId>,
 }
 
 impl LocalVarDecl {
@@ -188,11 +207,11 @@ impl LocalVarDecl {
         }
     }
 
-    pub fn var_id(&self) -> Option<u64> {
+    pub fn var_id(&self) -> Option<IdentId> {
         self.var_id
     }
 
-    pub fn set_var_id(&mut self, id: u64) {
+    pub fn set_var_id(&mut self, id: IdentId) {
         self.var_id = Some(id);
     }
 }
@@ -225,6 +244,21 @@ pub enum Expr {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct ExprIdent {
+    pub ident: Ident,
+    var_id: Option<IdentId>,
+}
+
+impl ExprIdent {
+    fn new(ident: Ident) -> ExprIdent {
+        ExprIdent {
+            ident: ident,
+            var_id: None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
     pub name: Ident,
     pub args: Option<Vec<AstNode<Expr>>>,
@@ -244,8 +278,8 @@ impl FnCall {
         self.fn_id
     }
 
-    pub fn set_fn_id(&mut self, id: u64) {
-        self.fn_id = Some(FnId(id));
+    pub fn set_fn_id(&mut self, id: FnId) {
+        self.fn_id = Some(id);
     }
 }
 

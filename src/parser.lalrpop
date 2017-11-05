@@ -97,10 +97,7 @@ FnArgList: Vec<FnArg> = {
 /// arg -> path ident
 FnArg: FnArg = {
 	<arg_type: Path> <name: Ident> => {
-		FnArg {
-			name: name,
-			arg_type: arg_type,
-		}
+		FnArg::new(name, arg_type)
 	}
 };
 
