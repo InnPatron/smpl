@@ -75,7 +75,7 @@ DeclStmt: DeclStmt = {
 
 /// fn_decl -> "fn" ident "(" [arg_list]? ")" ["->" path]? block
 pub FnDecl: Function = {
-	"fn" <name: Ident> "(" <args: FnArgList?> ")" <return_type: ("->" Path)?> <b: Block> => {
+	"fn" <name: Ident> "(" <args: FnParameterList?> ")" <return_type: ("->" Path)?> <b: Block> => {
 		Function::new(
 			name,
 			args,
@@ -86,8 +86,8 @@ pub FnDecl: Function = {
 };
 
 /// arg_list -> arg ["," arg]*
-FnArgList: Vec<FnArg> = {
-	<first: FnArg> <tail: ("," <FnArg>)*> => {
+FnParameterList: Vec<FnParameter> = {
+	<first: FnParameter> <tail: ("," <FnParameter>)*> => {
 		let mut v = vec![first];
 		v.extend(tail);
 		v
@@ -95,9 +95,9 @@ FnArgList: Vec<FnArg> = {
 };
 
 /// arg -> path ident
-FnArg: FnArg = {
+FnParameter: FnParameter = {
 	<arg_type: Path> <name: Ident> => {
-		FnArg::new(name, arg_type)
+		FnParameter::new(name, arg_type)
 	}
 };
 

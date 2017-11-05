@@ -81,14 +81,14 @@ impl From<Function> for DeclStmt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: Ident,
-    pub args: Option<Vec<FnArg>>,
+    pub args: Option<Vec<FnParameter>>,
     pub return_type: Option<Path>,
     pub body: AstNode<Block>,
     fn_id: Option<FnId>
 }
 
 impl Function {
-    pub fn new(name: Ident, args: Option<Vec<FnArg>>, return_type: Option<Path>, body: Block) -> Function {
+    pub fn new(name: Ident, args: Option<Vec<FnParameter>>, return_type: Option<Path>, body: Block) -> Function {
         Function {
             name: name,
             args: args,
@@ -108,15 +108,15 @@ impl Function {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct FnArg {
+pub struct FnParameter {
     pub name: Ident,
     pub arg_type: Path,
     var_id: Option<VarId>,
 }
 
-impl FnArg {
-    pub fn new(name: Ident, arg_type: Path) -> FnArg {
-        FnArg {
+impl FnParameter {
+    pub fn new(name: Ident, arg_type: Path) -> FnParameter {
+        FnParameter {
             name: name,
             arg_type: arg_type,
             var_id: None,
