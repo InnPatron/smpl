@@ -9,6 +9,25 @@ use ascii::*;
 use smpl_type::*;
 use ast::*;
 
+static mut fn_id: u64 = 0;
+static mut ident_id: u64 = 0;
+
+/// TODO: Make this use non-static
+fn next_fn_id() -> u64 {
+    unsafe {
+        fn_id += 1;
+        fn_id
+    }
+}
+
+/// TODO: Make this use non-static
+fn next_ident_id() -> u64 {
+    unsafe {
+        ident_id += 1;
+        ident_id
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Err {
 
