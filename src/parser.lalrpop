@@ -330,7 +330,7 @@ Term: Expr = {
 /// expr_leaf -> "(" uni_expr ")" | literal | fn_call
 ExprLeaf: Expr = {
 	"(" <u: UniExpr> ")" => Expr::Uni(AstNode::untyped(u)),
-	<i: Ident> => Expr::Ident(AstNode::untyped(i)),
+	<i: Ident> => Expr::Ident(AstNode::untyped(ExprIdent::new(i))),
 	<l: Literal> => Expr::Literal(l),
 	<f: FnCall> => Expr::FnCall(AstNode::untyped(f)),
 };

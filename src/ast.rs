@@ -239,7 +239,7 @@ pub enum Expr {
     Bin(AstNode<BinExpr>),
     Uni(AstNode<UniExpr>),
     Literal(AstNode<Literal>),
-    Ident(AstNode<Ident>),
+    Ident(AstNode<ExprIdent>),
     FnCall(AstNode<FnCall>),
 }
 
@@ -250,7 +250,7 @@ pub struct ExprIdent {
 }
 
 impl ExprIdent {
-    fn new(ident: Ident) -> ExprIdent {
+    pub fn new(ident: Ident) -> ExprIdent {
         ExprIdent {
             ident: ident,
             var_id: None,
