@@ -22,16 +22,16 @@ impl DerefMut for FnId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct IdentId(pub u64);
+pub struct VarId(pub u64);
 
-impl Deref for IdentId {
+impl Deref for VarId {
     type Target = u64;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl DerefMut for IdentId {
+impl DerefMut for VarId {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
@@ -111,7 +111,7 @@ impl Function {
 pub struct FnArg {
     pub name: Ident,
     pub arg_type: Path,
-    var_id: Option<IdentId>,
+    var_id: Option<VarId>,
 }
 
 impl FnArg {
@@ -123,11 +123,11 @@ impl FnArg {
         }
     }
 
-    pub fn set_var_id(&mut self, id: IdentId) {
+    pub fn set_var_id(&mut self, id: VarId) {
         self.var_id = Some(id)
     }
 
-    pub fn var_id(&self) -> Option<IdentId> {
+    pub fn var_id(&self) -> Option<VarId> {
         self.var_id
     }
 }
@@ -168,7 +168,7 @@ pub enum ExprStmt {
 pub struct Assignment {
     pub name: AstNode<Path>,
     pub value: AstNode<Expr>,
-    base_ident_id: Option<IdentId>,
+    base_ident_id: Option<VarId>,
 }
 
 impl Assignment {
@@ -180,11 +180,11 @@ impl Assignment {
         }
     }
 
-    pub fn base_ident_id(&self) -> Option<IdentId> {
+    pub fn base_ident_id(&self) -> Option<VarId> {
         self.base_ident_id
     }
 
-    pub fn set_base_ident_id(&mut self, ident: IdentId) {
+    pub fn set_base_ident_id(&mut self, ident: VarId) {
         self.base_ident_id = Some(ident);
     }
 }
@@ -194,7 +194,7 @@ pub struct LocalVarDecl {
     pub var_type: Path,
     pub var_name: Ident,
     pub var_init: AstNode<Expr>,
-    var_id: Option<IdentId>,
+    var_id: Option<VarId>,
 }
 
 impl LocalVarDecl {
@@ -207,11 +207,11 @@ impl LocalVarDecl {
         }
     }
 
-    pub fn var_id(&self) -> Option<IdentId> {
+    pub fn var_id(&self) -> Option<VarId> {
         self.var_id
     }
 
-    pub fn set_var_id(&mut self, id: IdentId) {
+    pub fn set_var_id(&mut self, id: VarId) {
         self.var_id = Some(id);
     }
 }
@@ -246,7 +246,7 @@ pub enum Expr {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExprIdent {
     pub ident: Ident,
-    var_id: Option<IdentId>,
+    var_id: Option<VarId>,
 }
 
 impl ExprIdent {
