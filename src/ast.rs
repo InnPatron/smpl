@@ -256,6 +256,14 @@ impl ExprIdent {
             var_id: None,
         }
     }
+
+    pub fn set_var_id(&mut self, id: VarId) {
+        self.var_id = Some(id);
+    }
+
+    pub fn var_id(&self) -> Option<VarId> {
+        self.var_id
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
