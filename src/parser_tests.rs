@@ -21,7 +21,7 @@ mod parser_tests {
         let input = "fn test_fn(i32 arg) { }";
         let func = parse_FnDecl(input).unwrap();
         assert_eq!(func.name, ident!("test_fn"));
-        assert_eq!(func.args, Some(vec![FnArg { name: ident!("arg"), arg_type: path!("i32")}]));
+        assert_eq!(func.args, Some(vec![FnParameter::new(ident!("arg"), path!("i32"))]));
         assert_eq!(func.body, AstNode::untyped(Block(Vec::new())));
     }
 
