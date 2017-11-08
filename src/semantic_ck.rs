@@ -431,20 +431,40 @@ pub trait StmtCk: Debug {
                 self.semantic_data_mut().bind_var(decl.var_name.clone(), v_type, var_id);
             },
 
-            ExprStmt::Assignment(ref mut asgmnt) => {
+            ExprStmt::Assignment(ref mut assignment) => {
                 /*
                  * 1) Retrieve type of binding.
                  * 2) Typify rhs expr
                  * 3) Check if lhs type == rhs type
                  */
-                let destination_type = {
-                    unimplemented!("Walk path; going from binding through struct defs");
+                let destination_type: &SmplType;
+                let base_id;
+                {
+                    let mut iter = assignment.name.data.0.iter();
+                    let root: &VarBinding = self.semantic_data().get_var(iter.next().unwrap())
+                                                   .ok_or(unimplemented!("Base variable does not exist"))?;
+                    base_id = root.binding_id.clone();
+                    let mut current_type = &root.var_type;
+                    
+                    // Walk the path and and get field types
+                    for ident in iter {
+                        if let SmplType::Struct(ref struct_type) = *current_type {
+                            let field_type = struct_type.fields.get(ident)
+                                                        .ok_or(unimplemented!("Struct definition does not have field {}", ident))?;
+                            current_type = field_type;
+                        } else {
+                            unimplemented!("Type of {} in {} is not a struct type", 
+                                           ident, assignment.name.data);
+                        }
+                    }
+                    
+                    destination_type = current_type;
                 };
 
-                // TODO: implement (don't forget to set var id)
+                assignment.set_base_ident_id(base_id);
 
-                self.semantic_data().typify_expr(&mut asgmnt.value)?;
-                if Some(destination_type) != asgmnt.value.d_type.as_ref() {
+                self.semantic_data().typify_expr(&mut assignment.value)?;
+                if Some(destination_type) != assignment.value.d_type.as_ref() {
                     unimplemented!("LHS and RHS types do not match");
                 }
             },
