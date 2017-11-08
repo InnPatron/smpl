@@ -154,6 +154,8 @@ impl SemanticData {
         let return_type = fn_type.return_type.clone();
         let fn_id = next_fn_id();
 
+        fn_def.set_fn_id(fn_id);
+
         match self.bind_fn(fn_def.name.clone(), fn_type, fn_id) {
             Some(_) => unimplemented!("TODO: Handle binding override"),
             None => (), 
@@ -161,12 +163,14 @@ impl SemanticData {
         
         let mut fn_checker = FunctionChecker::new(self, &*return_type);
 
-        if let Some(ref args) = fn_def.args {   
+        if let Some(ref mut args) = fn_def.args {   
             // add bindings for args
-            for (arg, arg_type) in args.iter().zip(arg_types.iter()) {
-                fn_checker.semantic_data_mut().bind_var(arg.name.clone(), 
-                                                        arg_type.clone(), 
-                                                        next_var_id());
+            for (param, param_type) in args.iter_mut().zip(arg_types.iter()) {
+                let param_id = next_var_id();
+                param.set_var_id(param_id);
+                fn_checker.semantic_data_mut().bind_var(param.name.clone(), 
+                                                        param_type.clone(), 
+                                                        param_id);
             }
         }
 
@@ -436,6 +440,8 @@ pub trait StmtCk: Debug {
                 let destination_type = {
                     unimplemented!("Walk path; going from binding through struct defs");
                 };
+
+                // TODO: implement (don't forget to set var id)
 
                 self.semantic_data().typify_expr(&mut asgmnt.value)?;
                 if Some(destination_type) != asgmnt.value.d_type.as_ref() {
