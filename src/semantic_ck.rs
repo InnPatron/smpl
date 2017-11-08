@@ -1,7 +1,7 @@
 #[macro_use]
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::borrow::BorrowMut;
+use std::borrow::{Borrow, BorrowMut};
 use std::fmt::Debug;
 
 use ascii::*;
@@ -9,22 +9,22 @@ use ascii::*;
 use smpl_type::*;
 use ast::*;
 
-static mut fn_id: u64 = 0;
-static mut ident_id: u64 = 0;
+static mut fn_id_counter: u64 = 0;
+static mut ident_id_counter: u64 = 0;
 
 /// TODO: Make this use non-static
-fn next_fn_id() -> u64 {
+fn next_fn_id() -> FnId {
     unsafe {
-        fn_id += 1;
-        fn_id
+        fn_id_counter += 1;
+        FnId(fn_id_counter)
     }
 }
 
 /// TODO: Make this use non-static
-fn next_ident_id() -> u64 {
+fn next_var_id() -> VarId {
     unsafe {
-        ident_id += 1;
-        ident_id
+        ident_id_counter += 1;
+        VarId(ident_id_counter)
     }
 }
 
@@ -33,10 +33,23 @@ pub enum Err {
 
 }
 
+#[derive(Debug, Clone)]
+pub struct FnBinding {
+    fn_type: FunctionType,
+    binding_id: FnId,
+}
+
+#[derive(Debug, Clone)]
+pub struct VarBinding {
+    var_type: SmplType,
+    binding_id: VarId,
+}
+
 #[derive(Clone, Debug)]
 pub struct SemanticData {
     pub type_map: HashMap<Path, SmplType>,
-    pub binding_map: HashMap<Ident, SmplType>,
+    pub fn_map: HashMap<Ident, FnBinding>,
+    pub var_map: HashMap<Ident, VarBinding>,
     pub is_loop: bool,
     pub return_type: Option<SmplType>,
 }
@@ -50,11 +63,10 @@ impl SemanticData {
         type_map.insert(path!("bool"), SmplType::Bool);
         type_map.insert(path!("unit"), SmplType::Unit);
 
-        let mut binding_map = HashMap::new();
-
         SemanticData {
             type_map: type_map,
-            binding_map: binding_map,
+            fn_map: HashMap::new(),
+            var_map: HashMap::new(),
             is_loop: false,
             return_type: None,
         }
@@ -64,8 +76,30 @@ impl SemanticData {
         self.type_map.insert(name.into(), def)
     }
 
-    fn bind(&mut self, name: Ident, binding_type: SmplType) -> Option<SmplType> {
-        self.binding_map.insert(name, binding_type)
+    fn bind_var(&mut self, name: Ident, var_type: SmplType, id: VarId) -> Option<VarBinding> {
+        self.var_map.insert(name, VarBinding {
+            var_type: var_type,
+            binding_id: id,
+        })
+    }
+
+    fn bind_fn(&mut self, name: Ident, fn_type: FunctionType, id: FnId) -> Option<FnBinding> {
+        self.fn_map.insert(name, FnBinding {
+            fn_type: fn_type,
+            binding_id: id
+        })
+    }
+
+    fn get_type<T: Borrow<Path>>(&self, name: T) -> Option<&SmplType> {
+        self.type_map.get(name.borrow())
+    }
+
+    fn get_var(&self, name: &Ident) -> Option<&VarBinding> {
+        self.var_map.get(name)
+    }
+
+    fn get_fn(&self, name: &Ident) -> Option<&FnBinding> {
+        self.fn_map.get(name)
     }
 
     pub fn accept_struct_def(&mut self, struct_def: &Struct) -> Result<(), Err> {
@@ -118,7 +152,9 @@ impl SemanticData {
         let fn_type = self.gen_fn_type(fn_def)?;
         let arg_types = fn_type.args.clone();
         let return_type = fn_type.return_type.clone();
-        match self.bind(fn_def.name.clone(), SmplType::Function(fn_type)) {
+        let fn_id = next_fn_id();
+
+        match self.bind_fn(fn_def.name.clone(), fn_type, fn_id) {
             Some(_) => unimplemented!("TODO: Handle binding override"),
             None => (), 
         }
@@ -128,7 +164,9 @@ impl SemanticData {
         if let Some(ref args) = fn_def.args {   
             // add bindings for args
             for (arg, arg_type) in args.iter().zip(arg_types.iter()) {
-                fn_checker.semantic_data_mut().bind(arg.name.clone(), arg_type.clone());
+                fn_checker.semantic_data_mut().bind_var(arg.name.clone(), 
+                                                        arg_type.clone(), 
+                                                        next_var_id());
             }
         }
 
@@ -189,12 +227,22 @@ impl SemanticData {
                 expr.d_type = node_l.d_type.clone();
             }
 
-            Ident(ref mut node_id) => {
-                match self.binding_map.get(&node_id.data) {
-                    Some(smpl_type) => node_id.d_type = Some(smpl_type.clone()),
+            Ident(ref mut expr_ident) => {
+                match self.get_var(&expr_ident.data.ident) {
+                    Some(ref var_binding) => {
+                        let smpl_type = var_binding.var_type.clone();
+                        let id = var_binding.binding_id.clone();
+                        
+                        // Annotate type
+                        expr_ident.d_type = Some(smpl_type);
+
+                        // Set var id
+                        expr_ident.data.set_var_id(id);
+                    }
+
                     None => unimplemented!("Binding does not exist"),
                 }
-                expr.d_type = node_id.d_type.clone();
+                expr.d_type = expr_ident.d_type.clone();
             },
 
             Bin(ref mut node_bin) => {
@@ -209,38 +257,40 @@ impl SemanticData {
             },
 
             FnCall(ref mut fn_call) => {
-                let smpl_type = self.binding_map.get(&fn_call.data.name)
-                                                .ok_or(unimplemented!("Did not find fn in binding map"))?;
-                if let &SmplType::Function(ref fn_type) = smpl_type {
+                let fn_binding = self.fn_map.get(&fn_call.data.name)
+                                            .ok_or(unimplemented!("Did not find fn in binding map"))?;
+                let fn_type = &fn_binding.fn_type;
 
-                    // Verify arg types matches types in fn call
-                    match fn_call.data.args {
-                        Some(ref mut call_args) => {
-                            if call_args.len() != fn_type.args.len() {
-                                unimplemented!("Arg lengths do not match.");
-                            }
+                // Verify arg types matches types in fn call
+                match fn_call.data.args {
+                    Some(ref mut call_args) => {
+                        if call_args.len() != fn_type.args.len() {
+                            unimplemented!("Arg lengths do not match.");
+                        }
 
-                            for (ref mut call_arg, fn_type_arg) in call_args.iter_mut()
-                                                                            .zip(fn_type.args.iter()) {
-                                self.typify_expr(call_arg)?;
-                                if call_arg.d_type.as_ref() != Some(fn_type_arg) {
-                                    unimplemented!("Arg types do not match");
-                                }
-                            }
-                        },
-
-                        None => {
-                            if fn_type.args.len() != 0 {
-                                unimplemented!("Arg lengths do not match.");
+                        for (ref mut call_arg, fn_type_arg) in call_args.iter_mut()
+                                                                        .zip(fn_type.args.iter()) {
+                            self.typify_expr(call_arg)?;
+                            if call_arg.d_type.as_ref() != Some(fn_type_arg) {
+                                unimplemented!("Arg types do not match");
                             }
                         }
-                    }
+                    },
 
-                    fn_call.d_type = Some(*fn_type.return_type.clone());
-                    expr.d_type = fn_call.d_type.clone();
-                } else {
-                    unimplemented!("Binding does not map to a function type");
+                    None => {
+                        if fn_type.args.len() != 0 {
+                            unimplemented!("Arg lengths do not match.");
+                        }
+                    }
                 }
+
+                // Annotate type
+                fn_call.d_type = Some(*fn_type.return_type.clone());
+                expr.d_type = fn_call.d_type.clone();
+
+                // Set fn id
+                fn_call.data.set_fn_id(fn_binding.binding_id.clone());
+
             },
 
             Uni(ref mut uni_expr) => {
@@ -370,8 +420,11 @@ pub trait StmtCk: Debug {
                     v_type.clone()
                 };
 
+                let var_id = next_var_id();
+                decl.set_var_id(var_id);
+
                 // Ignore any name overrides (ALLOW shadowing).
-                self.semantic_data_mut().bind(decl.var_name.clone(), v_type);
+                self.semantic_data_mut().bind_var(decl.var_name.clone(), v_type, var_id);
             },
 
             ExprStmt::Assignment(ref mut asgmnt) => {
