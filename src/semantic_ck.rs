@@ -304,7 +304,28 @@ impl SemanticData {
 
             Uni(ref mut uni_expr) => {
                 self.typify_expr(&mut uni_expr.data.expr)?;
-                unimplemented!("Handle uni op potential type transformation");
+
+                let expr_t = &uni_expr.data.expr.d_type;
+
+                match uni_expr.data.op {
+                    UniOp::LogicalInvert => {
+                        if let Some(SmplType::Bool) = *expr_t {
+                            uni_expr.d_type = Some(SmplType::Bool);
+                        } else {
+                            unimplemented!("Found LogicalInvert op. Expected bool, found {:?}", expr_t);
+                        }
+                    },
+
+                    UniOp::Negate => {
+                        match *expr_t {
+                            Some(SmplType::Int) => uni_expr.d_type = Some(SmplType::Int),
+                            Some(SmplType::Float) => uni_expr.d_type = Some(SmplType::Float),
+                            _ => unimplemented!("Found Negate op. Expected a numeric type, found {:?}", expr_t),
+                        }
+                    }
+
+                    _ => unimplemented!(),
+                }
             },
         }
 
