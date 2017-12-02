@@ -253,7 +253,12 @@ impl SemanticData {
                 self.typify_expr(&mut node_bin.data.lhs)?;
                 self.typify_expr(&mut node_bin.data.rhs)?;
                 if node_bin.data.lhs.d_type == node_bin.data.rhs.d_type {
-                    node_bin.d_type = node_bin.data.lhs.d_type.clone();
+                    use ast::BinOp::*;
+                    match node_bin.data.op {
+                        Add | Sub | Mul | Div | Mod => node_bin.d_type = node_bin.data.lhs.d_type.clone(),
+                        LogicalAnd | LogicalOr | GreaterEq | Greater | LesserEq | Lesser | Eq | InEq => node_bin.d_type = Some(SmplType::Bool),
+
+                    }
                 } else {
                     unimplemented!("lhs and rhs must be the same type");
                 }
