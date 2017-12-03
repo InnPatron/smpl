@@ -656,6 +656,72 @@ mod semantic_tests {
     }
 
     #[test]
+    fn if_type_check() {
+        {
+            let input =
+"fn test() {
+    if false {
+    } 
+
+    if true {
+    }
+}";
+            let mut fn_def = parse_FnDecl(input).unwrap();
+            let mut sck = SemanticData::new();
+            sck.accept_fn_def(&mut fn_def).unwrap();
+        }
+
+        {
+            let input =
+"fn test() -> int {
+    if false {
+        return 0;
+    } 
+
+    if true {
+        return 0;
+    }
+}";
+            let mut fn_def = parse_FnDecl(input).unwrap();
+            let mut sck = SemanticData::new();
+            sck.accept_fn_def(&mut fn_def).unwrap();
+        }
+    }
+
+    #[test]
+    fn while_type_check() {
+        {
+            let input =
+"fn test() {
+    while false {
+    } 
+
+    while true {
+    }
+}";
+            let mut fn_def = parse_FnDecl(input).unwrap();
+            let mut sck = SemanticData::new();
+            sck.accept_fn_def(&mut fn_def).unwrap();
+        }
+
+        {
+            let input =
+"fn test() -> int {
+    while false {
+        return 0;
+    } 
+
+    while true {
+        return 0;
+    }
+}";
+            let mut fn_def = parse_FnDecl(input).unwrap();
+            let mut sck = SemanticData::new();
+            sck.accept_fn_def(&mut fn_def).unwrap();
+        }
+    }
+
+    #[test]
     fn test_full_fn_type_check() {
         {
             let input =
