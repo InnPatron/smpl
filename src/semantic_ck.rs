@@ -161,7 +161,9 @@ impl SemanticData {
             None => (), 
         }
         
-        let mut fn_checker = FunctionChecker::new(self, &*return_type);
+        let mut semantic_data = self.clone();
+        semantic_data.return_type = Some(*return_type.clone());
+        let mut fn_checker = FunctionChecker::new(semantic_data);
 
         if let Some(ref mut args) = fn_def.args {   
             // add bindings for args
@@ -364,12 +366,15 @@ pub struct FunctionChecker {
 }
 
 impl FunctionChecker {
-    fn new(parent_data: &SemanticData, return_type: &SmplType) -> FunctionChecker {
-        let mut data = parent_data.clone();
-        data.is_loop = false;
-        data.return_type = Some(return_type.clone());
+    fn new(data: SemanticData) -> FunctionChecker {
         FunctionChecker {
-            semantic_data: data,
+            semantic_data: data
+        }
+    }
+
+    fn scoped(parent_data: &SemanticData) -> FunctionChecker {
+        FunctionChecker {
+            semantic_data: parent_data.clone()
         }
     }
 }
@@ -506,10 +511,9 @@ pub trait StmtCk: Debug {
                     unimplemented!("Condition must evaluate to a boolean.");
                 }
 
-                let mut scoped_semantic_data = self.semantic_data().clone();
-                let mut scoped_expector = LoopChecker::new(&mut scoped_semantic_data);
+                let mut scoped_stmt_ck = FunctionChecker::scoped(self.semantic_data());
                 for stmt in if_stmt.block.0.iter_mut() {
-                    scoped_expector.accept_stmt(stmt)?;
+                    scoped_stmt_ck.accept_stmt(stmt)?;
                 }
             },
 
