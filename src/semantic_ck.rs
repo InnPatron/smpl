@@ -12,6 +12,15 @@ use ast::*;
 static mut fn_id_counter: u64 = 0;
 static mut ident_id_counter: u64 = 0;
 
+pub fn check(program: &mut Program) -> Result<(), Err> {
+    let mut s_data = SemanticData::new();
+    for decl_stmt in program.0.iter_mut() {
+        s_data.accept_decl_stmt(decl_stmt)?;
+    }
+
+    Ok(())
+}
+
 /// TODO: Make this use non-static
 fn next_fn_id() -> FnId {
     unsafe {
@@ -100,6 +109,13 @@ impl SemanticData {
 
     fn get_fn(&self, name: &Ident) -> Option<&FnBinding> {
         self.fn_map.get(name)
+    }
+
+    pub fn accept_decl_stmt(&mut self, decl_stmt: &mut DeclStmt) -> Result<(), Err> {
+        match *decl_stmt {
+            DeclStmt::Struct(ref mut struct_def) => self.accept_struct_def(struct_def),
+            DeclStmt::Function(ref mut fn_def) => self.accept_fn_def(fn_def),
+        }
     }
 
     pub fn accept_struct_def(&mut self, struct_def: &Struct) -> Result<(), Err> {
