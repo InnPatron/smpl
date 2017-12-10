@@ -179,14 +179,29 @@ Assignment: Assignment = {
 	}
 };
 
-/// if_stmt -> "if" expr block
+/// if_stmt -> "if" branch ["elif" branch]* ["else" block]?
 IfStmt: If = {
-	"if" <conditional: Expr> <block: Block> => {
+	"if" <initial_branch: Branch> <elifs: ("elif" Branch)*> <default_block: ("else" Block)?> => {
+		let mut branches = Vec::new();
+		branches.push(initial_branch);
+		branches.extend(elifs.into_iter().map(|branch| branch.1));
+
 		If {
+			branches: branches,
+			default_block: default_block.map(|block| block.1)
+		}
+		
+	},
+};
+
+/// branch -> expr block
+Branch: Branch = {
+	<conditional: Expr> <block: Block> => {
+		Branch {
 			conditional: AstNode::untyped(conditional),
 			block: block
 		}
-	},
+	}
 };
 
 /// while_stmt -> "while" expr block

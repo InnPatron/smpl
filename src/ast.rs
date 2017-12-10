@@ -106,7 +106,7 @@ pub struct LocalVarDecl {
 #[derive(Clone, Debug, PartialEq)]
 pub struct If {
     pub branches: Vec<Branch>,
-    pub default_branch: Option<Branch>
+    pub default_block: Option<Block>
 }
 
 #[derive(Clone, Debug, PartialEq)]
