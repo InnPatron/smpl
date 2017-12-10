@@ -150,6 +150,12 @@ pub ExprStmt: ExprStmt = {
 	<while_stmt: WhileStmt> => ExprStmt::While(while_stmt),
 	<local_var_decl: LocalVarDecl> => ExprStmt::LocalVarDecl(local_var_decl),
 	<assignment: Assignment> => ExprStmt::Assignment(assignment),
+	<return_stmt: ReturnStmt> => ExprStmt::Return(return_stmt),
+};
+
+/// return -> "return" expr ";"
+ReturnStmt: AstNode<Expr> = {
+	"return" <e: Expr> ";" => AstNode::untyped(e),
 };
 
 /// local_var_decl -> path ident "=" expr ";"
