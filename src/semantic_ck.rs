@@ -522,15 +522,18 @@ pub trait StmtCk: Debug {
                  * 2) Generate new scope & typify block
                  */
 
-                self.semantic_data().typify_expr(&mut if_stmt.conditional)?;
-                if if_stmt.conditional.d_type != Some(SmplType::Bool) {
-                    unimplemented!("Condition must evaluate to a boolean.");
-                }
+                for branch in if_stmt.branches.iter_mut() {
+                    self.semantic_data().typify_expr(&mut branch.conditional)?;
+                
+                    if branch.conditional.d_type != Some(SmplType::Bool) {
+                        unimplemented!("Condition must evaluate to a boolean.");
+                    }
 
-                let mut scoped_stmt_ck = FunctionChecker::scoped(self.semantic_data());
-                for stmt in if_stmt.block.0.iter_mut() {
-                    scoped_stmt_ck.accept_stmt(stmt)?;
-                }
+                    let mut scoped_stmt_ck = FunctionChecker::scoped(self.semantic_data());
+                    for stmt in branch.block.0.iter_mut() {
+                        scoped_stmt_ck.accept_stmt(stmt)?;
+                    }
+                }                
             },
 
             ExprStmt::While(ref mut while_stmt) => {
