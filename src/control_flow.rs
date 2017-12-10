@@ -92,10 +92,26 @@ impl CFG {
 
                         // Go through and generate the graph for code branches. Collect the ends.
                         let mut branch_ends = Vec::new();
-                        let instructions = &if_data.block.0;
-                        let branch_graph = CFG::follow_branch(cfg, instructions, previous);
-                        if let Some(branch_end) = branch_graph { 
-                            branch_ends.push(branch_end);
+
+                        for branch in if_data.branches.iter() {
+                            let instructions = &branch.block.0;
+                            let branch_graph = CFG::follow_branch(cfg, instructions, previous);
+                            if let Some(branch_end) = branch_graph { 
+                                branch_ends.push(branch_end);
+                            }
+                        }
+
+                        let has_default_branch;
+                        if let Some(ref block) = if_data.default_block.as_ref() {
+                            has_default_branch = true;
+                            
+                            let instructions = &block.0;
+                            let branch_graph = CFG::follow_branch(cfg, instructions, previous);
+                            if let Some(branch_end) = branch_graph {
+                                branch_ends.push(branch_end);
+                            }
+                        } else {
+                            has_default_branch = false;
                         }
 
 
@@ -104,6 +120,15 @@ impl CFG {
                         for end in branch_ends.into_iter() {
                             cfg.graph.add_edge(end, merge_node, ());
                         }
+
+
+                        // No "else" branch to act as a default.
+                        if has_default_branch == false {
+                            // Create an edge directly linking pre-branch to post-branch.
+                            cfg.graph.add_edge(previous.unwrap(), merge_node, ());
+                        }
+
+                        // All other nodes added after the branching.
                         previous = Some(merge_node);
                     }
 
