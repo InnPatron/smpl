@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use petgraph::graph;
 use ast::*;
+use smpl_type::{ SmplType, FunctionType };
 
 pub struct CFG {
     graph: graph::Graph<Node, ()>,
@@ -60,7 +61,7 @@ macro_rules! branch {
 }
 
 impl CFG {
-    pub fn generate(fn_def: &Function) -> Result<Self, ()> {
+    pub fn generate(fn_def: &Function, fn_type: &FunctionType) -> Result<Self, ()> {
         let mut cfg = CFG {
             graph: graph::Graph::new()
         };
@@ -70,8 +71,12 @@ impl CFG {
         
         let instructions = &fn_def.body.data.0;
         let fn_graph = CFG::follow_branch(&mut cfg, instructions, previous);
+        previous = fn_graph;
 
-        // TODO: Auto-insert Node::End if the return type is SmplType::Unit
+        // Auto-insert Node::End if the return type is SmplType::Unit
+        if *fn_type.return_type == SmplType::Unit {
+            append_node!(cfg, previous, Node::End);
+        }
 
         Ok(cfg)
     }
@@ -162,6 +167,7 @@ mod tests {
     use super::*;
     use parser::*;
     use petgraph::dot::{Dot, Config};
+    use smpl_type::*;
 
     #[test]
     fn test_cfg_generation() {
@@ -171,8 +177,12 @@ mod tests {
     int a = 2;
     int b = 3;
 }";
+            let fn_type = FunctionType {
+                args: vec![SmplType::Int],
+                return_type: Box::new(SmplType::Unit)
+            };
             let fn_def = parse_FnDecl(input).unwrap();
-            let cfg = CFG::generate(&fn_def).unwrap();
+            let cfg = CFG::generate(&fn_def, &fn_type).unwrap();
 
             println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
         }
@@ -189,8 +199,12 @@ mod tests {
 
     d = 5;
 }";
+            let fn_type = FunctionType {
+                args: vec![SmplType::Int],
+                return_type: Box::new(SmplType::Unit)
+            };
             let fn_def = parse_FnDecl(input).unwrap();
-            let cfg = CFG::generate(&fn_def).unwrap();
+            let cfg = CFG::generate(&fn_def, &fn_type).unwrap();
 
             println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
         }
