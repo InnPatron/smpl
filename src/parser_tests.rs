@@ -6,72 +6,14 @@ mod parser_tests {
     use ast::*;
     use smpl_type::*;
 
-    macro_rules! boolean {
-        ($val: expr) => {{
-            Literal::Bool($val)
-        }};
-
-        ($val: expr => Expr) => {{
-            Expr::Literal(AstNode::typed(boolean!($val), SmplType::Bool))
-        }};
-
-        ($val: expr => BoxExpr) => {{
-            Box::new(boolean!($val => Expr))
-        }}
-    }
-
-    macro_rules! number {
-        ($str_num: expr) => {{
-            Literal::Number($str_num.to_string())
-        }};
-
-        ($str_num: expr => Expr) => {{
-            Expr::Literal(AstNode::untyped(number!($str_num)))
-        }};
-
-        ($str_num: expr => BoxExpr) => {{
-            Box::new(number!($str_num => Expr))
-        }}
-    }
-
-    macro_rules! ident {
-        ($ident: expr) => {{
-            Ident(AsciiString::from_str($ident).unwrap())
-        }};
-
-        ($ident: expr => Expr) => {{ 
-            Expr::Ident(AstNode::untyped(ident!($ident)))
-        }};
-
-        ($ident: expr => BoxExpr) => {{
-            Box::new(ident!($ident => Expr))
-        }}
-    }
-
-    macro_rules! path {
-        ($($segment: expr),*) => {{
-            let mut v = Vec::new();
-            $(v.push(ident!($segment));)*;
-            Path(v)
-        }};
-    }
-
-    macro_rules! bin_expr {
-        ($lhs: expr, $op: expr, $rhs: expr) => {{
-            BinExpr {
-                op: $op,
-                lhs: AstNode::untyped($lhs),
-                rhs: AstNode::untyped($rhs),
-            }
-        }};
-
-        (($lhs: expr, $op: expr, $rhs: expr) => Expr) => {{
-            Expr::Bin(AstNode::untyped(bin_expr!($lhs, $op, $rhs)))
-        }};
-
-        (($lhs: expr, $op: expr, $rhs: expr) => BoxExpr) => {{
-            Box::new(bin_expr!(($lhs, $op, $rhs) => Expr))
-        }};
+    #[test]
+    fn test_parse_local_var_decl() {
+        let input = "int a = 10;";
+        let stmt = parse_ExprStmt(input).unwrap();
+        if let ExprStmt::LocalVarDecl(ref decl) = stmt {
+            assert_eq!(decl.var_type, path!("int"));
+            assert_eq!(decl.var_name, ident!("a"));
+        }
     }
 
     #[test]
@@ -79,7 +21,7 @@ mod parser_tests {
         let input = "fn test_fn(i32 arg) { }";
         let func = parse_FnDecl(input).unwrap();
         assert_eq!(func.name, ident!("test_fn"));
-        assert_eq!(func.args, Some(vec![FnArg { name: ident!("arg"), arg_type: path!("i32")}]));
+        assert_eq!(func.args, Some(vec![FnParameter::new(ident!("arg"), path!("i32"))]));
         assert_eq!(func.body, AstNode::untyped(Block(Vec::new())));
     }
 

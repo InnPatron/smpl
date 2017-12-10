@@ -1,7 +1,41 @@
 use std::str::FromStr;
+use std::fmt;
+use std::ops::{Deref, DerefMut};
 use super::Span;
 use smpl_type::SmplType;
 use ascii::AsciiString;
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct FnId(pub u64);
+
+impl Deref for FnId {
+    type Target = u64;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for FnId {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct VarId(pub u64);
+
+impl Deref for VarId {
+    type Target = u64;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for VarId {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AstNode<T: Clone + PartialEq + ::std::fmt::Debug> {
@@ -47,15 +81,55 @@ impl From<Function> for DeclStmt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: Ident,
-    pub args: Option<Vec<FnArg>>,
+    pub args: Option<Vec<FnParameter>>,
     pub return_type: Option<Path>,
     pub body: AstNode<Block>,
+    fn_id: Option<FnId>
+}
+
+impl Function {
+    pub fn new(name: Ident, args: Option<Vec<FnParameter>>, return_type: Option<Path>, body: Block) -> Function {
+        Function {
+            name: name,
+            args: args,
+            return_type: return_type,
+            body: AstNode::untyped(body),
+            fn_id: None,
+        }
+    }
+
+    pub fn fn_id(&self) -> Option<FnId> {
+        self.fn_id
+    }
+
+    pub fn set_fn_id(&mut self, id: FnId) {
+        self.fn_id = Some(id);
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct FnArg {
+pub struct FnParameter {
     pub name: Ident,
     pub arg_type: Path,
+    var_id: Option<VarId>,
+}
+
+impl FnParameter {
+    pub fn new(name: Ident, arg_type: Path) -> FnParameter {
+        FnParameter {
+            name: name,
+            arg_type: arg_type,
+            var_id: None,
+        }
+    }
+
+    pub fn set_var_id(&mut self, id: VarId) {
+        self.var_id = Some(id)
+    }
+
+    pub fn var_id(&self) -> Option<VarId> {
+        self.var_id
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -76,7 +150,7 @@ pub struct StructField {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
     ExprStmt(ExprStmt),
-    Expr(Expr),
+    Expr(AstNode<Expr>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -94,6 +168,25 @@ pub enum ExprStmt {
 pub struct Assignment {
     pub name: AstNode<Path>,
     pub value: AstNode<Expr>,
+    base_ident_id: Option<VarId>,
+}
+
+impl Assignment {
+    pub fn new(name: Path, value: Expr) -> Assignment {
+        Assignment {
+            name: AstNode::untyped(name),
+            value: AstNode::untyped(value),
+            base_ident_id: None
+        }
+    }
+
+    pub fn base_ident_id(&self) -> Option<VarId> {
+        self.base_ident_id
+    }
+
+    pub fn set_base_ident_id(&mut self, ident: VarId) {
+        self.base_ident_id = Some(ident);
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -101,6 +194,26 @@ pub struct LocalVarDecl {
     pub var_type: Path,
     pub var_name: Ident,
     pub var_init: AstNode<Expr>,
+    var_id: Option<VarId>,
+}
+
+impl LocalVarDecl {
+    pub fn new(var_type: Path, var_name: Ident, var_init: AstNode<Expr>) -> LocalVarDecl {
+        LocalVarDecl {
+            var_type: var_type,
+            var_name: var_name,
+            var_init: var_init,
+            var_id: None
+        }
+    }
+
+    pub fn var_id(&self) -> Option<VarId> {
+        self.var_id
+    }
+
+    pub fn set_var_id(&mut self, id: VarId) {
+        self.var_id = Some(id);
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -126,15 +239,56 @@ pub enum Expr {
     Bin(AstNode<BinExpr>),
     Uni(AstNode<UniExpr>),
     Literal(AstNode<Literal>),
-    Ident(AstNode<Ident>),
+    Ident(AstNode<ExprIdent>),
     FnCall(AstNode<FnCall>),
-    Block,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ExprIdent {
+    pub ident: Ident,
+    var_id: Option<VarId>,
+}
+
+impl ExprIdent {
+    pub fn new(ident: Ident) -> ExprIdent {
+        ExprIdent {
+            ident: ident,
+            var_id: None,
+        }
+    }
+
+    pub fn set_var_id(&mut self, id: VarId) {
+        self.var_id = Some(id);
+    }
+
+    pub fn var_id(&self) -> Option<VarId> {
+        self.var_id
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
     pub name: Ident,
-    pub args: Option<Vec<Expr>>
+    pub args: Option<Vec<AstNode<Expr>>>,
+    fn_id: Option<FnId>
+}
+
+impl FnCall {
+    pub fn new(name: Ident, args: Option<Vec<AstNode<Expr>>>) -> FnCall {
+        FnCall {
+            name: name,
+            args: args, 
+            fn_id: None,
+        }
+    }
+
+    pub fn fn_id(&self) -> Option<FnId> {
+        self.fn_id
+    }
+
+    pub fn set_fn_id(&mut self, id: FnId) {
+        self.fn_id = Some(id);
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -186,7 +340,7 @@ pub enum Literal {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Block(pub Vec<Stmt>);
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Ident(pub AsciiString);
 
 impl Ident {
@@ -195,8 +349,31 @@ impl Ident {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+impl fmt::Display for Ident {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Path(pub Vec<Ident>);
+
+impl From<Ident> for Path {
+    fn from(ident: Ident) -> Path {
+        Path(vec![ident])
+    }
+}
+
+impl fmt::Display for Path {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let buffer = self.0.iter().fold(AsciiString::new(), 
+                                        |mut buffer, ref item| {
+                                            buffer.push_str(&item.0); 
+                                            buffer
+                                        });
+        write!(f, "{}", buffer)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Keyword {

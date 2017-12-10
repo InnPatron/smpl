@@ -75,19 +75,19 @@ DeclStmt: DeclStmt = {
 
 /// fn_decl -> "fn" ident "(" [arg_list]? ")" ["->" path]? block
 pub FnDecl: Function = {
-	"fn" <name: Ident> "(" <args: FnArgList?> ")" <return_type: ("->" Path)?> <b: Block> => {
-		Function {
-			name: name,
-			args: args,
-			return_type: return_type.map(|r| r.1),
-			body: AstNode::untyped(b),
-		}
+	"fn" <name: Ident> "(" <args: FnParameterList?> ")" <return_type: ("->" Path)?> <b: Block> => {
+		Function::new(
+			name,
+			args,
+			return_type.map(|r| r.1),
+			b,
+		)
 	}
 };
 
 /// arg_list -> arg ["," arg]*
-FnArgList: Vec<FnArg> = {
-	<first: FnArg> <tail: ("," <FnArg>)*> => {
+FnParameterList: Vec<FnParameter> = {
+	<first: FnParameter> <tail: ("," <FnParameter>)*> => {
 		let mut v = vec![first];
 		v.extend(tail);
 		v
@@ -95,12 +95,9 @@ FnArgList: Vec<FnArg> = {
 };
 
 /// arg -> path ident
-FnArg: FnArg = {
+FnParameter: FnParameter = {
 	<arg_type: Path> <name: Ident> => {
-		FnArg {
-			name: name,
-			arg_type: arg_type,
-		}
+		FnParameter::new(name, arg_type)
 	}
 };
 
@@ -135,7 +132,7 @@ StructField: StructField = {
 
 /// stmt -> expr ";" | expr_stmt
 pub Stmt: Stmt = {
-	<e: Expr> ";" => Stmt::Expr(e),
+	<e: Expr> ";" => Stmt::Expr(AstNode::untyped(e)),
 	<e: ExprStmt> => Stmt::ExprStmt(e),
 };
 
@@ -161,21 +158,21 @@ ReturnStmt: AstNode<Expr> = {
 /// local_var_decl -> path ident "=" expr ";"
 LocalVarDecl: LocalVarDecl = {
 	<var_type: Path> <name: Ident> "=" <e: Expr> ";" => {
-		LocalVarDecl {
-			var_type: var_type,
-			var_name: name,
-			var_init: AstNode::untyped(e)
-		}
+		LocalVarDecl::new(
+			var_type,
+			name,
+			AstNode::untyped(e)
+		)
 	},
 };
 
 /// assignment -> path "=" expr ";"
 Assignment: Assignment = {
 	<name: Path> "=" <e: Expr> ";" => {
-		Assignment {
-			name: AstNode::untyped(name),
-			value: AstNode::untyped(e),
-		}
+		Assignment::new(
+			name,
+			e,
+		)
 	}
 };
 
@@ -333,7 +330,7 @@ Term: Expr = {
 /// expr_leaf -> "(" uni_expr ")" | literal | fn_call
 ExprLeaf: Expr = {
 	"(" <u: UniExpr> ")" => Expr::Uni(AstNode::untyped(u)),
-	<i: Ident> => Expr::Ident(AstNode::untyped(i)),
+	<i: Ident> => Expr::Ident(AstNode::untyped(ExprIdent::new(i))),
 	<l: Literal> => Expr::Literal(l),
 	<f: FnCall> => Expr::FnCall(AstNode::untyped(f)),
 };
@@ -341,18 +338,18 @@ ExprLeaf: Expr = {
 /// fn_call -> ident "(" fn_call_args ")"
 FnCall: FnCall = {
 	<name: Ident> "(" <args: FnCallArgs?> ")" => {
-		FnCall {
-			name: name,
-			args: args,
-		}
+		FnCall::new(
+			name, 
+			args,
+		)
 	}
 };
 
 /// fn_call_args -> expr ["," expr]*
-FnCallArgs: Vec<Expr> = {
+FnCallArgs: Vec<AstNode<Expr>> = {
 	<first: Expr> <tail: ("," <Expr>)*> => {
-		let mut v = vec![first];
-		v.extend(tail);
+		let mut v = vec![AstNode::untyped(first)];
+		v.extend(tail.into_iter().map(|e| AstNode::untyped(e)).collect::<Vec<_>>());
 		v
 	}
 };
