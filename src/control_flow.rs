@@ -249,4 +249,146 @@ mod tests {
             println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
         }
     }
+
+    #[test]
+    fn test_cfg_analysis() {
+        {
+            let input =
+"fn test(int arg) {
+    int a = 2;
+    int b = 3;
+}";
+            let fn_type = FunctionType {
+                args: vec![SmplType::Int],
+                return_type: Box::new(SmplType::Unit)
+            };
+            let fn_def = parse_FnDecl(input).unwrap();
+            let (cfg, previous) = CFG::generate(&fn_def, &fn_type).unwrap();
+            let validation_result = cfg.validate(previous);
+            assert_eq!(validation_result, Ok(()));
+        }
+
+        {
+            let input =
+"fn test(int arg) -> int {
+    int a = 2;
+    int b = 3;
+}";
+            let fn_type = FunctionType {
+                args: vec![SmplType::Int],
+                return_type: Box::new(SmplType::Int)
+            };
+            let fn_def = parse_FnDecl(input).unwrap();
+            let (cfg, previous) = CFG::generate(&fn_def, &fn_type).unwrap();
+            let validation_result = cfg.validate(previous);
+            assert_eq!(validation_result, Err(Err::MissingReturn));
+        }
+
+        {
+            let input =
+"fn test(int arg) -> int {
+    int a = 2;
+    int b = 3;
+    return a;
+}";
+            let fn_type = FunctionType {
+                args: vec![SmplType::Int],
+                return_type: Box::new(SmplType::Int)
+            };
+            let fn_def = parse_FnDecl(input).unwrap();
+            let (cfg, previous) = CFG::generate(&fn_def, &fn_type).unwrap();
+            let validation_result = cfg.validate(previous);
+            assert_eq!(validation_result, Ok(()));
+        }
+
+        {
+            let input =
+"fn test(int arg) -> int {
+    int a = 2;
+    int b = 3;
+    if true {
+        if true {
+
+        }
+        return a;
+    }
+}";
+            let fn_type = FunctionType {
+                args: vec![SmplType::Int],
+                return_type: Box::new(SmplType::Int)
+            };
+            let fn_def = parse_FnDecl(input).unwrap();
+            let (cfg, previous) = CFG::generate(&fn_def, &fn_type).unwrap();
+            let validation_result = cfg.validate(previous);
+            assert_eq!(validation_result, Err(Err::MissingReturn));
+        }
+
+        {
+            let input =
+"fn test(int arg) -> int {
+    int a = 2;
+    int b = 3;
+    if true {
+        if true {
+            return b;
+        }
+        return a;
+    }
+    return b;
+}";
+            let fn_type = FunctionType {
+                args: vec![SmplType::Int],
+                return_type: Box::new(SmplType::Int)
+            };
+            let fn_def = parse_FnDecl(input).unwrap();
+            let (cfg, previous) = CFG::generate(&fn_def, &fn_type).unwrap();
+            let validation_result = cfg.validate(previous);
+            assert_eq!(validation_result, Ok(()));
+        }
+
+        {
+            let input =
+"fn test(int arg) -> int {
+    int a = 2;
+    int b = 3;
+    int c = 4;
+    if false {
+        return a;
+    } elif false {
+        return b;
+    } else {
+        return c;
+    }
+}";
+            let fn_type = FunctionType {
+                args: vec![SmplType::Int],
+                return_type: Box::new(SmplType::Int)
+            };
+            let fn_def = parse_FnDecl(input).unwrap();
+            let (cfg, previous) = CFG::generate(&fn_def, &fn_type).unwrap();
+            let validation_result = cfg.validate(previous);
+            assert_eq!(validation_result, Ok(()));
+        }
+
+        {
+            let input =
+"fn test(int arg) -> int {
+    int a = 2;
+    int b = 3;
+    if false {
+        return b;
+    } elif true {
+        return a;
+    } 
+}";
+            let fn_type = FunctionType {
+                args: vec![SmplType::Int],
+                return_type: Box::new(SmplType::Int)
+            };
+            let fn_def = parse_FnDecl(input).unwrap();
+            let (cfg, previous) = CFG::generate(&fn_def, &fn_type).unwrap();
+            let validation_result = cfg.validate(previous);
+            assert_eq!(validation_result, Err(Err::MissingReturn));
+        }
+    }
 }
