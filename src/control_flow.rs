@@ -178,7 +178,15 @@ impl CFG {
                     }
 
                     ExprStmt::While(_) => {
+                        unimplemented!("Loop CFG creation");
+                    }
 
+                    ExprStmt::Break => {
+                        unimplemented!("Break statement CFG creation");
+                    }
+
+                    ExprStmt::Continue => {
+                        unimplemented!("Continue statement CFG creation");
                     }
 
                     ExprStmt::Return(_) => {
