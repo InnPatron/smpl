@@ -84,6 +84,8 @@ impl CFG {
             append_node!(cfg, previous, Node::End);
         }
 
+        // previous is only None if return type != SmplType::Unit AND CFG::follow_branch returned
+        // None (function was empty)
         Ok((cfg, previous))
     }
 
@@ -92,6 +94,9 @@ impl CFG {
         let mut search_stack = Vec::new();
         if let Some(last_node) = previous {
             search_stack.push(last_node);
+        } else {
+            // Function was empty and note SmplType::Unit
+            return Err(Err::MissingReturn);
         }
 
         // Node::End represents return statements. Start at the ends of the graph and scan for
