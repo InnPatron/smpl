@@ -89,7 +89,7 @@ impl CFG {
         Ok((cfg, previous))
     }
 
-    pub fn validate(&self, previous: Option<graph::NodeIndex>, fn_type: &FunctionType) -> Result<(), Err> {
+    pub fn validate(&self, previous: Option<graph::NodeIndex>) -> Result<(), Err> {
         
         let mut search_stack = Vec::new();
         if let Some(last_node) = previous {
