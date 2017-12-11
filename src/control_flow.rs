@@ -17,6 +17,11 @@ pub enum Node {
     BranchMerge,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Err {
+    MissingReturn,
+}
+
 macro_rules! append_node {
     ($CFG: expr, $previous: expr, $to_insert: expr) => {
         let temp = $CFG.graph.add_node($to_insert);
@@ -62,7 +67,7 @@ macro_rules! branch {
 }
 
 impl CFG {
-    pub fn generate(fn_def: &Function, fn_type: &FunctionType) -> Result<Self, ()> {
+    pub fn generate(fn_def: &Function, fn_type: &FunctionType) -> Result<Self, Err> {
         let mut cfg = CFG {
             graph: graph::Graph::new()
         };
@@ -101,7 +106,7 @@ impl CFG {
                     continue;
                 } else {
                     // Fail
-                    unimplemented!("Expected to find Node::End (in the form of a return statement)");
+                    return Err(Err::MissingReturn);
                 }
             }
         }
