@@ -182,7 +182,7 @@ impl CFG {
                     }
 
                     ExprStmt::Return(_) => {
-
+                        append_node!(cfg, previous, Node::End);
                     }
 
                     ref s @ _ => {
