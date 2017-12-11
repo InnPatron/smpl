@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use petgraph;
 use petgraph::graph;
 use ast::*;
 use smpl_type::{ SmplType, FunctionType };
@@ -76,6 +77,33 @@ impl CFG {
         // Auto-insert Node::End if the return type is SmplType::Unit
         if *fn_type.return_type == SmplType::Unit {
             append_node!(cfg, previous, Node::End);
+        }
+
+
+        // Node::End represents return statements. Start at the ends of the graph and scan for
+        // Node::End's. If there are not enough Node::End's, there are not enough return
+        // statements.
+        {
+            let mut search_stack = Vec::new();
+            if let Some(last_node) = previous {
+                search_stack.push(last_node);
+            }
+
+            while let Some(node_id) = search_stack.pop() {
+                let node = cfg.graph.node_weight(node_id).unwrap();
+                // Backtrack into the branches to search for Node::End's
+                if let Node::BranchMerge = *node {
+                    let incoming = cfg.graph.neighbors_directed(node_id, 
+                                                                petgraph::Direction::Incoming);
+                    search_stack.extend(incoming);
+                } else if let Node::End = *node {
+                    // Pass
+                    continue;
+                } else {
+                    // Fail
+                    unimplemented!("Expected to find Node::End (in the form of a return statement)");
+                }
+            }
         }
 
         Ok(cfg)
