@@ -67,7 +67,7 @@ macro_rules! branch {
 }
 
 impl CFG {
-    pub fn generate(fn_def: &Function, fn_type: &FunctionType) -> Result<Self, Err> {
+    pub fn generate(fn_def: &Function, fn_type: &FunctionType) -> Result<(Self, Option<graph::NodeIndex>), Err> {
         let mut cfg = CFG {
             graph: graph::Graph::new()
         };
@@ -84,34 +84,36 @@ impl CFG {
             append_node!(cfg, previous, Node::End);
         }
 
+        Ok((cfg, previous))
+    }
+
+    pub fn validate(&self, previous: Option<graph::NodeIndex>, fn_type: &FunctionType) -> Result<(), Err> {
+        
+        let mut search_stack = Vec::new();
+        if let Some(last_node) = previous {
+            search_stack.push(last_node);
+        }
 
         // Node::End represents return statements. Start at the ends of the graph and scan for
         // Node::End's. If there are not enough Node::End's, there are not enough return
         // statements.
-        {
-            let mut search_stack = Vec::new();
-            if let Some(last_node) = previous {
-                search_stack.push(last_node);
-            }
-
-            while let Some(node_id) = search_stack.pop() {
-                let node = cfg.graph.node_weight(node_id).unwrap();
-                // Backtrack into the branches to search for Node::End's
-                if let Node::BranchMerge = *node {
-                    let incoming = cfg.graph.neighbors_directed(node_id, 
-                                                                petgraph::Direction::Incoming);
-                    search_stack.extend(incoming);
-                } else if let Node::End = *node {
-                    // Pass
-                    continue;
-                } else {
-                    // Fail
-                    return Err(Err::MissingReturn);
-                }
+        while let Some(node_id) = search_stack.pop() {
+            let node = self.graph.node_weight(node_id).unwrap();
+            // Backtrack into the branches to search for Node::End's
+            if let Node::BranchMerge = *node {
+                let incoming = self.graph.neighbors_directed(node_id, 
+                                                            petgraph::Direction::Incoming);
+                search_stack.extend(incoming);
+            } else if let Node::End = *node {
+                // Pass
+                continue;
+            } else {
+                // Fail
+                return Err(Err::MissingReturn);
             }
         }
 
-        Ok(cfg)
+        Ok(())
     }
 
     /// 
@@ -215,7 +217,7 @@ mod tests {
                 return_type: Box::new(SmplType::Unit)
             };
             let fn_def = parse_FnDecl(input).unwrap();
-            let cfg = CFG::generate(&fn_def, &fn_type).unwrap();
+            let (cfg, _) = CFG::generate(&fn_def, &fn_type).unwrap();
 
             println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
         }
@@ -237,7 +239,7 @@ mod tests {
                 return_type: Box::new(SmplType::Unit)
             };
             let fn_def = parse_FnDecl(input).unwrap();
-            let cfg = CFG::generate(&fn_def, &fn_type).unwrap();
+            let (cfg, _) = CFG::generate(&fn_def, &fn_type).unwrap();
 
             println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
         }
