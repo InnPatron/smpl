@@ -6,6 +6,7 @@ use std::fmt::Debug;
 
 use ascii::*;
 
+use control_flow::CFG;
 use smpl_type::*;
 use ast::*;
 
@@ -172,7 +173,7 @@ impl SemanticData {
 
         fn_def.set_fn_id(fn_id);
 
-        match self.bind_fn(fn_def.name.clone(), fn_type, fn_id) {
+        match self.bind_fn(fn_def.name.clone(), fn_type.clone(), fn_id) {
             Some(_) => unimplemented!("TODO: Handle binding override"),
             None => (), 
         }
@@ -195,6 +196,9 @@ impl SemanticData {
         for stmt in fn_def.body.data.0.iter_mut() {
             fn_checker.accept_stmt(stmt)?;
         }
+
+        let (cfg, last) = CFG::generate(fn_def, &fn_type).expect("unimplemented!()");
+        cfg.validate(last).expect("unimplemented");
         
         Ok(())
     }
