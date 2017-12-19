@@ -4,24 +4,6 @@ use petgraph::graph;
 use ast::*;
 use smpl_type::{ SmplType, FunctionType };
 
-pub struct CFG {
-    graph: graph::Graph<Node, ()>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Node {
-    Start,
-    End,
-    Stmt(String),
-    BranchSplit,
-    BranchMerge,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Err {
-    MissingReturn,
-}
-
 macro_rules! append_node {
     ($CFG: expr, $previous: expr, $to_insert: expr) => {
         let temp = $CFG.graph.add_node($to_insert);
@@ -53,17 +35,22 @@ macro_rules! append_node_index {
     }
 }
 
-macro_rules! branch {
-    ($CFG: expr, $previous: expr, $to_insert: expr) => {
-        let temp = $CFG.graph.add_node($to_insert);
-        if let Some(previous_node) = $previous {
-            $CFG.graph.add_edge(previous_node, temp, ());
-        } else {
-            panic!("Attempting to branch on a non-existent node");
-        }
+pub struct CFG {
+    graph: graph::Graph<Node, ()>,
+}
 
-        temp
-    }
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Node {
+    Start,
+    End,
+    Stmt(String),
+    BranchSplit,
+    BranchMerge,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Err {
+    MissingReturn,
 }
 
 impl CFG {
