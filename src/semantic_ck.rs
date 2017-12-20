@@ -743,6 +743,8 @@ mod semantic_tests {
     while true {
         return 0;
     }
+
+    return 0;
 }";
             let mut fn_def = parse_FnDecl(input).unwrap();
             let mut sck = SemanticData::new();
