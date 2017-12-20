@@ -48,6 +48,8 @@ pub enum Node {
     BranchMerge,
     LoopHead,
     LoopFoot,
+    Break,
+    Continue,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -186,11 +188,25 @@ impl CFG {
                     }
 
                     ExprStmt::Break => {
-                        unimplemented!("Break statement CFG creation");
+                        let break_id = cfg.graph.add_node(Node::Break);
+                        append_node_index!(cfg, previous, break_id);
+                        
+                        if let Some((_, foot)) = loop_data {
+                            cfg.graph.add_edge(break_id, foot, ());
+                        } else {
+                            unimplemented!("Return error when no loop header data? Or save for validation.");
+                        }
                     }
 
                     ExprStmt::Continue => {
-                        unimplemented!("Continue statement CFG creation");
+                        let continue_id = cfg.graph.add_node(Node::Continue);
+                        append_node_index!(cfg, previous, continue_id);
+                        
+                        if let Some((head, _)) = loop_data {
+                            cfg.graph.add_edge(continue_id, head, ());
+                        } else {
+                            unimplemented!("Return error when no loop header data? Or save for validation.");
+                        }
                     }
 
                     ExprStmt::Return(_) => {
