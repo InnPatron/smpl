@@ -46,6 +46,8 @@ pub enum Node {
     Stmt(String),
     BranchSplit,
     BranchMerge,
+    LoopHead,
+    LoopFoot,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -63,7 +65,7 @@ impl CFG {
         previous = Some(cfg.graph.add_node(Node::Start));
         
         let instructions = &fn_def.body.data.0;
-        let fn_graph = CFG::follow_branch(&mut cfg, instructions, previous);
+        let fn_graph = CFG::follow_branch(&mut cfg, instructions, previous, None);
         previous = fn_graph;
 
         // Auto-insert Node::End if the return type is SmplType::Unit
@@ -111,7 +113,7 @@ impl CFG {
     /// 
     /// Returns the last node in a code branch.
     /// 
-    fn follow_branch(cfg: &mut CFG, instructions: &[Stmt], mut previous: Option<graph::NodeIndex>) -> Option<graph::NodeIndex> {
+    fn follow_branch(cfg: &mut CFG, instructions: &[Stmt], mut previous: Option<graph::NodeIndex>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex)>) -> Option<graph::NodeIndex> {
         
         for stmt in instructions.iter() {
             if let &Stmt::ExprStmt(ref expr_stmt) = stmt {
@@ -127,7 +129,7 @@ impl CFG {
 
                         for branch in if_data.branches.iter() {
                             let instructions = &branch.block.0;
-                            let branch_graph = CFG::follow_branch(cfg, instructions, previous);
+                            let branch_graph = CFG::follow_branch(cfg, instructions, previous, loop_data);
                             if let Some(branch_end) = branch_graph { 
                                 branch_ends.push(branch_end);
                             }
@@ -138,7 +140,7 @@ impl CFG {
                             has_default_branch = true;
                             
                             let instructions = &block.0;
-                            let branch_graph = CFG::follow_branch(cfg, instructions, previous);
+                            let branch_graph = CFG::follow_branch(cfg, instructions, previous, loop_data);
                             if let Some(branch_end) = branch_graph {
                                 branch_ends.push(branch_end);
                             }
@@ -164,8 +166,23 @@ impl CFG {
                         previous = Some(merge_node);
                     }
 
-                    ExprStmt::While(_) => {
-                        unimplemented!("Loop CFG creation");
+                    ExprStmt::While(ref while_data) => {
+                        let head = cfg.graph.add_node(Node::LoopHead);
+                        let foot = cfg.graph.add_node(Node::LoopFoot);
+
+
+                        append_node_index!(cfg, previous, head);
+
+                        let instructions = &while_data.block.0;
+                        let loop_body = CFG::follow_branch(cfg, instructions, 
+                                                           previous, Some((head, foot)));
+                        if let Some(body) = loop_body {
+                            cfg.graph.add_edge(body, foot, ());
+                        } else {
+                            cfg.graph.add_edge(head, foot, ());
+                        }
+
+                        previous = Some(foot);
                     }
 
                     ExprStmt::Break => {
