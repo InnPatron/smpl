@@ -37,17 +37,27 @@ macro_rules! append_node_index {
 
 pub struct CFG {
     graph: graph::Graph<Node, ()>,
+    start: graph::NodeIndex,
+    end: graph::NodeIndex,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Node {
     Start,
     End,
-    Stmt(String),
+
+    Expr(AstNode<Expr>),
+
     BranchSplit,
     BranchMerge,
+
+    Assignment(Assignment),
+    LocalVarDecl(LocalVarDecl),
+
     LoopHead,
     LoopFoot,
+
+    Return(Option<AstNode<Expr>>),
     Break,
     Continue,
 }
@@ -58,69 +68,47 @@ pub enum Err {
 }
 
 impl CFG {
-    pub fn generate(fn_def: &Function, fn_type: &FunctionType) -> Result<(Self, Option<graph::NodeIndex>), Err> {
-        let mut cfg = CFG {
-            graph: graph::Graph::new()
-        };
+    pub fn generate(fn_def: Function, fn_type: &FunctionType) -> Result<Self, Err> {
 
         let mut previous: Option<graph::NodeIndex> = None;
-        previous = Some(cfg.graph.add_node(Node::Start));
+
+        let mut cfg = {
+            let mut graph = graph::Graph::new();
+            let start = graph.add_node(Node::Start);
+            let end = graph.add_node(Node::End);
+
+            CFG {
+                graph: graph,
+                start: start,
+                end: end,
+            }
+        };
+
+        previous = Some(cfg.start);
         
-        let instructions = &fn_def.body.data.0;
+        let instructions = fn_def.body.data.0;
         let fn_graph = CFG::follow_branch(&mut cfg, instructions, previous, None);
         previous = fn_graph;
 
-        // Auto-insert Node::End if the return type is SmplType::Unit
+        // Auto-insert Node::Return(None) if the return type is SmplType::Unit
         if *fn_type.return_type == SmplType::Unit {
-            append_node!(cfg, previous, Node::End);
+            append_node!(cfg, previous, Node::Return(None));
         }
 
-        // previous is only None if return type != SmplType::Unit AND CFG::follow_branch returned
-        // None (function was empty)
-        Ok((cfg, previous))
-    }
+        append_node_index!(cfg, previous, cfg.end);
 
-    pub fn validate(&self, previous: Option<graph::NodeIndex>) -> Result<(), Err> {
-        
-        let mut search_stack = Vec::new();
-        if let Some(last_node) = previous {
-            search_stack.push(last_node);
-        } else {
-            // Function was empty and note SmplType::Unit
-            return Err(Err::MissingReturn);
-        }
-
-        // Node::End represents return statements. Start at the ends of the graph and scan for
-        // Node::End's. If there are not enough Node::End's, there are not enough return
-        // statements.
-        while let Some(node_id) = search_stack.pop() {
-            let node = self.graph.node_weight(node_id).unwrap();
-            // Backtrack into the branches to search for Node::End's
-            if let Node::BranchMerge = *node {
-                let incoming = self.graph.neighbors_directed(node_id, 
-                                                            petgraph::Direction::Incoming);
-                search_stack.extend(incoming);
-            } else if let Node::End = *node {
-                // Pass
-                continue;
-            } else {
-                // Fail
-                return Err(Err::MissingReturn);
-            }
-        }
-
-        Ok(())
+        Ok(cfg)
     }
 
     /// 
     /// Returns the last node in a code branch.
     /// 
-    fn follow_branch(cfg: &mut CFG, instructions: &[Stmt], mut previous: Option<graph::NodeIndex>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex)>) -> Option<graph::NodeIndex> {
+    fn follow_branch(cfg: &mut CFG, instructions: Vec<Stmt>, mut previous: Option<graph::NodeIndex>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex)>) -> Option<graph::NodeIndex> {
         
-        for stmt in instructions.iter() {
-            if let &Stmt::ExprStmt(ref expr_stmt) = stmt {
-                match (*expr_stmt) {
-                    ExprStmt::If(ref if_data) => {
+        for stmt in instructions.into_iter() {
+            if let Stmt::ExprStmt(expr_stmt) = stmt {
+                match (expr_stmt) {
+                    ExprStmt::If(if_data) => {
 
                         // Any potential branching starst off with at a Node::BranchSplit
                         append_node!(cfg, previous, Node::BranchSplit);
@@ -129,20 +117,22 @@ impl CFG {
                         // Go through and generate the graph for code branches. Collect the ends.
                         let mut branch_ends = Vec::new();
 
-                        for branch in if_data.branches.iter() {
-                            let instructions = &branch.block.0;
-                            let branch_graph = CFG::follow_branch(cfg, instructions, previous, loop_data);
+                        for branch in if_data.branches.into_iter() {
+                            let instructions = branch.block.0;
+                            let branch_graph = CFG::follow_branch(cfg, instructions, 
+                                                                  previous, loop_data);
                             if let Some(branch_end) = branch_graph { 
                                 branch_ends.push(branch_end);
                             }
                         }
 
                         let has_default_branch;
-                        if let Some(ref block) = if_data.default_block.as_ref() {
+                        if let Some(block) = if_data.default_block {
                             has_default_branch = true;
                             
-                            let instructions = &block.0;
-                            let branch_graph = CFG::follow_branch(cfg, instructions, previous, loop_data);
+                            let instructions = block.0;
+                            let branch_graph = CFG::follow_branch(cfg, instructions, 
+                                                                  previous, loop_data);
                             if let Some(branch_end) = branch_graph {
                                 branch_ends.push(branch_end);
                             }
@@ -168,14 +158,14 @@ impl CFG {
                         previous = Some(merge_node);
                     }
 
-                    ExprStmt::While(ref while_data) => {
+                    ExprStmt::While(while_data) => {
                         let head = cfg.graph.add_node(Node::LoopHead);
                         let foot = cfg.graph.add_node(Node::LoopFoot);
 
 
                         append_node_index!(cfg, previous, head);
 
-                        let instructions = &while_data.block.0;
+                        let instructions = while_data.block.0;
                         let loop_body = CFG::follow_branch(cfg, instructions, 
                                                            previous, Some((head, foot)));
                         if let Some(body) = loop_body {
@@ -209,20 +199,22 @@ impl CFG {
                         }
                     }
 
-                    ExprStmt::Return(_) => {
-                        append_node!(cfg, previous, Node::End);
+                    ExprStmt::Return(expr) => {
+                        let ret = cfg.graph.add_node(Node::Return(Some(expr)));
+                        append_node_index!(cfg, previous, ret);
+                        cfg.graph.add_edge(ret, cfg.end, ());
                     }
 
-                    ref s @ _ => {
-                        let to_insert = Node::Stmt(format!("{:?}", s));
-                        let temp = cfg.graph.add_node(to_insert);
-                        if let Some(previous_node) = previous {
-                            cfg.graph.add_edge(previous_node, temp, ());
-                        }
-                        
-                        previous = Some(temp);
+                    ExprStmt::LocalVarDecl(decl) => {
+                        append_node!(cfg, previous, Node::LocalVarDecl(decl));
+                    }
+
+                    ExprStmt::Assignment(assignment) => {
+                        append_node!(cfg, previous, Node::Assignment(assignment));
                     }
                 }
+            } else if let Stmt::Expr(expr) = stmt {
+                append_node!(cfg, previous, Node::Expr(expr));
             }
         }
 
