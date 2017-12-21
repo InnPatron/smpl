@@ -5,14 +5,19 @@ use ast::*;
 use smpl_type::{ SmplType, FunctionType };
 
 macro_rules! append_node {
+
     ($CFG: expr, $previous: expr, $to_insert: expr) => {
+        append_node!($CFG, $previous, $to_insert, Edge::Normal)
+    };
+
+    ($CFG: expr, $previous: expr, $to_insert: expr, $edge: expr) => {
         let temp = $CFG.graph.add_node($to_insert);
         if let Some(previous_node) = $previous {
-            $CFG.graph.add_edge(previous_node, temp, ());
+            $CFG.graph.add_edge(previous_node, temp, $edge);
         }
         
         $previous = Some(temp);
-    }
+    };
 }
 
 macro_rules! link_node_index {
@@ -26,17 +31,22 @@ macro_rules! link_node_index {
 }
 
 macro_rules! append_node_index {
+
     ($CFG: expr, $previous: expr, $to_insert: expr) => {
+        append_node_index!($CFG, $previous, $to_insert, Edge::Normal)
+    };
+
+    ($CFG: expr, $previous: expr, $to_insert: expr, $edge: expr) => {
         if let Some(previous_node) = $previous {
-            $CFG.graph.add_edge(previous_node, $to_insert, ());
+            $CFG.graph.add_edge(previous_node, $to_insert, $edge);
         }
         
         $previous = Some($to_insert);
-    }
+    };
 }
 
 pub struct CFG {
-    graph: graph::Graph<Node, ()>,
+    graph: graph::Graph<Node, Edge>,
     start: graph::NodeIndex,
     end: graph::NodeIndex,
 }
@@ -60,6 +70,15 @@ pub enum Node {
     Return(Option<AstNode<Expr>>),
     Break,
     Continue,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Edge {
+    Normal,
+    Conditional(Option<AstNode<Expr>>),
+    BranchSidestep,
+    LoopSidestep,
+    BackEdge,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -122,7 +141,7 @@ impl CFG {
                             let branch_graph = CFG::follow_branch(cfg, instructions, 
                                                                   previous, loop_data);
                             if let Some(branch_end) = branch_graph { 
-                                branch_ends.push(branch_end);
+                                branch_ends.push((Some(branch.conditional), branch_end));
                             }
                         }
 
@@ -134,7 +153,7 @@ impl CFG {
                             let branch_graph = CFG::follow_branch(cfg, instructions, 
                                                                   previous, loop_data);
                             if let Some(branch_end) = branch_graph {
-                                branch_ends.push(branch_end);
+                                branch_ends.push((None, branch_end));
                             }
                         } else {
                             has_default_branch = false;
@@ -143,15 +162,15 @@ impl CFG {
 
                         // All branches come back together at a Node::BranchMerge
                         let merge_node = cfg.graph.add_node(Node::BranchMerge);
-                        for end in branch_ends.into_iter() {
-                            cfg.graph.add_edge(end, merge_node, ());
+                        for (condition, end) in branch_ends.into_iter() {
+                            cfg.graph.add_edge(end, merge_node, Edge::Conditional(condition));
                         }
 
 
                         // No "else" branch to act as a default.
                         if has_default_branch == false {
                             // Create an edge directly linking pre-branch to post-branch.
-                            cfg.graph.add_edge(previous.unwrap(), merge_node, ());
+                            cfg.graph.add_edge(previous.unwrap(), merge_node, Edge::BranchSidestep);
                         }
 
                         // All other nodes added after the branching.
@@ -162,6 +181,9 @@ impl CFG {
                         let head = cfg.graph.add_node(Node::LoopHead);
                         let foot = cfg.graph.add_node(Node::LoopFoot);
 
+                        cfg.graph.add_edge(head, foot, Edge::LoopSidestep);
+                        cfg.graph.add_edge(foot, head, Edge::BackEdge);
+
 
                         append_node_index!(cfg, previous, head);
 
@@ -169,9 +191,7 @@ impl CFG {
                         let loop_body = CFG::follow_branch(cfg, instructions, 
                                                            previous, Some((head, foot)));
                         if let Some(body) = loop_body {
-                            cfg.graph.add_edge(body, foot, ());
-                        } else {
-                            cfg.graph.add_edge(head, foot, ());
+                            cfg.graph.add_edge(body, foot, Edge::Normal);
                         }
 
                         previous = Some(foot);
@@ -182,7 +202,7 @@ impl CFG {
                         append_node_index!(cfg, previous, break_id);
                         
                         if let Some((_, foot)) = loop_data {
-                            cfg.graph.add_edge(break_id, foot, ());
+                            cfg.graph.add_edge(break_id, foot, Edge::Normal);
                         } else {
                             unimplemented!("Return error when no loop header data? Or save for validation.");
                         }
@@ -193,7 +213,7 @@ impl CFG {
                         append_node_index!(cfg, previous, continue_id);
                         
                         if let Some((head, _)) = loop_data {
-                            cfg.graph.add_edge(continue_id, head, ());
+                            cfg.graph.add_edge(continue_id, head, Edge::BackEdge);
                         } else {
                             unimplemented!("Return error when no loop header data? Or save for validation.");
                         }
@@ -202,7 +222,7 @@ impl CFG {
                     ExprStmt::Return(expr) => {
                         let ret = cfg.graph.add_node(Node::Return(Some(expr)));
                         append_node_index!(cfg, previous, ret);
-                        cfg.graph.add_edge(ret, cfg.end, ());
+                        cfg.graph.add_edge(ret, cfg.end, Edge::Normal);
                     }
 
                     ExprStmt::LocalVarDecl(decl) => {
