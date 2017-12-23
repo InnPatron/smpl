@@ -75,9 +75,8 @@ pub enum Node {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Edge {
     Normal,
-    Conditional(Option<AstNode<Expr>>),
-    BranchSidestep,
-    LoopSidestep,
+    Conditional(AstNode<Expr>),
+    FallbackCondition,
     BackEdge,
 }
 
@@ -163,14 +162,19 @@ impl CFG {
                         // All branches come back together at a Node::BranchMerge
                         let merge_node = cfg.graph.add_node(Node::BranchMerge);
                         for (condition, end) in branch_ends.into_iter() {
-                            cfg.graph.add_edge(end, merge_node, Edge::Conditional(condition));
+                            let edge = if let Some(condition) = condition{
+                                Edge::Conditional(condition)
+                            } else {
+                                Edge::FallbackCondition
+                            };
+                            cfg.graph.add_edge(end, merge_node, edge);
                         }
 
 
                         // No "else" branch to act as a default.
                         if has_default_branch == false {
                             // Create an edge directly linking pre-branch to post-branch.
-                            cfg.graph.add_edge(previous.unwrap(), merge_node, Edge::BranchSidestep);
+                            cfg.graph.add_edge(previous.unwrap(), merge_node, Edge::FallbackCondition);
                         }
 
                         // All other nodes added after the branching.
@@ -181,7 +185,7 @@ impl CFG {
                         let head = cfg.graph.add_node(Node::LoopHead);
                         let foot = cfg.graph.add_node(Node::LoopFoot);
 
-                        cfg.graph.add_edge(head, foot, Edge::LoopSidestep);
+                        cfg.graph.add_edge(head, foot, Edge::FallbackCondition);
                         cfg.graph.add_edge(foot, head, Edge::BackEdge);
 
 
