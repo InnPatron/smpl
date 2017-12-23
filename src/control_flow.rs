@@ -83,6 +83,8 @@ pub enum Edge {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Err {
     MissingReturn,
+    BadBreak,
+    BadContinue,
 }
 
 impl CFG {
@@ -105,7 +107,7 @@ impl CFG {
         previous = Some(cfg.start);
         
         let instructions = fn_def.body.data.0;
-        let fn_graph = CFG::follow_branch(&mut cfg, instructions, previous, None);
+        let fn_graph = CFG::follow_branch(&mut cfg, instructions, previous, None)?;
         previous = fn_graph;
 
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
@@ -121,7 +123,7 @@ impl CFG {
     /// 
     /// Returns the last node in a code branch.
     /// 
-    fn follow_branch(cfg: &mut CFG, instructions: Vec<Stmt>, mut previous: Option<graph::NodeIndex>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex)>) -> Option<graph::NodeIndex> {
+    fn follow_branch(cfg: &mut CFG, instructions: Vec<Stmt>, mut previous: Option<graph::NodeIndex>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex)>) -> Result<Option<graph::NodeIndex>, Err> {
         
         for stmt in instructions.into_iter() {
             if let Stmt::ExprStmt(expr_stmt) = stmt {
@@ -138,7 +140,7 @@ impl CFG {
                         for branch in if_data.branches.into_iter() {
                             let instructions = branch.block.0;
                             let branch_graph = CFG::follow_branch(cfg, instructions, 
-                                                                  previous, loop_data);
+                                                                  previous, loop_data)?;
                             if let Some(branch_end) = branch_graph { 
                                 branch_ends.push((Some(branch.conditional), branch_end));
                             }
@@ -150,7 +152,7 @@ impl CFG {
                             
                             let instructions = block.0;
                             let branch_graph = CFG::follow_branch(cfg, instructions, 
-                                                                  previous, loop_data);
+                                                                  previous, loop_data)?;
                             if let Some(branch_end) = branch_graph {
                                 branch_ends.push((None, branch_end));
                             }
@@ -193,7 +195,7 @@ impl CFG {
 
                         let instructions = while_data.block.0;
                         let loop_body = CFG::follow_branch(cfg, instructions, 
-                                                           previous, Some((head, foot)));
+                                                           previous, Some((head, foot)))?;
 
                         // Go through the list of neighbors to the loop head and their edges.
                         // If the edge is NOT a FallbackCondition, then it is the loop body.
@@ -226,7 +228,7 @@ impl CFG {
                         if let Some((_, foot)) = loop_data {
                             cfg.graph.add_edge(break_id, foot, Edge::Normal);
                         } else {
-                            unimplemented!("Return error when no loop header data? Or save for validation.");
+                            return Err(Err::BadBreak);
                         }
                     }
 
@@ -237,7 +239,7 @@ impl CFG {
                         if let Some((head, _)) = loop_data {
                             cfg.graph.add_edge(continue_id, head, Edge::BackEdge);
                         } else {
-                            unimplemented!("Return error when no loop header data? Or save for validation.");
+                            return Err(Err::BadContinue);
                         }
                     }
 
@@ -260,7 +262,7 @@ impl CFG {
             }
         }
 
-        return previous;
+        return Ok(previous);
    }
 }
 
