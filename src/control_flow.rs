@@ -4,41 +4,58 @@ use petgraph::graph;
 use ast::*;
 use smpl_type::{ SmplType, FunctionType };
 
+macro_rules! append_branch {
+
+    ($CFG: expr, $head: expr, $previous: expr, $branch: expr, $edge: expr) => {
+        match $head {
+            None => {
+                $head = $branch.head;
+            }
+
+            Some(head) => {
+                if let Some(b_head) = $branch.head {
+                    $CFG.graph.add_edge(head, b_head, $edge);
+                }
+            }
+        }
+
+        $previous = $branch.foot;
+    }
+}
+
 macro_rules! append_node {
 
-    ($CFG: expr, $previous: expr, $to_insert: expr) => {
-        append_node!($CFG, $previous, $to_insert, Edge::Normal)
+    ($CFG: expr, $head: expr, $previous: expr, $to_insert: expr) => {
+        append_node!($CFG, $head, $previous, $to_insert, Edge::Normal)
     };
 
-    ($CFG: expr, $previous: expr, $to_insert: expr, $edge: expr) => {
+    ($CFG: expr, $head: expr, $previous: expr, $to_insert: expr, $edge: expr) => {
         let temp = $CFG.graph.add_node($to_insert);
         if let Some(previous_node) = $previous {
             $CFG.graph.add_edge(previous_node, temp, $edge);
+        }
+
+        if $head.is_none() {
+            $head = Some(temp);
         }
         
         $previous = Some(temp);
     };
 }
 
-macro_rules! link_node_index {
-    ($CFG: expr, $previous: expr, $to_insert: expr) => {
-        if let Some(previous_node) = $previous {
-            $CFG.graph.add_edge(previous_node, $to_insert, ());
-        } else {
-            panic!("Attempting to link to a non-existent node");
-        }
-    }
-}
-
 macro_rules! append_node_index {
 
-    ($CFG: expr, $previous: expr, $to_insert: expr) => {
-        append_node_index!($CFG, $previous, $to_insert, Edge::Normal)
+    ($CFG: expr, $head: expr, $previous: expr, $to_insert: expr) => {
+        append_node_index!($CFG, $head, $previous, $to_insert, Edge::Normal)
     };
 
-    ($CFG: expr, $previous: expr, $to_insert: expr, $edge: expr) => {
+    ($CFG: expr, $head: expr, $previous: expr, $to_insert: expr, $edge: expr) => {
         if let Some(previous_node) = $previous {
             $CFG.graph.add_edge(previous_node, $to_insert, $edge);
+        }
+
+        if $head.is_none() {
+            $head = Some($to_insert);
         }
         
         $previous = Some($to_insert);
@@ -87,10 +104,14 @@ pub enum Err {
     BadContinue,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct BranchData {
+    head: Option<graph::NodeIndex>,
+    foot: Option<graph::NodeIndex>,
+}
+
 impl CFG {
     pub fn generate(fn_def: Function, fn_type: &FunctionType) -> Result<Self, Err> {
-
-        let mut previous: Option<graph::NodeIndex> = None;
 
         let mut cfg = {
             let mut graph = graph::Graph::new();
@@ -104,46 +125,51 @@ impl CFG {
             }
         };
 
-        previous = Some(cfg.start);
+        let mut head = None;
+        let mut previous = Some(cfg.start);
         
         let instructions = fn_def.body.data.0;
-        let fn_graph = CFG::follow_branch(&mut cfg, instructions, previous, None)?;
-        previous = fn_graph;
+        let fn_graph = CFG::get_branch(&mut cfg, instructions, None)?;
 
+        append_branch!(cfg, head, previous, fn_graph, Edge::Normal);
+        
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
         if *fn_type.return_type == SmplType::Unit {
-            append_node!(cfg, previous, Node::Return(None));
+            append_node!(cfg, head, previous, Node::Return(None));
         }
 
-        append_node_index!(cfg, previous, cfg.end);
+        append_node_index!(cfg, head, previous, cfg.end);
 
         Ok(cfg)
     }
 
     /// 
-    /// Returns the last node in a code branch.
+    /// Returns the first and the last node in a code branch.
     /// 
-    fn follow_branch(cfg: &mut CFG, instructions: Vec<Stmt>, mut previous: Option<graph::NodeIndex>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex)>) -> Result<Option<graph::NodeIndex>, Err> {
+    fn get_branch(cfg: &mut CFG, instructions: Vec<Stmt>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex)>) -> Result<BranchData, Err> {
         
+        let mut previous = None;
+        let mut head = None;
         for stmt in instructions.into_iter() {
             if let Stmt::ExprStmt(expr_stmt) = stmt {
                 match (expr_stmt) {
                     ExprStmt::If(if_data) => {
 
                         // Any potential branching starst off with at a Node::BranchSplit
-                        append_node!(cfg, previous, Node::BranchSplit);
+                        let split_node = cfg.graph.add_node(Node::BranchSplit);
+                        append_node_index!(cfg, head, previous, split_node);
+
+                        // All branches come back together at a Node::BranchMerge
+                        let merge_node = cfg.graph.add_node(Node::BranchMerge);
 
 
                         // Go through and generate the graph for code branches. Collect the ends.
-                        let mut branch_ends = Vec::new();
+                        let mut branches = Vec::new();
 
                         for branch in if_data.branches.into_iter() {
                             let instructions = branch.block.0;
-                            let branch_graph = CFG::follow_branch(cfg, instructions, 
-                                                                  previous, loop_data)?;
-                            if let Some(branch_end) = branch_graph { 
-                                branch_ends.push((Some(branch.conditional), branch_end));
-                            }
+                            let branch_graph = CFG::get_branch(cfg, instructions, loop_data)?;
+                            branches.push((Some(branch.conditional), branch_graph));
                         }
 
                         let has_default_branch;
@@ -151,32 +177,35 @@ impl CFG {
                             has_default_branch = true;
                             
                             let instructions = block.0;
-                            let branch_graph = CFG::follow_branch(cfg, instructions, 
-                                                                  previous, loop_data)?;
-                            if let Some(branch_end) = branch_graph {
-                                branch_ends.push((None, branch_end));
-                            }
+                            let branch_graph = CFG::get_branch(cfg, instructions, loop_data)?;
+
+                            branches.push((None, branch_graph));
                         } else {
                             has_default_branch = false;
                         }
 
-
-                        // All branches come back together at a Node::BranchMerge
-                        let merge_node = cfg.graph.add_node(Node::BranchMerge);
-                        for (condition, end) in branch_ends.into_iter() {
-                            let edge = if let Some(condition) = condition{
+                        
+                        for (condition, branch) in branches.into_iter() {
+                            let start_edge = if let Some(condition) = condition {
                                 Edge::Conditional(condition)
                             } else {
                                 Edge::FallbackCondition
                             };
-                            cfg.graph.add_edge(end, merge_node, edge);
+
+                            if let Some(branch_head) = branch.head {
+                                cfg.graph.add_edge(branch_head, split_node, start_edge);
+                            }
+
+                            if let Some(branch_foot) = branch.foot {
+                                cfg.graph.add_edge(branch_foot, merge_node, Edge::Normal);
+                            }
                         }
 
 
                         // No "else" branch to act as a default.
                         if has_default_branch == false {
                             // Create an edge directly linking pre-branch to post-branch.
-                            cfg.graph.add_edge(previous.unwrap(), merge_node, Edge::FallbackCondition);
+                            cfg.graph.add_edge(split_node, merge_node, Edge::FallbackCondition);
                         }
 
                         // All other nodes added after the branching.
@@ -184,22 +213,21 @@ impl CFG {
                     }
 
                     ExprStmt::While(while_data) => {
-                        let head = cfg.graph.add_node(Node::LoopHead);
-                        let foot = cfg.graph.add_node(Node::LoopFoot);
+                        let loop_head = cfg.graph.add_node(Node::LoopHead);
+                        let loop_foot = cfg.graph.add_node(Node::LoopFoot);
 
-                        cfg.graph.add_edge(head, foot, Edge::FallbackCondition);
-                        cfg.graph.add_edge(foot, head, Edge::BackEdge);
+                        cfg.graph.add_edge(loop_head, loop_foot, Edge::FallbackCondition);
+                        cfg.graph.add_edge(loop_foot, loop_head, Edge::BackEdge);
 
 
-                        append_node_index!(cfg, previous, head);
+                        append_node_index!(cfg, head, previous, loop_head);
 
                         let instructions = while_data.block.0;
-                        let loop_body = CFG::follow_branch(cfg, instructions, 
-                                                           previous, Some((head, foot)))?;
+                        let loop_body = CFG::get_branch(cfg, instructions, Some((loop_head, loop_foot)))?;
 
-                        // Go through the list of neighbors to the loop head and their edges.
+                        // Go through the list of neighbors to the loop loop_head and their edges.
                         // If the edge is NOT a FallbackCondition, then it is the loop body.
-                        let mut neighbors = cfg.graph.neighbors_directed(head, petgraph::Direction::Outgoing).detach(); 
+                        let mut neighbors = cfg.graph.neighbors_directed(loop_head, petgraph::Direction::Outgoing).detach(); 
                         
                         while let Some(edge) = neighbors.next_edge(&cfg.graph) {
                             let mut weight = cfg.graph.edge_weight_mut(edge);
@@ -217,17 +245,17 @@ impl CFG {
                             }
                         }
 
-                        // Connect the end of the loop body to the loop foot.
-                        if let Some(body) = loop_body {
-                            cfg.graph.add_edge(body, foot, Edge::Normal);
+                        // Connect the end of the loop body to the loop loop_foot.
+                        if let Some(body) = loop_body.foot {
+                            cfg.graph.add_edge(body, loop_foot, Edge::Normal);
                         }
 
-                        previous = Some(foot);
+                        previous = Some(loop_foot);
                     }
 
                     ExprStmt::Break => {
                         let break_id = cfg.graph.add_node(Node::Break);
-                        append_node_index!(cfg, previous, break_id);
+                        append_node_index!(cfg, head, previous, break_id);
                         
                         if let Some((_, foot)) = loop_data {
                             cfg.graph.add_edge(break_id, foot, Edge::Normal);
@@ -238,7 +266,7 @@ impl CFG {
 
                     ExprStmt::Continue => {
                         let continue_id = cfg.graph.add_node(Node::Continue);
-                        append_node_index!(cfg, previous, continue_id);
+                        append_node_index!(cfg, head, previous, continue_id);
                         
                         if let Some((head, _)) = loop_data {
                             cfg.graph.add_edge(continue_id, head, Edge::BackEdge);
@@ -249,24 +277,27 @@ impl CFG {
 
                     ExprStmt::Return(expr) => {
                         let ret = cfg.graph.add_node(Node::Return(Some(expr)));
-                        append_node_index!(cfg, previous, ret);
+                        append_node_index!(cfg, head, previous, ret);
                         cfg.graph.add_edge(ret, cfg.end, Edge::Normal);
                     }
 
                     ExprStmt::LocalVarDecl(decl) => {
-                        append_node!(cfg, previous, Node::LocalVarDecl(decl));
+                        append_node!(cfg, head, previous, Node::LocalVarDecl(decl));
                     }
 
                     ExprStmt::Assignment(assignment) => {
-                        append_node!(cfg, previous, Node::Assignment(assignment));
+                        append_node!(cfg, head, previous, Node::Assignment(assignment));
                     }
                 }
             } else if let Stmt::Expr(expr) = stmt {
-                append_node!(cfg, previous, Node::Expr(expr));
+                append_node!(cfg, head, previous, Node::Expr(expr));
             }
         }
 
-        return Ok(previous);
+        return Ok(BranchData {
+            head: head,
+            foot: previous 
+        });
    }
 }
 
