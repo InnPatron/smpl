@@ -199,17 +199,21 @@ impl CFG {
 
                         // Go through the list of neighbors to the loop head and their edges.
                         // If the edge is NOT a FallbackCondition, then it is the loop body.
-                        for neighbor in cfg.graph.neighbors_directed(head, Direction::Outgoing).detach() {
-                            if let Some(edge) = cfg.graph.find_edge(head, neighbor) {
-                                match edge {
-                                    Edge::FallbackCondition => continue,
-                                    
-                                    _ => { 
-                                        cfg.graph.update_edge(head, neighbor, 
-                                                              Edge::Conditional(while_data.conditional));
+                        let mut neighbors = cfg.graph.neighbors_directed(head, petgraph::Direction::Outgoing).detach(); 
+                        
+                        while let Some(edge) = neighbors.next_edge(&cfg.graph) {
+                            let mut weight = cfg.graph.edge_weight_mut(edge);
+                            match weight {
+                                Some(weight) => {
+                                    if let Edge::FallbackCondition = *weight {
+                                        continue;
+                                    } else {
+                                        *weight = Edge::Conditional(while_data.conditional);
                                         break;
                                     }
-                                }
+                                },
+
+                                None => unreachable!(),
                             }
                         }
 
