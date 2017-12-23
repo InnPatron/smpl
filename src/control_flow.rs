@@ -194,6 +194,24 @@ impl CFG {
                         let instructions = while_data.block.0;
                         let loop_body = CFG::follow_branch(cfg, instructions, 
                                                            previous, Some((head, foot)));
+
+                        // Go through the list of neighbors to the loop head and their edges.
+                        // If the edge is NOT a FallbackCondition, then it is the loop body.
+                        for neighbor in cfg.graph.neighbors_directed(head, Direction::Outgoing).detach() {
+                            if let Some(edge) = cfg.graph.find_edge(head, neighbor) {
+                                match edge {
+                                    Edge::FallbackCondition => continue,
+                                    
+                                    _ => { 
+                                        cfg.graph.update_edge(head, neighbor, 
+                                                              Edge::Conditional(while_data.conditional));
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Connect the end of the loop body to the loop foot.
                         if let Some(body) = loop_body {
                             cfg.graph.add_edge(body, foot, Edge::Normal);
                         }
