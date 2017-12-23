@@ -219,35 +219,16 @@ impl CFG {
                         cfg.graph.add_edge(loop_head, loop_foot, Edge::FallbackCondition);
                         cfg.graph.add_edge(loop_foot, loop_head, Edge::BackEdge);
 
-
                         append_node_index!(cfg, head, previous, loop_head);
 
                         let instructions = while_data.block.0;
                         let loop_body = CFG::get_branch(cfg, instructions, Some((loop_head, loop_foot)))?;
 
-                        // Go through the list of neighbors to the loop loop_head and their edges.
-                        // If the edge is NOT a FallbackCondition, then it is the loop body.
-                        let mut neighbors = cfg.graph.neighbors_directed(loop_head, petgraph::Direction::Outgoing).detach(); 
-                        
-                        while let Some(edge) = neighbors.next_edge(&cfg.graph) {
-                            let mut weight = cfg.graph.edge_weight_mut(edge);
-                            match weight {
-                                Some(weight) => {
-                                    if let Edge::FallbackCondition = *weight {
-                                        continue;
-                                    } else {
-                                        *weight = Edge::Conditional(while_data.conditional);
-                                        break;
-                                    }
-                                },
-
-                                None => unreachable!(),
-                            }
-                        }
+                        append_branch!(cfg, head, previous, loop_body, Edge::Conditional(while_data.conditional));
 
                         // Connect the end of the loop body to the loop loop_foot.
-                        if let Some(body) = loop_body.foot {
-                            cfg.graph.add_edge(body, loop_foot, Edge::Normal);
+                        if let Some(body_foot) = loop_body.foot {
+                            cfg.graph.add_edge(body_foot, loop_foot, Edge::Normal);
                         }
 
                         previous = Some(loop_foot);
