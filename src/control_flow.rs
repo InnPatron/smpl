@@ -19,7 +19,11 @@ macro_rules! append_branch {
             }
         }
 
-        $previous = $branch.foot;
+        match $branch.foot {
+            Some(foot) => $previous = Some(foot),
+
+            None => $previous = $head,
+        }
     }
 }
 
@@ -125,8 +129,8 @@ impl CFG {
             }
         };
 
-        let mut head = None;
         let mut previous = Some(cfg.start);
+        let mut head = previous; 
         
         let instructions = fn_def.body.data.0;
         let fn_graph = CFG::get_branch(&mut cfg, instructions, None)?;
