@@ -197,7 +197,7 @@ impl CFG {
                             };
 
                             if let Some(branch_head) = branch.head {
-                                cfg.graph.add_edge(branch_head, split_node, start_edge);
+                                cfg.graph.add_edge(split_node, branch_head, start_edge);
                             }
 
                             if let Some(branch_foot) = branch.foot {
