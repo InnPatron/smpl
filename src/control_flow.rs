@@ -84,6 +84,7 @@ pub enum Node {
 
     Assignment(Assignment),
     LocalVarDecl(LocalVarDecl),
+    Condition(AstNode<Expr>),
 
     LoopHead,
     LoopFoot,
@@ -96,8 +97,8 @@ pub enum Node {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Edge {
     Normal,
-    Conditional(AstNode<Expr>),
-    FallbackCondition,
+    True,
+    False,
     BackEdge,
 }
 
@@ -167,49 +168,45 @@ impl CFG {
                         let merge_node = cfg.graph.add_node(Node::BranchMerge);
 
 
-                        // Go through and generate the graph for code branches. Collect the ends.
-                        let mut branches = Vec::new();
+                        let mut previous_condition = None;
 
                         for branch in if_data.branches.into_iter() {
                             let instructions = branch.block.0;
                             let branch_graph = CFG::get_branch(cfg, instructions, loop_data)?;
-                            branches.push((Some(branch.conditional), branch_graph));
+                            let condition_node = cfg.graph.add_node(Node::Condition(branch.conditional));
+
+                            let edge = if previous_condition.is_none() {
+                                Edge::Normal
+                            } else {
+                                Edge::False
+                            };
+
+                            append_node_index!(cfg, head, previous, condition_node, edge);
+                            append_branch!(cfg, head, previous, branch_graph, Edge::True);
+                            if let Some(previous) = previous {
+                                cfg.graph.add_edge(previous, merge_node, Edge::Normal);
+                            } else {
+                                unreachable!();
+                            }
+
+                            previous = Some(condition_node);
+                            previous_condition = Some(condition_node);
                         }
 
-                        let has_default_branch;
                         if let Some(block) = if_data.default_block {
-                            has_default_branch = true;
                             
                             let instructions = block.0;
                             let branch_graph = CFG::get_branch(cfg, instructions, loop_data)?;
 
-                            branches.push((None, branch_graph));
+                            append_branch!(cfg, head, previous, branch_graph, Edge::False);
+
                         } else {
-                            has_default_branch = false;
-                        }
-
-                        
-                        for (condition, branch) in branches.into_iter() {
-                            let start_edge = if let Some(condition) = condition {
-                                Edge::Conditional(condition)
+                            // No default branch ("else")
+                            if let Some(previous) = previous {
+                                cfg.graph.add_edge(previous, merge_node, Edge::False);
                             } else {
-                                Edge::FallbackCondition
-                            };
-
-                            if let Some(branch_head) = branch.head {
-                                cfg.graph.add_edge(split_node, branch_head, start_edge);
+                                unreachable!();
                             }
-
-                            if let Some(branch_foot) = branch.foot {
-                                cfg.graph.add_edge(branch_foot, merge_node, Edge::Normal);
-                            }
-                        }
-
-
-                        // No "else" branch to act as a default.
-                        if has_default_branch == false {
-                            // Create an edge directly linking pre-branch to post-branch.
-                            cfg.graph.add_edge(split_node, merge_node, Edge::FallbackCondition);
                         }
 
                         // All other nodes added after the branching.
@@ -220,7 +217,7 @@ impl CFG {
                         let loop_head = cfg.graph.add_node(Node::LoopHead);
                         let loop_foot = cfg.graph.add_node(Node::LoopFoot);
 
-                        cfg.graph.add_edge(loop_head, loop_foot, Edge::FallbackCondition);
+                        cfg.graph.add_edge(loop_head, loop_foot, Edge::False);
                         cfg.graph.add_edge(loop_foot, loop_head, Edge::BackEdge);
 
                         append_node_index!(cfg, head, previous, loop_head);
@@ -228,7 +225,9 @@ impl CFG {
                         let instructions = while_data.block.0;
                         let loop_body = CFG::get_branch(cfg, instructions, Some((loop_head, loop_foot)))?;
 
-                        append_branch!(cfg, head, previous, loop_body, Edge::Conditional(while_data.conditional));
+                        let condition = cfg.graph.add_node(Node::Condition(while_data.conditional));
+                        append_node_index!(cfg, head, previous, condition);
+                        append_branch!(cfg, head, previous, loop_body, Edge::True);
 
                         // Connect the end of the loop body to the loop loop_foot.
                         if let Some(body_foot) = loop_body.foot {
