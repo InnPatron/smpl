@@ -288,6 +288,7 @@ mod tests {
     use parser::*;
     use petgraph::dot::{Dot, Config};
     use smpl_type::*;
+    use std::mem;
 
     #[test]
     fn test_cfg_generation() {
@@ -305,19 +306,44 @@ mod tests {
             let cfg = CFG::generate(fn_def, &fn_type).unwrap();
 
             println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
+
+            {
+                assert_eq!(*cfg.graph.node_weight(cfg.start).unwrap(), Node::Start);
+                assert_eq!(*cfg.graph.node_weight(cfg.end).unwrap(), Node::End);
+                // start -> var decl -> var decl -> implicit return -> end
+                assert_eq!(cfg.graph.node_count(), 5);
+
+                let var_dec_1 = cfg.graph.neighbors(cfg.start).next().expect("Looking for node after start");
+                let var_dec_1_node = cfg.graph.node_weight(var_dec_1).unwrap();
+                
+                let var_dec_2 = cfg.graph.neighbors(var_dec_1).next().expect("Looking for node after the first var declaration");
+                let var_dec_2_node = cfg.graph.node_weight(var_dec_2).unwrap();
+                {
+                    assert!({
+                        if let Node::LocalVarDecl(_) = *var_dec_1_node {
+                            true
+                        } else {
+                            false
+                        }
+                    });
+
+                    assert!({
+                        if let Node::LocalVarDecl(_) = *var_dec_2_node {
+                            true
+                        } else {
+                            false
+                        }
+                    });
+                }
+            }
         }
 
         {
             let input =
 "fn test(int arg) {
-    int a = 2;
-    int b = 3;
-
     if (test) {
         int c = 4;
     }
-
-    d = 5;
 }";
             let fn_type = FunctionType {
                 args: vec![SmplType::Int],
@@ -327,6 +353,33 @@ mod tests {
             let cfg = CFG::generate(fn_def, &fn_type).unwrap();
 
             println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
+
+            {
+                assert_eq!(*cfg.graph.node_weight(cfg.start).unwrap(), Node::Start);
+                assert_eq!(*cfg.graph.node_weight(cfg.end).unwrap(), Node::End);
+                // start -> branch_split {
+                //          -> var decl
+                // } -> branch_merge -> implicit return -> end
+                assert_eq!(cfg.graph.node_count(), 6);
+
+                let split = cfg.graph.neighbors(cfg.start).next().expect("Looking for node after start");
+                let split_node = cfg.graph.node_weight(split).unwrap();
+                {
+                    assert_eq!(mem::discriminant(split_node), mem::discriminant(&Node::BranchSplit));
+                    let mut edges = cfg.graph.edges(split);
+                    let mut has_condition = false;
+                    assert_eq!(edges.clone().count(), 2);
+                    for e in edges {
+                        if let Edge::Conditional(_) = *e.weight() {
+                            has_condition = true;
+                        }
+                    }
+
+                    assert!(has_condition);
+                }
+
+            }
         }
+
     }   
 }
