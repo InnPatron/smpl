@@ -221,14 +221,18 @@ impl CFG {
                         // Run out of conditional branches.
                         // Check for a default branch.
                         if let Some(block) = if_data.default_block {
-                            
+                            // Found default branch ("else")
+                            // Connect branch via false edge 
+                    
                             let instructions = block.0;
                             let branch_graph = CFG::get_branch(cfg, instructions, loop_data)?;
 
-                            // TODO: I think this is wrong. How is the default branch being
-                            // connected back to the merge node?
-                            append_branch!(cfg, head, previous, branch_graph, Edge::False);
-
+                            if let Some(branch_head) = branch_graph.head {
+                                cfg.graph.add_edge(previous.unwrap(), branch_head, Edge::False);
+                                cfg.graph.add_edge(branch_graph.foot.unwrap(), merge_node, Edge::Normal);
+                            } else {
+                                cfg.graph.add_edge(previous.unwrap(), merge_node, Edge::False);
+                            }
                         } else {
                             // No default branch ("else"). Connect the last condition node to the
                             // merge node with a false edge.
