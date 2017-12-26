@@ -629,6 +629,81 @@ let input =
             let end = implicit_return_neighbors.next().unwrap();
             assert_eq!(*node_w!(cfg, end), Node::End);
         }
+    }
 
+    #[test]
+    fn while_loop_generation() {
+        let input =
+"fn test(int arg) {
+    while (true) {
+        
+    }
+}";
+        let fn_type = FunctionType {
+            args: vec![SmplType::Int],
+            return_type: Box::new(SmplType::Unit)
+        };
+        let fn_def = parse_FnDecl(input).unwrap();
+        let cfg = CFG::generate(fn_def, &fn_type).unwrap();
+
+        println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
+
+        // start -> loop_head(A) -> condition(B)
+        //       -[true]> loop_foot(A)
+        //       -[false]> loop_foot(A)
+        // loop_foot(A) -> implicit_return -> end
+        //
+
+        assert_eq!(cfg.graph.node_count(), 6);
+
+        let mut start_neighbors = neighbors!(cfg, cfg.start);
+        assert_eq!(start_neighbors.clone().count(), 1);
+
+        let loop_head = start_neighbors.next().unwrap();
+        assert_eq!(*node_w!(cfg, loop_head), Node::LoopHead);
+
+        let mut head_neighbors = neighbors!(cfg, loop_head);
+        assert_eq!(head_neighbors.clone().count(), 1);
+
+        let condition = head_neighbors.next().unwrap();
+        match *node_w!(cfg, condition) {
+            Node::Condition(_) => (),
+            ref n @ _ => panic!("Expected condition node. Found {:?}", n),
+        }        
+        
+        let mut condition_edges = edges!(cfg, condition);
+        assert_eq!(condition_edges.clone().count(), 2);
+
+        let mut truth_target = None;
+        let mut false_target = None;
+        for edge in condition_edges {
+            match *edge.weight() {
+                Edge::True => truth_target = Some(edge.target()),
+                Edge::False => false_target = Some(edge.target()),
+
+                ref e @ _ => panic!("Expected true or false edge. Found {:?}", e),
+            }
+        }
+
+        let truth_target = truth_target.unwrap();
+        let false_target = false_target.unwrap();
+        assert_eq!(*node_w!(cfg, truth_target), Node::LoopFoot);
+        assert_eq!(truth_target, false_target);
+
+        let foot = truth_target;
+        let mut foot_neighbors = neighbors!(cfg, foot);
+        assert_eq!(foot_neighbors.clone().count(), 1);
+
+        let implicit_return = foot_neighbors.next().unwrap();
+        match *node_w!(cfg, implicit_return) {
+            Node::Return(_) => (),
+            ref n @ _ => panic!("Expected return node. Found {:?}", n),
+        }
+        
+        let mut return_neighbors = neighbors!(cfg, implicit_return);
+        assert_eq!(return_neighbors.clone().count(), 1);
+
+        let end = return_neighbors.next().unwrap();
+        assert_eq!(*node_w!(cfg, end), Node::End);
     }
 }
