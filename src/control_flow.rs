@@ -179,11 +179,17 @@ impl CFG {
                             let edge = if previous_condition.is_none() {
                                 Edge::Normal
                             } else {
+                                // Means that there was a previous condition and the current branch
+                                // should be connected along the false edge.
                                 Edge::False
                             };
 
                             append_node_index!(cfg, head, previous, condition_node, edge);
-                            append_branch!(cfg, head, previous, branch_graph, Edge::True);
+                            if let Some(branch_head) = branch_graph.head {
+                                cfg.graph.add_edge(previous.unwrap(), branch_head, Edge::True);
+                                previous = branch_graph.foot;   // If branch_graph.head.is_some(), branch_graph.foot.is_some()
+                            }
+
                             if let Some(previous) = previous {
                                 cfg.graph.add_edge(previous, merge_node, Edge::Normal);
                             } else {
