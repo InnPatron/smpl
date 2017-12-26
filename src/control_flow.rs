@@ -255,12 +255,13 @@ impl CFG {
 
                         let condition = cfg.graph.add_node(Node::Condition(while_data.conditional));
                         append_node_index!(cfg, head, previous, condition);
-                        if loop_body.head.is_some() {
-                            append_branch!(cfg, head, previous, loop_body, Edge::True);
-                            cfg.graph.add_edge(previous.unwrap(), loop_foot, Edge::Normal);
+
+                        if let Some(branch_head) = loop_body.head {
+                            cfg.graph.add_edge(condition, branch_head, Edge::True);
                             cfg.graph.add_edge(condition, loop_foot, Edge::False);
                         } else {
-                            cfg.graph.add_edge(previous.unwrap(), loop_foot, Edge::True);
+                            cfg.graph.add_edge(condition, loop_foot, Edge::True);
+                            cfg.graph.add_edge(condition, loop_foot, Edge::False);
                         }
 
                         previous = Some(loop_foot);
@@ -652,6 +653,7 @@ let input =
         //       -[true]> loop_foot(A)
         //       -[false]> loop_foot(A)
         // loop_foot(A) -> implicit_return -> end
+        // loop_head(A) << loop_foot(A)
         //
 
         assert_eq!(cfg.graph.node_count(), 6);
@@ -692,7 +694,7 @@ let input =
 
         let foot = truth_target;
         let mut foot_neighbors = neighbors!(cfg, foot);
-        assert_eq!(foot_neighbors.clone().count(), 1);
+        assert_eq!(foot_neighbors.clone().count(), 2);
 
         let implicit_return = foot_neighbors.next().unwrap();
         match *node_w!(cfg, implicit_return) {
