@@ -434,14 +434,22 @@ if (test) {
 
             let merge = merge.unwrap();
 
-            let end = cfg.graph.neighbors(merge).next().unwrap();
-            let end_weight = cfg.graph.node_weight(end).unwrap();
-            if let Node::End = *end_weight {
-                // Should only be one (incoming) edge into Node::End
-                let edges = cfg.graph.edges(end);
+            let return_n = cfg.graph.neighbors(merge).next().unwrap();
+            let return_weight = cfg.graph.node_weight(return_n).unwrap();
+            if let Node::Return(_) = *return_weight {
+                let edges = cfg.graph.edges_directed(return_n, Direction::Outgoing);
                 assert_eq!(edges.clone().count(), 1);
             } else {
-                panic!("After branch merge should be Node::End");
+                panic!("After Node::Merge should be Node::Return");
+            }
+
+            let end = cfg.graph.neighbors(return_n).next().unwrap();
+            let end_weight = cfg.graph.node_weight(end).unwrap();
+            if let Node::End = *end_weight {
+                let edges = cfg.graph.edges_directed(end, Direction::Outgoing);
+                assert_eq!(edges.clone().count(), 0);
+            } else {
+                panic!("After Node::Return should be Node::End");
             }
         }
     }   
