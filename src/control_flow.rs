@@ -201,16 +201,10 @@ impl CFG {
                             // Append the condition node
                             append_node_index!(cfg, head, previous, condition_node, edge);
                             if let Some(branch_head) = branch_graph.head {
-                                cfg.graph.add_edge(previous.unwrap(), branch_head, Edge::True);
-                                previous = branch_graph.foot;   // If branch_graph.head.is_some(), branch_graph.foot.is_some()
-                            }
-
-                            // previous will always be Some (either the branch foot or the
-                            // condition node).
-                            if let Some(previous) = previous {
-                                cfg.graph.add_edge(previous, merge_node, Edge::Normal);
+                                cfg.graph.add_edge(condition_node, branch_head, Edge::True);
+                                cfg.graph.add_edge(branch_graph.foot.unwrap(), merge_node, Edge::Normal);
                             } else {
-                                unreachable!();
+                                cfg.graph.add_edge(condition_node, merge_node, Edge::True);
                             }
 
                             // Backtrack to this branch's condition node
