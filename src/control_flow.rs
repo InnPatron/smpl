@@ -217,7 +217,6 @@ impl CFG {
                         let loop_head = cfg.graph.add_node(Node::LoopHead);
                         let loop_foot = cfg.graph.add_node(Node::LoopFoot);
 
-                        cfg.graph.add_edge(loop_head, loop_foot, Edge::False);
                         cfg.graph.add_edge(loop_foot, loop_head, Edge::BackEdge);
 
                         append_node_index!(cfg, head, previous, loop_head);
@@ -227,11 +226,12 @@ impl CFG {
 
                         let condition = cfg.graph.add_node(Node::Condition(while_data.conditional));
                         append_node_index!(cfg, head, previous, condition);
-                        append_branch!(cfg, head, previous, loop_body, Edge::True);
-
-                        // Connect the end of the loop body to the loop loop_foot.
-                        if let Some(body_foot) = loop_body.foot {
-                            cfg.graph.add_edge(body_foot, loop_foot, Edge::Normal);
+                        if loop_body.head.is_some() {
+                            append_branch!(cfg, head, previous, loop_body, Edge::True);
+                            cfg.graph.add_edge(previous.unwrap(), loop_foot, Edge::Normal);
+                            cfg.graph.add_edge(condition, loop_foot, Edge::False);
+                        } else {
+                            cfg.graph.add_edge(previous.unwrap(), loop_foot, Edge::True);
                         }
 
                         previous = Some(loop_foot);
