@@ -1,41 +1,9 @@
 use std::str::FromStr;
 use std::fmt;
-use std::ops::{Deref, DerefMut};
 use super::Span;
 use smpl_type::SmplType;
 use ascii::AsciiString;
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct FnId(pub u64);
-
-impl Deref for FnId {
-    type Target = u64;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for FnId {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct VarId(pub u64);
-
-impl Deref for VarId {
-    type Target = u64;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for VarId {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
+use semantic_ck::{FnId, VarId};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AstNode<T: Clone + PartialEq + ::std::fmt::Debug> {

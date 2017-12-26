@@ -67,6 +67,7 @@ macro_rules! append_node_index {
     };
 }
 
+#[derive(Clone, Debug)]
 pub struct CFG {
     graph: graph::Graph<Node, Edge>,
     start: graph::NodeIndex,
