@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use petgraph;
 use petgraph::graph;
+use petgraph::visit::EdgeRef;
 use ast::*;
 use smpl_type::{ SmplType, FunctionType };
 
@@ -290,6 +291,7 @@ mod tests {
     use super::*;
     use parser::*;
     use petgraph::dot::{Dot, Config};
+    use petgraph::Direction;
     use smpl_type::*;
     use std::mem;
 
@@ -362,27 +364,79 @@ if (test) {
         {
             assert_eq!(*cfg.graph.node_weight(cfg.start).unwrap(), Node::Start);
             assert_eq!(*cfg.graph.node_weight(cfg.end).unwrap(), Node::End);
-            // start -> branch_split {
-            //          -> var decl
-            // } -> branch_merge -> implicit return -> end
-            assert_eq!(cfg.graph.node_count(), 6);
 
+            // start -> branch_split -> condition 
+            //      -[true]> {
+            //          -> var decl
+            //      } ->        >>___ branch_merge ->
+            //        -[false]> >>
+            //      implicit return -> end
+            assert_eq!(cfg.graph.node_count(), 7);
+
+            // Check split node
             let split = cfg.graph.neighbors(cfg.start).next().expect("Looking for node after start");
             let split_node = cfg.graph.node_weight(split).unwrap();
             {
                 assert_eq!(mem::discriminant(split_node), mem::discriminant(&Node::BranchSplit));
-                let mut edges = cfg.graph.edges(split);
-                let mut has_condition = false;
-                assert_eq!(edges.clone().count(), 2);
-                for e in edges {
-                    if let Edge::Conditional(_) = *e.weight() {
-                        has_condition = true;
-                    }
-                }
-
-                assert!(has_condition);
+                let mut edges = cfg.graph.edges_directed(split, Direction::Outgoing);
+                assert_eq!(edges.clone().count(), 1);
             }
 
+            let mut merge = None;
+            // Check condition node
+            let condition = cfg.graph.neighbors(split).next().expect("Looking for condition node");
+            let condition_node = cfg.graph.node_weight(condition).unwrap();
+            {
+                if let Node::Condition(_) = *condition_node {
+                    let mut edges = cfg.graph.edges_directed(condition, Direction::Outgoing);
+                    assert_eq!(edges.clone().count(), 2);
+
+                    let mut found_true_edge = false;
+                    let mut found_false_edge = false;
+
+                    // Look for True False edges and verify
+                    for edge in edges {
+                        if let Edge::True = *edge.weight() {
+
+                            let target = edge.target();
+
+                            let mut found_decl = false;
+                            if let Node::LocalVarDecl(_) = *cfg.graph.node_weight(target).unwrap() {
+                                found_decl = true;
+                            }
+                            assert!(found_decl);
+
+
+                            found_true_edge = true;
+                        } else if let Edge::False = *edge.weight() {
+                            let target = edge.target();
+
+                            if let Node::BranchMerge = *cfg.graph.node_weight(target).unwrap() {
+                                merge = Some(target);
+                            }
+
+                            found_false_edge = true;
+                        }
+                    }
+
+                    assert!(found_true_edge);
+                    assert!(found_false_edge);
+                } else {
+                    panic!("Not a condition node");
+                }
+            }
+
+            let merge = merge.unwrap();
+
+            let end = cfg.graph.neighbors(merge).next().unwrap();
+            let end_weight = cfg.graph.node_weight(end).unwrap();
+            if let Node::End = *end_weight {
+                // Should only be one (incoming) edge into Node::End
+                let edges = cfg.graph.edges(end);
+                assert_eq!(edges.clone().count(), 1);
+            } else {
+                panic!("After branch merge should be Node::End");
+            }
         }
     }   
 }
