@@ -117,6 +117,11 @@ struct BranchData {
 }
 
 impl CFG {
+
+    ///
+    /// Generate the control flow graph.
+    /// Only performs continue/break statement checking (necessary for CFG generation).
+    ///
     pub fn generate(fn_def: Function, fn_type: &FunctionType) -> Result<Self, Err> {
 
         let mut cfg = {
@@ -131,19 +136,23 @@ impl CFG {
             }
         };
 
+        // Start with Node::Start
         let mut previous = Some(cfg.start);
         let mut head = previous; 
         
         let instructions = fn_def.body.data.0;
         let fn_graph = CFG::get_branch(&mut cfg, instructions, None)?;
 
+        // Append the function body.
         append_branch!(cfg, head, previous, fn_graph, Edge::Normal);
         
+
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
         if *fn_type.return_type == SmplType::Unit {
             append_node!(cfg, head, previous, Node::Return(None));
         }
 
+        // Connect the last node to the Node::End
         append_node_index!(cfg, head, previous, cfg.end);
 
         Ok(cfg)
@@ -156,9 +165,13 @@ impl CFG {
         
         let mut previous = None;
         let mut head = None;
+
+        // Go through all the instructions
         for stmt in instructions.into_iter() {
             if let Stmt::ExprStmt(expr_stmt) = stmt {
                 match (expr_stmt) {
+
+                    // All if statements begin and and with Node::BranchSplit and Node::BranchMerge
                     ExprStmt::If(if_data) => {
 
                         // Any potential branching starst off with at a Node::BranchSplit
@@ -176,39 +189,49 @@ impl CFG {
                             let branch_graph = CFG::get_branch(cfg, instructions, loop_data)?;
                             let condition_node = cfg.graph.add_node(Node::Condition(branch.conditional));
 
+                            // Check if there was a previous condition / branch
                             let edge = if previous_condition.is_none() {
                                 Edge::Normal
                             } else {
                                 // Means that there was a previous condition and the current branch
-                                // should be connected along the false edge.
+                                // should be connected to the previous by a false edge.
                                 Edge::False
                             };
 
+                            // Append the condition node
                             append_node_index!(cfg, head, previous, condition_node, edge);
                             if let Some(branch_head) = branch_graph.head {
                                 cfg.graph.add_edge(previous.unwrap(), branch_head, Edge::True);
                                 previous = branch_graph.foot;   // If branch_graph.head.is_some(), branch_graph.foot.is_some()
                             }
 
+                            // previous will always be Some (either the branch foot or the
+                            // condition node).
                             if let Some(previous) = previous {
                                 cfg.graph.add_edge(previous, merge_node, Edge::Normal);
                             } else {
                                 unreachable!();
                             }
 
+                            // Backtrack to this branch's condition node
                             previous = Some(condition_node);
                             previous_condition = Some(condition_node);
                         }
 
+                        // Run out of conditional branches.
+                        // Check for a default branch.
                         if let Some(block) = if_data.default_block {
                             
                             let instructions = block.0;
                             let branch_graph = CFG::get_branch(cfg, instructions, loop_data)?;
 
+                            // TODO: I think this is wrong. How is the default branch being
+                            // connected back to the merge node?
                             append_branch!(cfg, head, previous, branch_graph, Edge::False);
 
                         } else {
-                            // No default branch ("else")
+                            // No default branch ("else"). Connect the last condition node to the
+                            // merge node with a false edge.
                             if let Some(previous) = previous {
                                 cfg.graph.add_edge(previous, merge_node, Edge::False);
                             } else {
@@ -220,6 +243,7 @@ impl CFG {
                         previous = Some(merge_node);
                     }
 
+                    // All loops being and end with Node::LoopHead and Node::LoopFoot
                     ExprStmt::While(while_data) => {
                         let loop_head = cfg.graph.add_node(Node::LoopHead);
                         let loop_foot = cfg.graph.add_node(Node::LoopFoot);
@@ -249,8 +273,10 @@ impl CFG {
                         append_node_index!(cfg, head, previous, break_id);
                         
                         if let Some((_, foot)) = loop_data {
+                            // Add an edge to the foot of the loop.
                             cfg.graph.add_edge(break_id, foot, Edge::Normal);
                         } else {
+                            // Found a break statement not inside a loop.
                             return Err(Err::BadBreak);
                         }
                     }
@@ -260,8 +286,10 @@ impl CFG {
                         append_node_index!(cfg, head, previous, continue_id);
                         
                         if let Some((head, _)) = loop_data {
+                            // Add a backedge to the head of the loop.
                             cfg.graph.add_edge(continue_id, head, Edge::BackEdge);
                         } else {
+                            // Found a continue statement not inside a loop.
                             return Err(Err::BadContinue);
                         }
                     }
@@ -269,6 +297,8 @@ impl CFG {
                     ExprStmt::Return(expr) => {
                         let ret = cfg.graph.add_node(Node::Return(Some(expr)));
                         append_node_index!(cfg, head, previous, ret);
+
+                        // Add an edge to the Node::End of the function
                         cfg.graph.add_edge(ret, cfg.end, Edge::Normal);
                     }
 
@@ -285,6 +315,7 @@ impl CFG {
             }
         }
 
+        // 'previous' represents the last node in the branch
         return Ok(BranchData {
             head: head,
             foot: previous 
@@ -300,6 +331,24 @@ mod tests {
     use petgraph::Direction;
     use smpl_type::*;
     use std::mem;
+
+    macro_rules! neighbors {
+        ($CFG: expr, $node: expr) => {
+            $CFG.graph.neighbors_directed($node, Direction::Outgoing)
+        }
+    }
+
+    macro_rules! edges {
+        ($CFG: expr, $node: expr) => {
+            $CFG.graph.edges_directed($node, Direction::Outgoing)
+        }
+    }
+
+    macro_rules! node_w {
+        ($CFG: expr, $node: expr) => {
+            $CFG.graph.node_weight($node).unwrap()
+        }
+    }
 
     #[test]
     fn linear_cfg_generation() {
@@ -452,5 +501,136 @@ if (test) {
                 panic!("After Node::Return should be Node::End");
             }
         }
-    }   
+    }
+
+    #[test]
+    fn complex_branching_cfg_generation() {
+let input =
+"fn test(int arg) {
+    if (false) {
+        int c = 4;
+    } elif (true) {
+
+    } else {
+
+    }
+}";
+        let fn_type = FunctionType {
+            args: vec![SmplType::Int],
+            return_type: Box::new(SmplType::Unit)
+        };
+        let fn_def = parse_FnDecl(input).unwrap();
+        let cfg = CFG::generate(fn_def, &fn_type).unwrap();
+
+        println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
+
+        {
+            // start -> branch_split(A) -> condition(B)
+            //      -[true]> {
+            //          local_var_decl
+            //      } -> branch_merge(A)
+            //
+            //      -[false]> condition(C)
+            //           -[true]> branch_merge(A)
+            //
+            //           -[false]> branch_merge(A) 
+            //
+            // branch_merge(A) -> implicit_return -> end
+            //
+            
+            assert_eq!(cfg.graph.node_count(), 8);
+
+            let mut start_neighbors = neighbors!(cfg, cfg.start);
+            assert_eq!(start_neighbors.clone().count(), 1);
+
+            let split = start_neighbors.next().unwrap();
+            match *node_w!(cfg, split) {
+                Node::BranchSplit => (),    // Success
+                _ => panic!("Expected Node::BranchSplit"),
+            }
+
+            let mut split_neighbors = neighbors!(cfg, split);
+            assert_eq!(split_neighbors.clone().count(), 1);
+
+            let condition_b = split_neighbors.next().unwrap();
+            match *node_w!(cfg, condition_b) {
+                Node::Condition(_) => (), // Success
+
+                ref n @ _ => panic!("Expected a condition node. Found {:?}", n),
+
+            }
+
+            let condition_b_edges = edges!(cfg, condition_b);
+            let mut condition_c = None;
+            let mut var_decl = None;
+
+            assert_eq!(condition_b_edges.clone().count(), 2);
+            for edge in condition_b_edges {
+                match *edge.weight() {
+                    Edge::True => var_decl = Some(edge.target()),
+                    Edge::False => condition_c = Some(edge.target()),
+
+                    ref e @ _ => panic!("Expected true or false edge. Found {:?}", e),
+                }
+            }
+
+
+            // condition b TRUE branch
+            let var_decl = var_decl.expect("Missing true edge connecting to variable declaration");
+            match *node_w!(cfg, var_decl) {
+                Node::LocalVarDecl(_) => (), 
+
+                ref n @ _ => panic!("Expected local variable declartion. Found {:?}", n),
+            }
+
+            let mut var_decl_neighbors = neighbors!(cfg, var_decl);
+            assert_eq!(var_decl_neighbors.clone().count(), 1);
+            match *node_w!(cfg, var_decl_neighbors.next().unwrap()) {
+                Node::BranchMerge => (),
+
+                ref n @ _ => panic!("Expected Node::BranchMerge. Found {:?}", n),
+            }
+
+
+            // condition b FALSE branch (condition c)
+            let condition_c = condition_c.expect("Missing false edge connecting to Condition C");
+            let condition_c_edges = edges!(cfg, condition_c);
+            let mut truth_target = None;
+            let mut false_target = None;
+
+            assert_eq!(condition_c_edges.clone().count(), 2);
+            for edge in condition_c_edges {
+                match *edge.weight() {
+                    Edge::True => truth_target = Some(edge.target()),
+                    Edge::False => false_target = Some(edge.target()),
+
+                    ref e @ _ => panic!("Expected true or false edge. Found {:?}", e),
+                }
+            }
+
+            let truth_target = truth_target.unwrap();
+            let false_target = false_target.unwrap();
+
+            assert_eq!(truth_target, false_target);
+            assert_eq!(*node_w!(cfg, truth_target), Node::BranchMerge);
+            assert_eq!(*node_w!(cfg, false_target), Node::BranchMerge);
+
+            let branch_merge = truth_target;
+            let mut branch_merge_neighbors = neighbors!(cfg, branch_merge);
+            assert_eq!(branch_merge_neighbors.clone().count(), 1);
+
+            let implicit_return = branch_merge_neighbors.next().unwrap();
+            match *node_w!(cfg, implicit_return) {
+                Node::Return(_) => (),
+                ref n @ _ => println!("Expected return node. Found {:?}", n),
+            }
+
+            let mut implicit_return_neighbors = neighbors!(cfg, implicit_return);
+            assert_eq!(implicit_return_neighbors.clone().count(), 1);
+
+            let end = implicit_return_neighbors.next().unwrap();
+            assert_eq!(*node_w!(cfg, end), Node::End);
+        }
+
+    }
 }
