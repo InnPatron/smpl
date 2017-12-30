@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::Cell;
+use std::rc::Rc;
 use std::fmt::Debug;
 
 use ascii::*;
@@ -11,68 +12,165 @@ use control_flow::Err as ControlFlowErr;
 use control_flow::CFG;
 use smpl_type::*;
 use ast::*;
+use ast::Function as AstFunction;
 
 pub fn check(mut program: Program) -> Result<(), Err> {
-    
+    let mut universe = Universe::std();
+    let mut global_scope = universe.std_scope.clone();
 
+    for decl_stmt in program.0.into_iter() {
+        match decl_stmt {
+            DeclStmt::Struct(struct_def) => {
+                let struct_t = generate_struct_type(&global_scope, &universe, struct_def)?;
+                let id = universe.new_type_id();
+                
+                global_scope.insert_type(struct_t.name.clone().into(), id);
+                universe.insert_type(id, SmplType::Struct(struct_t));
+            },
+
+            DeclStmt::Function(fn_def) => {
+                let name = fn_def.name.clone().into();
+
+                let type_id = universe.new_type_id();
+
+                let fn_type = generate_fn_type(&global_scope, &universe, &fn_def)?;
+                let cfg = CFG::generate(fn_def, &fn_type)?;
+
+                let fn_id = universe.insert_fn(type_id, fn_type, cfg);
+                global_scope.insert_fn(name, fn_id);
+            },
+        }
+    }
     Ok(())
+}
+
+fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunction) -> Result<FunctionType, Err> {
+    let ret_type = match fn_def.return_type {
+        Some(ref path) => scope.get_type(universe, path)?,
+        None => Rc::new(SmplType::Unit),
+    };
+
+    let args: Vec<_> = match fn_def.args {
+        Some(ref args) => args.iter()
+                              .map(|ref fn_param| scope.get_type(universe, &fn_param.arg_type))
+                              .collect::<Result<Vec<Rc<SmplType>>, Err>>()?,
+
+        None => Vec::new(),
+    };
+
+    Ok(FunctionType {
+        args: args,
+        return_type: ret_type,
+    })
+}
+
+fn generate_struct_type(scope: &ScopedData, universe: &Universe, struct_def: Struct) -> Result<StructType, Err> {
+    let struct_name = struct_def.name;
+    let mut fields = HashMap::new();
+    if let Some(body) = struct_def.body.0 {
+        for field in body.into_iter() {
+            let f_name = field.name;
+            let field_type = scope.get_type(universe, &f_name.clone().into())?.clone();
+            fields.insert(f_name, field_type);
+        }
+    } 
+
+    let struct_t = StructType {
+        name: struct_name,
+        fields: fields,
+    };
+
+    Ok(struct_t)
 }
 
 #[derive(Clone, Debug)]
 pub enum Err {
     ControlFlowErr(ControlFlowErr),
+    UnknownType(Path),
+    UnknownVar(Ident),
+}
+
+impl From<ControlFlowErr> for Err {
+    fn from(err: ControlFlowErr) -> Err {
+        Err::ControlFlowErr(err)
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TypeId(pub u64);
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct FnId(pub u64);
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct VarId(pub u64);
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct FnId(pub u64);
 
 #[derive(Clone, Debug)]
 pub struct Function {
-    fn_type: FunctionType,
-    cfg: CFG
+    fn_type: TypeId,
+    cfg: CFG,
 }
 
 #[derive(Clone, Debug)]
-struct GlobalData {
-    types: HashMap<TypeId, SmplType>,
-    fns: HashMap<FnId, Function>,
+struct Universe {
+    types: HashMap<TypeId, Rc<SmplType>>,
+    fn_map: HashMap<FnId, Function>,
     id_counter: Cell<u64>,
+    std_scope: ScopedData,
 }
 
-impl GlobalData {
+impl Universe {
 
-    fn std() -> GlobalData {
-        let mut data = GlobalData {
-            types: HashMap::new(),
-            fns: HashMap::new(),
-            id_counter: Cell::new(0), 
-        };
+    fn std() -> Universe {
 
-        let mut map = HashMap::new();
-        map.insert(data.new_type_id(), SmplType::Unit);
-        map.insert(data.new_type_id(), SmplType::Int);
-        map.insert(data.new_type_id(), SmplType::Float);
-        map.insert(data.new_type_id(), SmplType::String);
-        map.insert(data.new_type_id(), SmplType::Bool);
+        let mut type_map = vec![
+            (TypeId(0), path!("Unit"), SmplType::Unit),
+            (TypeId(1), path!("i32"), SmplType::Int),
+            (TypeId(2), path!("float"), SmplType::Float),
+            (TypeId(3), path!("String"), SmplType::String),
+            (TypeId(4), path!("bool"), SmplType::Bool),
+        ];
 
-        data.types = map;
-
-        data
+        Universe {
+            types: type_map.clone().into_iter().map(|(id, _, t)| (id, Rc::new(t))).collect(),
+            fn_map: HashMap::new(),
+            id_counter: Cell::new(5),
+            std_scope: ScopedData {
+                type_map: type_map.into_iter().map(|(id, path, _)| (path, id)).collect(),
+                vars: HashMap::new(),
+                var_map: HashMap::new(),
+                fn_map: HashMap::new(),
+            },
+        }
     }
 
-    pub fn new_fn_id(&self) -> FnId {
-        let id = self.id_counter.get();
-        let fn_id = FnId(id);
-        self.id_counter.set(id + 1);
+    fn insert_fn(&mut self, type_id: TypeId, fn_t: FunctionType, cfg: CFG) -> FnId {
+        let fn_id = self.new_fn_id();
+        self.insert_type(type_id, SmplType::Function(fn_t));
+
+        let function = Function {
+            fn_type: type_id,
+            cfg: cfg,
+        };
+
+        if self.fn_map.insert(fn_id, function).is_some() {
+            panic!("Attempting to override Function with FnId {} in the Universe", fn_id.0);
+        }
 
         fn_id
+    }
+
+    fn insert_type(&mut self, id: TypeId, t: SmplType) {
+        if self.types.insert(id, Rc::new(t)).is_some() {
+            panic!("Attempting to override type with TypeId {} in the Universe", id.0);
+        }
+    }
+
+    fn get_type(&self, id: &TypeId) -> Rc<SmplType> {
+        match self.types.get(id).map(|t| t.clone()) {
+            Some(t) => t,
+            None => panic!("Type with TypeId {} does not exist.", id.0),
+        }
     }
 
     pub fn new_type_id(&self) -> TypeId {
@@ -85,17 +183,58 @@ impl GlobalData {
 
     pub fn new_var_id(&self) -> VarId {
         let id = self.id_counter.get();
-        let type_id = VarId(id);
+        let var_id = VarId(id);
         self.id_counter.set(id + 1);
 
-        type_id
+        var_id
+    }
+
+    pub fn new_fn_id(&self) -> FnId {
+        let id = self.id_counter.get();
+        let fn_id = FnId(id);
+        self.id_counter.set(id + 1);
+
+        fn_id
     }
 }
 
 #[derive(Clone, Debug)]
 struct ScopedData {
-    types: HashMap<Path, TypeId>,
-    fns: HashMap<Ident, FnId>,
+    type_map: HashMap<Path, TypeId>,
     vars: HashMap<Ident, VarId>,
-    var_map: HashMap<VarId, SmplType>,
+    var_map: HashMap<VarId, Rc<SmplType>>,
+    fn_map: HashMap<Path, FnId>,
+}
+
+impl ScopedData {
+
+    fn insert_fn(&mut self, name: Path, fn_id: FnId) {
+        // TODO: Fn name override behaviour?
+        self.fn_map.insert(name, fn_id);
+    }
+
+    fn get_type(&self, universe: &Universe, path: &Path) -> Result<Rc<SmplType>, Err> {
+        let id = self.type_map.get(path).ok_or(Err::UnknownType(path.clone()))?;
+        let t = universe.types.get(id).expect(&format!("Missing TypeId: {}. All TypeId's should be valid if retrieven from ScopedData.type_map", id.0));
+        Ok(t.clone())
+    }
+
+    fn insert_type(&mut self, path: Path, id: TypeId) -> Option<TypeId> {
+        self.type_map.insert(path, id)
+    }
+
+    fn get_var(&self, name: &Ident) -> Result<Rc<SmplType>, Err> {
+        let id = self.vars.get(name).ok_or(Err::UnknownVar(name.clone()))?;
+        let var_t = self.var_map.get(id).expect(&format!("Missing VarId: {}. All VarId's should be valid if retrieven from ScopedData.vars", id.0));
+        Ok(var_t.clone())
+    }
+
+    fn insert_var(&mut self, universe: &Universe, name: Ident, var_type: SmplType) {
+        let id = universe.new_var_id();
+        self.vars.insert(name, id);
+        if self.var_map.insert(id, Rc::new(var_type)).is_some() {
+            panic!("Attempted to override VarId [{}]. All VarId's should be unique", id.0);
+        }
+    }
+
 }
