@@ -79,19 +79,19 @@ pub enum Node {
     Start,
     End,
 
-    Expr(AstNode<Expr>),
+    Expr(Expr),
 
     BranchSplit,
     BranchMerge,
 
     Assignment(Assignment),
     LocalVarDecl(LocalVarDecl),
-    Condition(AstNode<Expr>),
+    Condition(Expr),
 
     LoopHead,
     LoopFoot,
 
-    Return(Option<AstNode<Expr>>),
+    Return(Option<Expr>),
     Break,
     Continue,
 }
@@ -141,7 +141,7 @@ impl CFG {
         let mut previous = Some(cfg.start);
         let mut head = previous; 
         
-        let instructions = fn_def.body.data.0;
+        let instructions = fn_def.body.0;
         let fn_graph = CFG::get_branch(&mut cfg, instructions, None)?;
 
         // Append the function body.
@@ -331,6 +331,7 @@ mod tests {
     use petgraph::Direction;
     use smpl_type::*;
     use std::mem;
+    use std::rc::Rc;
 
     macro_rules! neighbors {
         ($CFG: expr, $node: expr) => {
@@ -359,8 +360,8 @@ int a = 2;
 int b = 3;
 }";
         let fn_type = FunctionType {
-            args: vec![SmplType::Int],
-            return_type: Box::new(SmplType::Unit)
+            args: vec![Rc::new(SmplType::Int)],
+            return_type: Rc::new(SmplType::Unit)
         };
         let fn_def = parse_FnDecl(input).unwrap();
         let cfg = CFG::generate(fn_def, &fn_type).unwrap();
@@ -408,8 +409,8 @@ if (test) {
 }
 }";
         let fn_type = FunctionType {
-            args: vec![SmplType::Int],
-            return_type: Box::new(SmplType::Unit)
+            args: vec![Rc::new(SmplType::Int)],
+            return_type: Rc::new(SmplType::Unit)
         };
         let fn_def = parse_FnDecl(input).unwrap();
         let cfg = CFG::generate(fn_def, &fn_type).unwrap();
@@ -516,8 +517,8 @@ let input =
     }
 }";
         let fn_type = FunctionType {
-            args: vec![SmplType::Int],
-            return_type: Box::new(SmplType::Unit)
+            args: vec![Rc::new(SmplType::Int)],
+            return_type: Rc::new(SmplType::Unit)
         };
         let fn_def = parse_FnDecl(input).unwrap();
         let cfg = CFG::generate(fn_def, &fn_type).unwrap();
@@ -642,8 +643,8 @@ let input =
     }
 }";
         let fn_type = FunctionType {
-            args: vec![SmplType::Int],
-            return_type: Box::new(SmplType::Unit)
+            args: vec![Rc::new(SmplType::Int)],
+            return_type: Rc::new(SmplType::Unit)
         };
         let fn_def = parse_FnDecl(input).unwrap();
         let cfg = CFG::generate(fn_def, &fn_type).unwrap();

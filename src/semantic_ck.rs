@@ -97,13 +97,40 @@ impl From<ControlFlowErr> for Err {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TypeId(pub u64);
+pub struct TypeId(u64);
+
+impl ::std::fmt::Display for TypeId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "TypeId[{}]", self.0)
+    }
+}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct VarId(pub u64);
+pub struct VarId(u64);
+
+impl ::std::fmt::Display for VarId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "VarId[{}]", self.0)
+    }
+}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct FnId(pub u64);
+pub struct FnId(u64);
+
+impl ::std::fmt::Display for FnId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "FnId[{}]", self.0)
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TmpId(u64);
+
+impl ::std::fmt::Display for TmpId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "TmpId[{}]", self.0)
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct Function {
@@ -112,23 +139,34 @@ pub struct Function {
 }
 
 #[derive(Clone, Debug)]
-struct Universe {
+pub struct Universe {
     types: HashMap<TypeId, Rc<SmplType>>,
     fn_map: HashMap<FnId, Function>,
     id_counter: Cell<u64>,
     std_scope: ScopedData,
+    unit: TypeId,
+    int: TypeId,
+    float: TypeId,
+    string: TypeId,
+    boolean: TypeId,
 }
 
 impl Universe {
 
-    fn std() -> Universe {
+    pub fn std() -> Universe {
+
+        let unit = (TypeId(0), path!("Unit"), SmplType::Unit);
+        let int = (TypeId(1), path!("i32"), SmplType::Int);
+        let float = (TypeId(2), path!("float"), SmplType::Float);
+        let string = (TypeId(3), path!("String"), SmplType::String);
+        let boolean = (TypeId(4), path!("bool"), SmplType::Bool);
 
         let mut type_map = vec![
-            (TypeId(0), path!("Unit"), SmplType::Unit),
-            (TypeId(1), path!("i32"), SmplType::Int),
-            (TypeId(2), path!("float"), SmplType::Float),
-            (TypeId(3), path!("String"), SmplType::String),
-            (TypeId(4), path!("bool"), SmplType::Bool),
+            unit.clone(),
+            int.clone(),
+            float.clone(),
+            string.clone(),
+            boolean.clone(),
         ];
 
         Universe {
@@ -141,7 +179,32 @@ impl Universe {
                 var_map: HashMap::new(),
                 fn_map: HashMap::new(),
             },
+            unit: unit.0,
+            int: int.0,
+            float: float.0,
+            string: string.0,
+            boolean: boolean.0,
         }
+    }
+
+    pub fn unit(&self) -> TypeId {
+        self.unit
+    }
+
+    pub fn int(&self) -> TypeId {
+        self.int
+    }
+
+    pub fn float(&self) -> TypeId {
+        self.float
+    }
+
+    pub fn string(&self) -> TypeId {
+        self.string
+    }
+
+    pub fn boolean(&self) -> TypeId {
+        self.boolean
     }
 
     fn insert_fn(&mut self, type_id: TypeId, fn_t: FunctionType, cfg: CFG) -> FnId {
@@ -173,28 +236,28 @@ impl Universe {
         }
     }
 
-    pub fn new_type_id(&self) -> TypeId {
-        let id = self.id_counter.get();
-        let type_id = TypeId(id);
-        self.id_counter.set(id + 1);
+    fn inc_counter(&self) -> u64 {
+        let curr = self.id_counter.get();
+        let next = curr + 1;
+        self.id_counter.set(next);
 
-        type_id
+        curr
+    }
+
+    pub fn new_type_id(&self) -> TypeId {
+        TypeId(self.inc_counter())
     }
 
     pub fn new_var_id(&self) -> VarId {
-        let id = self.id_counter.get();
-        let var_id = VarId(id);
-        self.id_counter.set(id + 1);
-
-        var_id
+        VarId(self.inc_counter())
     }
 
     pub fn new_fn_id(&self) -> FnId {
-        let id = self.id_counter.get();
-        let fn_id = FnId(id);
-        self.id_counter.set(id + 1);
+        FnId(self.inc_counter())
+    }
 
-        fn_id
+    pub fn new_tmp_id(&self) -> TmpId {
+        TmpId(self.inc_counter())
     }
 }
 
