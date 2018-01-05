@@ -34,7 +34,7 @@ pub fn check(mut program: Program) -> Result<(), Err> {
                 let type_id = universe.new_type_id();
 
                 let fn_type = generate_fn_type(&global_scope, &universe, &fn_def)?;
-                let cfg = CFG::generate(fn_def, &fn_type)?;
+                let cfg = CFG::generate(&universe, fn_def, &fn_type)?;
 
                 let fn_id = universe.insert_fn(type_id, fn_type, cfg);
                 global_scope.insert_fn(name, fn_id);

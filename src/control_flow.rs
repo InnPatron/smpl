@@ -1,8 +1,12 @@
 use std::collections::HashMap;
+use std::cell::Cell;
+
 use petgraph;
 use petgraph::graph;
 use petgraph::visit::EdgeRef;
-use ast::*;
+use ast;
+use expr_flow;
+use semantic_ck::{Universe, TypeId};
 use smpl_type::{ SmplType, FunctionType };
 
 macro_rules! append_branch {
@@ -79,19 +83,19 @@ pub enum Node {
     Start,
     End,
 
-    Expr(Expr),
+    Expr(expr_flow::Expr),
 
     BranchSplit,
     BranchMerge,
 
     Assignment(Assignment),
     LocalVarDecl(LocalVarDecl),
-    Condition(Expr),
+    Condition(expr_flow::Expr),
 
     LoopHead,
     LoopFoot,
 
-    Return(Option<Expr>),
+    Return(Option<expr_flow::Expr>),
     Break,
     Continue,
 }
@@ -117,13 +121,73 @@ struct BranchData {
     foot: Option<graph::NodeIndex>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct Assignment {
+    name: ast::Path,
+    value: expr_flow::Expr,
+    type_id: Cell<Option<TypeId>>,
+}
+
+impl Assignment {
+    fn new(universe: &Universe, assignment: ast::Assignment) -> Assignment {
+        Assignment {
+            name: assignment.name,
+            value: expr_flow::flatten(universe, assignment.value),
+            type_id: Cell::new(None),
+        }
+    }
+
+    fn set_id(&self, id: TypeId) {
+        if self.type_id.get().is_some() {
+            panic!("Attempting to override {} for local variable declarration {:?}", id, self);
+        } else {
+            self.type_id.set(Some(id));
+        }
+    }
+
+    fn get_id(&self) -> Option<TypeId> {
+        self.type_id.get()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LocalVarDecl {
+    var_type: ast::Path,
+    var_name: ast::Ident,
+    var_init: expr_flow::Expr,
+    type_id: Cell<Option<TypeId>>,
+}
+
+impl LocalVarDecl {
+    fn new(universe: &Universe, decl: ast::LocalVarDecl) -> LocalVarDecl {
+        LocalVarDecl {
+            var_type: decl.var_type,
+            var_name: decl.var_name,
+            var_init: expr_flow::flatten(universe, decl.var_init),
+            type_id: Cell::new(None),
+        }
+    }
+
+    fn set_id(&self, id: TypeId) {
+        if self.type_id.get().is_some() {
+            panic!("Attempting to override {} for local variable declarration {:?}", id, self);
+        } else {
+            self.type_id.set(Some(id));
+        }
+    }
+
+    fn get_id(&self) -> Option<TypeId> {
+        self.type_id.get()
+    }
+}
+
 impl CFG {
 
     ///
     /// Generate the control flow graph.
     /// Only performs continue/break statement checking (necessary for CFG generation).
     ///
-    pub fn generate(fn_def: Function, fn_type: &FunctionType) -> Result<Self, Err> {
+    pub fn generate(universe: &Universe, fn_def: ast::Function, fn_type: &FunctionType) -> Result<Self, Err> {
 
         let mut cfg = {
             let mut graph = graph::Graph::new();
@@ -142,7 +206,7 @@ impl CFG {
         let mut head = previous; 
         
         let instructions = fn_def.body.0;
-        let fn_graph = CFG::get_branch(&mut cfg, instructions, None)?;
+        let fn_graph = CFG::get_branch(universe, &mut cfg, instructions, None)?;
 
         // Append the function body.
         append_branch!(cfg, head, previous, fn_graph, Edge::Normal);
@@ -162,7 +226,9 @@ impl CFG {
     /// 
     /// Returns the first and the last node in a code branch.
     /// 
-    fn get_branch(cfg: &mut CFG, instructions: Vec<Stmt>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex)>) -> Result<BranchData, Err> {
+    fn get_branch(universe: &Universe, cfg: &mut CFG, instructions: Vec<ast::Stmt>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex)>) -> Result<BranchData, Err> {
+        use ast::*;
+        use expr_flow::Expr as ExprFlow;
         
         let mut previous = None;
         let mut head = None;
@@ -187,8 +253,11 @@ impl CFG {
 
                         for branch in if_data.branches.into_iter() {
                             let instructions = branch.block.0;
-                            let branch_graph = CFG::get_branch(cfg, instructions, loop_data)?;
-                            let condition_node = cfg.graph.add_node(Node::Condition(branch.conditional));
+                            let branch_graph = CFG::get_branch(universe, cfg, instructions, loop_data)?;
+                            let condition_node = {
+                                let expr = expr_flow::flatten(universe, branch.conditional);
+                                cfg.graph.add_node(Node::Condition(expr))
+                            };
 
                             // Check if there was a previous condition / branch
                             let edge = if previous_condition.is_none() {
@@ -220,7 +289,7 @@ impl CFG {
                             // Connect branch via false edge 
                     
                             let instructions = block.0;
-                            let branch_graph = CFG::get_branch(cfg, instructions, loop_data)?;
+                            let branch_graph = CFG::get_branch(universe, cfg, instructions, loop_data)?;
 
                             if let Some(branch_head) = branch_graph.head {
                                 cfg.graph.add_edge(previous.unwrap(), branch_head, Edge::False);
@@ -252,9 +321,12 @@ impl CFG {
                         append_node_index!(cfg, head, previous, loop_head);
 
                         let instructions = while_data.block.0;
-                        let loop_body = CFG::get_branch(cfg, instructions, Some((loop_head, loop_foot)))?;
+                        let loop_body = CFG::get_branch(universe, cfg, instructions, Some((loop_head, loop_foot)))?;
+                        let condition = {
+                            let expr = expr_flow::flatten(universe, while_data.conditional);
+                            cfg.graph.add_node(Node::Condition(expr))
+                        };
 
-                        let condition = cfg.graph.add_node(Node::Condition(while_data.conditional));
                         append_node_index!(cfg, head, previous, condition);
 
                         if let Some(branch_head) = loop_body.head {
@@ -295,6 +367,7 @@ impl CFG {
                     }
 
                     ExprStmt::Return(expr) => {
+                        let expr = expr_flow::flatten(universe, expr);
                         let ret = cfg.graph.add_node(Node::Return(Some(expr)));
                         append_node_index!(cfg, head, previous, ret);
 
@@ -303,15 +376,15 @@ impl CFG {
                     }
 
                     ExprStmt::LocalVarDecl(decl) => {
-                        append_node!(cfg, head, previous, Node::LocalVarDecl(decl));
+                        append_node!(cfg, head, previous, Node::LocalVarDecl(self::LocalVarDecl::new(universe, decl)));
                     }
 
                     ExprStmt::Assignment(assignment) => {
-                        append_node!(cfg, head, previous, Node::Assignment(assignment));
+                        append_node!(cfg, head, previous, Node::Assignment(self::Assignment::new(universe, assignment)));
                     }
                 }
             } else if let Stmt::Expr(expr) = stmt {
-                append_node!(cfg, head, previous, Node::Expr(expr));
+                append_node!(cfg, head, previous, Node::Expr(expr_flow::flatten(universe, expr)));
             }
         }
 
