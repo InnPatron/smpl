@@ -1,97 +1,61 @@
 use std::cell::Cell;
 use std::collections::HashMap;
+use std::slice::Iter;
 
 use semantic_ck::{Universe, FnId, TypeId, VarId, TmpId};
-use ast::{FnCall as AstFnCall, Ident as AstIdent, Literal, UniOp, BinOp, Expr};
+use ast::{FnCall as AstFnCall, Ident as AstIdent, Literal, UniOp, BinOp, Expr as AstExpr};
 
-pub struct ExprScope {
-    map: HashMap<TmpId, Tmp>,
-}
-
-#[derive(Debug)]
-pub struct Tmp {
-    id: TmpId,
-    value: Value,
-}
-
-#[derive(Debug)]
-pub enum Op {
-    BinOp(BinOp),
-    UniOp(UniOp),
-    FnCall(usize),
-}
-
-#[derive(Debug)]
-pub enum Value {
-    Literal(Typed<Literal>),
-    Ident(Typed<Ident>),
-    FnCall(Typed<FnCall>),
-    BinExpr(Typed<BinOp>, Box<Typed<Value>>, Box<Typed<Value>>),
-    UniExpr(Typed<UniOp>, Box<Typed<Value>>),
-}
-
-pub fn flatten_expr(universe: &Universe, e: Expr) {
-    let mut scope = ExprScope {
+pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
+    let mut expr = Expr {
         map: HashMap::new(),
+        execution_order: Vec::new(),
     };
 
-    let mut ops = Vec::new();
-    let mut values = Vec::new();
-    let mut exprs = Vec::new();
+    flatten_expr(universe, &mut expr, e);
 
-    exprs.push(e);
-
-    while let Some(e) = exprs.pop() {
-        match e {
-            Expr::Bin(bin) => {
-                ops.push(Op::BinOp(bin.op));
-                //TODO: Might need to switch order
-                exprs.push(*bin.lhs);
-                exprs.push(*bin.rhs);
-            }
-
-            Expr::Uni(uni) => {
-                ops.push(Op::UniOp(uni.op));
-                exprs.push(*uni.expr);
-            }
-
-            Expr::Literal(literal) => {
-                let lit_type = match literal {
-                    Literal::String(_) => universe.string(),
-                    Literal::Number(ref num) => {
-                        unimplemented!("Might need to fix parser to distinguish between ints and floats (require floats to have a full stop)");
-                    },
-                    Literal::Bool(_) => universe.boolean(),
-                };
-
-                let tmp = Tmp {
-                    id: universe.new_tmp_id(),
-                    value: Value::Literal(Typed::typed(literal, lit_type))
-                };
-
-                values.push(map_tmp(&mut scope, tmp));
-            }
-
-            Expr::Ident(ident) => {
-                let tmp = Tmp {
-                    id: universe.new_tmp_id(),
-                    value: Value::Ident(Typed::untyped(Ident::new(ident)))
-                };
-
-                values.push(map_tmp(&mut scope, tmp));
-            }
-
-            Expr::FnCall(fn_call) => {
-
-            }
-        }
-    }
+    expr
 }
 
-fn map_tmp(scope: &mut ExprScope, tmp: Tmp) -> TmpId {
-    let id = tmp.id;
-    scope.map.insert(id, tmp);
-    id
+pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId {
+    match e {
+        AstExpr::Bin(bin) => {
+            let lhs = flatten_expr(universe, scope, *bin.lhs);
+            let rhs = flatten_expr(universe, scope, *bin.rhs);
+            scope.map_tmp(universe, Value::BinExpr(Typed::untyped(bin.op), 
+                                                   Typed::untyped(lhs),
+                                                   Typed::untyped(rhs)))
+        }
+
+        AstExpr::Uni(uni) => {
+            let expr = flatten_expr(universe, scope, *uni.expr);
+            scope.map_tmp(universe, Value::UniExpr(Typed::untyped(uni.op),
+                                                   Typed::untyped(expr)))
+        }
+
+        AstExpr::Literal(literal) => {
+            let lit_type = match literal {
+                Literal::String(_) => universe.string(),
+                Literal::Number(ref num) => {
+                    unimplemented!("Might need to fix parser to distinguish between ints and floats (require floats to have a full stop)");
+                },
+                Literal::Bool(_) => universe.boolean(),
+            };
+
+            scope.map_tmp(universe, Value::Literal(Typed::typed(literal, lit_type)))
+        }
+
+        AstExpr::Ident(ident) => scope.map_tmp(universe, Value::Ident(Typed::untyped(Ident::new(ident)))),
+
+        AstExpr::FnCall(fn_call) => {
+            let name = fn_call.name;
+            let args = fn_call.args.map(|vec| vec.into_iter().map(|e| Typed::untyped(flatten_expr(universe, scope, e))).collect::<Vec<_>>());
+
+            let fn_call = FnCall::new(name, args);
+
+            scope.map_tmp(universe, Value::FnCall(Typed::untyped(fn_call)))
+        }
+    }
+    
 }
 
 #[derive(Debug)]
@@ -133,6 +97,49 @@ impl<T> Typed<T> where T: ::std::fmt::Debug {
     }
 }
 
+pub struct Expr {
+    map: HashMap<TmpId, Tmp>,
+    execution_order: Vec<TmpId>,
+}
+
+impl Expr {
+
+    pub fn execution_order(&self) -> Iter<TmpId> {
+        self.execution_order.iter()
+    }
+
+    fn map_tmp(&mut self, universe: &Universe, val: Value) -> TmpId {
+        let tmp = Tmp {
+            id: universe.new_tmp_id(),
+            value: val,
+        };
+        let id = tmp.id;
+
+        if self.map.insert(id, tmp).is_some() {
+            panic!("Attempting to override {}", id);
+        }
+
+        self.execution_order.push(id);
+
+        id
+    }
+}
+
+#[derive(Debug)]
+pub struct Tmp {
+    id: TmpId,
+    value: Value,
+}
+
+#[derive(Debug)]
+pub enum Value {
+    Literal(Typed<Literal>),
+    Ident(Typed<Ident>),
+    FnCall(Typed<FnCall>),
+    BinExpr(Typed<BinOp>, Typed<TmpId>, Typed<TmpId>),
+    UniExpr(Typed<UniOp>, Typed<TmpId>),
+}
+
 #[derive(Debug)]
 pub struct Ident {
     ident: AstIdent,
@@ -162,21 +169,23 @@ impl Ident {
 
 #[derive(Debug)]
 pub struct FnCall {
-    fn_call: AstFnCall,
+    name: AstIdent,
+    args: Option<Vec<Typed<TmpId>>>,
     fn_id: Cell<Option<FnId>>,
 }
 
 impl FnCall {
-    fn new(call: AstFnCall) -> FnCall {
+    fn new(name: AstIdent, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
         FnCall {
-            fn_call: call,
+            name: name,
+            args: args,
             fn_id: Cell::new(None),
         }
     }
 
     pub fn set_id(&self, id: FnId) {
         if self.fn_id.get().is_some() {
-            panic!("Attempting to overwrite {} of the FnCall {:?} with {}", self.fn_id.get().unwrap(), self.fn_call, id);
+            panic!("Attempting to overwrite {} of the FnCall {:?}", self.fn_id.get().unwrap(), self.name);
         } else {
             self.fn_id.set(Some(id));
         }
