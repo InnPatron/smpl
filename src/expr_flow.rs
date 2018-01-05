@@ -105,6 +105,10 @@ pub struct Expr {
 
 impl Expr {
 
+    pub fn get_tmp(&self, id: TmpId) -> &Tmp {
+        self.map.get(&id).expect("Given ID should always be valid if taken from the correct Expr")
+    }
+
     pub fn execution_order(&self) -> Iter<TmpId> {
         self.execution_order.iter()
     }
