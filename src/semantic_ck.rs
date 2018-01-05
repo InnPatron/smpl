@@ -139,23 +139,34 @@ pub struct Function {
 }
 
 #[derive(Clone, Debug)]
-struct Universe {
+pub struct Universe {
     types: HashMap<TypeId, Rc<SmplType>>,
     fn_map: HashMap<FnId, Function>,
     id_counter: Cell<u64>,
     std_scope: ScopedData,
+    unit: TypeId,
+    int: TypeId,
+    float: TypeId,
+    string: TypeId,
+    boolean: TypeId,
 }
 
 impl Universe {
 
     fn std() -> Universe {
 
+        let unit = (TypeId(0), path!("Unit"), SmplType::Unit);
+        let int = (TypeId(1), path!("i32"), SmplType::Int);
+        let float = (TypeId(2), path!("float"), SmplType::Float);
+        let string = (TypeId(3), path!("String"), SmplType::String);
+        let boolean = (TypeId(4), path!("bool"), SmplType::Bool);
+
         let mut type_map = vec![
-            (TypeId(0), path!("Unit"), SmplType::Unit),
-            (TypeId(1), path!("i32"), SmplType::Int),
-            (TypeId(2), path!("float"), SmplType::Float),
-            (TypeId(3), path!("String"), SmplType::String),
-            (TypeId(4), path!("bool"), SmplType::Bool),
+            unit.clone(),
+            int.clone(),
+            float.clone(),
+            string.clone(),
+            boolean.clone(),
         ];
 
         Universe {
@@ -168,7 +179,32 @@ impl Universe {
                 var_map: HashMap::new(),
                 fn_map: HashMap::new(),
             },
+            unit: unit.0,
+            int: int.0,
+            float: float.0,
+            string: string.0,
+            boolean: boolean.0,
         }
+    }
+
+    pub fn unit(&self) -> TypeId {
+        self.unit
+    }
+
+    pub fn int(&self) -> TypeId {
+        self.int
+    }
+
+    pub fn float(&self) -> TypeId {
+        self.float
+    }
+
+    pub fn string(&self) -> TypeId {
+        self.string
+    }
+
+    pub fn boolean(&self) -> TypeId {
+        self.boolean
     }
 
     fn insert_fn(&mut self, type_id: TypeId, fn_t: FunctionType, cfg: CFG) -> FnId {
