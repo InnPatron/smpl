@@ -4,7 +4,7 @@ macro_rules! boolean {
     }};
 
     ($val: expr => Expr) => {{
-        Expr::Literal(AstNode::typed(boolean!($val), SmplType::Bool))
+        Expr::Literal(boolean!($val))
     }};
 
     ($val: expr => BoxExpr) => {{
@@ -18,7 +18,7 @@ macro_rules! number {
     }};
 
     ($str_num: expr => Expr) => {{
-        Expr::Literal(AstNode::untyped(number!($str_num)))
+        Expr::Literal(number!($str_num))
     }};
 
     ($str_num: expr => BoxExpr) => {{
@@ -32,7 +32,7 @@ macro_rules! ident {
     }};
 
     ($ident: expr => Expr) => {{ 
-        Expr::Ident(AstNode::untyped(ident!($ident)))
+        Expr::Ident(ident!($ident))
     }};
 
     ($ident: expr => BoxExpr) => {{
@@ -52,13 +52,13 @@ macro_rules! bin_expr {
     ($lhs: expr, $op: expr, $rhs: expr) => {{
         BinExpr {
             op: $op,
-            lhs: AstNode::untyped($lhs),
-            rhs: AstNode::untyped($rhs),
+            lhs: $lhs,
+            rhs: $rhs,
         }
     }};
 
     (($lhs: expr, $op: expr, $rhs: expr) => Expr) => {{
-        Expr::Bin(AstNode::untyped(bin_expr!($lhs, $op, $rhs)))
+        Expr::Bin(bin_expr!($lhs, $op, $rhs))
     }};
 
     (($lhs: expr, $op: expr, $rhs: expr) => BoxExpr) => {{
