@@ -97,13 +97,40 @@ impl From<ControlFlowErr> for Err {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TypeId(pub u64);
+pub struct TypeId(u64);
+
+impl ::std::fmt::Display for TypeId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "TypeId[{}]", self.0)
+    }
+}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct VarId(pub u64);
+pub struct VarId(u64);
+
+impl ::std::fmt::Display for VarId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "VarId[{}]", self.0)
+    }
+}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct FnId(pub u64);
+pub struct FnId(u64);
+
+impl ::std::fmt::Display for FnId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "FnId[{}]", self.0)
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TmpId(u64);
+
+impl ::std::fmt::Display for TmpId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "TmpId[{}]", self.0)
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct Function {
