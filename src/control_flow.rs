@@ -79,19 +79,19 @@ pub enum Node {
     Start,
     End,
 
-    Expr(AstNode<Expr>),
+    Expr(Expr),
 
     BranchSplit,
     BranchMerge,
 
     Assignment(Assignment),
     LocalVarDecl(LocalVarDecl),
-    Condition(AstNode<Expr>),
+    Condition(Expr),
 
     LoopHead,
     LoopFoot,
 
-    Return(Option<AstNode<Expr>>),
+    Return(Option<Expr>),
     Break,
     Continue,
 }
@@ -141,7 +141,7 @@ impl CFG {
         let mut previous = Some(cfg.start);
         let mut head = previous; 
         
-        let instructions = fn_def.body.data.0;
+        let instructions = fn_def.body.0;
         let fn_graph = CFG::get_branch(&mut cfg, instructions, None)?;
 
         // Append the function body.

@@ -5,28 +5,6 @@ use smpl_type::SmplType;
 use ascii::AsciiString;
 use semantic_ck::{FnId, VarId};
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct AstNode<T: Clone + PartialEq + ::std::fmt::Debug> {
-    pub data: T,
-    pub d_type: Option<SmplType>,
-}
-
-impl<T> AstNode<T> where T: Clone + PartialEq + ::std::fmt::Debug {
-    pub fn untyped(data: T) -> AstNode<T> {
-        AstNode {
-            data: data,
-            d_type: None,
-        }
-    }
-
-    pub fn typed(data: T, d_type: SmplType) -> AstNode<T> {
-        AstNode {
-            data: data,
-            d_type: Some(d_type),
-        }
-    }
-}
-
 pub struct Program(pub Vec<DeclStmt>);
 
 pub enum DeclStmt {
@@ -51,7 +29,7 @@ pub struct Function {
     pub name: Ident,
     pub args: Option<Vec<FnParameter>>,
     pub return_type: Option<Path>,
-    pub body: AstNode<Block>,
+    pub body: Block,
     fn_id: Option<FnId>
 }
 
@@ -61,7 +39,7 @@ impl Function {
             name: name,
             args: args,
             return_type: return_type,
-            body: AstNode::untyped(body),
+            body: body,
             fn_id: None,
         }
     }
@@ -118,7 +96,7 @@ pub struct StructField {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
     ExprStmt(ExprStmt),
-    Expr(AstNode<Expr>),
+    Expr(Expr),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -127,23 +105,23 @@ pub enum ExprStmt {
     While(While),
     LocalVarDecl(LocalVarDecl),
     Assignment(Assignment),
-    Return(AstNode<Expr>),
+    Return(Expr),
     Break,
     Continue,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Assignment {
-    pub name: AstNode<Path>,
-    pub value: AstNode<Expr>,
+    pub name: Path,
+    pub value: Expr,
     base_ident_id: Option<VarId>,
 }
 
 impl Assignment {
     pub fn new(name: Path, value: Expr) -> Assignment {
         Assignment {
-            name: AstNode::untyped(name),
-            value: AstNode::untyped(value),
+            name: name,
+            value: value,
             base_ident_id: None
         }
     }
@@ -161,12 +139,12 @@ impl Assignment {
 pub struct LocalVarDecl {
     pub var_type: Path,
     pub var_name: Ident,
-    pub var_init: AstNode<Expr>,
-    var_id: Option<VarId>,
+    pub var_init: Expr,
+    pub var_id: Option<VarId>,
 }
 
 impl LocalVarDecl {
-    pub fn new(var_type: Path, var_name: Ident, var_init: AstNode<Expr>) -> LocalVarDecl {
+    pub fn new(var_type: Path, var_name: Ident, var_init: Expr) -> LocalVarDecl {
         LocalVarDecl {
             var_type: var_type,
             var_name: var_name,
@@ -192,23 +170,23 @@ pub struct If {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Branch {
-    pub conditional: AstNode<Expr>,
+    pub conditional: Expr,
     pub block: Block,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct While {
-    pub conditional: AstNode<Expr>,
+    pub conditional: Expr,
     pub block: Block,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    Bin(AstNode<BinExpr>),
-    Uni(AstNode<UniExpr>),
-    Literal(AstNode<Literal>),
-    Ident(AstNode<ExprIdent>),
-    FnCall(AstNode<FnCall>),
+    Bin(BinExpr),
+    Uni(UniExpr),
+    Literal(Literal),
+    Ident(ExprIdent),
+    FnCall(FnCall),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -237,12 +215,12 @@ impl ExprIdent {
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
     pub name: Ident,
-    pub args: Option<Vec<AstNode<Expr>>>,
+    pub args: Option<Vec<Expr>>,
     fn_id: Option<FnId>
 }
 
 impl FnCall {
-    pub fn new(name: Ident, args: Option<Vec<AstNode<Expr>>>) -> FnCall {
+    pub fn new(name: Ident, args: Option<Vec<Expr>>) -> FnCall {
         FnCall {
             name: name,
             args: args, 
@@ -262,8 +240,8 @@ impl FnCall {
 #[derive(Clone, Debug, PartialEq)]
 pub struct BinExpr {
     pub op: BinOp,
-    pub lhs: AstNode<Box<Expr>>,
-    pub rhs: AstNode<Box<Expr>>,
+    pub lhs: Box<Expr>,
+    pub rhs: Box<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -287,7 +265,7 @@ pub enum BinOp {
 #[derive(Clone, Debug, PartialEq)]
 pub struct UniExpr {
     pub op: UniOp,
-    pub expr: AstNode<Box<Expr>>
+    pub expr: Box<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
