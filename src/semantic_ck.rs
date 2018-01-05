@@ -153,7 +153,7 @@ pub struct Universe {
 
 impl Universe {
 
-    fn std() -> Universe {
+    pub fn std() -> Universe {
 
         let unit = (TypeId(0), path!("Unit"), SmplType::Unit);
         let int = (TypeId(1), path!("i32"), SmplType::Int);
