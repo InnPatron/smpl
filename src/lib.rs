@@ -6,6 +6,7 @@ extern crate petgraph;
 mod ast_macros;
 mod parser;
 mod ast;
+mod typed_ast;
 mod smpl_type;
 mod semantic_ck;
 mod control_flow;

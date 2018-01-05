@@ -3,13 +3,11 @@ use std::collections::HashMap;
 use std::slice::Iter;
 
 use semantic_ck::{Universe, FnId, TypeId, VarId, TmpId};
+use typed_ast::*;
 use ast::{FnCall as AstFnCall, Ident as AstIdent, Literal, UniOp, BinOp, Expr as AstExpr};
 
 pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
-    let mut expr = Expr {
-        map: HashMap::new(),
-        execution_order: Vec::new(),
-    };
+    let mut expr = Expr::new();
 
     flatten_expr(universe, &mut expr, e);
 
@@ -58,152 +56,6 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
         }
     }
     
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
-    data: T,
-    data_type: Cell<Option<TypeId>>
-}
-
-impl<T> Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
-    fn untyped(data: T) -> Typed<T> {
-        Typed {
-            data: data,
-            data_type: Cell::new(None) 
-        }
-    }
-
-    fn typed(data: T, t: TypeId) -> Typed<T> {
-        Typed {
-            data: data,
-            data_type: Cell::new(Some(t)),
-        }
-    }
-
-    pub fn set_type(&self, t: TypeId) {
-        // TODO: Handle type override
-        if self.data_type.get().is_some() {
-            panic!("Attempting to overwrite the type of this node ({:?})", self);
-        } else {
-            self.data_type.set(Some(t));
-        }
-    }
-
-    pub fn get_type(&self) -> Option<TypeId> {
-        self.data_type.get()
-    }
-
-    pub fn data(&self) -> &T {
-        &self.data
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Expr {
-    map: HashMap<TmpId, Tmp>,
-    execution_order: Vec<TmpId>,
-}
-
-impl Expr {
-
-    pub fn get_tmp(&self, id: TmpId) -> &Tmp {
-        self.map.get(&id).expect("Given ID should always be valid if taken from the correct Expr")
-    }
-
-    pub fn execution_order(&self) -> Iter<TmpId> {
-        self.execution_order.iter()
-    }
-
-    fn map_tmp(&mut self, universe: &Universe, val: Value, t: Option<TypeId>) -> TmpId {
-        let tmp = Tmp {
-            id: universe.new_tmp_id(),
-            value: Typed {
-                data: val,
-                data_type: Cell::new(t),
-            }
-        };
-        let id = tmp.id;
-
-        if self.map.insert(id, tmp).is_some() {
-            panic!("Attempting to override {}", id);
-        }
-
-        self.execution_order.push(id);
-
-        id
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Tmp {
-    id: TmpId,
-    value: Typed<Value>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Value {
-    Literal(Literal),
-    Ident(Ident),
-    FnCall(FnCall),
-    BinExpr(BinOp, Typed<TmpId>, Typed<TmpId>),
-    UniExpr(UniOp, Typed<TmpId>),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Ident {
-    ident: AstIdent,
-    var_id: Cell<Option<VarId>>,
-}
-
-impl Ident {
-    fn new(ident: AstIdent) -> Ident {
-        Ident {
-            ident: ident,
-            var_id: Cell::new(None),
-        }
-    }
-
-    pub fn set_id(&self, id: VarId) {
-        if self.var_id.get().is_some() {
-            panic!("Attempting to overwrite {} of the Ident {:?} with {}", self.var_id.get().unwrap(), self.ident, id);
-        } else {
-            self.var_id.set(Some(id));
-        }
-    }
-
-    pub fn get_id(&self) -> Option<VarId> {
-        self.var_id.get()
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct FnCall {
-    name: AstIdent,
-    args: Option<Vec<Typed<TmpId>>>,
-    fn_id: Cell<Option<FnId>>,
-}
-
-impl FnCall {
-    fn new(name: AstIdent, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
-        FnCall {
-            name: name,
-            args: args,
-            fn_id: Cell::new(None),
-        }
-    }
-
-    pub fn set_id(&self, id: FnId) {
-        if self.fn_id.get().is_some() {
-            panic!("Attempting to overwrite {} of the FnCall {:?}", self.fn_id.get().unwrap(), self.name);
-        } else {
-            self.fn_id.set(Some(id));
-        }
-    }
-
-    pub fn get_id(&self) -> Option<FnId> {
-        self.fn_id.get()
-    }
 }
 
 #[cfg(test)]

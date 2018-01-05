@@ -4,6 +4,7 @@ use std::cell::Cell;
 use petgraph;
 use petgraph::graph;
 use petgraph::visit::EdgeRef;
+use typed_ast;
 use ast;
 use expr_flow;
 use semantic_ck::{Universe, TypeId};
@@ -83,19 +84,19 @@ pub enum Node {
     Start,
     End,
 
-    Expr(expr_flow::Expr),
+    Expr(typed_ast::Expr),
 
     BranchSplit,
     BranchMerge,
 
-    Assignment(Assignment),
-    LocalVarDecl(LocalVarDecl),
-    Condition(expr_flow::Expr),
+    Assignment(typed_ast::Assignment),
+    LocalVarDecl(typed_ast::LocalVarDecl),
+    Condition(typed_ast::Expr),
 
     LoopHead,
     LoopFoot,
 
-    Return(Option<expr_flow::Expr>),
+    Return(Option<typed_ast::Expr>),
     Break,
     Continue,
 }
@@ -119,66 +120,6 @@ pub enum Err {
 struct BranchData {
     head: Option<graph::NodeIndex>,
     foot: Option<graph::NodeIndex>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Assignment {
-    name: ast::Path,
-    value: expr_flow::Expr,
-    type_id: Cell<Option<TypeId>>,
-}
-
-impl Assignment {
-    fn new(universe: &Universe, assignment: ast::Assignment) -> Assignment {
-        Assignment {
-            name: assignment.name,
-            value: expr_flow::flatten(universe, assignment.value),
-            type_id: Cell::new(None),
-        }
-    }
-
-    fn set_id(&self, id: TypeId) {
-        if self.type_id.get().is_some() {
-            panic!("Attempting to override {} for local variable declarration {:?}", id, self);
-        } else {
-            self.type_id.set(Some(id));
-        }
-    }
-
-    fn get_id(&self) -> Option<TypeId> {
-        self.type_id.get()
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct LocalVarDecl {
-    var_type: ast::Path,
-    var_name: ast::Ident,
-    var_init: expr_flow::Expr,
-    type_id: Cell<Option<TypeId>>,
-}
-
-impl LocalVarDecl {
-    fn new(universe: &Universe, decl: ast::LocalVarDecl) -> LocalVarDecl {
-        LocalVarDecl {
-            var_type: decl.var_type,
-            var_name: decl.var_name,
-            var_init: expr_flow::flatten(universe, decl.var_init),
-            type_id: Cell::new(None),
-        }
-    }
-
-    fn set_id(&self, id: TypeId) {
-        if self.type_id.get().is_some() {
-            panic!("Attempting to override {} for local variable declarration {:?}", id, self);
-        } else {
-            self.type_id.set(Some(id));
-        }
-    }
-
-    fn get_id(&self) -> Option<TypeId> {
-        self.type_id.get()
-    }
 }
 
 impl CFG {
@@ -228,7 +169,7 @@ impl CFG {
     /// 
     fn get_branch(universe: &Universe, cfg: &mut CFG, instructions: Vec<ast::Stmt>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex)>) -> Result<BranchData, Err> {
         use ast::*;
-        use expr_flow::Expr as ExprFlow;
+        use typed_ast::Expr as ExprFlow;
         
         let mut previous = None;
         let mut head = None;
@@ -376,11 +317,11 @@ impl CFG {
                     }
 
                     ExprStmt::LocalVarDecl(decl) => {
-                        append_node!(cfg, head, previous, Node::LocalVarDecl(self::LocalVarDecl::new(universe, decl)));
+                        append_node!(cfg, head, previous, Node::LocalVarDecl(typed_ast::LocalVarDecl::new(universe, decl)));
                     }
 
                     ExprStmt::Assignment(assignment) => {
-                        append_node!(cfg, head, previous, Node::Assignment(self::Assignment::new(universe, assignment)));
+                        append_node!(cfg, head, previous, Node::Assignment(typed_ast::Assignment::new(universe, assignment)));
                     }
                 }
             } else if let Stmt::Expr(expr) = stmt {
