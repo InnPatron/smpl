@@ -21,31 +21,32 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
         AstExpr::Bin(bin) => {
             let lhs = flatten_expr(universe, scope, *bin.lhs);
             let rhs = flatten_expr(universe, scope, *bin.rhs);
-            scope.map_tmp(universe, Value::BinExpr(Typed::untyped(bin.op), 
+            scope.map_tmp(universe, Value::BinExpr(bin.op, 
                                                    Typed::untyped(lhs),
-                                                   Typed::untyped(rhs)))
+                                                   Typed::untyped(rhs)),
+                                                   None)
         }
 
         AstExpr::Uni(uni) => {
             let expr = flatten_expr(universe, scope, *uni.expr);
-            scope.map_tmp(universe, Value::UniExpr(Typed::untyped(uni.op),
-                                                   Typed::untyped(expr)))
+            scope.map_tmp(universe, Value::UniExpr(uni.op,
+                                                   Typed::untyped(expr)),
+                                                   None)
         }
 
         AstExpr::Literal(literal) => {
             let lit_type = match literal {
-                Literal::String(_) => universe.string(),
+                Literal::String(_) => Some(universe.string()),
                 Literal::Number(ref num) => {
-                    //TODO: unimplemented!("Might need to fix parser to distinguish between ints and floats (require floats to have a full stop)");
-                    universe.int()
+                    None
                 },
-                Literal::Bool(_) => universe.boolean(),
+                Literal::Bool(_) => Some(universe.boolean()),
             };
 
-            scope.map_tmp(universe, Value::Literal(Typed::typed(literal, lit_type)))
+            scope.map_tmp(universe, Value::Literal(literal), lit_type)
         }
 
-        AstExpr::Ident(ident) => scope.map_tmp(universe, Value::Ident(Typed::untyped(Ident::new(ident)))),
+        AstExpr::Ident(ident) => scope.map_tmp(universe, Value::Ident(Ident::new(ident)), None),
 
         AstExpr::FnCall(fn_call) => {
             let name = fn_call.name;
@@ -53,7 +54,7 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
 
             let fn_call = FnCall::new(name, args);
 
-            scope.map_tmp(universe, Value::FnCall(Typed::untyped(fn_call)))
+            scope.map_tmp(universe, Value::FnCall(fn_call), None)
         }
     }
     
@@ -113,10 +114,13 @@ impl Expr {
         self.execution_order.iter()
     }
 
-    fn map_tmp(&mut self, universe: &Universe, val: Value) -> TmpId {
+    fn map_tmp(&mut self, universe: &Universe, val: Value, t: Option<TypeId>) -> TmpId {
         let tmp = Tmp {
             id: universe.new_tmp_id(),
-            value: val,
+            value: Typed {
+                data: val,
+                data_type: Cell::new(t),
+            }
         };
         let id = tmp.id;
 
@@ -133,16 +137,16 @@ impl Expr {
 #[derive(Debug)]
 pub struct Tmp {
     id: TmpId,
-    value: Value,
+    value: Typed<Value>,
 }
 
 #[derive(Debug)]
 pub enum Value {
-    Literal(Typed<Literal>),
-    Ident(Typed<Ident>),
-    FnCall(Typed<FnCall>),
-    BinExpr(Typed<BinOp>, Typed<TmpId>, Typed<TmpId>),
-    UniExpr(Typed<UniOp>, Typed<TmpId>),
+    Literal(Literal),
+    Ident(Ident),
+    FnCall(FnCall),
+    BinExpr(BinOp, Typed<TmpId>, Typed<TmpId>),
+    UniExpr(UniOp, Typed<TmpId>),
 }
 
 #[derive(Debug)]
@@ -221,9 +225,8 @@ mod tests {
         // Find and validate tmp storing 5.
         let _5_id = order.next().unwrap();
         {
-            match expr.map.get(_5_id).unwrap().value {
+            match expr.get_tmp(*_5_id).value.data {
                 Value::Literal(ref literal) => {
-                    let literal = &literal.data;
                     assert_eq!(*literal, Literal::Number("5".to_string()));
                 }
 
@@ -234,9 +237,8 @@ mod tests {
         // Find and validate tmp storing 2.
         let _2_id = order.next().unwrap();
         {
-            match expr.map.get(_2_id).unwrap().value {
+            match expr.get_tmp(*_2_id).value.data {
                 Value::Literal(ref literal) => {
-                    let literal = &literal.data;
                     assert_eq!(*literal, Literal::Number("2".to_string()));
                 }
 
@@ -247,9 +249,8 @@ mod tests {
         // Find and validate tmp storing 3.
         let _3_id = order.next().unwrap();
         {
-            match expr.map.get(_3_id).unwrap().value {
+            match expr.get_tmp(*_3_id).value.data {
                 Value::Literal(ref literal) => {
-                    let literal = &literal.data;
                     assert_eq!(*literal, Literal::Number("3".to_string()));
                 }
 
@@ -259,9 +260,9 @@ mod tests {
 
         let div_id = order.next().unwrap();
         {
-            let (l_id, r_id) = match expr.map.get(div_id).unwrap().value {
+            let (l_id, r_id) = match expr.get_tmp(*div_id).value.data {
                 Value::BinExpr(ref op, ref lhs, ref rhs) => {
-                    assert_eq!(op.data, BinOp::Div);
+                    assert_eq!(*op, BinOp::Div);
                     (lhs.data, rhs.data)
                 }
 
@@ -274,9 +275,9 @@ mod tests {
         
         let add_id = order.next().unwrap();
         {
-            let (l_id, r_id) = match expr.map.get(add_id).unwrap().value {
+            let (l_id, r_id) = match expr.get_tmp(*add_id).value.data {
                 Value::BinExpr(ref op, ref lhs, ref rhs) => {
-                    assert_eq!(op.data, BinOp::Add);
+                    assert_eq!(*op, BinOp::Add);
                     (lhs.data, rhs.data)
                 }
 
