@@ -196,3 +196,92 @@ impl FnCall {
         self.fn_id.get()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use parser::*;
+    use semantic_ck::*;
+    use super::*;
+
+    #[test]
+    fn expr_exec_order_ck() {
+        let input = "5 + 2 / 3";
+        let expr = parse_Expr(input).unwrap();
+
+        let universe = Universe::std();
+
+        let expr = flatten(&universe, expr);
+
+        let mut order = expr.execution_order();
+
+        // Find and validate tmp storing 5.
+        let _5_id = order.next().unwrap();
+        {
+            match expr.map.get(_5_id).unwrap().value {
+                Value::Literal(ref literal) => {
+                    let literal = &literal.data;
+                    assert_eq!(*literal, Literal::Number("5".to_string()));
+                }
+
+                ref v @ _ => panic!("Unexpected value {:?}. Expected a literal number 5", v),
+            }
+        }
+
+        // Find and validate tmp storing 2.
+        let _2_id = order.next().unwrap();
+        {
+            match expr.map.get(_2_id).unwrap().value {
+                Value::Literal(ref literal) => {
+                    let literal = &literal.data;
+                    assert_eq!(*literal, Literal::Number("2".to_string()));
+                }
+
+                ref v @ _ => panic!("Unexpected value {:?}. Expected a literal number 3", v),
+            }
+        }
+
+        // Find and validate tmp storing 3.
+        let _3_id = order.next().unwrap();
+        {
+            match expr.map.get(_3_id).unwrap().value {
+                Value::Literal(ref literal) => {
+                    let literal = &literal.data;
+                    assert_eq!(*literal, Literal::Number("3".to_string()));
+                }
+
+                ref v @ _ => panic!("Unexpected value {:?}. Expected a literal number 3", v),
+            }
+        }
+
+        let div_id = order.next().unwrap();
+        {
+            let (l_id, r_id) = match expr.map.get(div_id).unwrap().value {
+                Value::BinExpr(ref op, ref lhs, ref rhs) => {
+                    assert_eq!(op.data, BinOp::Div);
+                    (lhs.data, rhs.data)
+                }
+
+                ref v @ _ => panic!("Unexpected value {:?}. Expected a division expr", v),
+            };
+
+            assert_eq!(l_id, *_2_id);
+            assert_eq!(r_id, *_3_id);
+        }
+        
+        let add_id = order.next().unwrap();
+        {
+            let (l_id, r_id) = match expr.map.get(add_id).unwrap().value {
+                Value::BinExpr(ref op, ref lhs, ref rhs) => {
+                    assert_eq!(op.data, BinOp::Add);
+                    (lhs.data, rhs.data)
+                }
+
+                ref v @ _ => panic!("Unexpected value {:?}. Expected an addition expr", v),
+            };
+
+            assert_eq!(l_id, *_5_id);
+            assert_eq!(r_id, *div_id);
+
+        }
+    }
+}
