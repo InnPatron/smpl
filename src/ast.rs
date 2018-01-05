@@ -185,31 +185,8 @@ pub enum Expr {
     Bin(BinExpr),
     Uni(UniExpr),
     Literal(Literal),
-    Ident(ExprIdent),
+    Ident(Ident),
     FnCall(FnCall),
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct ExprIdent {
-    pub ident: Ident,
-    var_id: Option<VarId>,
-}
-
-impl ExprIdent {
-    pub fn new(ident: Ident) -> ExprIdent {
-        ExprIdent {
-            ident: ident,
-            var_id: None,
-        }
-    }
-
-    pub fn set_var_id(&mut self, id: VarId) {
-        self.var_id = Some(id);
-    }
-
-    pub fn var_id(&self) -> Option<VarId> {
-        self.var_id
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
