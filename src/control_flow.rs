@@ -347,6 +347,8 @@ mod tests {
     use std::mem;
     use std::rc::Rc;
 
+    use semantic_ck::Universe;
+
     macro_rules! neighbors {
         ($CFG: expr, $node: expr) => {
             $CFG.graph.neighbors_directed($node, Direction::Outgoing)
@@ -373,12 +375,13 @@ mod tests {
 int a = 2;
 int b = 3;
 }";
+        let universe = Universe::std();
         let fn_type = FunctionType {
             args: vec![Rc::new(SmplType::Int)],
             return_type: Rc::new(SmplType::Unit)
         };
         let fn_def = parse_FnDecl(input).unwrap();
-        let cfg = CFG::generate(fn_def, &fn_type).unwrap();
+        let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -422,12 +425,13 @@ if (test) {
     int c = 4;
 }
 }";
+        let universe = Universe::std();
         let fn_type = FunctionType {
             args: vec![Rc::new(SmplType::Int)],
             return_type: Rc::new(SmplType::Unit)
         };
         let fn_def = parse_FnDecl(input).unwrap();
-        let cfg = CFG::generate(fn_def, &fn_type).unwrap();
+        let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -530,12 +534,13 @@ let input =
 
     }
 }";
+        let universe = Universe::std();
         let fn_type = FunctionType {
             args: vec![Rc::new(SmplType::Int)],
             return_type: Rc::new(SmplType::Unit)
         };
         let fn_def = parse_FnDecl(input).unwrap();
-        let cfg = CFG::generate(fn_def, &fn_type).unwrap();
+        let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -656,12 +661,13 @@ let input =
         
     }
 }";
+        let universe = Universe::std();
         let fn_type = FunctionType {
             args: vec![Rc::new(SmplType::Int)],
             return_type: Rc::new(SmplType::Unit)
         };
         let fn_def = parse_FnDecl(input).unwrap();
-        let cfg = CFG::generate(fn_def, &fn_type).unwrap();
+        let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
