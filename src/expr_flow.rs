@@ -60,13 +60,13 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
     
 }
 
-#[derive(Debug)]
-pub struct Typed<T> where T: ::std::fmt::Debug {
+#[derive(Debug, Clone, PartialEq)]
+pub struct Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
     data: T,
     data_type: Cell<Option<TypeId>>
 }
 
-impl<T> Typed<T> where T: ::std::fmt::Debug {
+impl<T> Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
     fn untyped(data: T) -> Typed<T> {
         Typed {
             data: data,
@@ -99,6 +99,7 @@ impl<T> Typed<T> where T: ::std::fmt::Debug {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Expr {
     map: HashMap<TmpId, Tmp>,
     execution_order: Vec<TmpId>,
@@ -134,13 +135,13 @@ impl Expr {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Tmp {
     id: TmpId,
     value: Typed<Value>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Literal(Literal),
     Ident(Ident),
@@ -149,7 +150,7 @@ pub enum Value {
     UniExpr(UniOp, Typed<TmpId>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Ident {
     ident: AstIdent,
     var_id: Cell<Option<VarId>>,
@@ -176,7 +177,7 @@ impl Ident {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FnCall {
     name: AstIdent,
     args: Option<Vec<Typed<TmpId>>>,
