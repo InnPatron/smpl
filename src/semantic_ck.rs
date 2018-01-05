@@ -200,28 +200,28 @@ impl Universe {
         }
     }
 
-    pub fn new_type_id(&self) -> TypeId {
-        let id = self.id_counter.get();
-        let type_id = TypeId(id);
-        self.id_counter.set(id + 1);
+    fn inc_counter(&self) -> u64 {
+        let curr = self.id_counter.get();
+        let next = curr + 1;
+        self.id_counter.set(next);
 
-        type_id
+        curr
+    }
+
+    pub fn new_type_id(&self) -> TypeId {
+        TypeId(self.inc_counter())
     }
 
     pub fn new_var_id(&self) -> VarId {
-        let id = self.id_counter.get();
-        let var_id = VarId(id);
-        self.id_counter.set(id + 1);
-
-        var_id
+        VarId(self.inc_counter())
     }
 
     pub fn new_fn_id(&self) -> FnId {
-        let id = self.id_counter.get();
-        let fn_id = FnId(id);
-        self.id_counter.set(id + 1);
+        FnId(self.inc_counter())
+    }
 
-        fn_id
+    pub fn new_tmp_id(&self) -> TmpId {
+        TmpId(self.inc_counter())
     }
 }
 
