@@ -36,7 +36,8 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
             let lit_type = match literal {
                 Literal::String(_) => universe.string(),
                 Literal::Number(ref num) => {
-                    unimplemented!("Might need to fix parser to distinguish between ints and floats (require floats to have a full stop)");
+                    //TODO: unimplemented!("Might need to fix parser to distinguish between ints and floats (require floats to have a full stop)");
+                    universe.int()
                 },
                 Literal::Bool(_) => universe.boolean(),
             };
