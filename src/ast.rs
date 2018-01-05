@@ -3,7 +3,6 @@ use std::fmt;
 use super::Span;
 use smpl_type::SmplType;
 use ascii::AsciiString;
-use semantic_ck::{FnId, VarId};
 
 pub struct Program(pub Vec<DeclStmt>);
 
@@ -30,7 +29,6 @@ pub struct Function {
     pub args: Option<Vec<FnParameter>>,
     pub return_type: Option<Path>,
     pub body: Block,
-    fn_id: Option<FnId>
 }
 
 impl Function {
@@ -40,16 +38,7 @@ impl Function {
             args: args,
             return_type: return_type,
             body: body,
-            fn_id: None,
         }
-    }
-
-    pub fn fn_id(&self) -> Option<FnId> {
-        self.fn_id
-    }
-
-    pub fn set_fn_id(&mut self, id: FnId) {
-        self.fn_id = Some(id);
     }
 }
 
@@ -57,7 +46,6 @@ impl Function {
 pub struct FnParameter {
     pub name: Ident,
     pub arg_type: Path,
-    var_id: Option<VarId>,
 }
 
 impl FnParameter {
@@ -65,16 +53,7 @@ impl FnParameter {
         FnParameter {
             name: name,
             arg_type: arg_type,
-            var_id: None,
         }
-    }
-
-    pub fn set_var_id(&mut self, id: VarId) {
-        self.var_id = Some(id)
-    }
-
-    pub fn var_id(&self) -> Option<VarId> {
-        self.var_id
     }
 }
 
@@ -114,7 +93,6 @@ pub enum ExprStmt {
 pub struct Assignment {
     pub name: Path,
     pub value: Expr,
-    base_ident_id: Option<VarId>,
 }
 
 impl Assignment {
@@ -122,16 +100,7 @@ impl Assignment {
         Assignment {
             name: name,
             value: value,
-            base_ident_id: None
         }
-    }
-
-    pub fn base_ident_id(&self) -> Option<VarId> {
-        self.base_ident_id
-    }
-
-    pub fn set_base_ident_id(&mut self, ident: VarId) {
-        self.base_ident_id = Some(ident);
     }
 }
 
@@ -140,7 +109,6 @@ pub struct LocalVarDecl {
     pub var_type: Path,
     pub var_name: Ident,
     pub var_init: Expr,
-    pub var_id: Option<VarId>,
 }
 
 impl LocalVarDecl {
@@ -149,16 +117,7 @@ impl LocalVarDecl {
             var_type: var_type,
             var_name: var_name,
             var_init: var_init,
-            var_id: None
         }
-    }
-
-    pub fn var_id(&self) -> Option<VarId> {
-        self.var_id
-    }
-
-    pub fn set_var_id(&mut self, id: VarId) {
-        self.var_id = Some(id);
     }
 }
 
@@ -193,7 +152,6 @@ pub enum Expr {
 pub struct FnCall {
     pub name: Ident,
     pub args: Option<Vec<Expr>>,
-    fn_id: Option<FnId>
 }
 
 impl FnCall {
@@ -201,16 +159,7 @@ impl FnCall {
         FnCall {
             name: name,
             args: args, 
-            fn_id: None,
         }
-    }
-
-    pub fn fn_id(&self) -> Option<FnId> {
-        self.fn_id
-    }
-
-    pub fn set_fn_id(&mut self, id: FnId) {
-        self.fn_id = Some(id);
     }
 }
 
