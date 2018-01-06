@@ -164,8 +164,6 @@ impl CFG {
         }
 
         append_node!(cfg, head, previous, Node::ExitScope);
-
-        // Connect the last node to the Node::End
         append_node_index!(cfg, head, previous, cfg.end);
 
         Ok(cfg)
@@ -412,30 +410,52 @@ int b = 3;
         {
             assert_eq!(*cfg.graph.node_weight(cfg.start).unwrap(), Node::Start);
             assert_eq!(*cfg.graph.node_weight(cfg.end).unwrap(), Node::End);
-            // start -> var decl -> var decl -> implicit return -> end
-            assert_eq!(cfg.graph.node_count(), 5);
+            // start -> enter_scope -> var decl -> var decl -> implicit return -> exit_scope -> end
+            assert_eq!(cfg.graph.node_count(), 7);
 
-            let var_dec_1 = cfg.graph.neighbors(cfg.start).next().expect("Looking for node after start");
-            let var_dec_1_node = cfg.graph.node_weight(var_dec_1).unwrap();
+            let mut start_neighbors = neighbors!(cfg, cfg.start);
             
-            let var_dec_2 = cfg.graph.neighbors(var_dec_1).next().expect("Looking for node after the first var declaration");
-            let var_dec_2_node = cfg.graph.node_weight(var_dec_2).unwrap();
-            {
-                assert!({
-                    if let Node::LocalVarDecl(_) = *var_dec_1_node {
-                        true
-                    } else {
-                        false
-                    }
-                });
+            let enter = start_neighbors.next().unwrap();
+            let mut enter_neighbors = neighbors!(cfg, enter);
+            match *node_w!(cfg, enter) {
+                Node::EnterScope => (),
+                ref n @ _ => panic!("Expected to find Node::EnterScope. Found {:?}", n),
+            }
 
-                assert!({
-                    if let Node::LocalVarDecl(_) = *var_dec_2_node {
-                        true
-                    } else {
-                        false
-                    }
-                });
+            let var_decl_1 = enter_neighbors.next().unwrap();
+            let mut var_decl_1_neighbors = neighbors!(cfg, enter);
+            match *node_w!(cfg, var_decl_1) {
+                Node::LocalVarDecl(_) => (),
+                ref n @ _ => panic!("Expected to find Node::LocalVarDecl. Found {:?}", n),
+            }
+
+            let var_decl_2 = var_decl_1_neighbors.next().unwrap();
+            let mut var_decl_2_neighbors = neighbors!(cfg, var_decl_2);
+            match *node_w!(cfg, var_decl_2) {
+                Node::LocalVarDecl(_) => (),
+                ref n @ _ => panic!("Expected to find Node::LocalVarDecl. Found {:?}", n),
+            }
+
+            let ret = var_decl_2_neighbors.next().unwrap();
+            let mut ret_neighbors = neighbors!(cfg, ret);
+            match *node_w!(cfg, ret) {
+                Node::Return(_) => (),
+                ref n @ _ => panic!("Expected to find Node::Return. Found {:?}", n),
+            }
+
+            let exit = ret_neighbors.next().unwrap();
+            let mut exit_neighbors = neighbors!(cfg, exit);
+            match *node_w!(cfg, exit) {
+                Node::ExitScope => (),
+                ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
+            }
+
+            let end = exit_neighbors.next().unwrap();
+            let mut end_neighbors = neighbors!(cfg, end);
+            assert_eq!(end_neighbors.count(), 0);
+            match *node_w!(cfg, end) {
+                Node::End => (),
+                ref n @ _ => panic!("Expected to find Node::End. Found {:?}", n),
             }
         }
     }
@@ -463,21 +483,30 @@ if (test) {
             assert_eq!(*cfg.graph.node_weight(cfg.start).unwrap(), Node::Start);
             assert_eq!(*cfg.graph.node_weight(cfg.end).unwrap(), Node::End);
 
-            // start -> branch_split -> condition 
+            // start -> enter_scope -> branch_split -> condition 
             //      -[true]> {
+            //          -> enter_scope
             //          -> var decl
+            //          -> exit_scope
             //      } ->        >>___ branch_merge ->
             //        -[false]> >>
-            //      implicit return -> end
-            assert_eq!(cfg.graph.node_count(), 7);
+            //      implicit return -> exit_scope -> end
+            assert_eq!(cfg.graph.node_count(), 11);
+
+            let mut start_neighbors = neighbors!(cfg, cfg.start);
+
+            let enter = start_neighbors.next().unwrap();
+            let mut enter_neighbors = neighbors!(cfg, enter);
+            match *node_w!(cfg, enter) {
+                Node::EnterScope => (),
+                ref n @ _ => panic!("Expected to find Node::EnterScope. Found {:?}", n),
+            }
 
             // Check split node
-            let split = cfg.graph.neighbors(cfg.start).next().expect("Looking for node after start");
-            let split_node = cfg.graph.node_weight(split).unwrap();
-            {
-                assert_eq!(mem::discriminant(split_node), mem::discriminant(&Node::BranchSplit));
-                let mut edges = cfg.graph.edges_directed(split, Direction::Outgoing);
-                assert_eq!(edges.clone().count(), 1);
+            let split = enter_neighbors.next().unwrap();
+            match *node_w!(cfg, split) {
+                Node::BranchSplit => (),
+                ref n @ _ => panic!("Expected to find Node::BranchSplit. Found {:?}", n),
             }
 
             let mut merge = None;
@@ -498,12 +527,29 @@ if (test) {
 
                             let target = edge.target();
 
-                            let mut found_decl = false;
-                            if let Node::LocalVarDecl(_) = *cfg.graph.node_weight(target).unwrap() {
-                                found_decl = true;
-                            }
-                            assert!(found_decl);
+                            match *cfg.graph.node_weight(target).unwrap() {
+                                Node::EnterScope => {
+                                    let mut neighbors = cfg.graph.neighbors_directed(target, Direction::Outgoing);
+                                    let decl = neighbors.next().unwrap();
+                                    
+                                    match *cfg.graph.node_weight(decl).unwrap() {
+                                        Node::LocalVarDecl(_) => (),
+                                        ref n @ _ => panic!("Expected to find Node::LocalVarDecl. Found {:?}", n),
+                                    }
 
+                                    let mut neighbors = cfg.graph.neighbors_directed(decl, Direction::Outgoing);
+                                    let exit_scope = neighbors.next().unwrap();
+
+                                    match *cfg.graph.node_weight(exit_scope).unwrap() {
+                                        Node::ExitScope => (),
+
+                                        ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
+                                    }
+                                }
+
+                                ref n @ _ => panic!("Expected to find Node::EnterScope. Found {:?}", n),
+                            }
+                            
 
                             found_true_edge = true;
                         } else if let Edge::False = *edge.weight() {
@@ -525,23 +571,29 @@ if (test) {
             }
 
             let merge = merge.unwrap();
+            let mut merge_neighbors = neighbors!(cfg, merge);
 
             let return_n = cfg.graph.neighbors(merge).next().unwrap();
-            let return_weight = cfg.graph.node_weight(return_n).unwrap();
-            if let Node::Return(_) = *return_weight {
-                let edges = cfg.graph.edges_directed(return_n, Direction::Outgoing);
-                assert_eq!(edges.clone().count(), 1);
-            } else {
-                panic!("After Node::Merge should be Node::Return");
+            let mut return_neighbors = neighbors!(cfg, return_n);
+            match *node_w!(cfg, return_n) {
+                Node::Return(_) => (),
+                ref n @ _ => panic!("Expected to find Node::Return. Found {:?}", n),
             }
 
-            let end = cfg.graph.neighbors(return_n).next().unwrap();
-            let end_weight = cfg.graph.node_weight(end).unwrap();
-            if let Node::End = *end_weight {
-                let edges = cfg.graph.edges_directed(end, Direction::Outgoing);
-                assert_eq!(edges.clone().count(), 0);
-            } else {
-                panic!("After Node::Return should be Node::End");
+            let exit = return_neighbors.next().unwrap();
+            let mut exit_neighbors = neighbors!(cfg, exit);
+            match *node_w!(cfg, exit) {
+                Node::ExitScope => (),
+                ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
+            }
+
+            let end = exit_neighbors.next().unwrap();
+            let mut end_neighbors = neighbors!(cfg, end);
+            match *node_w!(cfg, end) {
+                Node::End => {
+                    assert_eq!(end_neighbors.count(), 0);
+                },
+                ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
             }
         }
     }
@@ -569,9 +621,11 @@ let input =
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
         {
-            // start -> branch_split(A) -> condition(B)
+            // start -> enter_scope -> branch_split(A) -> condition(B)
             //      -[true]> {
-            //          local_var_decl
+            //          enter_scope ->
+            //          local_var_decl ->
+            //          exit_scope ->
             //      } -> branch_merge(A)
             //
             //      -[false]> condition(C)
@@ -579,10 +633,10 @@ let input =
             //
             //           -[false]> branch_merge(A) 
             //
-            // branch_merge(A) -> implicit_return -> end
+            // branch_merge(A) -> implicit_return -> exit_scope -> end
             //
             
-            assert_eq!(cfg.graph.node_count(), 8);
+            assert_eq!(cfg.graph.node_count(), 12);
 
             let mut start_neighbors = neighbors!(cfg, cfg.start);
             assert_eq!(start_neighbors.clone().count(), 1);
@@ -606,12 +660,12 @@ let input =
 
             let condition_b_edges = edges!(cfg, condition_b);
             let mut condition_c = None;
-            let mut var_decl = None;
+            let mut condition_b_true = None;
 
             assert_eq!(condition_b_edges.clone().count(), 2);
             for edge in condition_b_edges {
                 match *edge.weight() {
-                    Edge::True => var_decl = Some(edge.target()),
+                    Edge::True => condition_b_true = Some(edge.target()),
                     Edge::False => condition_c = Some(edge.target()),
 
                     ref e @ _ => panic!("Expected true or false edge. Found {:?}", e),
@@ -620,16 +674,33 @@ let input =
 
 
             // condition b TRUE branch
-            let var_decl = var_decl.expect("Missing true edge connecting to variable declaration");
+
+            let enter = condition_b_true.expect("Missing true edge connecting to variable declaration");
+            let mut enter_neighbors = neighbors!(cfg, enter);
+            match *node_w!(cfg, enter) {
+                Node::EnterScope => (),
+                ref n @ _ => panic!("Expected Node::EnterScope. Found {:?}", n),
+            }
+
+            let var_decl = enter_neighbors.next().unwrap();
+            let mut var_decl_neighbors = neighbors!(cfg, var_decl);
+            assert_eq!(var_decl_neighbors.clone().count(), 1);
             match *node_w!(cfg, var_decl) {
                 Node::LocalVarDecl(_) => (), 
 
                 ref n @ _ => panic!("Expected local variable declartion. Found {:?}", n),
             }
 
-            let mut var_decl_neighbors = neighbors!(cfg, var_decl);
-            assert_eq!(var_decl_neighbors.clone().count(), 1);
-            match *node_w!(cfg, var_decl_neighbors.next().unwrap()) {
+
+            let exit = var_decl_neighbors.next().unwrap();
+            let mut exit_neighbors = neighbors!(cfg, exit);
+            match *node_w!(cfg, enter) {
+                Node::ExitScope => (),
+                ref n @ _ => panic!("Expected Node::ExitScope. Found {:?}", n),
+            }
+
+            let merge = exit_neighbors.next().unwrap();
+            match *node_w!(cfg, merge) {
                 Node::BranchMerge => (),
 
                 ref n @ _ => panic!("Expected Node::BranchMerge. Found {:?}", n),
@@ -695,10 +766,10 @@ let input =
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
-        // start -> loop_head(A) -> condition(B)
+        // start -> enter_scope -> loop_head(A) -> condition(B)
         //       -[true]> loop_foot(A)
         //       -[false]> loop_foot(A)
-        // loop_foot(A) -> implicit_return -> end
+        // loop_foot(A) -> implicit_return -> exit_scope -> end
         // loop_head(A) << loop_foot(A)
         //
 
