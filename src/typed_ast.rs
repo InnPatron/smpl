@@ -38,7 +38,7 @@ impl<T> Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
         }
     }
 
-    pub fn set_type(&self, t: TypeId) {
+    pub fn set_type_id(&self, t: TypeId) {
         // TODO: Handle type override
         if self.data_type.get().is_some() {
             panic!("Attempting to overwrite the type of this node ({:?})", self);
@@ -47,7 +47,7 @@ impl<T> Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
         }
     }
 
-    pub fn get_type(&self) -> Option<TypeId> {
+    pub fn type_id(&self) -> Option<TypeId> {
         self.data_type.get()
     }
 }
@@ -58,6 +58,7 @@ pub struct Assignment {
     name: ast::Path,
     value: self::Expr,
     type_id: Cell<Option<TypeId>>,
+    var_id: Cell<Option<VarId>>,
 }
 
 impl Assignment {
@@ -66,10 +67,11 @@ impl Assignment {
             name: assignment.name,
             value: expr_flow::flatten(universe, assignment.value),
             type_id: Cell::new(None),
+            var_id: Cell::new(None),
         }
     }
 
-    pub fn set_id(&self, id: TypeId) {
+    pub fn set_type_id(&self, id: TypeId) {
         if self.type_id.get().is_some() {
             panic!("Attempting to override {} for local variable declarration {:?}", id, self);
         } else {
@@ -77,8 +79,20 @@ impl Assignment {
         }
     }
 
-    pub fn get_id(&self) -> Option<TypeId> {
+    pub fn type_id(&self) -> Option<TypeId> {
         self.type_id.get()
+    }
+
+    pub fn set_var_id(&self, id: VarId) {
+        if self.var_id.get().is_some() {
+            panic!("Attempting to override {} for local variable declarration {:?}", id, self);
+        } else {
+            self.var_id.set(Some(id));
+        }
+    }
+
+    pub fn var_id(&self) -> Option<VarId> {
+        self.var_id.get()
     }
 }
 
@@ -88,6 +102,7 @@ pub struct LocalVarDecl {
     var_name: ast::Ident,
     var_init: self::Expr,
     type_id: Cell<Option<TypeId>>,
+    var_id: VarId,
 }
 
 impl LocalVarDecl {
@@ -97,10 +112,11 @@ impl LocalVarDecl {
             var_name: decl.var_name,
             var_init: expr_flow::flatten(universe, decl.var_init),
             type_id: Cell::new(None),
+            var_id: universe.new_var_id(),
         }
     }
 
-    pub fn set_id(&self, id: TypeId) {
+    pub fn set_type_id(&self, id: TypeId) {
         if self.type_id.get().is_some() {
             panic!("Attempting to override {} for local variable declarration {:?}", id, self);
         } else {
@@ -108,8 +124,12 @@ impl LocalVarDecl {
         }
     }
 
-    pub fn get_id(&self) -> Option<TypeId> {
+    pub fn type_id(&self) -> Option<TypeId> {
         self.type_id.get()
+    }
+
+    pub fn var_id(&self) -> VarId {
+        self.var_id
     }
 }
 
