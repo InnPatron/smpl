@@ -1,63 +1,8 @@
 use std::str::FromStr;
 use std::fmt;
-use std::ops::{Deref, DerefMut};
 use super::Span;
 use smpl_type::SmplType;
 use ascii::AsciiString;
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct FnId(pub u64);
-
-impl Deref for FnId {
-    type Target = u64;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for FnId {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct VarId(pub u64);
-
-impl Deref for VarId {
-    type Target = u64;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for VarId {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct AstNode<T: Clone + PartialEq + ::std::fmt::Debug> {
-    pub data: T,
-    pub d_type: Option<SmplType>,
-}
-
-impl<T> AstNode<T> where T: Clone + PartialEq + ::std::fmt::Debug {
-    pub fn untyped(data: T) -> AstNode<T> {
-        AstNode {
-            data: data,
-            d_type: None,
-        }
-    }
-
-    pub fn typed(data: T, d_type: SmplType) -> AstNode<T> {
-        AstNode {
-            data: data,
-            d_type: Some(d_type),
-        }
-    }
-}
 
 pub struct Program(pub Vec<DeclStmt>);
 
@@ -83,8 +28,7 @@ pub struct Function {
     pub name: Ident,
     pub args: Option<Vec<FnParameter>>,
     pub return_type: Option<Path>,
-    pub body: AstNode<Block>,
-    fn_id: Option<FnId>
+    pub body: Block,
 }
 
 impl Function {
@@ -93,17 +37,8 @@ impl Function {
             name: name,
             args: args,
             return_type: return_type,
-            body: AstNode::untyped(body),
-            fn_id: None,
+            body: body,
         }
-    }
-
-    pub fn fn_id(&self) -> Option<FnId> {
-        self.fn_id
-    }
-
-    pub fn set_fn_id(&mut self, id: FnId) {
-        self.fn_id = Some(id);
     }
 }
 
@@ -111,7 +46,6 @@ impl Function {
 pub struct FnParameter {
     pub name: Ident,
     pub arg_type: Path,
-    var_id: Option<VarId>,
 }
 
 impl FnParameter {
@@ -119,16 +53,7 @@ impl FnParameter {
         FnParameter {
             name: name,
             arg_type: arg_type,
-            var_id: None,
         }
-    }
-
-    pub fn set_var_id(&mut self, id: VarId) {
-        self.var_id = Some(id)
-    }
-
-    pub fn var_id(&self) -> Option<VarId> {
-        self.var_id
     }
 }
 
@@ -150,7 +75,7 @@ pub struct StructField {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
     ExprStmt(ExprStmt),
-    Expr(AstNode<Expr>),
+    Expr(Expr),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -159,33 +84,23 @@ pub enum ExprStmt {
     While(While),
     LocalVarDecl(LocalVarDecl),
     Assignment(Assignment),
-    Return(AstNode<Expr>),
+    Return(Expr),
     Break,
     Continue,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Assignment {
-    pub name: AstNode<Path>,
-    pub value: AstNode<Expr>,
-    base_ident_id: Option<VarId>,
+    pub name: Path,
+    pub value: Expr,
 }
 
 impl Assignment {
     pub fn new(name: Path, value: Expr) -> Assignment {
         Assignment {
-            name: AstNode::untyped(name),
-            value: AstNode::untyped(value),
-            base_ident_id: None
+            name: name,
+            value: value,
         }
-    }
-
-    pub fn base_ident_id(&self) -> Option<VarId> {
-        self.base_ident_id
-    }
-
-    pub fn set_base_ident_id(&mut self, ident: VarId) {
-        self.base_ident_id = Some(ident);
     }
 }
 
@@ -193,26 +108,16 @@ impl Assignment {
 pub struct LocalVarDecl {
     pub var_type: Path,
     pub var_name: Ident,
-    pub var_init: AstNode<Expr>,
-    var_id: Option<VarId>,
+    pub var_init: Expr,
 }
 
 impl LocalVarDecl {
-    pub fn new(var_type: Path, var_name: Ident, var_init: AstNode<Expr>) -> LocalVarDecl {
+    pub fn new(var_type: Path, var_name: Ident, var_init: Expr) -> LocalVarDecl {
         LocalVarDecl {
             var_type: var_type,
             var_name: var_name,
             var_init: var_init,
-            var_id: None
         }
-    }
-
-    pub fn var_id(&self) -> Option<VarId> {
-        self.var_id
-    }
-
-    pub fn set_var_id(&mut self, id: VarId) {
-        self.var_id = Some(id);
     }
 }
 
@@ -224,78 +129,45 @@ pub struct If {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Branch {
-    pub conditional: AstNode<Expr>,
+    pub conditional: Expr,
     pub block: Block,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct While {
-    pub conditional: AstNode<Expr>,
+    pub conditional: Expr,
     pub block: Block,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    Bin(AstNode<BinExpr>),
-    Uni(AstNode<UniExpr>),
-    Literal(AstNode<Literal>),
-    Ident(AstNode<ExprIdent>),
-    FnCall(AstNode<FnCall>),
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct ExprIdent {
-    pub ident: Ident,
-    var_id: Option<VarId>,
-}
-
-impl ExprIdent {
-    pub fn new(ident: Ident) -> ExprIdent {
-        ExprIdent {
-            ident: ident,
-            var_id: None,
-        }
-    }
-
-    pub fn set_var_id(&mut self, id: VarId) {
-        self.var_id = Some(id);
-    }
-
-    pub fn var_id(&self) -> Option<VarId> {
-        self.var_id
-    }
+    Bin(BinExpr),
+    Uni(UniExpr),
+    Literal(Literal),
+    Ident(Ident),
+    FnCall(FnCall),
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
     pub name: Ident,
-    pub args: Option<Vec<AstNode<Expr>>>,
-    fn_id: Option<FnId>
+    pub args: Option<Vec<Expr>>,
 }
 
 impl FnCall {
-    pub fn new(name: Ident, args: Option<Vec<AstNode<Expr>>>) -> FnCall {
+    pub fn new(name: Ident, args: Option<Vec<Expr>>) -> FnCall {
         FnCall {
             name: name,
             args: args, 
-            fn_id: None,
         }
-    }
-
-    pub fn fn_id(&self) -> Option<FnId> {
-        self.fn_id
-    }
-
-    pub fn set_fn_id(&mut self, id: FnId) {
-        self.fn_id = Some(id);
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BinExpr {
     pub op: BinOp,
-    pub lhs: AstNode<Box<Expr>>,
-    pub rhs: AstNode<Box<Expr>>,
+    pub lhs: Box<Expr>,
+    pub rhs: Box<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -319,7 +191,7 @@ pub enum BinOp {
 #[derive(Clone, Debug, PartialEq)]
 pub struct UniExpr {
     pub op: UniOp,
-    pub expr: AstNode<Box<Expr>>
+    pub expr: Box<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

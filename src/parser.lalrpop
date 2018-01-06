@@ -132,7 +132,7 @@ StructField: StructField = {
 
 /// stmt -> expr ";" | expr_stmt
 pub Stmt: Stmt = {
-	<e: Expr> ";" => Stmt::Expr(AstNode::untyped(e)),
+	<e: Expr> ";" => Stmt::Expr(e),
 	<e: ExprStmt> => Stmt::ExprStmt(e),
 };
 
@@ -151,8 +151,8 @@ pub ExprStmt: ExprStmt = {
 };
 
 /// return -> "return" expr ";"
-ReturnStmt: AstNode<Expr> = {
-	"return" <e: Expr> ";" => AstNode::untyped(e),
+ReturnStmt: Expr = {
+	"return" <e: Expr> ";" => e,
 };
 
 /// local_var_decl -> path ident "=" expr ";"
@@ -161,7 +161,7 @@ LocalVarDecl: LocalVarDecl = {
 		LocalVarDecl::new(
 			var_type,
 			name,
-			AstNode::untyped(e)
+			e,
 		)
 	},
 };
@@ -195,7 +195,7 @@ IfStmt: If = {
 Branch: Branch = {
 	<conditional: Expr> <block: Block> => {
 		Branch {
-			conditional: AstNode::untyped(conditional),
+			conditional: conditional,
 			block: block
 		}
 	}
@@ -205,7 +205,7 @@ Branch: Branch = {
 WhileStmt: While = {
 	"while" <conditional: Expr> <block: Block> => {
 		While {
-			conditional: AstNode::untyped(conditional),
+			conditional: conditional,
 			block: block
 		}
 	},
@@ -219,11 +219,11 @@ pub Expr: Expr = {
 /// cmp_expr -> cmp_expr ["&&" | "||"] relative_cmp | relative_cmp
 pub CmpExpr: Expr = {
 	<lhs: CmpExpr> <op: CmpOpLowestPrecedence> <rhs: RelativeCmpBranch> => {
-		Expr::Bin(AstNode::untyped(BinExpr {
+		Expr::Bin(BinExpr {
 			op: op,
-			lhs: AstNode::untyped(Box::new(lhs)),
-			rhs: AstNode::untyped(Box::new(rhs)),
-		}))
+			lhs: Box::new(lhs),
+			rhs: Box::new(rhs),
+		})
 	},
 
 	RelativeCmpBranch,
@@ -232,11 +232,11 @@ pub CmpExpr: Expr = {
 /// relative_cmp -> relative_cmp [">" | ">=" | "<" | "<="] equality_cmp | equality_cmp
 RelativeCmpBranch: Expr = {
 	<lhs: RelativeCmpBranch> <op: CmpOpLowPrecedence> <rhs: EqualityCmpBranch> => {
-		Expr::Bin(AstNode::untyped(BinExpr {
+		Expr::Bin(BinExpr {
 			op: op,
-			lhs: AstNode::untyped(Box::new(lhs)),
-			rhs: AstNode::untyped(Box::new(rhs)),
-		}))
+			lhs: Box::new(lhs),
+			rhs: Box::new(rhs),
+		})
 	},
 
 	EqualityCmpBranch,
@@ -245,11 +245,11 @@ RelativeCmpBranch: Expr = {
 /// equality_cmp -> equality_cmp ["==" | "!="] math_expr | math_expr
 EqualityCmpBranch: Expr = {
 	<lhs: EqualityCmpBranch> <op: CmpOpGreaterPrecedence> <rhs: MathExpr> => {
-		Expr::Bin(AstNode::untyped(BinExpr {
+		Expr::Bin(BinExpr {
 			op: op,
-			lhs: AstNode::untyped(Box::new(lhs)),
-			rhs: AstNode::untyped(Box::new(rhs)),
-		}))
+			lhs: Box::new(lhs),
+			rhs: Box::new(rhs),
+		})
 	},
 
 	<MathExpr>,
@@ -275,19 +275,19 @@ CmpOpLowPrecedence: BinOp = {
 /// math_expr -> math_expr ["+" | "-"] factor | factor
 pub MathExpr: Expr = {
 	<lhs: MathExpr> "+" <rhs: Factor> => {
-		Expr::Bin(AstNode::untyped(BinExpr {
+		Expr::Bin(BinExpr {
 			op: BinOp::Add,
-			lhs: AstNode::untyped(Box::new(lhs.into())),
-			rhs: AstNode::untyped(Box::new(rhs.into())),
-		}))
+			lhs: Box::new(lhs),
+			rhs: Box::new(rhs),
+		})
 	},
 
 	<lhs: MathExpr> "-" <rhs: Factor> => {
-		Expr::Bin(AstNode::untyped(BinExpr {
+		Expr::Bin(BinExpr {
 			op: BinOp::Sub,
-			lhs: AstNode::untyped(Box::new(lhs.into())),
-			rhs: AstNode::untyped(Box::new(rhs.into())),
-		}))
+			lhs: Box::new(lhs),
+			rhs: Box::new(rhs),
+		})
 	},
 
 	Factor,
@@ -296,27 +296,27 @@ pub MathExpr: Expr = {
 /// factor -> factor ["*" | "/" | "%"] term | term
 Factor: Expr = {
 	<lhs: Factor> "*" <rhs: Term> => {
-		Expr::Bin(AstNode::untyped(BinExpr {
+		Expr::Bin(BinExpr {
 			op: BinOp::Mul,
-			lhs: AstNode::untyped(Box::new(lhs.into())),
-			rhs: AstNode::untyped(Box::new(rhs)),
-		}))
+			lhs: Box::new(lhs),
+			rhs: Box::new(rhs),
+		})
 	},
 
 	<lhs: Factor> "/" <rhs: Term> => {
-		Expr::Bin(AstNode::untyped(BinExpr {
+		Expr::Bin(BinExpr {
 			op: BinOp::Div,
-			lhs: AstNode::untyped(Box::new(lhs.into())),
-			rhs: AstNode::untyped(Box::new(rhs)),
-		}))
+			lhs: Box::new(lhs),
+			rhs: Box::new(rhs),
+		})
 	},
 
 	<lhs: Factor> "%" <rhs: Term> => {
-		Expr::Bin(AstNode::untyped(BinExpr {
+		Expr::Bin(BinExpr {
 			op: BinOp::Mod,
-			lhs: AstNode::untyped(Box::new(lhs.into())),
-			rhs: AstNode::untyped(Box::new(rhs)),
-		}))
+			lhs: Box::new(lhs),
+			rhs: Box::new(rhs),
+		})
 	},
 	<Term>
 };
@@ -329,10 +329,10 @@ Term: Expr = {
 
 /// expr_leaf -> "(" uni_expr ")" | literal | fn_call
 ExprLeaf: Expr = {
-	"(" <u: UniExpr> ")" => Expr::Uni(AstNode::untyped(u)),
-	<i: Ident> => Expr::Ident(AstNode::untyped(ExprIdent::new(i))),
+	"(" <u: UniExpr> ")" => Expr::Uni(u),
+	<i: Ident> => Expr::Ident(i),
 	<l: Literal> => Expr::Literal(l),
-	<f: FnCall> => Expr::FnCall(AstNode::untyped(f)),
+	<f: FnCall> => Expr::FnCall(f),
 };
 
 /// fn_call -> ident "(" fn_call_args ")"
@@ -346,17 +346,17 @@ FnCall: FnCall = {
 };
 
 /// fn_call_args -> expr ["," expr]*
-FnCallArgs: Vec<AstNode<Expr>> = {
+FnCallArgs: Vec<Expr> = {
 	<first: Expr> <tail: ("," <Expr>)*> => {
-		let mut v = vec![AstNode::untyped(first)];
-		v.extend(tail.into_iter().map(|e| AstNode::untyped(e)).collect::<Vec<_>>());
+		let mut v = vec![first];
+		v.extend(tail.into_iter());
 		v
 	}
 };
 
 /// uni_expr -> ["-" | "!" | "&" | "*"] expr
 UniExpr: UniExpr = {
-	<op: UniOp> <e: Expr> => UniExpr { op: op, expr: AstNode::untyped(Box::new(e)) },
+	<op: UniOp> <e: Expr> => UniExpr { op: op, expr: Box::new(e) },
 };
 
 UniOp: UniOp = {
@@ -367,12 +367,11 @@ UniOp: UniOp = {
 };
 
 /// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "\"" [.] "\""
-Literal: AstNode<Literal> = {
-	<number: r"[0-9]+[.[0-9]+]?"> => AstNode::untyped(Literal::Number(number.to_string())),
-	"\"" <string: "r[.]*"> "\"" => AstNode::typed(Literal::String(string.to_string()), 
-					SmplType::String),
-	"true" => AstNode::typed(Literal::Bool(true), SmplType::Bool),
-	"false" => AstNode::typed(Literal::Bool(false), SmplType::Bool),
+Literal: Literal = {
+	<number: r"[0-9]+[.[0-9]+]?"> => Literal::Number(number.to_string()),
+	"\"" <string: "r[.]*"> "\"" => Literal::String(string.to_string()),
+	"true" => Literal::Bool(true),
+	"false" => Literal::Bool(false), 
 
 };
 
