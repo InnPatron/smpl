@@ -403,7 +403,7 @@ int b = 3;
             }
 
             let var_decl_1 = enter_neighbors.next().unwrap();
-            let mut var_decl_1_neighbors = neighbors!(cfg, enter);
+            let mut var_decl_1_neighbors = neighbors!(cfg, var_decl_1);
             match *node_w!(cfg, var_decl_1) {
                 Node::LocalVarDecl(_) => (),
                 ref n @ _ => panic!("Expected to find Node::LocalVarDecl. Found {:?}", n),
@@ -621,10 +621,17 @@ let input =
             let mut start_neighbors = neighbors!(cfg, cfg.start);
             assert_eq!(start_neighbors.clone().count(), 1);
 
-            let split = start_neighbors.next().unwrap();
+            let enter = start_neighbors.next().unwrap();
+            let mut enter_neighbors = neighbors!(cfg, enter);
+            match *node_w!(cfg, enter) {
+                Node::EnterScope => (),
+                ref n @ _ => panic!("Expected to find Node::Enter. Found {:?}", n),
+            }
+
+            let split = enter_neighbors.next().unwrap();
             match *node_w!(cfg, split) {
                 Node::BranchSplit => (),    // Success
-                _ => panic!("Expected Node::BranchSplit"),
+                ref n @ _ => panic!("Expected to find Node::BranchSplit. Found {:?}", n),
             }
 
             let mut split_neighbors = neighbors!(cfg, split);
@@ -674,7 +681,7 @@ let input =
 
             let exit = var_decl_neighbors.next().unwrap();
             let mut exit_neighbors = neighbors!(cfg, exit);
-            match *node_w!(cfg, enter) {
+            match *node_w!(cfg, exit) {
                 Node::ExitScope => (),
                 ref n @ _ => panic!("Expected Node::ExitScope. Found {:?}", n),
             }
@@ -715,15 +722,21 @@ let input =
             assert_eq!(branch_merge_neighbors.clone().count(), 1);
 
             let implicit_return = branch_merge_neighbors.next().unwrap();
+            let mut implicit_return_neighbors = neighbors!(cfg, implicit_return);
+            assert_eq!(implicit_return_neighbors.clone().count(), 1);
             match *node_w!(cfg, implicit_return) {
                 Node::Return(_) => (),
                 ref n @ _ => println!("Expected return node. Found {:?}", n),
             }
 
-            let mut implicit_return_neighbors = neighbors!(cfg, implicit_return);
-            assert_eq!(implicit_return_neighbors.clone().count(), 1);
+            let exit = implicit_return_neighbors.next().unwrap();
+            let mut exit_neighbors = neighbors!(cfg, exit);
+            match *node_w!(cfg, exit) {
+                Node::ExitScope => (),
+                ref n @ _ => panic!("Expected to find Node::Exit. Found {:?}", n),
+            }
 
-            let end = implicit_return_neighbors.next().unwrap();
+            let end = exit_neighbors.next().unwrap();
             assert_eq!(*node_w!(cfg, end), Node::End);
         }
     }
@@ -753,12 +766,19 @@ let input =
         // loop_head(A) << loop_foot(A)
         //
 
-        assert_eq!(cfg.graph.node_count(), 6);
+        assert_eq!(cfg.graph.node_count(), 8);
 
         let mut start_neighbors = neighbors!(cfg, cfg.start);
         assert_eq!(start_neighbors.clone().count(), 1);
 
-        let loop_head = start_neighbors.next().unwrap();
+        let enter = start_neighbors.next().unwrap();
+        let mut enter_neighbors = neighbors!(cfg, enter);
+        match *node_w!(cfg, enter) {
+            Node::EnterScope => (),
+            ref n @ _ => panic!("Expected to find Node::Enter. Found {:?}", n),
+        }
+
+        let loop_head = enter_neighbors.next().unwrap();
         assert_eq!(*node_w!(cfg, loop_head), Node::LoopHead);
 
         let mut head_neighbors = neighbors!(cfg, loop_head);
@@ -794,15 +814,26 @@ let input =
         assert_eq!(foot_neighbors.clone().count(), 2);
 
         let implicit_return = foot_neighbors.next().unwrap();
+        let mut return_neighbors = neighbors!(cfg, implicit_return);
+        assert_eq!(return_neighbors.clone().count(), 1);
         match *node_w!(cfg, implicit_return) {
             Node::Return(_) => (),
             ref n @ _ => panic!("Expected return node. Found {:?}", n),
         }
-        
-        let mut return_neighbors = neighbors!(cfg, implicit_return);
-        assert_eq!(return_neighbors.clone().count(), 1);
 
-        let end = return_neighbors.next().unwrap();
-        assert_eq!(*node_w!(cfg, end), Node::End);
+        let exit = return_neighbors.next().unwrap();
+        let mut exit_neighbors = neighbors!(cfg, exit);
+        match *node_w!(cfg, exit) {
+            Node::ExitScope => (),
+            ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
+        }
+
+        let end = exit_neighbors.next().unwrap();
+        let mut end_neighbors = neighbors!(cfg, end);
+        assert_eq!(end_neighbors.count(), 0);
+        match *node_w!(cfg, end) {
+            Node::End => (),
+            ref n @ _ => panic!("Expected to find Node::End. Found {:?}", n),
+        }
     }
 }
