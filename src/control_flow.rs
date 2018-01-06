@@ -10,29 +10,6 @@ use expr_flow;
 use semantic_ck::{Universe, TypeId};
 use smpl_type::{ SmplType, FunctionType };
 
-macro_rules! append_branch {
-
-    ($CFG: expr, $head: expr, $previous: expr, $branch: expr, $edge: expr) => {
-        match $head {
-            None => {
-                $head = $branch.head;
-            }
-
-            Some(head) => {
-                if let Some(b_head) = $branch.head {
-                    $CFG.graph.add_edge(head, b_head, $edge);
-                }
-            }
-        }
-
-        match $branch.foot {
-            Some(foot) => $previous = Some(foot),
-
-            None => $previous = $head,
-        }
-    }
-}
-
 macro_rules! append_node {
 
     ($CFG: expr, $head: expr, $previous: expr, $to_insert: expr) => {
@@ -155,7 +132,10 @@ impl CFG {
         let fn_graph = CFG::get_branch(universe, &mut cfg, instructions, None)?;
 
         // Append the function body.
-        append_branch!(cfg, head, previous, fn_graph, Edge::Normal);
+        if let Some(branch_head) = fn_graph.head {
+            cfg.graph.add_edge(previous.unwrap(), branch_head, Edge::Normal);
+            previous = Some(fn_graph.foot.unwrap());
+        }
         
 
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
