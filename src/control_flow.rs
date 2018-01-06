@@ -96,6 +96,9 @@ pub enum Node {
     LoopHead,
     LoopFoot,
 
+    EnterScope,
+    ExitScope,
+
     Return(Option<typed_ast::Expr>),
     Break,
     Continue,
@@ -145,6 +148,8 @@ impl CFG {
         // Start with Node::Start
         let mut previous = Some(cfg.start);
         let mut head = previous; 
+
+        append_node!(cfg, head, previous, Node::EnterScope);
         
         let instructions = fn_def.body.0;
         let fn_graph = CFG::get_branch(universe, &mut cfg, instructions, None)?;
@@ -157,6 +162,8 @@ impl CFG {
         if *fn_type.return_type == SmplType::Unit {
             append_node!(cfg, head, previous, Node::Return(None));
         }
+
+        append_node!(cfg, head, previous, Node::ExitScope);
 
         // Connect the last node to the Node::End
         append_node_index!(cfg, head, previous, cfg.end);
@@ -212,8 +219,13 @@ impl CFG {
                             // Append the condition node
                             append_node_index!(cfg, head, previous, condition_node, edge);
                             if let Some(branch_head) = branch_graph.head {
-                                cfg.graph.add_edge(condition_node, branch_head, Edge::True);
-                                cfg.graph.add_edge(branch_graph.foot.unwrap(), merge_node, Edge::Normal);
+                                let scope_enter = cfg.graph.add_node(Node::EnterScope);
+                                let scope_exit = cfg.graph.add_node(Node::ExitScope);
+
+                                cfg.graph.add_edge(condition_node, scope_enter, Edge::True);
+                                cfg.graph.add_edge(scope_enter, branch_head, Edge::Normal);
+                                cfg.graph.add_edge(branch_graph.foot.unwrap(), scope_exit, Edge::Normal);
+                                cfg.graph.add_edge(scope_exit, merge_node, Edge::Normal);
                             } else {
                                 cfg.graph.add_edge(condition_node, merge_node, Edge::True);
                             }
@@ -233,8 +245,13 @@ impl CFG {
                             let branch_graph = CFG::get_branch(universe, cfg, instructions, loop_data)?;
 
                             if let Some(branch_head) = branch_graph.head {
-                                cfg.graph.add_edge(previous.unwrap(), branch_head, Edge::False);
-                                cfg.graph.add_edge(branch_graph.foot.unwrap(), merge_node, Edge::Normal);
+                                let scope_enter = cfg.graph.add_node(Node::EnterScope);
+                                let scope_exit = cfg.graph.add_node(Node::ExitScope);
+
+                                cfg.graph.add_edge(previous.unwrap(), scope_enter, Edge::False);
+                                cfg.graph.add_edge(scope_enter, branch_head, Edge::Normal);
+                                cfg.graph.add_edge(branch_graph.foot.unwrap(), scope_exit, Edge::Normal);
+                                cfg.graph.add_edge(scope_exit, merge_node, Edge::Normal);
                             } else {
                                 cfg.graph.add_edge(previous.unwrap(), merge_node, Edge::False);
                             }
@@ -271,7 +288,14 @@ impl CFG {
                         append_node_index!(cfg, head, previous, condition);
 
                         if let Some(branch_head) = loop_body.head {
-                            cfg.graph.add_edge(condition, branch_head, Edge::True);
+                            let scope_enter = cfg.graph.add_node(Node::EnterScope);
+                            let scope_exit = cfg.graph.add_node(Node::ExitScope);
+
+                            cfg.graph.add_edge(condition, scope_enter, Edge::True);
+                            cfg.graph.add_edge(scope_enter, branch_head, Edge::Normal);
+                            cfg.graph.add_edge(loop_body.foot.unwrap(), scope_exit, Edge::Normal);
+                            cfg.graph.add_edge(scope_exit, loop_foot, Edge::Normal);
+
                             cfg.graph.add_edge(condition, loop_foot, Edge::False);
                         } else {
                             cfg.graph.add_edge(condition, loop_foot, Edge::True);
