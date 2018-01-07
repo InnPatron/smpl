@@ -159,6 +159,7 @@ impl CFG {
             match *e.weight() {
                 Edge::True => true_branch = Some(e.target()),
                 Edge::False => false_branch = Some(e.target()),
+                ref e @ _ => panic!("Unexpected edge {:?} coming out of a condition node.", e),
             }
         }
 
