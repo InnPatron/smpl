@@ -9,6 +9,7 @@ mod ast;
 mod typed_ast;
 mod smpl_type;
 mod semantic_ck;
+#[macro_use]
 mod control_flow;
 mod expr_flow;
 mod fn_analyzer;
