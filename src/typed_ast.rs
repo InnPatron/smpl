@@ -203,21 +203,21 @@ impl Tmp {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Literal(ast::Literal),
-    Ident(self::Ident),
+    Variable(self::Variable),
     FnCall(self::FnCall),
     BinExpr(ast::BinOp, Typed<TmpId>, Typed<TmpId>),
     UniExpr(ast::UniOp, Typed<TmpId>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Ident {
+pub struct Variable {
     ident: AsciiString,
     var_id: Cell<Option<VarId>>,
 }
 
-impl Ident {
-    pub fn new(ident: ast::Ident) -> Ident {
-        Ident {
+impl Variable {
+    pub fn new(ident: ast::Ident) -> Variable {
+        Variable {
             ident: ident.0,
             var_id: Cell::new(None),
         }

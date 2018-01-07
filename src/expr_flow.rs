@@ -44,7 +44,7 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
             scope.map_tmp(universe, Value::Literal(literal), lit_type)
         }
 
-        AstExpr::Ident(ident) => scope.map_tmp(universe, Value::Ident(Ident::new(ident)), None),
+        AstExpr::Ident(ident) => scope.map_tmp(universe, Value::Variable(Variable::new(ident)), None),
 
         AstExpr::FnCall(fn_call) => {
             let name = fn_call.name;
