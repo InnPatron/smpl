@@ -31,7 +31,7 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
 
 
 
-            Node::LocalVarDecl(var_decl) => {
+            Node::LocalVarDecl(ref var_decl) => {
                 let name = var_decl.var_name();
                 let var_id = var_decl.var_id();
                 let type_path = var_decl.type_path();

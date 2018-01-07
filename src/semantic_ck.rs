@@ -298,7 +298,7 @@ impl ScopedData {
             .ok_or(Err::UnknownVar(name.to_owned()))
     }
 
-    pub fn insert_var(&self, name: AsciiString, id: VarId, type_id: TypeId) {
+    pub fn insert_var(&mut self, name: AsciiString, id: VarId, type_id: TypeId) {
         self.var_map.insert(name, id);
 
         if self.var_type_map.insert(id, type_id).is_some() {

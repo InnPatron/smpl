@@ -235,7 +235,7 @@ impl CFG {
     /// Node::Continue) or none (Node::End), return an error.
     ///
     pub fn next(&self, id: graph::NodeIndex) -> Result<graph::NodeIndex, ()> {
-        let neighbors = self.graph.neighbors_directed(id, Direction::Outgoing);
+        let mut neighbors = self.graph.neighbors_directed(id, Direction::Outgoing);
         if neighbors.clone().count() != 1 {
             Err(())
         } else {
