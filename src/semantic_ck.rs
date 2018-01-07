@@ -276,6 +276,12 @@ impl ScopedData {
         self.fn_map.insert(name, fn_id);
     }
 
+    pub fn type_id(&self, path: &Path) -> Result<TypeId, Err> {
+        self.type_map.get(path)
+            .map(|id| id.clone())
+            .ok_or(Err::UnknownType(path.clone()))
+    }
+
     fn get_type(&self, universe: &Universe, path: &Path) -> Result<Rc<SmplType>, Err> {
         let id = self.type_map.get(path).ok_or(Err::UnknownType(path.clone()))?;
         let t = universe.types.get(id).expect(&format!("Missing TypeId: {}. All TypeId's should be valid if retrieven from ScopedData.type_map", id.0));
