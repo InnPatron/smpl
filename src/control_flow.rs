@@ -3,12 +3,25 @@ use std::cell::Cell;
 
 use petgraph;
 use petgraph::graph;
+use petgraph::Direction;
 use petgraph::visit::EdgeRef;
 use typed_ast;
 use ast;
 use expr_flow;
 use semantic_ck::{Universe, TypeId};
 use smpl_type::{ SmplType, FunctionType };
+
+macro_rules! node_w {
+    ($CFG: expr, $node: expr) => {
+        $CFG.graph().node_weight($node).unwrap()
+    }
+}
+
+macro_rules! neighbors {
+    ($CFG: expr, $node: expr) => {
+        $CFG.graph().neighbors_directed($node, Direction::Outgoing)
+    }
+}
 
 macro_rules! append_node {
 
@@ -103,6 +116,126 @@ struct BranchData {
 }
 
 impl CFG {
+
+    pub fn graph(&self) -> &graph::Graph<Node, Edge> {
+        &self.graph
+    }
+
+    ///
+    /// Returns (TRUE, FALSE) branch heads.
+    ///
+    pub fn after_condition(&self, id: graph::NodeIndex) -> Result<(graph::NodeIndex, graph::NodeIndex), ()> {
+
+        match *node_w!(self, id) {
+            Node::Condition(_) => (),
+            _ => return Err(()),
+        }
+
+        let edges = self.graph.edges_directed(id, Direction::Outgoing);
+        assert_eq!(edges.clone().count(), 2);
+         
+        let mut true_branch = None;
+        let mut false_branch = None;
+        for e in edges {
+            match *e.weight() {
+                Edge::True => true_branch = Some(e.target()),
+                Edge::False => false_branch = Some(e.target()),
+            }
+        }
+
+        Ok((true_branch.unwrap(), false_branch.unwrap()))
+    }
+
+    pub fn after_return(&self, id: graph::NodeIndex) -> Result<graph::NodeIndex, ()> {
+
+        match *node_w!(self, id) {
+            Node::Return(_) => (),
+            _ => return Err(()),
+        }
+
+        let neighbors = neighbors!(self, id);
+        assert_eq!(neighbors.clone().count(), 2);
+         
+        for n in neighbors {
+            match *node_w!(self, n) {
+                Node::End => (),
+                _ => return Ok(n),
+            }
+        }
+        Err(())
+        
+    }
+
+    pub fn after_continue(&self, id: graph::NodeIndex) -> Result<graph::NodeIndex, ()> {
+
+        match *node_w!(self, id) {
+            Node::Continue => (),
+            _ => return Err(()),
+        }
+
+        let neighbors = neighbors!(self, id);
+        assert_eq!(neighbors.clone().count(), 2);
+         
+        for n in neighbors {
+            match *node_w!(self, n) {
+                Node::LoopHead => (),
+                _ => return Ok(n),
+            }
+        }
+        Err(())
+        
+    }
+
+    pub fn after_break(&self, id: graph::NodeIndex) -> Result<graph::NodeIndex, ()> {
+
+        match *node_w!(self, id) {
+            Node::Break => (),
+            _ => return Err(()),
+        }
+
+        let neighbors = neighbors!(self, id);
+        assert_eq!(neighbors.clone().count(), 2);
+        
+        for n in neighbors {
+            match *node_w!(self, n) {
+                Node::LoopFoot => (),
+                _ => return Ok(n),
+            }
+        }
+        Err(())
+    }
+
+    pub fn after_start(&self) -> Result<graph::NodeIndex, ()> {
+        self.next(self.start)
+    }
+
+    ///
+    /// Convenience function to get the next node in a linear sequence. If the current node has
+    /// multiple outgoing edge (such as Node::Condition, Node::Return, Node::Break, and
+    /// Node::Continue) or none (Node::End), return an error.
+    ///
+    pub fn next(&self, id: graph::NodeIndex) -> Result<graph::NodeIndex, ()> {
+        let neighbors = self.graph.neighbors_directed(id, Direction::Outgoing);
+        if neighbors.clone().count() != 1 {
+            Err(())
+        } else {
+            Ok(neighbors.next().unwrap())
+        }
+    }
+
+    ///
+    /// Get the branch heads of the branches of a conditional node in the format (TRUE, FALSE). If
+    /// the given node is not Node::Conditional, return an error.
+    ///
+    pub fn get_branches(&self, id: graph::NodeIndex) -> Result<(graph::NodeIndex, graph::NodeIndex), ()> {
+        match *self.graph.node_weight(id).unwrap() {
+            Node::Condition(_) => {
+                unimplemented!()
+            }
+
+            _ => Err(()),
+        }
+    }
 
     ///
     /// Generate the control flow graph.
@@ -350,12 +483,6 @@ mod tests {
     use std::rc::Rc;
 
     use semantic_ck::Universe;
-
-    macro_rules! neighbors {
-        ($CFG: expr, $node: expr) => {
-            $CFG.graph.neighbors_directed($node, Direction::Outgoing)
-        }
-    }
 
     macro_rules! edges {
         ($CFG: expr, $node: expr) => {
