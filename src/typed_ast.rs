@@ -116,6 +116,14 @@ impl LocalVarDecl {
         }
     }
 
+    pub fn type_path(&self) -> &ast::Path {
+        &self.var_type
+    }
+
+    pub fn var_name(&self) -> &AsciiStr {
+        &*self.var_name.0
+    }
+
     pub fn set_type_id(&self, id: TypeId) {
         if self.type_id.get().is_some() {
             panic!("Attempting to override {} for local variable declarration {:?}", id, self);
