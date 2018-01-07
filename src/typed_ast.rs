@@ -10,7 +10,7 @@ use semantic_ck::*;
 use expr_flow;
 use smpl_type::{ SmplType, FunctionType };
 use ast;
-use ascii::AsciiString;
+use ascii::{AsciiString, AsciiStr};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
@@ -213,6 +213,10 @@ impl Ident {
             ident: ident.0,
             var_id: Cell::new(None),
         }
+    }
+
+    pub fn ident(&self) -> &AsciiStr {
+        &*self.ident
     }
 
     pub fn set_id(&self, id: VarId) {

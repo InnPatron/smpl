@@ -87,7 +87,7 @@ fn generate_struct_type(scope: &ScopedData, universe: &Universe, struct_def: Str
 pub enum Err {
     ControlFlowErr(ControlFlowErr),
     UnknownType(Path),
-    UnknownVar(Ident),
+    UnknownVar(AsciiString),
 }
 
 impl From<ControlFlowErr> for Err {
@@ -175,8 +175,8 @@ impl Universe {
             id_counter: Cell::new(5),
             std_scope: ScopedData {
                 type_map: type_map.into_iter().map(|(id, path, _)| (path, id)).collect(),
-                vars: HashMap::new(),
                 var_map: HashMap::new(),
+                var_type_map: HashMap::new(),
                 fn_map: HashMap::new(),
             },
             unit: unit.0,
@@ -262,10 +262,10 @@ impl Universe {
 }
 
 #[derive(Clone, Debug)]
-struct ScopedData {
+pub struct ScopedData {
     type_map: HashMap<Path, TypeId>,
-    vars: HashMap<Ident, VarId>,
-    var_map: HashMap<VarId, Rc<SmplType>>,
+    var_map: HashMap<AsciiString, VarId>,
+    var_type_map: HashMap<VarId, TypeId>,
     fn_map: HashMap<Path, FnId>,
 }
 
@@ -286,18 +286,17 @@ impl ScopedData {
         self.type_map.insert(path, id)
     }
 
-    fn get_var(&self, name: &Ident) -> Result<Rc<SmplType>, Err> {
-        let id = self.vars.get(name).ok_or(Err::UnknownVar(name.clone()))?;
-        let var_t = self.var_map.get(id).expect(&format!("Missing VarId: {}. All VarId's should be valid if retrieven from ScopedData.vars", id.0));
-        Ok(var_t.clone())
+    pub fn var_type_id(&self, name: &AsciiStr) -> Result<TypeId, Err> {
+        self.var_map.get(name)
+            .map(|id| self.var_type_map.get(id).unwrap().clone())
+            .ok_or(Err::UnknownVar(name.to_owned()))
     }
 
-    fn insert_var(&mut self, universe: &Universe, name: Ident, var_type: SmplType) {
-        let id = universe.new_var_id();
-        self.vars.insert(name, id);
-        if self.var_map.insert(id, Rc::new(var_type)).is_some() {
-            panic!("Attempted to override VarId [{}]. All VarId's should be unique", id.0);
+    pub fn insert_var(&self, name: AsciiString, id: VarId, type_id: TypeId) {
+        self.var_map.insert(name, id);
+
+        if self.var_type_map.insert(id, type_id).is_some() {
+            panic!("Attempting to override variable {} with a different type. Shadowing should produce a new variable id.", id);
         }
     }
-
 }
