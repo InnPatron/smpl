@@ -121,6 +121,25 @@ impl CFG {
         &self.graph
     }
 
+    pub fn after_loop_foot(&self, id: graph::NodeIndex) -> Result<graph::NodeIndex, ()> {
+
+        match *node_w!(self, id) {
+            Node::LoopFoot => (),
+            _ => return Err(()),
+        }
+
+        let neighbors = neighbors!(self, id);
+        assert_eq!(neighbors.clone().count(), 2);
+         
+        for n in neighbors {
+            match *node_w!(self, n) {
+                Node::LoopHead => (),
+                _ => return Ok(n),
+            }
+        }
+        Err(())
+    }
+
     ///
     /// Returns (TRUE, FALSE) branch heads.
     ///
