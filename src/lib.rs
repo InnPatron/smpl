@@ -2,6 +2,7 @@ extern crate itertools;
 extern crate ascii;
 extern crate petgraph;
 
+mod err;
 #[macro_use]
 mod ast_macros;
 mod parser;

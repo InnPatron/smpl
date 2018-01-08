@@ -8,6 +8,7 @@ use petgraph::visit::EdgeRef;
 use typed_ast;
 use ast;
 use expr_flow;
+use err::ControlFlowErr;
 use semantic_ck::{Universe, TypeId};
 use smpl_type::{ SmplType, FunctionType };
 
@@ -100,13 +101,6 @@ pub enum Edge {
     True,
     False,
     BackEdge,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Err {
-    MissingReturn,
-    BadBreak,
-    BadContinue,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -261,7 +255,7 @@ impl CFG {
     /// Generate the control flow graph.
     /// Only performs continue/break statement checking (necessary for CFG generation).
     ///
-    pub fn generate(universe: &Universe, fn_def: ast::Function, fn_type: &FunctionType) -> Result<Self, Err> {
+    pub fn generate(universe: &Universe, fn_def: ast::Function, fn_type: &FunctionType) -> Result<Self, ControlFlowErr> {
 
         let mut cfg = {
             let mut graph = graph::Graph::new();
@@ -305,7 +299,7 @@ impl CFG {
     /// 
     /// Returns the first and the last node in a code branch.
     /// 
-    fn get_branch(universe: &Universe, cfg: &mut CFG, instructions: Vec<ast::Stmt>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex)>) -> Result<BranchData, Err> {
+    fn get_branch(universe: &Universe, cfg: &mut CFG, instructions: Vec<ast::Stmt>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex)>) -> Result<BranchData, ControlFlowErr> {
         use ast::*;
         use typed_ast::Expr as ExprFlow;
         
@@ -445,7 +439,7 @@ impl CFG {
                             cfg.graph.add_edge(break_id, foot, Edge::Normal);
                         } else {
                             // Found a break statement not inside a loop.
-                            return Err(Err::BadBreak);
+                            return Err(ControlFlowErr::BadBreak);
                         }
                     }
 
@@ -458,7 +452,7 @@ impl CFG {
                             cfg.graph.add_edge(continue_id, head, Edge::BackEdge);
                         } else {
                             // Found a continue statement not inside a loop.
-                            return Err(Err::BadContinue);
+                            return Err(ControlFlowErr::BadContinue);
                         }
                     }
 

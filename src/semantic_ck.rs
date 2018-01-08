@@ -8,7 +8,7 @@ use std::fmt::Debug;
 
 use ascii::*;
 
-use control_flow::Err as ControlFlowErr;
+use err::Err;
 use control_flow::CFG;
 use smpl_type::*;
 use ast::*;
@@ -81,19 +81,6 @@ fn generate_struct_type(scope: &ScopedData, universe: &Universe, struct_def: Str
     };
 
     Ok(struct_t)
-}
-
-#[derive(Clone, Debug)]
-pub enum Err {
-    ControlFlowErr(ControlFlowErr),
-    UnknownType(Path),
-    UnknownVar(Ident),
-}
-
-impl From<ControlFlowErr> for Err {
-    fn from(err: ControlFlowErr) -> Err {
-        Err::ControlFlowErr(err)
-    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

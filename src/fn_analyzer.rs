@@ -3,15 +3,11 @@ use std::collections::HashMap;
 use ast;
 use control_flow::*;
 use typed_ast::*;
-use semantic_ck::{Universe, ScopedData, Err, TypeId};
+use err::Err;
+use semantic_ck::{Universe, ScopedData, TypeId};
 use smpl_type::*;
 
 use petgraph::graph::NodeIndex;
-
-#[derive(Clone, Debug)]
-pub enum TypeErr {
-
-}
 
 pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_type: &FunctionType) -> Result<(), Err> {
 
