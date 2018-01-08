@@ -286,7 +286,7 @@ impl CFG {
         
 
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
-        if *fn_type.return_type == SmplType::Unit {
+        if *universe.get_type(fn_type.return_type)== SmplType::Unit {
             append_node!(cfg, head, previous, Node::Return(None));
         }
 

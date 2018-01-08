@@ -46,14 +46,14 @@ pub fn check(mut program: Program) -> Result<(), Err> {
 
 fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunction) -> Result<FunctionType, Err> {
     let ret_type = match fn_def.return_type {
-        Some(ref path) => scope.get_type(universe, path)?,
-        None => Rc::new(SmplType::Unit),
+        Some(ref path) => scope.type_id(path)?,
+        None => universe.unit(),
     };
 
     let args: Vec<_> = match fn_def.args {
         Some(ref args) => args.iter()
-                              .map(|ref fn_param| scope.get_type(universe, &fn_param.arg_type))
-                              .collect::<Result<Vec<Rc<SmplType>>, Err>>()?,
+                              .map(|ref fn_param| scope.type_id(&fn_param.arg_type))
+                              .collect::<Result<Vec<_>, Err>>()?,
 
         None => Vec::new(),
     };
@@ -70,7 +70,7 @@ fn generate_struct_type(scope: &ScopedData, universe: &Universe, struct_def: Str
     if let Some(body) = struct_def.body.0 {
         for field in body.into_iter() {
             let f_name = field.name;
-            let field_type = scope.get_type(universe, &f_name.clone().into())?.clone();
+            let field_type = scope.type_id(&f_name.clone().into())?.clone();
             fields.insert(f_name, field_type);
         }
     } 
