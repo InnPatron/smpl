@@ -50,7 +50,9 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
     unimplemented!();
 }
 
-fn resolve_expr(universe: &Universe, scope: &ScopedData, cfg: &CFG, expr: &Expr) -> Result<(), Err> {
+fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<TypeId, Err> {
+    let mut expr_type = None;
+
     for tmp_id in expr.execution_order() {
         let tmp = expr.get_tmp(*tmp_id);
         let tmp_type;
@@ -90,12 +92,56 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, cfg: &CFG, expr: &Expr)
             }
 
             Value::FnCall(ref fn_call) => {
-                let arg_types = fn_call.args();
-                unimplemented!()
+                let fn_id = scope.get_fn(&fn_call.name().clone().into())?;
+                let func = universe.get_fn(fn_id);
+                let fn_type_id = func.type_id();
+                let fn_type = universe.get_type(fn_type_id);
+
+                if let SmplType::Function(ref fn_type) = *fn_type {
+                    let arg_types = fn_call.args()
+                                           .map(|ref vec| {
+                                               vec.iter().map(|ref tmp_id| {
+                                                   let tmp = expr.get_tmp(*tmp_id.data());
+                                                   let tmp_value = tmp.value();
+                                                   let tmp_value_type_id = tmp_value.type_id().unwrap();
+                                                   tmp_id.set_type_id(tmp_value_type_id);
+                                                   universe.get_type(tmp_value_type_id)
+                                               }).collect::<Vec<_>>()
+                                           });
+
+                    match arg_types {
+                        Some(arg_types) => {
+                            if fn_type.args.len() != arg_types.len() {
+                                unimplemented!("Arity error: Arg length does not match fn definition.");
+                            }
+
+                            let fn_param_types = fn_type.args.iter().map(|id| universe.get_type(*id));
+
+                            for (arg, param) in arg_types.iter().zip(fn_param_types) {
+                                if (*arg != param) {
+                                    unimplemented!("Arg does not match param type.");
+                                }
+                            }
+                        }
+
+                        None => {
+                            if fn_type.args.len() != 0 {
+                                unimplemented!("Arg lengths do not match");
+                            }
+                        }
+                    }
+
+                    tmp_type = fn_type.return_type;
+                } else {
+                    panic!("{} was mapped to {}, which is not SmplType::Function but {:?}", fn_id, fn_type_id, fn_type );
+                }
             }
         }
+
+        expr_type = Some(tmp_type);
     }
-    unimplemented!()
+
+    Ok(expr_type.unwrap())
 }
 
 fn resolve_bin_op(universe: &Universe, op: &ast::BinOp, lhs: TypeId, rhs: TypeId) -> Result<TypeId, Err> {
