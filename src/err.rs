@@ -5,6 +5,7 @@ pub enum Err {
     ControlFlowErr(ControlFlowErr),
     UnknownType(Path),
     UnknownVar(Ident),
+    UnknownFn(Path),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

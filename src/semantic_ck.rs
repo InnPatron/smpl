@@ -223,6 +223,10 @@ impl Universe {
         }
     }
 
+    pub fn get_fn(&self, id: FnId) -> &Function {
+        self.fn_map.get(&id).unwrap()
+    }
+
     fn inc_counter(&self) -> u64 {
         let curr = self.id_counter.get();
         let next = curr + 1;
@@ -297,5 +301,11 @@ impl ScopedData {
         if self.var_type_map.insert(id, type_id).is_some() {
             panic!("Attempting to override variable {} with a different type. Shadowing should produce a new variable id.", id);
         }
+    }
+
+    pub fn get_fn(&self, path: &Path) -> Result<FnId, Err> {
+        self.fn_map.get(path)
+                   .map(|id| id.clone())
+                   .ok_or(Err::UnknownFn(path.clone()))
     }
 }
