@@ -229,8 +229,8 @@ impl Universe {
         }
     }
 
-    fn get_type(&self, id: &TypeId) -> Rc<SmplType> {
-        match self.types.get(id).map(|t| t.clone()) {
+    pub fn get_type(&self, id: TypeId) -> Rc<SmplType> {
+        match self.types.get(&id).map(|t| t.clone()) {
             Some(t) => t,
             None => panic!("Type with TypeId {} does not exist.", id.0),
         }
@@ -292,10 +292,16 @@ impl ScopedData {
         self.type_map.insert(path, id)
     }
 
-    pub fn var_type_id(&self, name: &Ident) -> Result<TypeId, Err> {
-        self.var_map.get(name)
-            .map(|id| self.var_type_map.get(id).unwrap().clone())
-            .ok_or(Err::UnknownVar(name.clone()))
+    pub fn var_info(&self, name: &Ident) -> Result<(VarId, TypeId), Err> {
+        let var_id = self.var_map.get(name)
+                         .ok_or(Err::UnknownVar(name.clone()))?
+                         .clone();
+        let type_id = self.var_type_map
+                          .get(&var_id)
+                          .unwrap()
+                          .clone();
+
+        Ok((var_id, type_id))
     }
 
     pub fn insert_var(&mut self, name: Ident, id: VarId, type_id: TypeId) {
