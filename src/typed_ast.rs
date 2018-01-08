@@ -242,7 +242,7 @@ impl Variable {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnCall {
-    name: AsciiString,
+    name: ast::Ident,
     args: Option<Vec<Typed<TmpId>>>,
     fn_id: Cell<Option<FnId>>,
 }
@@ -250,10 +250,18 @@ pub struct FnCall {
 impl FnCall {
     pub fn new(name: ast::Ident, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
         FnCall {
-            name: name.0,
+            name: name,
             args: args,
             fn_id: Cell::new(None),
         }
+    }
+
+    pub fn name(&self) -> &ast::Ident {
+        &self.name
+    }
+
+    pub fn args(&self) -> Option<&Vec<Typed<TmpId>>> {
+        self.args.as_ref()
     }
 
     pub fn set_id(&self, id: FnId) {
