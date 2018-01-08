@@ -125,6 +125,16 @@ pub struct Function {
     cfg: CFG,
 }
 
+impl Function {
+    pub fn type_id(&self) -> TypeId {
+        self.fn_type
+    }
+
+    pub fn cfg(&self) -> &CFG {
+        &self.cfg
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Universe {
     types: HashMap<TypeId, Rc<SmplType>>,
