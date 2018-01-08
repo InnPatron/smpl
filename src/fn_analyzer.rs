@@ -26,16 +26,21 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
             Node::EnterScope => scope_stack.push(current_scope.clone()),
             Node::ExitScope => current_scope = scope_stack.pop().expect("If CFG was generated properly and the graph is being walked correctly, there should be a scope to pop"),
 
-
-
             Node::LocalVarDecl(ref var_decl) => {
                 let name = var_decl.var_name().clone();
                 let var_id = var_decl.var_id();
-                let type_path = var_decl.type_path();
+                let var_type_path = var_decl.type_path();
+                let var_type_id = current_scope.type_id(var_type_path)?;
+                let var_type = universe.get_type(var_type_id);
 
-                let type_id = current_scope.type_id(type_path)?;
+                let expr_type_id = resolve_expr(universe, &current_scope, var_decl.init_expr())?;
+                let expr_type = universe.get_type(expr_type_id);
 
-                current_scope.insert_var(name, var_id, type_id);
+                if var_type == expr_type {
+                    current_scope.insert_var(name, var_id, var_type_id);
+                } else {
+                    unimplemented!("LHS type != RHS type");
+                }
 
                 to_check = cfg.next(to_check).unwrap();
             }
