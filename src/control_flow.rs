@@ -520,8 +520,8 @@ int b = 3;
 }";
         let universe = Universe::std();
         let fn_type = FunctionType {
-            args: vec![Rc::new(SmplType::Int)],
-            return_type: Rc::new(SmplType::Unit)
+            args: vec![universe.int()],
+            return_type: universe.unit()
         };
         let fn_def = parse_FnDecl(input).unwrap();
         let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
@@ -592,8 +592,8 @@ if (test) {
 }";
         let universe = Universe::std();
         let fn_type = FunctionType {
-            args: vec![Rc::new(SmplType::Int)],
-            return_type: Rc::new(SmplType::Unit)
+            args: vec![universe.int()],
+            return_type: universe.unit(), 
         };
         let fn_def = parse_FnDecl(input).unwrap();
         let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
@@ -733,8 +733,8 @@ let input =
 }";
         let universe = Universe::std();
         let fn_type = FunctionType {
-            args: vec![Rc::new(SmplType::Int)],
-            return_type: Rc::new(SmplType::Unit)
+            args: vec![universe.int()],
+            return_type: universe.unit(),
         };
         let fn_def = parse_FnDecl(input).unwrap();
         let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
@@ -892,8 +892,8 @@ let input =
 }";
         let universe = Universe::std();
         let fn_type = FunctionType {
-            args: vec![Rc::new(SmplType::Int)],
-            return_type: Rc::new(SmplType::Unit)
+            args: vec![universe.int()],
+            return_type: universe.unit(), 
         };
         let fn_def = parse_FnDecl(input).unwrap();
         let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
