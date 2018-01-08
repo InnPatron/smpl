@@ -87,7 +87,7 @@ fn generate_struct_type(scope: &ScopedData, universe: &Universe, struct_def: Str
 pub enum Err {
     ControlFlowErr(ControlFlowErr),
     UnknownType(Path),
-    UnknownVar(AsciiString),
+    UnknownVar(Ident),
 }
 
 impl From<ControlFlowErr> for Err {
@@ -264,7 +264,7 @@ impl Universe {
 #[derive(Clone, Debug)]
 pub struct ScopedData {
     type_map: HashMap<Path, TypeId>,
-    var_map: HashMap<AsciiString, VarId>,
+    var_map: HashMap<Ident, VarId>,
     var_type_map: HashMap<VarId, TypeId>,
     fn_map: HashMap<Path, FnId>,
 }
@@ -292,13 +292,13 @@ impl ScopedData {
         self.type_map.insert(path, id)
     }
 
-    pub fn var_type_id(&self, name: &AsciiStr) -> Result<TypeId, Err> {
+    pub fn var_type_id(&self, name: &Ident) -> Result<TypeId, Err> {
         self.var_map.get(name)
             .map(|id| self.var_type_map.get(id).unwrap().clone())
-            .ok_or(Err::UnknownVar(name.to_owned()))
+            .ok_or(Err::UnknownVar(name.clone()))
     }
 
-    pub fn insert_var(&mut self, name: AsciiString, id: VarId, type_id: TypeId) {
+    pub fn insert_var(&mut self, name: Ident, id: VarId, type_id: TypeId) {
         self.var_map.insert(name, id);
 
         if self.var_type_map.insert(id, type_id).is_some() {

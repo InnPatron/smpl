@@ -120,8 +120,8 @@ impl LocalVarDecl {
         &self.var_type
     }
 
-    pub fn var_name(&self) -> &AsciiStr {
-        &*self.var_name.0
+    pub fn var_name(&self) -> &ast::Ident {
+        &self.var_name
     }
 
     pub fn set_type_id(&self, id: TypeId) {
@@ -211,20 +211,20 @@ pub enum Value {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Variable {
-    ident: AsciiString,
+    ident: ast::Ident,
     var_id: Cell<Option<VarId>>,
 }
 
 impl Variable {
     pub fn new(ident: ast::Ident) -> Variable {
         Variable {
-            ident: ident.0,
+            ident: ident,
             var_id: Cell::new(None),
         }
     }
 
-    pub fn ident(&self) -> &AsciiStr {
-        &*self.ident
+    pub fn ident(&self) -> &ast::Ident {
+        &self.ident
     }
 
     pub fn set_id(&self, id: VarId) {

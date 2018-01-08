@@ -32,13 +32,13 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
 
 
             Node::LocalVarDecl(ref var_decl) => {
-                let name = var_decl.var_name();
+                let name = var_decl.var_name().clone();
                 let var_id = var_decl.var_id();
                 let type_path = var_decl.type_path();
 
                 let type_id = current_scope.type_id(type_path)?;
 
-                current_scope.insert_var(name.to_owned(), var_id, type_id);
+                current_scope.insert_var(name, var_id, type_id);
 
                 to_check = cfg.next(to_check).unwrap();
             }
