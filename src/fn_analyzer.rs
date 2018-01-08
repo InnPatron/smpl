@@ -23,6 +23,10 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
                 to_check = cfg.next(to_check).unwrap();
             }
 
+            Node::LoopFoot => to_check = cfg.after_loop_foot(to_check).unwrap(),
+            Node::Continue => to_check = cfg.after_continue(to_check).unwrap(),
+            Node::Break => to_check = cfg.after_break(to_check).unwrap(),
+
             Node::EnterScope => scope_stack.push(current_scope.clone()),
             Node::ExitScope => current_scope = scope_stack.pop().expect("If CFG was generated properly and the graph is being walked correctly, there should be a scope to pop"),
 
@@ -40,6 +44,26 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
                     current_scope.insert_var(name.into(), var_id, var_type_id);
                 } else {
                     unimplemented!("LHS type != RHS type");
+                }
+
+                to_check = cfg.next(to_check).unwrap();
+            }
+
+            Node::Expr(ref expr) => {
+                resolve_expr(universe, &current_scope, expr)?;
+                to_check = cfg.next(to_check).unwrap();
+            }
+
+            Node::Return(ref return_expr) => {
+                let fn_return_type = universe.get_type(fn_type.return_type);
+                let expr_type_id = match return_expr.as_ref() {
+                    Some(ref expr) => resolve_expr(universe, &current_scope, expr)?,
+
+                    None => universe.unit(),
+                };
+
+                if universe.get_type(expr_type_id) != fn_return_type {
+                    unimplemented!("Return expr type and Fn Return types do not match");
                 }
 
                 to_check = cfg.next(to_check).unwrap();
