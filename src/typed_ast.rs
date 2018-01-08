@@ -139,6 +139,10 @@ impl LocalVarDecl {
     pub fn var_id(&self) -> VarId {
         self.var_id
     }
+
+    pub fn init_expr(&self) -> &self::Expr {
+        &self.var_init
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
