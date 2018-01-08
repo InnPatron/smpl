@@ -71,6 +71,14 @@ impl Assignment {
         }
     }
 
+    pub fn name(&self) -> &ast::Path {
+        &self.name
+    }
+
+    pub fn value(&self) -> &self::Expr {
+        &self.value
+    }
+
     pub fn set_type_id(&self, id: TypeId) {
         if self.type_id.get().is_some() {
             panic!("Attempting to override {} for local variable declarration {:?}", id, self);
