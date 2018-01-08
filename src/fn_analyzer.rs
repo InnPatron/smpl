@@ -41,7 +41,7 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
                 let expr_type = universe.get_type(expr_type_id);
 
                 if var_type == expr_type {
-                    current_scope.insert_var(name.into(), var_id, var_type_id);
+                    current_scope.insert_var(name, var_id, var_type_id);
                 } else {
                     unimplemented!("LHS type != RHS type");
                 }

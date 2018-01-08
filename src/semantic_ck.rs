@@ -265,7 +265,7 @@ impl Universe {
 #[derive(Clone, Debug)]
 pub struct ScopedData {
     type_map: HashMap<Path, TypeId>,
-    var_map: HashMap<Path, VarId>,
+    var_map: HashMap<Ident, VarId>,
     var_type_map: HashMap<VarId, TypeId>,
     fn_map: HashMap<Path, FnId>,
 }
@@ -294,7 +294,7 @@ impl ScopedData {
     }
 
     pub fn var_info(&self, name: &Ident) -> Result<(VarId, TypeId), Err> {
-        let var_id = self.var_map.get(&name.clone().into())
+        let var_id = self.var_map.get(name)
                          .ok_or(Err::UnknownVar(name.clone()))?
                          .clone();
         let type_id = self.var_type_map
@@ -305,7 +305,7 @@ impl ScopedData {
         Ok((var_id, type_id))
     }
 
-    pub fn insert_var(&mut self, name: Path, id: VarId, type_id: TypeId) {
+    pub fn insert_var(&mut self, name: Ident, id: VarId, type_id: TypeId) {
         self.var_map.insert(name, id);
 
         if self.var_type_map.insert(id, type_id).is_some() {
