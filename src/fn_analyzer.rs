@@ -38,7 +38,7 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
     let mut scope_stack = Vec::new();
     let mut current_scope = global_scope.clone();
 
-    let mut to_check = cfg.after_start().unwrap();
+    let mut to_check = cfg.after_start();
 
     loop {
         match visit_node(&analyzer_data, &mut current_scope, &mut scope_stack, to_check)? {
@@ -58,20 +58,20 @@ fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack
     match *node_w!(data.cfg, to_check) {
         Node::End => Ok(None),
         Node::Start | Node::BranchSplit | Node::BranchMerge | Node::LoopHead => {
-            Ok(Some(data.cfg.next(to_check).unwrap()))
+            Ok(Some(data.cfg.next(to_check)))
         }
 
-        Node::LoopFoot => Ok(Some(data.cfg.after_loop_foot(to_check).unwrap())),
-        Node::Continue => Ok(Some(data.cfg.after_continue(to_check).unwrap())),
-        Node::Break => Ok(Some(data.cfg.after_break(to_check).unwrap())),
+        Node::LoopFoot => Ok(Some(data.cfg.after_loop_foot(to_check))),
+        Node::Continue => Ok(Some(data.cfg.after_continue(to_check))),
+        Node::Break => Ok(Some(data.cfg.after_break(to_check))),
 
         Node::EnterScope => {
             scope_stack.push(current_scope.clone());
-            Ok(Some(data.cfg.next(to_check).unwrap()))
+            Ok(Some(data.cfg.next(to_check)))
         }
         Node::ExitScope => {
             *current_scope = scope_stack.pop().expect("If CFG was generated properly and the graph is being walked correctly, there should be a scope to pop");
-            Ok(Some(data.cfg.next(to_check).unwrap()))
+            Ok(Some(data.cfg.next(to_check)))
         }
 
         Node::LocalVarDecl(ref var_decl) => {
@@ -90,7 +90,7 @@ fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack
                 unimplemented!("LHS type != RHS type");
             }
 
-            Ok(Some(data.cfg.next(to_check).unwrap()))
+            Ok(Some(data.cfg.next(to_check)))
         }
 
         Node::Assignment(ref assignment) => {
@@ -112,12 +112,12 @@ fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack
                 unimplemented!("LHS Type != RGHS Type");
             }
 
-            Ok(Some(data.cfg.next(to_check).unwrap()))
+            Ok(Some(data.cfg.next(to_check)))
         },
 
         Node::Expr(ref expr) => {
             resolve_expr(data.universe, &current_scope, expr)?;
-            Ok(Some(data.cfg.next(to_check).unwrap()))            
+            Ok(Some(data.cfg.next(to_check)))
         }
 
         Node::Return(ref return_expr) => {
@@ -131,7 +131,7 @@ fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack
                 unimplemented!("Return expr type and Fn Return types do not match");
             }
 
-            Ok(Some(data.cfg.next(to_check).unwrap()))
+            Ok(Some(data.cfg.next(to_check)))
         }
 
         Node::Condition(ref condition_expr) => {
@@ -142,7 +142,7 @@ fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack
             }
 
             let mut merge_node = None;
-            let (true_branch_head, false_branch_head) = data.cfg.after_condition(to_check).unwrap();
+            let (true_branch_head, false_branch_head) = data.cfg.after_condition(to_check);
 
             let mut current_true_node = true_branch_head;
             let mut current_false_node = false_branch_head;

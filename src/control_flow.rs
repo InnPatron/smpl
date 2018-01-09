@@ -115,33 +115,37 @@ impl CFG {
         &self.graph
     }
 
-    pub fn after_loop_foot(&self, id: graph::NodeIndex) -> Result<graph::NodeIndex, ()> {
+    pub fn after_loop_foot(&self, id: graph::NodeIndex) -> graph::NodeIndex {
 
         match *node_w!(self, id) {
             Node::LoopFoot => (),
-            _ => return Err(()),
+            _ => panic!("Should only be given a Node::LoopFoot"),
         }
 
         let neighbors = neighbors!(self, id);
-        assert_eq!(neighbors.clone().count(), 2);
+        let neighbor_count = neighbors.clone().count();
+        
+        if neighbor_count != 2 {
+            panic!("Loop foot should always be pointing to LoopHead and the next Node. Need two directed neighbors, found {}", neighbor_count);
+        }
          
         for n in neighbors {
             match *node_w!(self, n) {
                 Node::LoopHead => (),
-                _ => return Ok(n),
+                _ => return n,
             }
         }
-        Err(())
+        unreachable!();
     }
 
     ///
     /// Returns (TRUE, FALSE) branch heads.
     ///
-    pub fn after_condition(&self, id: graph::NodeIndex) -> Result<(graph::NodeIndex, graph::NodeIndex), ()> {
+    pub fn after_condition(&self, id: graph::NodeIndex) -> (graph::NodeIndex, graph::NodeIndex) {
 
         match *node_w!(self, id) {
             Node::Condition(_) => (),
-            _ => return Err(()),
+            _ => panic!("Should only be given a Node::Condition"),
         }
 
         let edges = self.graph.edges_directed(id, Direction::Outgoing);
@@ -157,69 +161,109 @@ impl CFG {
             }
         }
 
-        Ok((true_branch.unwrap(), false_branch.unwrap()))
+        (true_branch.unwrap(), false_branch.unwrap())
     }
 
-    pub fn after_return(&self, id: graph::NodeIndex) -> Result<graph::NodeIndex, ()> {
+    pub fn after_return(&self, id: graph::NodeIndex) -> graph::NodeIndex {
 
         match *node_w!(self, id) {
             Node::Return(_) => (),
-            _ => return Err(()),
+            _ => panic!("Should only be given a Node::Return"),
         }
 
-        let neighbors = neighbors!(self, id);
-        assert_eq!(neighbors.clone().count(), 2);
+        let mut neighbors = neighbors!(self, id);
+        let neighbor_count = neighbors.clone().count();
          
-        for n in neighbors {
-            match *node_w!(self, n) {
-                Node::End => (),
-                _ => return Ok(n),
+        if neighbor_count == 2 {
+            let mut found_first_end = false;
+            for n in neighbors {
+                match *node_w!(self, n) {
+                    Node::End => {
+                        if found_first_end {
+                            return n;
+                        } else {
+                            found_first_end = true;
+                        }
+                    },
+                    _ => return n,
+                }
             }
+        } else if neighbor_count == 1 {
+            return neighbors.next().unwrap();
+        } else {
+            panic!("Node::Return points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
         }
-        Err(())
-        
+
+        unreachable!();
     }
 
-    pub fn after_continue(&self, id: graph::NodeIndex) -> Result<graph::NodeIndex, ()> {
+    pub fn after_continue(&self, id: graph::NodeIndex) -> graph::NodeIndex {
 
         match *node_w!(self, id) {
             Node::Continue => (),
-            _ => return Err(()),
+            _ => panic!("Should only be given a Node::Continue"),
         }
 
-        let neighbors = neighbors!(self, id);
-        assert_eq!(neighbors.clone().count(), 2);
-         
-        for n in neighbors {
-            match *node_w!(self, n) {
-                Node::LoopHead => (),
-                _ => return Ok(n),
+        let mut neighbors = neighbors!(self, id);
+        let neighbor_count = neighbors.clone().count();
+
+        if neighbor_count == 2 {
+            let mut found_first = false;
+            for n in neighbors {
+                match *node_w!(self, n) {
+                    Node::LoopHead => {
+                        if found_first {    
+                            return n;
+                        } else {
+                            found_first = true;
+                        }
+                    }
+                    _ => return n,
+                }
             }
+        } else if neighbor_count == 1 {
+            return neighbors.next().unwrap();
+        } else {
+            panic!("Node::Continue points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
         }
-        Err(())
         
+        unreachable!();
     }
 
-    pub fn after_break(&self, id: graph::NodeIndex) -> Result<graph::NodeIndex, ()> {
+    pub fn after_break(&self, id: graph::NodeIndex) -> graph::NodeIndex {
 
         match *node_w!(self, id) {
             Node::Break => (),
-            _ => return Err(()),
+            _ => panic!("Should only be given a Node::Break"),
         }
 
         let neighbors = neighbors!(self, id);
-        assert_eq!(neighbors.clone().count(), 2);
+        let neighbor_count = neighbors.clone().count();
         
-        for n in neighbors {
-            match *node_w!(self, n) {
-                Node::LoopFoot => (),
-                _ => return Ok(n),
+        if neighbor_count == 2 {
+            let mut found_first = false;
+            for n in neighbors {
+                match *node_w!(self, n) {
+                    Node::LoopFoot => {
+                        if found_first {    
+                            return n;
+                        } else {
+                            found_first = true;
+                        }
+                    }
+                    _ => return n,
+                }
             }
+        } else if neighbor_count == 1 {
+
+        } else {
+            panic!("Node::Continue points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
         }
-        Err(())
+
+        unreachable!();
     }
 
-    pub fn after_start(&self) -> Result<graph::NodeIndex, ()> {
+    pub fn after_start(&self) -> graph::NodeIndex {
         self.next(self.start)
     }
 
@@ -228,12 +272,12 @@ impl CFG {
     /// multiple outgoing edge (such as Node::Condition, Node::Return, Node::Break, and
     /// Node::Continue) or none (Node::End), return an error.
     ///
-    pub fn next(&self, id: graph::NodeIndex) -> Result<graph::NodeIndex, ()> {
+    pub fn next(&self, id: graph::NodeIndex) -> graph::NodeIndex {
         let mut neighbors = self.graph.neighbors_directed(id, Direction::Outgoing);
         if neighbors.clone().count() != 1 {
-            Err(())
+            panic!("CFG::next() only works when a Node has 1 neighbor");
         } else {
-            Ok(neighbors.next().unwrap())
+            neighbors.next().unwrap()
         }
     }
 
