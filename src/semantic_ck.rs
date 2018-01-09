@@ -184,6 +184,10 @@ impl Universe {
         }
     }
 
+    pub fn std_scope(&self) -> ScopedData {
+        self.std_scope.clone()
+    }
+
     pub fn unit(&self) -> TypeId {
         self.unit
     }
@@ -204,7 +208,7 @@ impl Universe {
         self.boolean
     }
 
-    fn insert_fn(&mut self, type_id: TypeId, fn_t: FunctionType, cfg: CFG) -> FnId {
+    pub fn insert_fn(&mut self, type_id: TypeId, fn_t: FunctionType, cfg: CFG) -> FnId {
         let fn_id = self.new_fn_id();
         self.insert_type(type_id, SmplType::Function(fn_t));
 
@@ -220,7 +224,7 @@ impl Universe {
         fn_id
     }
 
-    fn insert_type(&mut self, id: TypeId, t: SmplType) {
+    pub fn insert_type(&mut self, id: TypeId, t: SmplType) {
         if self.types.insert(id, Rc::new(t)).is_some() {
             panic!("Attempting to override type with TypeId {} in the Universe", id.0);
         }
@@ -272,7 +276,7 @@ pub struct ScopedData {
 
 impl ScopedData {
 
-    fn insert_fn(&mut self, name: Path, fn_id: FnId) {
+    pub fn insert_fn(&mut self, name: Path, fn_id: FnId) {
         // TODO: Fn name override behaviour?
         self.fn_map.insert(name, fn_id);
     }
@@ -283,13 +287,13 @@ impl ScopedData {
             .ok_or(Err::UnknownType(path.clone()))
     }
 
-    fn get_type(&self, universe: &Universe, path: &Path) -> Result<Rc<SmplType>, Err> {
+    pub fn get_type(&self, universe: &Universe, path: &Path) -> Result<Rc<SmplType>, Err> {
         let id = self.type_map.get(path).ok_or(Err::UnknownType(path.clone()))?;
         let t = universe.types.get(id).expect(&format!("Missing TypeId: {}. All TypeId's should be valid if retrieven from ScopedData.type_map", id.0));
         Ok(t.clone())
     }
 
-    fn insert_type(&mut self, path: Path, id: TypeId) -> Option<TypeId> {
+    pub fn insert_type(&mut self, path: Path, id: TypeId) -> Option<TypeId> {
         self.type_map.insert(path, id)
     }
 
