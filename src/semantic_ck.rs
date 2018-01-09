@@ -10,6 +10,7 @@ use ascii::*;
 
 use err::Err;
 use control_flow::CFG;
+use fn_analyzer::analyze_fn;
 use smpl_type::*;
 use ast::*;
 use ast::Function as AstFunction;
@@ -39,6 +40,9 @@ pub fn check(mut program: Program) -> Result<(), Err> {
                 let fn_id = universe.new_fn_id();
                 universe.insert_fn(fn_id, type_id, fn_type, cfg);
                 global_scope.insert_fn(name, fn_id);
+
+                let func = universe.get_fn(fn_id);
+                analyze_fn(&universe, &global_scope, func.cfg(), fn_id)?;
             },
         }
     }
