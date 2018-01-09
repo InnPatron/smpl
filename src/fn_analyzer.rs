@@ -361,3 +361,51 @@ fn walk_field_access(universe: &Universe, root_type_id: TypeId, path: Iter<ast::
 
     Ok(current_type_id)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ast::*;
+    use parser::*;
+    use smpl_type::*;
+    use semantic_ck::*;
+    use ascii::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_walk_field_access() {
+        let mut universe = Universe::std();
+
+        let fields_1 = vec![(ident!("field1"), universe.int()),
+                        (ident!("field2"), universe.boolean())]
+
+                        .into_iter().collect::<HashMap<_,_>>();
+        let struct_type_1 = StructType {
+            name: ident!("foo"),
+            fields: fields_1,
+        };
+        let struct_type_1_id = universe.new_type_id();
+        universe.insert_type(struct_type_1_id, SmplType::Struct(struct_type_1));
+
+
+        let fields_2 = vec![(ident!("foo_field"), struct_type_1_id)]
+
+                           .into_iter().collect::<HashMap<_,_>>();
+
+        let struct_type_2 = StructType {
+            name: ident!("bar"),
+            fields: fields_2,
+        };
+        let struct_type_2_id = universe.new_type_id();
+        universe.insert_type(struct_type_2_id, SmplType::Struct(struct_type_2));
+
+        let mut scope = universe.std_scope();
+        let root_var_id = universe.new_var_id();
+        scope.insert_var(ident!("baz"), root_var_id, struct_type_2_id);
+
+        let path = path!("foo_field", "field1");
+        let field_type_id = walk_field_access(&universe, struct_type_2_id, path.iter()).unwrap();
+
+        assert_eq!(field_type_id, universe.int());
+    }
+}
