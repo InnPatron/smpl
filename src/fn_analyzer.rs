@@ -50,7 +50,8 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
     if scope_stack.len() != 0 {
         panic!("Should be no left over scopes if CFG was generated properly and fully-walked.");
     }
-    unimplemented!();
+
+    Ok(())
 }
 
 fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack: &mut Vec<ScopedData>, to_check: NodeIndex) -> Result<Option<NodeIndex>, Err> {
