@@ -6,6 +6,7 @@ pub enum Err {
     UnknownType(Path),
     UnknownVar(Ident),
     UnknownFn(Path),
+    UnknownField(Ident),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

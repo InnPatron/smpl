@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::slice::Iter;
 
 use ast;
 use control_flow::*;
@@ -227,4 +228,22 @@ fn resolve_uni_op(universe: &Universe, op: &ast::UniOp, tmp_type_id: TypeId) -> 
 
         _ => unimplemented!(),
     }
+}
+
+fn walk_field_access(universe: &Universe, root_type_id: TypeId, path: Iter<ast::Ident>) -> Result<TypeId, Err> {
+    let mut current_type_id = root_type_id;
+    let mut current_type = universe.get_type(root_type_id);
+    for field in path {
+        match *current_type {
+            SmplType::Struct(ref struct_type) => {
+                current_type_id = *struct_type.fields.get(field).ok_or(Err::UnknownField(field.clone()))?;
+             }
+
+            _ => unimplemented!("Unexpected field access on non-struct type"),
+        }
+
+        current_type = universe.get_type(current_type_id);
+    }
+
+    Ok(current_type_id)
 }
