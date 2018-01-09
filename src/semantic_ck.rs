@@ -368,7 +368,7 @@ mod tests {
     use parser::*;
 
     #[test]
-    fn test_semantic_analysis() {
+    fn basic_test_semantic_analysis() {
         let program =
 "struct Test {
     field_1: i32,
@@ -388,6 +388,16 @@ fn main() {
 ";
         let program = parse_Program(program).unwrap();
         let program = check(program).unwrap();
+
+        let universe = program.universe();
+
+        let main = universe.get_fn(program.main().unwrap());
+        let main_type = universe.get_type(main.type_id());
+        if let SmplType::Function(ref fn_type) = *main_type {
+            assert_eq!(SmplType::Unit, *universe.get_type(fn_type.return_type));
+        } else {
+            panic!("main()'s TypeId was not mapped to a SmplType::Function");
+        }
 
     }
 }
