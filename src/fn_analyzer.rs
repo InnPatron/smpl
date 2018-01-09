@@ -50,6 +50,28 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
                 to_check = cfg.next(to_check).unwrap();
             }
 
+            Node::Assignment(ref assignment) => {
+                let mut assignee = assignment.name().iter();
+                let root_var_name = assignee.next().unwrap();
+
+                let (root_var_id, root_var_type_id) = current_scope.var_info(root_var_name)?;
+
+                let assignee_type_id = walk_field_access(universe, root_var_type_id, assignee)?;
+                assignment.set_var_id(root_var_id);
+                assignment.set_type_id(assignee_type_id);
+
+                let expr_type_id = resolve_expr(universe, &current_scope, assignment.value())?;
+
+                let assignee_type = universe.get_type(assignee_type_id);
+                let expr_type = universe.get_type(expr_type_id);
+
+                if assignee_type != expr_type {
+                    unimplemented!("LHS Type != RGHS Type");
+                }
+
+                to_check = cfg.next(to_check).unwrap();
+            },
+
             Node::Expr(ref expr) => {
                 resolve_expr(universe, &current_scope, expr)?;
                 to_check = cfg.next(to_check).unwrap();
