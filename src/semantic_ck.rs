@@ -36,7 +36,8 @@ pub fn check(mut program: Program) -> Result<(), Err> {
                 let fn_type = generate_fn_type(&global_scope, &universe, &fn_def)?;
                 let cfg = CFG::generate(&universe, fn_def, &fn_type)?;
 
-                let fn_id = universe.insert_fn(type_id, fn_type, cfg);
+                let fn_id = universe.new_fn_id();
+                universe.insert_fn(fn_id, type_id, fn_type, cfg);
                 global_scope.insert_fn(name, fn_id);
             },
         }
@@ -208,8 +209,7 @@ impl Universe {
         self.boolean
     }
 
-    pub fn insert_fn(&mut self, type_id: TypeId, fn_t: FunctionType, cfg: CFG) -> FnId {
-        let fn_id = self.new_fn_id();
+    pub fn insert_fn(&mut self, fn_id: FnId, type_id: TypeId, fn_t: FunctionType, cfg: CFG) {
         self.insert_type(type_id, SmplType::Function(fn_t));
 
         let function = Function {
@@ -220,8 +220,6 @@ impl Universe {
         if self.fn_map.insert(fn_id, function).is_some() {
             panic!("Attempting to override Function with FnId {} in the Universe", fn_id.0);
         }
-
-        fn_id
     }
 
     pub fn insert_type(&mut self, id: TypeId, t: SmplType) {
