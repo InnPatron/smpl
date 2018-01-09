@@ -13,11 +13,33 @@ use control_flow::CFG;
 use fn_analyzer::analyze_fn;
 use smpl_type::*;
 use ast::*;
-use ast::Function as AstFunction;
+use ast::{Function as AstFunction, Program as AstProgram};
 
-pub fn check(mut program: Program) -> Result<(), Err> {
+pub struct Program {
+    universe: Universe,
+    global_scope: ScopedData,
+    main: Option<FnId>,
+}
+
+impl Program {
+    pub fn universe(&self) -> &Universe {
+        &self.universe
+    }
+
+    pub fn global_scope(&self) -> &ScopedData {
+        &self.global_scope
+    }
+
+    pub fn main(&self) -> Option<FnId> {
+        self.main
+    }
+}
+
+pub fn check(mut program: AstProgram) -> Result<Program, Err> {
     let mut universe = Universe::std();
     let mut global_scope = universe.std_scope.clone();
+
+    let mut main = None;
 
     for decl_stmt in program.0.into_iter() {
         match decl_stmt {
@@ -30,7 +52,7 @@ pub fn check(mut program: Program) -> Result<(), Err> {
             },
 
             DeclStmt::Function(fn_def) => {
-                let name = fn_def.name.clone().into();
+                let name: Path = fn_def.name.clone().into();
 
                 let type_id = universe.new_type_id();
 
@@ -39,14 +61,27 @@ pub fn check(mut program: Program) -> Result<(), Err> {
 
                 let fn_id = universe.new_fn_id();
                 universe.insert_fn(fn_id, type_id, fn_type, cfg);
-                global_scope.insert_fn(name, fn_id);
+                global_scope.insert_fn(name.clone(), fn_id);
 
                 let func = universe.get_fn(fn_id);
                 analyze_fn(&universe, &global_scope, func.cfg(), fn_id)?;
+
+                if name == path!("main") {
+                    if main.is_some() {
+                        unimplemented!("Multiple main functions!");
+                    } else {
+                        main = Some(fn_id);
+                    }
+                }
             },
         }
     }
-    Ok(())
+    
+    Ok( Program {
+        universe: universe,
+        global_scope: global_scope,
+        main: main,
+    })
 }
 
 fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunction) -> Result<FunctionType, Err> {
