@@ -360,3 +360,33 @@ impl ScopedData {
                    .ok_or(Err::UnknownFn(path.clone()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use parser::*;
+
+    #[test]
+    fn test_semantic_analysis() {
+        let program =
+"struct Test {
+    field_1: i32,
+    field_2: float,
+    field_3: String,
+    field_4: bool
+}
+
+fn main() {
+    bool truthy = true;
+    if true {
+        truthy = false;
+    } else {
+        truthy = true;
+    }
+}
+";
+        let program = parse_Program(program).unwrap();
+        let program = check(program).unwrap();
+
+    }
+}
