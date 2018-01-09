@@ -110,7 +110,8 @@ fn generate_struct_type(scope: &ScopedData, universe: &Universe, struct_def: Str
     if let Some(body) = struct_def.body.0 {
         for field in body.into_iter() {
             let f_name = field.name;
-            let field_type = scope.type_id(&f_name.clone().into())?.clone();
+            let f_type_path = field.field_type;
+            let field_type = scope.type_id(&f_type_path)?;
             fields.insert(f_name, field_type);
         }
     } 
