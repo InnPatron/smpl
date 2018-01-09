@@ -133,7 +133,64 @@ fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack
             Ok(Some(data.cfg.next(to_check).unwrap()))
         }
 
-        _ => unimplemented!(),
+        Node::Condition(ref condition_expr) => {
+            let expr_type_id = resolve_expr(data.universe, current_scope, condition_expr)?;
+
+            if *data.universe.get_type(expr_type_id) != SmplType::Bool {
+                unimplemented!("Expr to a condition must be of type Bool.");
+            }
+
+            let mut merge_node = None;
+            let (true_branch_head, false_branch_head) = data.cfg.after_condition(to_check).unwrap();
+
+            let mut current_true_node = true_branch_head;
+            let mut current_false_node = false_branch_head;
+            let mut true_merged = false;
+            let mut false_merged = false;
+
+            // Go through all the nodes in each branch until each branch hits the
+            // Node::BranchMerge.
+            //
+            // Can continue going through the CFG linearly afterwords.
+            loop {
+                if true_merged == false {
+                    match *node_w!(data.cfg, current_true_node) {
+                        Node::BranchMerge => {
+                            merge_node = Some(current_true_node);
+                            true_merged = true;
+                        }
+
+                        _ => (),
+                    }
+                    match visit_node(data, current_scope, scope_stack, current_true_node)? {
+                        Some(next) => current_true_node = next,
+                        None => return Ok(None),
+                    }
+                }
+
+                if false_merged == false {
+                    match *node_w!(data.cfg, current_false_node) {
+                        Node::BranchMerge => {
+                            merge_node = Some(current_false_node);
+                            false_merged = true;
+                        }
+
+                        _ => (),
+                    }
+                    match visit_node(data, current_scope, scope_stack, current_false_node)? {
+                        Some(next) => current_false_node = next,
+                        None => return Ok(None),
+                    }
+                }
+
+                if true_merged && false_merged {
+                    break;
+                }
+            }
+
+            let merge_node = merge_node.unwrap();
+            Ok(Some(merge_node))
+        }
     }
 }
 
