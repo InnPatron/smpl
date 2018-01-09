@@ -1,16 +1,39 @@
 use std::collections::HashMap;
 use std::slice::Iter;
+use std::rc::Rc;
 
 use ast;
 use control_flow::*;
 use typed_ast::*;
 use err::Err;
-use semantic_ck::{Universe, ScopedData, TypeId};
+use semantic_ck::{Universe, ScopedData, TypeId, FnId};
 use smpl_type::*;
 
 use petgraph::graph::NodeIndex;
 
-pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_type: &FunctionType) -> Result<(), Err> {
+struct FnAnalyzerData<'a, 'b> {
+    universe: &'a Universe,
+    cfg: &'b CFG,
+    fn_return_type: Rc<SmplType>,
+}
+
+pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_id: FnId) -> Result<(), Err> {
+
+    let fn_return_type;
+    let func = universe.get_fn(fn_id);
+    match *universe.get_type(func.type_id()) {
+        SmplType::Function(ref fn_type) => {
+            fn_return_type = universe.get_type(fn_type.return_type);
+        }
+
+        ref t @ _ => panic!("{} not mapped to a function but a {:?}", fn_id, t),
+    }
+
+    let analyzer_data = FnAnalyzerData {
+        universe: universe,
+        cfg: cfg,
+        fn_return_type: fn_return_type
+    };
 
     let mut scope_stack = Vec::new();
     let mut current_scope = global_scope.clone();
@@ -18,81 +41,9 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
     let mut to_check = cfg.after_start().unwrap();
 
     loop {
-        match *node_w!(cfg, to_check) {
-            Node::End => break,
-            Node::Start | Node::BranchSplit | Node::BranchMerge | Node::LoopHead => {
-                to_check = cfg.next(to_check).unwrap();
-            }
-
-            Node::LoopFoot => to_check = cfg.after_loop_foot(to_check).unwrap(),
-            Node::Continue => to_check = cfg.after_continue(to_check).unwrap(),
-            Node::Break => to_check = cfg.after_break(to_check).unwrap(),
-
-            Node::EnterScope => scope_stack.push(current_scope.clone()),
-            Node::ExitScope => current_scope = scope_stack.pop().expect("If CFG was generated properly and the graph is being walked correctly, there should be a scope to pop"),
-
-            Node::LocalVarDecl(ref var_decl) => {
-                let name = var_decl.var_name().clone();
-                let var_id = var_decl.var_id();
-                let var_type_path = var_decl.type_path();
-                let var_type_id = current_scope.type_id(var_type_path)?;
-                let var_type = universe.get_type(var_type_id);
-
-                let expr_type_id = resolve_expr(universe, &current_scope, var_decl.init_expr())?;
-                let expr_type = universe.get_type(expr_type_id);
-
-                if var_type == expr_type {
-                    current_scope.insert_var(name, var_id, var_type_id);
-                } else {
-                    unimplemented!("LHS type != RHS type");
-                }
-
-                to_check = cfg.next(to_check).unwrap();
-            }
-
-            Node::Assignment(ref assignment) => {
-                let mut assignee = assignment.name().iter();
-                let root_var_name = assignee.next().unwrap();
-
-                let (root_var_id, root_var_type_id) = current_scope.var_info(root_var_name)?;
-
-                let assignee_type_id = walk_field_access(universe, root_var_type_id, assignee)?;
-                assignment.set_var_id(root_var_id);
-                assignment.set_type_id(assignee_type_id);
-
-                let expr_type_id = resolve_expr(universe, &current_scope, assignment.value())?;
-
-                let assignee_type = universe.get_type(assignee_type_id);
-                let expr_type = universe.get_type(expr_type_id);
-
-                if assignee_type != expr_type {
-                    unimplemented!("LHS Type != RGHS Type");
-                }
-
-                to_check = cfg.next(to_check).unwrap();
-            },
-
-            Node::Expr(ref expr) => {
-                resolve_expr(universe, &current_scope, expr)?;
-                to_check = cfg.next(to_check).unwrap();
-            }
-
-            Node::Return(ref return_expr) => {
-                let fn_return_type = universe.get_type(fn_type.return_type);
-                let expr_type_id = match return_expr.as_ref() {
-                    Some(ref expr) => resolve_expr(universe, &current_scope, expr)?,
-
-                    None => universe.unit(),
-                };
-
-                if universe.get_type(expr_type_id) != fn_return_type {
-                    unimplemented!("Return expr type and Fn Return types do not match");
-                }
-
-                to_check = cfg.next(to_check).unwrap();
-            }
-
-            _ => unimplemented!(),
+        match visit_node(&analyzer_data, &mut current_scope, &mut scope_stack, to_check)? {
+            Some(next) => to_check = next,
+            None => break,
         }
     }
 
@@ -100,6 +51,90 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
         panic!("Should be no left over scopes if CFG was generated properly and fully-walked.");
     }
     unimplemented!();
+}
+
+fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack: &mut Vec<ScopedData>, to_check: NodeIndex) -> Result<Option<NodeIndex>, Err> {
+    match *node_w!(data.cfg, to_check) {
+        Node::End => Ok(None),
+        Node::Start | Node::BranchSplit | Node::BranchMerge | Node::LoopHead => {
+            Ok(Some(data.cfg.next(to_check).unwrap()))
+        }
+
+        Node::LoopFoot => Ok(Some(data.cfg.after_loop_foot(to_check).unwrap())),
+        Node::Continue => Ok(Some(data.cfg.after_continue(to_check).unwrap())),
+        Node::Break => Ok(Some(data.cfg.after_break(to_check).unwrap())),
+
+        Node::EnterScope => {
+            scope_stack.push(current_scope.clone());
+            Ok(Some(data.cfg.next(to_check).unwrap()))
+        }
+        Node::ExitScope => {
+            *current_scope = scope_stack.pop().expect("If CFG was generated properly and the graph is being walked correctly, there should be a scope to pop");
+            Ok(Some(data.cfg.next(to_check).unwrap()))
+        }
+
+        Node::LocalVarDecl(ref var_decl) => {
+            let name = var_decl.var_name().clone();
+            let var_id = var_decl.var_id();
+            let var_type_path = var_decl.type_path();
+            let var_type_id = current_scope.type_id(var_type_path)?;
+            let var_type = data.universe.get_type(var_type_id);
+
+            let expr_type_id = resolve_expr(data.universe, &current_scope, var_decl.init_expr())?;
+            let expr_type = data.universe.get_type(expr_type_id);
+
+            if var_type == expr_type {
+                current_scope.insert_var(name, var_id, var_type_id);
+            } else {
+                unimplemented!("LHS type != RHS type");
+            }
+
+            Ok(Some(data.cfg.next(to_check).unwrap()))
+        }
+
+        Node::Assignment(ref assignment) => {
+            let mut assignee = assignment.name().iter();
+            let root_var_name = assignee.next().unwrap();
+
+            let (root_var_id, root_var_type_id) = current_scope.var_info(root_var_name)?;
+
+            let assignee_type_id = walk_field_access(data.universe, root_var_type_id, assignee)?;
+            assignment.set_var_id(root_var_id);
+            assignment.set_type_id(assignee_type_id);
+
+            let expr_type_id = resolve_expr(data.universe, &current_scope, assignment.value())?;
+
+            let assignee_type = data.universe.get_type(assignee_type_id);
+            let expr_type = data.universe.get_type(expr_type_id);
+
+            if assignee_type != expr_type {
+                unimplemented!("LHS Type != RGHS Type");
+            }
+
+            Ok(Some(data.cfg.next(to_check).unwrap()))
+        },
+
+        Node::Expr(ref expr) => {
+            resolve_expr(data.universe, &current_scope, expr)?;
+            Ok(Some(data.cfg.next(to_check).unwrap()))            
+        }
+
+        Node::Return(ref return_expr) => {
+            let expr_type_id = match return_expr.as_ref() {
+                Some(ref expr) => resolve_expr(data.universe, &current_scope, expr)?,
+
+                None => data.universe.unit(),
+            };
+
+            if data.universe.get_type(expr_type_id) != data.fn_return_type {
+                unimplemented!("Return expr type and Fn Return types do not match");
+            }
+
+            Ok(Some(data.cfg.next(to_check).unwrap()))
+        }
+
+        _ => unimplemented!(),
+    }
 }
 
 fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<TypeId, Err> {
