@@ -31,9 +31,8 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
         AstExpr::Literal(literal) => {
             let lit_type = match literal {
                 Literal::String(_) => Some(universe.string()),
-                Literal::Number(ref num) => {
-                    None
-                },
+                Literal::Int(_) => Some(universe.int()),
+                Literal::Float(_) => Some(universe.float()),
                 Literal::Bool(_) => Some(universe.boolean()),
             };
 
@@ -76,7 +75,7 @@ mod tests {
         {
             match *expr.get_tmp(*_5_id).value().data() {
                 Value::Literal(ref literal) => {
-                    assert_eq!(*literal, Literal::Number("5".to_string()));
+                    assert_eq!(*literal, Literal::Int(5));
                 }
 
                 ref v @ _ => panic!("Unexpected value {:?}. Expected a literal number 5", v),
@@ -88,7 +87,7 @@ mod tests {
         {
             match *expr.get_tmp(*_2_id).value().data() {
                 Value::Literal(ref literal) => {
-                    assert_eq!(*literal, Literal::Number("2".to_string()));
+                    assert_eq!(*literal, Literal::Int(2));
                 }
 
                 ref v @ _ => panic!("Unexpected value {:?}. Expected a literal number 3", v),
@@ -100,7 +99,7 @@ mod tests {
         {
             match *expr.get_tmp(*_3_id).value().data() {
                 Value::Literal(ref literal) => {
-                    assert_eq!(*literal, Literal::Number("3".to_string()));
+                    assert_eq!(*literal, Literal::Int(3));
                 }
 
                 ref v @ _ => panic!("Unexpected value {:?}. Expected a literal number 3", v),

@@ -14,17 +14,17 @@ macro_rules! boolean {
 }
 
 #[allow(unused_macros)]
-macro_rules! number {
-    ($str_num: expr) => {{
-        Literal::Number($str_num.to_string())
+macro_rules! int {
+    ($int: expr) => {{
+        Literal::Int($int)
     }};
 
-    ($str_num: expr => Expr) => {{
-        Expr::Literal(number!($str_num))
+    ($int: expr => Expr) => {{
+        Expr::Literal(int!($int))
     }};
 
-    ($str_num: expr => BoxExpr) => {{
-        Box::new(number!($str_num => Expr))
+    ($int: expr => BoxExpr) => {{
+        Box::new(int!($int => Expr))
     }}
 }
 
