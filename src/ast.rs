@@ -252,13 +252,3 @@ impl fmt::Display for Path {
         write!(f, "{}", buffer)
     }
 }
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Keyword {
-    If,
-    While,
-    Break,
-    Return,
-    Struct,
-    Function,
-}

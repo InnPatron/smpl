@@ -4,7 +4,6 @@ mod parser_tests {
     use parser::*;
     use ascii::*;
     use ast::*;
-    use smpl_type::*;
 
     #[test]
     fn test_parse_local_var_decl() {

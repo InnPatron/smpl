@@ -326,7 +326,7 @@ impl CFG {
     /// 
     /// Returns the first and the last node in a code branch.
     /// 
-    fn get_branch(universe: &Universe, cfg: &mut CFG, instructions: Vec<ast::Stmt>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex, LoopId)>) -> Result<BranchData, ControlFlowErr> {
+    fn get_branch(universe: &Universe, cfg: &mut CFG, instructions: Vec<ast::Stmt>, loop_data: Option<(graph::NodeIndex, graph::NodeIndex, LoopId)>) -> Result<BranchData, ControlFlowErr> {
         use ast::*;
         
         let mut previous = None;
@@ -516,8 +516,6 @@ mod tests {
     use petgraph::dot::{Dot, Config};
     use petgraph::Direction;
     use smpl_type::*;
-    use std::mem;
-    use std::rc::Rc;
 
     use semantic_ck::Universe;
 
@@ -595,7 +593,7 @@ int b = 3;
             }
 
             let end = exit_neighbors.next().unwrap();
-            let mut end_neighbors = neighbors!(cfg, end);
+            let end_neighbors = neighbors!(cfg, end);
             assert_eq!(end_neighbors.count(), 0);
             match *node_w!(cfg, end) {
                 Node::End => (),
@@ -708,7 +706,6 @@ if (test) {
             }
 
             let merge = merge.unwrap();
-            let mut merge_neighbors = neighbors!(cfg, merge);
 
             let return_n = cfg.graph.neighbors(merge).next().unwrap();
             let mut return_neighbors = neighbors!(cfg, return_n);
@@ -725,7 +722,7 @@ if (test) {
             }
 
             let end = exit_neighbors.next().unwrap();
-            let mut end_neighbors = neighbors!(cfg, end);
+            let end_neighbors = neighbors!(cfg, end);
             match *node_w!(cfg, end) {
                 Node::End => {
                     assert_eq!(end_neighbors.count(), 0);
@@ -941,7 +938,7 @@ let input =
             ref n @ _ => panic!("Expected condition node. Found {:?}", n),
         }        
         
-        let mut condition_edges = edges!(cfg, condition);
+        let condition_edges = edges!(cfg, condition);
         assert_eq!(condition_edges.clone().count(), 2);
 
         let mut truth_target = None;

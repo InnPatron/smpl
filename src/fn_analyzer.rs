@@ -432,10 +432,9 @@ fn walk_field_access(universe: &Universe, root_type_id: TypeId, full_path: ast::
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use super::*;
     use ast::*;
-    use parser::*;
-    use smpl_type::*;
     use semantic_ck::*;
     use ascii::*;
     use std::str::FromStr;
