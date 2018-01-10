@@ -54,8 +54,8 @@ struct TestStruct {
             let input = "1+2";
             let e = parse_MathExpr(input).unwrap();
             let root = {
-                let _1 = number!("1" => BoxExpr);
-                let _2 = number!("2" => BoxExpr);
+                let _1 = int!(1 => BoxExpr);
+                let _2 = int!(2 => BoxExpr);
 
                 let parent = bin_expr!((_1, BinOp::Add, _2) => Expr);
                 parent
@@ -69,9 +69,9 @@ struct TestStruct {
             let input = "1 + 2 * 5";
             let e = parse_MathExpr(input).unwrap();
             let root = {
-                let _1 = number!("1" => BoxExpr);
-                let _2 = number!("2" => BoxExpr);
-                let _5 = number!("5" => BoxExpr);
+                let _1 = int!(1 => BoxExpr);
+                let _2 = int!(2 => BoxExpr);
+                let _5 = int!(5 => BoxExpr);
                 let child = bin_expr!((_2, BinOp::Mul, _5) => BoxExpr);
 
                 let parent = bin_expr!((_1, BinOp::Add, child) => Expr);
@@ -84,9 +84,9 @@ struct TestStruct {
             let input = "5 * (1 + 2)";
             let e = parse_MathExpr(input).unwrap();
             let root = {
-                let _1 = number!("1" => BoxExpr);
-                let _2 = number!("2" => BoxExpr);
-                let _5 = number!("5" => BoxExpr);
+                let _1 = int!(1 => BoxExpr);
+                let _2 = int!(2 => BoxExpr);
+                let _5 = int!(5 => BoxExpr);
                 let child = bin_expr!((_1, BinOp::Add, _2) => BoxExpr);
 
                 let parent = bin_expr!((_5, BinOp::Mul, child) => Expr);
@@ -101,10 +101,10 @@ struct TestStruct {
             let e = parse_MathExpr(input).unwrap();
 
             let root = {
-                let _5 = number!("5" => BoxExpr);
-                let _10 = number!("10" => BoxExpr);
-                let _321 = number!("321" => BoxExpr);
-                let _8 = number!("8" => BoxExpr);
+                let _5 = int!(5 => BoxExpr);
+                let _10 = int!(10 => BoxExpr);
+                let _321 = int!(321 => BoxExpr);
+                let _8 = int!(8 => BoxExpr);
 
                 let lhs_child = bin_expr!((_5.clone(), BinOp::Mod, _5) => BoxExpr);
                 let lhs_child = bin_expr!((lhs_child, BinOp::Mul, _10) => BoxExpr);
@@ -141,11 +141,11 @@ struct TestStruct {
             let e = parse_CmpExpr(input).unwrap();
 
             let root = {
-                let _1 = number!("1" => BoxExpr);
-                let _2 = number!("2" => BoxExpr);
-                let _3 = number!("3" => BoxExpr);
-                let _4 = number!("4" => BoxExpr);
-                let _5 = number!("5" => BoxExpr);
+                let _1 = int!(1 => BoxExpr);
+                let _2 = int!(2 => BoxExpr);
+                let _3 = int!(3 => BoxExpr);
+                let _4 = int!(4 => BoxExpr);
+                let _5 = int!(5 => BoxExpr);
 
                 let lhs_child = bin_expr!((_1, BinOp::Add, _5) => BoxExpr);
                 let lhs_child = bin_expr!((lhs_child, BinOp::Eq, _2) => BoxExpr);
@@ -163,12 +163,12 @@ struct TestStruct {
             let e = parse_CmpExpr(input).unwrap();
 
             let root = {
-                let _1 = number!("1" => BoxExpr);
-                let _2 = number!("2" => BoxExpr);
-                let _3 = number!("3" => BoxExpr);
-                let _4 = number!("4" => BoxExpr);
-                let _5 = number!("5" => BoxExpr);
-                let _6 = number!("6" => BoxExpr);
+                let _1 = int!(1 => BoxExpr);
+                let _2 = int!(2 => BoxExpr);
+                let _3 = int!(3 => BoxExpr);
+                let _4 = int!(4 => BoxExpr);
+                let _5 = int!(5 => BoxExpr);
+                let _6 = int!(6 => BoxExpr);
 
                 let lhs_child = bin_expr!((_1, BinOp::Add, _5) => BoxExpr);
                 let lhs_child = bin_expr!((lhs_child, BinOp::Mul, _6) => BoxExpr);
