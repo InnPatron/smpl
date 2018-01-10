@@ -366,8 +366,8 @@ UniOp: UniOp = {
 };
 
 /// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "\"" [.] "\""
-Literal: Literal = {
-	<number: r"[0-9]+[.[0-9]+]?"> => {
+pub Literal: Literal = {
+	<number: r"[0-9]+[.[0-9]*]?"> => {
 		if number.contains(".") {
 			Literal::Float(number.parse::<f64>().unwrap())
 		} else {

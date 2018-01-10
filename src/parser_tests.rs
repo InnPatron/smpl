@@ -6,6 +6,30 @@ mod parser_tests {
     use ast::*;
 
     #[test]
+    fn test_parse_numbers() {
+        let input = "21";
+        let literal = parse_Literal(input).unwrap();
+        match literal {
+            Literal::Int(int) => assert_eq!(int, 21),
+            _ => panic!(),
+        }
+
+        let input = "21.0";
+        let literal = parse_Literal(input).unwrap();
+        match literal {
+            Literal::Float(float) => assert_eq!(float, 21.0),
+            _ => panic!(),
+        }
+
+        let input = "21.";
+        let literal = parse_Literal(input).unwrap();
+        match literal {
+            Literal::Float(float) => assert_eq!(float, 21.0),
+            _ => panic!(),
+        }
+    }
+
+    #[test]
     fn test_parse_local_var_decl() {
         let input = "int a = 10;";
         let stmt = parse_ExprStmt(input).unwrap();
