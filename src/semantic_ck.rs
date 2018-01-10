@@ -68,7 +68,7 @@ pub fn check(mut program: AstProgram) -> Result<Program, Err> {
 
                 if name == path!("main") {
                     if main.is_some() {
-                        unimplemented!("Multiple main functions!");
+                        return Err(Err::MultipleMainFns);
                     } else {
                         main = Some(fn_id);
                     }
