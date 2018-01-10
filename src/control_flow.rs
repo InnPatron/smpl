@@ -281,20 +281,6 @@ impl CFG {
     }
 
     ///
-    /// Get the branch heads of the branches of a conditional node in the format (TRUE, FALSE). If
-    /// the given node is not Node::Conditional, return an error.
-    ///
-    pub fn get_branches(&self, id: graph::NodeIndex) -> Result<(graph::NodeIndex, graph::NodeIndex), ()> {
-        match *self.graph.node_weight(id).unwrap() {
-            Node::Condition(_) => {
-                unimplemented!()
-            }
-
-            _ => Err(()),
-        }
-    }
-
-    ///
     /// Generate the control flow graph.
     /// Only performs continue/break statement checking (necessary for CFG generation).
     ///
