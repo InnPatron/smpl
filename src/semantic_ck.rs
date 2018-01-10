@@ -8,15 +8,38 @@ use std::fmt::Debug;
 
 use ascii::*;
 
-use control_flow::Err as ControlFlowErr;
+use err::Err;
 use control_flow::CFG;
+use fn_analyzer::analyze_fn;
 use smpl_type::*;
 use ast::*;
-use ast::Function as AstFunction;
+use ast::{Function as AstFunction, Program as AstProgram};
 
-pub fn check(mut program: Program) -> Result<(), Err> {
+pub struct Program {
+    universe: Universe,
+    global_scope: ScopedData,
+    main: Option<FnId>,
+}
+
+impl Program {
+    pub fn universe(&self) -> &Universe {
+        &self.universe
+    }
+
+    pub fn global_scope(&self) -> &ScopedData {
+        &self.global_scope
+    }
+
+    pub fn main(&self) -> Option<FnId> {
+        self.main
+    }
+}
+
+pub fn check(mut program: AstProgram) -> Result<Program, Err> {
     let mut universe = Universe::std();
     let mut global_scope = universe.std_scope.clone();
+
+    let mut main = None;
 
     for decl_stmt in program.0.into_iter() {
         match decl_stmt {
@@ -29,31 +52,48 @@ pub fn check(mut program: Program) -> Result<(), Err> {
             },
 
             DeclStmt::Function(fn_def) => {
-                let name = fn_def.name.clone().into();
+                let name: Path = fn_def.name.clone().into();
 
                 let type_id = universe.new_type_id();
 
                 let fn_type = generate_fn_type(&global_scope, &universe, &fn_def)?;
                 let cfg = CFG::generate(&universe, fn_def, &fn_type)?;
 
-                let fn_id = universe.insert_fn(type_id, fn_type, cfg);
-                global_scope.insert_fn(name, fn_id);
+                let fn_id = universe.new_fn_id();
+                universe.insert_fn(fn_id, type_id, fn_type, cfg);
+                global_scope.insert_fn(name.clone(), fn_id);
+
+                let func = universe.get_fn(fn_id);
+                analyze_fn(&universe, &global_scope, func.cfg(), fn_id)?;
+
+                if name == path!("main") {
+                    if main.is_some() {
+                        return Err(Err::MultipleMainFns);
+                    } else {
+                        main = Some(fn_id);
+                    }
+                }
             },
         }
     }
-    Ok(())
+    
+    Ok( Program {
+        universe: universe,
+        global_scope: global_scope,
+        main: main,
+    })
 }
 
 fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunction) -> Result<FunctionType, Err> {
     let ret_type = match fn_def.return_type {
-        Some(ref path) => scope.get_type(universe, path)?,
-        None => Rc::new(SmplType::Unit),
+        Some(ref path) => scope.type_id(path)?,
+        None => universe.unit(),
     };
 
     let args: Vec<_> = match fn_def.args {
         Some(ref args) => args.iter()
-                              .map(|ref fn_param| scope.get_type(universe, &fn_param.arg_type))
-                              .collect::<Result<Vec<Rc<SmplType>>, Err>>()?,
+                              .map(|ref fn_param| scope.type_id(&fn_param.arg_type))
+                              .collect::<Result<Vec<_>, Err>>()?,
 
         None => Vec::new(),
     };
@@ -70,7 +110,8 @@ fn generate_struct_type(scope: &ScopedData, universe: &Universe, struct_def: Str
     if let Some(body) = struct_def.body.0 {
         for field in body.into_iter() {
             let f_name = field.name;
-            let field_type = scope.get_type(universe, &f_name.clone().into())?.clone();
+            let f_type_path = field.field_type;
+            let field_type = scope.type_id(&f_type_path)?;
             fields.insert(f_name, field_type);
         }
     } 
@@ -81,19 +122,6 @@ fn generate_struct_type(scope: &ScopedData, universe: &Universe, struct_def: Str
     };
 
     Ok(struct_t)
-}
-
-#[derive(Clone, Debug)]
-pub enum Err {
-    ControlFlowErr(ControlFlowErr),
-    UnknownType(Path),
-    UnknownVar(Ident),
-}
-
-impl From<ControlFlowErr> for Err {
-    fn from(err: ControlFlowErr) -> Err {
-        Err::ControlFlowErr(err)
-    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -132,10 +160,29 @@ impl ::std::fmt::Display for TmpId {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct LoopId(u64);
+
+impl ::std::fmt::Display for LoopId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "LoopId[{}]", self.0)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Function {
     fn_type: TypeId,
     cfg: CFG,
+}
+
+impl Function {
+    pub fn type_id(&self) -> TypeId {
+        self.fn_type
+    }
+
+    pub fn cfg(&self) -> &CFG {
+        &self.cfg
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -175,8 +222,8 @@ impl Universe {
             id_counter: Cell::new(5),
             std_scope: ScopedData {
                 type_map: type_map.into_iter().map(|(id, path, _)| (path, id)).collect(),
-                vars: HashMap::new(),
                 var_map: HashMap::new(),
+                var_type_map: HashMap::new(),
                 fn_map: HashMap::new(),
             },
             unit: unit.0,
@@ -185,6 +232,10 @@ impl Universe {
             string: string.0,
             boolean: boolean.0,
         }
+    }
+
+    pub fn std_scope(&self) -> ScopedData {
+        self.std_scope.clone()
     }
 
     pub fn unit(&self) -> TypeId {
@@ -207,8 +258,7 @@ impl Universe {
         self.boolean
     }
 
-    fn insert_fn(&mut self, type_id: TypeId, fn_t: FunctionType, cfg: CFG) -> FnId {
-        let fn_id = self.new_fn_id();
+    pub fn insert_fn(&mut self, fn_id: FnId, type_id: TypeId, fn_t: FunctionType, cfg: CFG) {
         self.insert_type(type_id, SmplType::Function(fn_t));
 
         let function = Function {
@@ -219,21 +269,23 @@ impl Universe {
         if self.fn_map.insert(fn_id, function).is_some() {
             panic!("Attempting to override Function with FnId {} in the Universe", fn_id.0);
         }
-
-        fn_id
     }
 
-    fn insert_type(&mut self, id: TypeId, t: SmplType) {
+    pub fn insert_type(&mut self, id: TypeId, t: SmplType) {
         if self.types.insert(id, Rc::new(t)).is_some() {
             panic!("Attempting to override type with TypeId {} in the Universe", id.0);
         }
     }
 
-    fn get_type(&self, id: &TypeId) -> Rc<SmplType> {
-        match self.types.get(id).map(|t| t.clone()) {
+    pub fn get_type(&self, id: TypeId) -> Rc<SmplType> {
+        match self.types.get(&id).map(|t| t.clone()) {
             Some(t) => t,
             None => panic!("Type with TypeId {} does not exist.", id.0),
         }
+    }
+
+    pub fn get_fn(&self, id: FnId) -> &Function {
+        self.fn_map.get(&id).unwrap()
     }
 
     fn inc_counter(&self) -> u64 {
@@ -259,45 +311,106 @@ impl Universe {
     pub fn new_tmp_id(&self) -> TmpId {
         TmpId(self.inc_counter())
     }
+
+    pub fn new_loop_id(&self) -> LoopId {
+        LoopId(self.inc_counter())
+    }
 }
 
 #[derive(Clone, Debug)]
-struct ScopedData {
+pub struct ScopedData {
     type_map: HashMap<Path, TypeId>,
-    vars: HashMap<Ident, VarId>,
-    var_map: HashMap<VarId, Rc<SmplType>>,
+    var_map: HashMap<Ident, VarId>,
+    var_type_map: HashMap<VarId, TypeId>,
     fn_map: HashMap<Path, FnId>,
 }
 
 impl ScopedData {
 
-    fn insert_fn(&mut self, name: Path, fn_id: FnId) {
+    pub fn insert_fn(&mut self, name: Path, fn_id: FnId) {
         // TODO: Fn name override behaviour?
         self.fn_map.insert(name, fn_id);
     }
 
-    fn get_type(&self, universe: &Universe, path: &Path) -> Result<Rc<SmplType>, Err> {
+    pub fn type_id(&self, path: &Path) -> Result<TypeId, Err> {
+        self.type_map.get(path)
+            .map(|id| id.clone())
+            .ok_or(Err::UnknownType(path.clone()))
+    }
+
+    pub fn get_type(&self, universe: &Universe, path: &Path) -> Result<Rc<SmplType>, Err> {
         let id = self.type_map.get(path).ok_or(Err::UnknownType(path.clone()))?;
         let t = universe.types.get(id).expect(&format!("Missing TypeId: {}. All TypeId's should be valid if retrieven from ScopedData.type_map", id.0));
         Ok(t.clone())
     }
 
-    fn insert_type(&mut self, path: Path, id: TypeId) -> Option<TypeId> {
+    pub fn insert_type(&mut self, path: Path, id: TypeId) -> Option<TypeId> {
         self.type_map.insert(path, id)
     }
 
-    fn get_var(&self, name: &Ident) -> Result<Rc<SmplType>, Err> {
-        let id = self.vars.get(name).ok_or(Err::UnknownVar(name.clone()))?;
-        let var_t = self.var_map.get(id).expect(&format!("Missing VarId: {}. All VarId's should be valid if retrieven from ScopedData.vars", id.0));
-        Ok(var_t.clone())
+    pub fn var_info(&self, name: &Ident) -> Result<(VarId, TypeId), Err> {
+        let var_id = self.var_map.get(name)
+                         .ok_or(Err::UnknownVar(name.clone()))?
+                         .clone();
+        let type_id = self.var_type_map
+                          .get(&var_id)
+                          .unwrap()
+                          .clone();
+
+        Ok((var_id, type_id))
     }
 
-    fn insert_var(&mut self, universe: &Universe, name: Ident, var_type: SmplType) {
-        let id = universe.new_var_id();
-        self.vars.insert(name, id);
-        if self.var_map.insert(id, Rc::new(var_type)).is_some() {
-            panic!("Attempted to override VarId [{}]. All VarId's should be unique", id.0);
+    pub fn insert_var(&mut self, name: Ident, id: VarId, type_id: TypeId) {
+        self.var_map.insert(name, id);
+
+        if self.var_type_map.insert(id, type_id).is_some() {
+            panic!("Attempting to override variable {} with a different type. Shadowing should produce a new variable id.", id);
         }
     }
 
+    pub fn get_fn(&self, path: &Path) -> Result<FnId, Err> {
+        self.fn_map.get(path)
+                   .map(|id| id.clone())
+                   .ok_or(Err::UnknownFn(path.clone()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use parser::*;
+
+    #[test]
+    fn basic_test_semantic_analysis() {
+        let program =
+"struct Test {
+    field_1: i32,
+    field_2: float,
+    field_3: String,
+    field_4: bool
+}
+
+fn main() {
+    bool truthy = true;
+    if true {
+        truthy = false;
+    } else {
+        truthy = true;
+    }
+}
+";
+        let program = parse_Program(program).unwrap();
+        let program = check(program).unwrap();
+
+        let universe = program.universe();
+
+        let main = universe.get_fn(program.main().unwrap());
+        let main_type = universe.get_type(main.type_id());
+        if let SmplType::Function(ref fn_type) = *main_type {
+            assert_eq!(SmplType::Unit, *universe.get_type(fn_type.return_type));
+        } else {
+            panic!("main()'s TypeId was not mapped to a SmplType::Function");
+        }
+
+    }
 }

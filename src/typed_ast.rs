@@ -10,7 +10,7 @@ use semantic_ck::*;
 use expr_flow;
 use smpl_type::{ SmplType, FunctionType };
 use ast;
-use ascii::AsciiString;
+use ascii::{AsciiString, AsciiStr};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
@@ -71,6 +71,14 @@ impl Assignment {
         }
     }
 
+    pub fn name(&self) -> &ast::Path {
+        &self.name
+    }
+
+    pub fn value(&self) -> &self::Expr {
+        &self.value
+    }
+
     pub fn set_type_id(&self, id: TypeId) {
         if self.type_id.get().is_some() {
             panic!("Attempting to override {} for local variable declarration {:?}", id, self);
@@ -116,6 +124,14 @@ impl LocalVarDecl {
         }
     }
 
+    pub fn type_path(&self) -> &ast::Path {
+        &self.var_type
+    }
+
+    pub fn var_name(&self) -> &ast::Ident {
+        &self.var_name
+    }
+
     pub fn set_type_id(&self, id: TypeId) {
         if self.type_id.get().is_some() {
             panic!("Attempting to override {} for local variable declarration {:?}", id, self);
@@ -130,6 +146,10 @@ impl LocalVarDecl {
 
     pub fn var_id(&self) -> VarId {
         self.var_id
+    }
+
+    pub fn init_expr(&self) -> &self::Expr {
+        &self.var_init
     }
 }
 
@@ -195,24 +215,28 @@ impl Tmp {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Literal(ast::Literal),
-    Ident(self::Ident),
+    Variable(self::Variable),
     FnCall(self::FnCall),
     BinExpr(ast::BinOp, Typed<TmpId>, Typed<TmpId>),
     UniExpr(ast::UniOp, Typed<TmpId>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Ident {
-    ident: AsciiString,
+pub struct Variable {
+    ident: ast::Ident,
     var_id: Cell<Option<VarId>>,
 }
 
-impl Ident {
-    pub fn new(ident: ast::Ident) -> Ident {
-        Ident {
-            ident: ident.0,
+impl Variable {
+    pub fn new(ident: ast::Ident) -> Variable {
+        Variable {
+            ident: ident,
             var_id: Cell::new(None),
         }
+    }
+
+    pub fn ident(&self) -> &ast::Ident {
+        &self.ident
     }
 
     pub fn set_id(&self, id: VarId) {
@@ -230,7 +254,7 @@ impl Ident {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnCall {
-    name: AsciiString,
+    name: ast::Ident,
     args: Option<Vec<Typed<TmpId>>>,
     fn_id: Cell<Option<FnId>>,
 }
@@ -238,10 +262,18 @@ pub struct FnCall {
 impl FnCall {
     pub fn new(name: ast::Ident, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
         FnCall {
-            name: name.0,
+            name: name,
             args: args,
             fn_id: Cell::new(None),
         }
+    }
+
+    pub fn name(&self) -> &ast::Ident {
+        &self.name
+    }
+
+    pub fn args(&self) -> Option<&Vec<Typed<TmpId>>> {
+        self.args.as_ref()
     }
 
     pub fn set_id(&self, id: FnId) {

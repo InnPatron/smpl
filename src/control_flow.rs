@@ -3,33 +3,24 @@ use std::cell::Cell;
 
 use petgraph;
 use petgraph::graph;
+use petgraph::Direction;
 use petgraph::visit::EdgeRef;
 use typed_ast;
 use ast;
 use expr_flow;
-use semantic_ck::{Universe, TypeId};
+use err::ControlFlowErr;
+use semantic_ck::{Universe, TypeId, LoopId};
 use smpl_type::{ SmplType, FunctionType };
 
-macro_rules! append_branch {
+macro_rules! node_w {
+    ($CFG: expr, $node: expr) => {
+        $CFG.graph().node_weight($node).unwrap()
+    }
+}
 
-    ($CFG: expr, $head: expr, $previous: expr, $branch: expr, $edge: expr) => {
-        match $head {
-            None => {
-                $head = $branch.head;
-            }
-
-            Some(head) => {
-                if let Some(b_head) = $branch.head {
-                    $CFG.graph.add_edge(head, b_head, $edge);
-                }
-            }
-        }
-
-        match $branch.foot {
-            Some(foot) => $previous = Some(foot),
-
-            None => $previous = $head,
-        }
+macro_rules! neighbors {
+    ($CFG: expr, $node: expr) => {
+        $CFG.graph().neighbors_directed($node, Direction::Outgoing)
     }
 }
 
@@ -85,20 +76,22 @@ pub enum Node {
     End,
 
     Expr(typed_ast::Expr),
-
-    BranchSplit,
+    
     BranchMerge,
 
     Assignment(typed_ast::Assignment),
     LocalVarDecl(typed_ast::LocalVarDecl),
     Condition(typed_ast::Expr),
 
-    LoopHead,
-    LoopFoot,
+    LoopHead(LoopId),
+    LoopFoot(LoopId),
+
+    EnterScope,
+    ExitScope,
 
     Return(Option<typed_ast::Expr>),
-    Break,
-    Continue,
+    Break(LoopId),
+    Continue(LoopId),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -109,13 +102,6 @@ pub enum Edge {
     BackEdge,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Err {
-    MissingReturn,
-    BadBreak,
-    BadContinue,
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct BranchData {
     head: Option<graph::NodeIndex>,
@@ -124,11 +110,181 @@ struct BranchData {
 
 impl CFG {
 
+    pub fn graph(&self) -> &graph::Graph<Node, Edge> {
+        &self.graph
+    }
+
+    pub fn after_loop_foot(&self, id: graph::NodeIndex) -> graph::NodeIndex {
+
+        match *node_w!(self, id) {
+            Node::LoopFoot(_) => (),
+            _ => panic!("Should only be given a Node::LoopFoot"),
+        }
+
+        let neighbors = neighbors!(self, id);
+        let neighbor_count = neighbors.clone().count();
+        
+        if neighbor_count != 2 {
+            panic!("Loop foot should always be pointing to LoopHead and the next Node. Need two directed neighbors, found {}", neighbor_count);
+        }
+         
+        for n in neighbors {
+            match *node_w!(self, n) {
+                Node::LoopHead(_) => (),
+                _ => return n,
+            }
+        }
+        unreachable!();
+    }
+
+    ///
+    /// Returns (TRUE, FALSE) branch heads.
+    ///
+    pub fn after_condition(&self, id: graph::NodeIndex) -> (graph::NodeIndex, graph::NodeIndex) {
+
+        match *node_w!(self, id) {
+            Node::Condition(_) => (),
+            _ => panic!("Should only be given a Node::Condition"),
+        }
+
+        let edges = self.graph.edges_directed(id, Direction::Outgoing);
+        assert_eq!(edges.clone().count(), 2);
+         
+        let mut true_branch = None;
+        let mut false_branch = None;
+        for e in edges {
+            match *e.weight() {
+                Edge::True => true_branch = Some(e.target()),
+                Edge::False => false_branch = Some(e.target()),
+                ref e @ _ => panic!("Unexpected edge {:?} coming out of a condition node.", e),
+            }
+        }
+
+        (true_branch.unwrap(), false_branch.unwrap())
+    }
+
+    pub fn after_return(&self, id: graph::NodeIndex) -> graph::NodeIndex {
+
+        match *node_w!(self, id) {
+            Node::Return(_) => (),
+            _ => panic!("Should only be given a Node::Return"),
+        }
+
+        let mut neighbors = neighbors!(self, id);
+        let neighbor_count = neighbors.clone().count();
+         
+        if neighbor_count == 2 {
+            let mut found_first_end = false;
+            for n in neighbors {
+                match *node_w!(self, n) {
+                    Node::End => {
+                        if found_first_end {
+                            return n;
+                        } else {
+                            found_first_end = true;
+                        }
+                    },
+                    _ => return n,
+                }
+            }
+        } else if neighbor_count == 1 {
+            return neighbors.next().unwrap();
+        } else {
+            panic!("Node::Return points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
+        }
+
+        unreachable!();
+    }
+
+    pub fn after_continue(&self, id: graph::NodeIndex) -> graph::NodeIndex {
+
+        match *node_w!(self, id) {
+            Node::Continue(_) => (),
+            _ => panic!("Should only be given a Node::Continue"),
+        }
+
+        let mut neighbors = neighbors!(self, id);
+        let neighbor_count = neighbors.clone().count();
+
+        if neighbor_count == 2 {
+            let mut found_first = false;
+            for n in neighbors {
+                match *node_w!(self, n) {
+                    Node::LoopHead(_) => {
+                        if found_first {    
+                            return n;
+                        } else {
+                            found_first = true;
+                        }
+                    }
+                    _ => return n,
+                }
+            }
+        } else if neighbor_count == 1 {
+            return neighbors.next().unwrap();
+        } else {
+            panic!("Node::Continue points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
+        }
+        
+        unreachable!();
+    }
+
+    pub fn after_break(&self, id: graph::NodeIndex) -> graph::NodeIndex {
+
+        match *node_w!(self, id) {
+            Node::Break(_) => (),
+            _ => panic!("Should only be given a Node::Break"),
+        }
+
+        let neighbors = neighbors!(self, id);
+        let neighbor_count = neighbors.clone().count();
+        
+        if neighbor_count == 2 {
+            let mut found_first = false;
+            for n in neighbors {
+                match *node_w!(self, n) {
+                    Node::LoopFoot(_) => {
+                        if found_first {
+                            return n;
+                        } else {
+                            found_first = true;
+                        }
+                    }
+                    _ => return n,
+                }
+            }
+        } else if neighbor_count == 1 {
+
+        } else {
+            panic!("Node::Continue points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
+        }
+
+        unreachable!();
+    }
+
+    pub fn after_start(&self) -> graph::NodeIndex {
+        self.next(self.start)
+    }
+
+    ///
+    /// Convenience function to get the next node in a linear sequence. If the current node has
+    /// multiple outgoing edge (such as Node::Condition, Node::Return, Node::Break, and
+    /// Node::Continue) or none (Node::End), return an error.
+    ///
+    pub fn next(&self, id: graph::NodeIndex) -> graph::NodeIndex {
+        let mut neighbors = self.graph.neighbors_directed(id, Direction::Outgoing);
+        if neighbors.clone().count() != 1 {
+            panic!("CFG::next() only works when a Node has 1 neighbor");
+        } else {
+            neighbors.next().unwrap()
+        }
+    }
+
     ///
     /// Generate the control flow graph.
     /// Only performs continue/break statement checking (necessary for CFG generation).
     ///
-    pub fn generate(universe: &Universe, fn_def: ast::Function, fn_type: &FunctionType) -> Result<Self, Err> {
+    pub fn generate(universe: &Universe, fn_def: ast::Function, fn_type: &FunctionType) -> Result<Self, ControlFlowErr> {
 
         let mut cfg = {
             let mut graph = graph::Graph::new();
@@ -145,20 +301,25 @@ impl CFG {
         // Start with Node::Start
         let mut previous = Some(cfg.start);
         let mut head = previous; 
+
+        append_node!(cfg, head, previous, Node::EnterScope);
         
         let instructions = fn_def.body.0;
         let fn_graph = CFG::get_branch(universe, &mut cfg, instructions, None)?;
 
         // Append the function body.
-        append_branch!(cfg, head, previous, fn_graph, Edge::Normal);
+        if let Some(branch_head) = fn_graph.head {
+            cfg.graph.add_edge(previous.unwrap(), branch_head, Edge::Normal);
+            previous = Some(fn_graph.foot.unwrap());
+        }
         
 
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
-        if *fn_type.return_type == SmplType::Unit {
+        if *universe.get_type(fn_type.return_type)== SmplType::Unit {
             append_node!(cfg, head, previous, Node::Return(None));
         }
 
-        // Connect the last node to the Node::End
+        append_node!(cfg, head, previous, Node::ExitScope);
         append_node_index!(cfg, head, previous, cfg.end);
 
         Ok(cfg)
@@ -167,7 +328,7 @@ impl CFG {
     /// 
     /// Returns the first and the last node in a code branch.
     /// 
-    fn get_branch(universe: &Universe, cfg: &mut CFG, instructions: Vec<ast::Stmt>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex)>) -> Result<BranchData, Err> {
+    fn get_branch(universe: &Universe, cfg: &mut CFG, instructions: Vec<ast::Stmt>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex, LoopId)>) -> Result<BranchData, ControlFlowErr> {
         use ast::*;
         use typed_ast::Expr as ExprFlow;
         
@@ -181,10 +342,6 @@ impl CFG {
 
                     // All if statements begin and and with Node::BranchSplit and Node::BranchMerge
                     ExprStmt::If(if_data) => {
-
-                        // Any potential branching starst off with at a Node::BranchSplit
-                        let split_node = cfg.graph.add_node(Node::BranchSplit);
-                        append_node_index!(cfg, head, previous, split_node);
 
                         // All branches come back together at a Node::BranchMerge
                         let merge_node = cfg.graph.add_node(Node::BranchMerge);
@@ -212,8 +369,13 @@ impl CFG {
                             // Append the condition node
                             append_node_index!(cfg, head, previous, condition_node, edge);
                             if let Some(branch_head) = branch_graph.head {
-                                cfg.graph.add_edge(condition_node, branch_head, Edge::True);
-                                cfg.graph.add_edge(branch_graph.foot.unwrap(), merge_node, Edge::Normal);
+                                let scope_enter = cfg.graph.add_node(Node::EnterScope);
+                                let scope_exit = cfg.graph.add_node(Node::ExitScope);
+
+                                cfg.graph.add_edge(condition_node, scope_enter, Edge::True);
+                                cfg.graph.add_edge(scope_enter, branch_head, Edge::Normal);
+                                cfg.graph.add_edge(branch_graph.foot.unwrap(), scope_exit, Edge::Normal);
+                                cfg.graph.add_edge(scope_exit, merge_node, Edge::Normal);
                             } else {
                                 cfg.graph.add_edge(condition_node, merge_node, Edge::True);
                             }
@@ -233,8 +395,13 @@ impl CFG {
                             let branch_graph = CFG::get_branch(universe, cfg, instructions, loop_data)?;
 
                             if let Some(branch_head) = branch_graph.head {
-                                cfg.graph.add_edge(previous.unwrap(), branch_head, Edge::False);
-                                cfg.graph.add_edge(branch_graph.foot.unwrap(), merge_node, Edge::Normal);
+                                let scope_enter = cfg.graph.add_node(Node::EnterScope);
+                                let scope_exit = cfg.graph.add_node(Node::ExitScope);
+
+                                cfg.graph.add_edge(previous.unwrap(), scope_enter, Edge::False);
+                                cfg.graph.add_edge(scope_enter, branch_head, Edge::Normal);
+                                cfg.graph.add_edge(branch_graph.foot.unwrap(), scope_exit, Edge::Normal);
+                                cfg.graph.add_edge(scope_exit, merge_node, Edge::Normal);
                             } else {
                                 cfg.graph.add_edge(previous.unwrap(), merge_node, Edge::False);
                             }
@@ -254,15 +421,16 @@ impl CFG {
 
                     // All loops being and end with Node::LoopHead and Node::LoopFoot
                     ExprStmt::While(while_data) => {
-                        let loop_head = cfg.graph.add_node(Node::LoopHead);
-                        let loop_foot = cfg.graph.add_node(Node::LoopFoot);
+                        let loop_id = universe.new_loop_id();
+                        let loop_head = cfg.graph.add_node(Node::LoopHead(loop_id));
+                        let loop_foot = cfg.graph.add_node(Node::LoopFoot(loop_id));
 
                         cfg.graph.add_edge(loop_foot, loop_head, Edge::BackEdge);
 
                         append_node_index!(cfg, head, previous, loop_head);
 
                         let instructions = while_data.block.0;
-                        let loop_body = CFG::get_branch(universe, cfg, instructions, Some((loop_head, loop_foot)))?;
+                        let loop_body = CFG::get_branch(universe, cfg, instructions, Some((loop_head, loop_foot, loop_id)))?;
                         let condition = {
                             let expr = expr_flow::flatten(universe, while_data.conditional);
                             cfg.graph.add_node(Node::Condition(expr))
@@ -271,7 +439,14 @@ impl CFG {
                         append_node_index!(cfg, head, previous, condition);
 
                         if let Some(branch_head) = loop_body.head {
-                            cfg.graph.add_edge(condition, branch_head, Edge::True);
+                            let scope_enter = cfg.graph.add_node(Node::EnterScope);
+                            let scope_exit = cfg.graph.add_node(Node::ExitScope);
+
+                            cfg.graph.add_edge(condition, scope_enter, Edge::True);
+                            cfg.graph.add_edge(scope_enter, branch_head, Edge::Normal);
+                            cfg.graph.add_edge(loop_body.foot.unwrap(), scope_exit, Edge::Normal);
+                            cfg.graph.add_edge(scope_exit, loop_foot, Edge::Normal);
+
                             cfg.graph.add_edge(condition, loop_foot, Edge::False);
                         } else {
                             cfg.graph.add_edge(condition, loop_foot, Edge::True);
@@ -282,28 +457,28 @@ impl CFG {
                     }
 
                     ExprStmt::Break => {
-                        let break_id = cfg.graph.add_node(Node::Break);
-                        append_node_index!(cfg, head, previous, break_id);
-                        
-                        if let Some((_, foot)) = loop_data {
+                        if let Some((_, foot, loop_id)) = loop_data {
+                            let break_id = cfg.graph.add_node(Node::Break(loop_id));
+                            append_node_index!(cfg, head, previous, break_id);
+
                             // Add an edge to the foot of the loop.
                             cfg.graph.add_edge(break_id, foot, Edge::Normal);
                         } else {
                             // Found a break statement not inside a loop.
-                            return Err(Err::BadBreak);
+                            return Err(ControlFlowErr::BadBreak);
                         }
                     }
 
-                    ExprStmt::Continue => {
-                        let continue_id = cfg.graph.add_node(Node::Continue);
-                        append_node_index!(cfg, head, previous, continue_id);
-                        
-                        if let Some((head, _)) = loop_data {
+                    ExprStmt::Continue => {                    
+                        if let Some((loop_head, _, loop_id)) = loop_data {
+                            let continue_id = cfg.graph.add_node(Node::Continue(loop_id));
+                            append_node_index!(cfg, head, previous, continue_id);
+
                             // Add a backedge to the head of the loop.
-                            cfg.graph.add_edge(continue_id, head, Edge::BackEdge);
+                            cfg.graph.add_edge(continue_id, loop_head, Edge::BackEdge);
                         } else {
                             // Found a continue statement not inside a loop.
-                            return Err(Err::BadContinue);
+                            return Err(ControlFlowErr::BadContinue);
                         }
                     }
 
@@ -349,12 +524,6 @@ mod tests {
 
     use semantic_ck::Universe;
 
-    macro_rules! neighbors {
-        ($CFG: expr, $node: expr) => {
-            $CFG.graph.neighbors_directed($node, Direction::Outgoing)
-        }
-    }
-
     macro_rules! edges {
         ($CFG: expr, $node: expr) => {
             $CFG.graph.edges_directed($node, Direction::Outgoing)
@@ -377,8 +546,8 @@ int b = 3;
 }";
         let universe = Universe::std();
         let fn_type = FunctionType {
-            args: vec![Rc::new(SmplType::Int)],
-            return_type: Rc::new(SmplType::Unit)
+            args: vec![universe.int()],
+            return_type: universe.unit()
         };
         let fn_def = parse_FnDecl(input).unwrap();
         let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
@@ -388,30 +557,52 @@ int b = 3;
         {
             assert_eq!(*cfg.graph.node_weight(cfg.start).unwrap(), Node::Start);
             assert_eq!(*cfg.graph.node_weight(cfg.end).unwrap(), Node::End);
-            // start -> var decl -> var decl -> implicit return -> end
-            assert_eq!(cfg.graph.node_count(), 5);
+            // start -> enter_scope -> var decl -> var decl -> implicit return -> exit_scope -> end
+            assert_eq!(cfg.graph.node_count(), 7);
 
-            let var_dec_1 = cfg.graph.neighbors(cfg.start).next().expect("Looking for node after start");
-            let var_dec_1_node = cfg.graph.node_weight(var_dec_1).unwrap();
+            let mut start_neighbors = neighbors!(cfg, cfg.start);
             
-            let var_dec_2 = cfg.graph.neighbors(var_dec_1).next().expect("Looking for node after the first var declaration");
-            let var_dec_2_node = cfg.graph.node_weight(var_dec_2).unwrap();
-            {
-                assert!({
-                    if let Node::LocalVarDecl(_) = *var_dec_1_node {
-                        true
-                    } else {
-                        false
-                    }
-                });
+            let enter = start_neighbors.next().unwrap();
+            let mut enter_neighbors = neighbors!(cfg, enter);
+            match *node_w!(cfg, enter) {
+                Node::EnterScope => (),
+                ref n @ _ => panic!("Expected to find Node::EnterScope. Found {:?}", n),
+            }
 
-                assert!({
-                    if let Node::LocalVarDecl(_) = *var_dec_2_node {
-                        true
-                    } else {
-                        false
-                    }
-                });
+            let var_decl_1 = enter_neighbors.next().unwrap();
+            let mut var_decl_1_neighbors = neighbors!(cfg, var_decl_1);
+            match *node_w!(cfg, var_decl_1) {
+                Node::LocalVarDecl(_) => (),
+                ref n @ _ => panic!("Expected to find Node::LocalVarDecl. Found {:?}", n),
+            }
+
+            let var_decl_2 = var_decl_1_neighbors.next().unwrap();
+            let mut var_decl_2_neighbors = neighbors!(cfg, var_decl_2);
+            match *node_w!(cfg, var_decl_2) {
+                Node::LocalVarDecl(_) => (),
+                ref n @ _ => panic!("Expected to find Node::LocalVarDecl. Found {:?}", n),
+            }
+
+            let ret = var_decl_2_neighbors.next().unwrap();
+            let mut ret_neighbors = neighbors!(cfg, ret);
+            match *node_w!(cfg, ret) {
+                Node::Return(_) => (),
+                ref n @ _ => panic!("Expected to find Node::Return. Found {:?}", n),
+            }
+
+            let exit = ret_neighbors.next().unwrap();
+            let mut exit_neighbors = neighbors!(cfg, exit);
+            match *node_w!(cfg, exit) {
+                Node::ExitScope => (),
+                ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
+            }
+
+            let end = exit_neighbors.next().unwrap();
+            let mut end_neighbors = neighbors!(cfg, end);
+            assert_eq!(end_neighbors.count(), 0);
+            match *node_w!(cfg, end) {
+                Node::End => (),
+                ref n @ _ => panic!("Expected to find Node::End. Found {:?}", n),
             }
         }
     }
@@ -427,8 +618,8 @@ if (test) {
 }";
         let universe = Universe::std();
         let fn_type = FunctionType {
-            args: vec![Rc::new(SmplType::Int)],
-            return_type: Rc::new(SmplType::Unit)
+            args: vec![universe.int()],
+            return_type: universe.unit(), 
         };
         let fn_def = parse_FnDecl(input).unwrap();
         let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
@@ -439,26 +630,28 @@ if (test) {
             assert_eq!(*cfg.graph.node_weight(cfg.start).unwrap(), Node::Start);
             assert_eq!(*cfg.graph.node_weight(cfg.end).unwrap(), Node::End);
 
-            // start -> branch_split -> condition 
+            // start -> enter_scope -> condition 
             //      -[true]> {
+            //          -> enter_scope
             //          -> var decl
+            //          -> exit_scope
             //      } ->        >>___ branch_merge ->
             //        -[false]> >>
-            //      implicit return -> end
-            assert_eq!(cfg.graph.node_count(), 7);
+            //      implicit return -> exit_scope -> end
+            assert_eq!(cfg.graph.node_count(), 10);
 
-            // Check split node
-            let split = cfg.graph.neighbors(cfg.start).next().expect("Looking for node after start");
-            let split_node = cfg.graph.node_weight(split).unwrap();
-            {
-                assert_eq!(mem::discriminant(split_node), mem::discriminant(&Node::BranchSplit));
-                let mut edges = cfg.graph.edges_directed(split, Direction::Outgoing);
-                assert_eq!(edges.clone().count(), 1);
+            let mut start_neighbors = neighbors!(cfg, cfg.start);
+
+            let enter = start_neighbors.next().unwrap();
+            let mut enter_neighbors = neighbors!(cfg, enter);
+            match *node_w!(cfg, enter) {
+                Node::EnterScope => (),
+                ref n @ _ => panic!("Expected to find Node::EnterScope. Found {:?}", n),
             }
 
             let mut merge = None;
             // Check condition node
-            let condition = cfg.graph.neighbors(split).next().expect("Looking for condition node");
+            let condition = enter_neighbors.next().expect("Looking for condition node");
             let condition_node = cfg.graph.node_weight(condition).unwrap();
             {
                 if let Node::Condition(_) = *condition_node {
@@ -474,12 +667,29 @@ if (test) {
 
                             let target = edge.target();
 
-                            let mut found_decl = false;
-                            if let Node::LocalVarDecl(_) = *cfg.graph.node_weight(target).unwrap() {
-                                found_decl = true;
-                            }
-                            assert!(found_decl);
+                            match *cfg.graph.node_weight(target).unwrap() {
+                                Node::EnterScope => {
+                                    let mut neighbors = cfg.graph.neighbors_directed(target, Direction::Outgoing);
+                                    let decl = neighbors.next().unwrap();
+                                    
+                                    match *cfg.graph.node_weight(decl).unwrap() {
+                                        Node::LocalVarDecl(_) => (),
+                                        ref n @ _ => panic!("Expected to find Node::LocalVarDecl. Found {:?}", n),
+                                    }
 
+                                    let mut neighbors = cfg.graph.neighbors_directed(decl, Direction::Outgoing);
+                                    let exit_scope = neighbors.next().unwrap();
+
+                                    match *cfg.graph.node_weight(exit_scope).unwrap() {
+                                        Node::ExitScope => (),
+
+                                        ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
+                                    }
+                                }
+
+                                ref n @ _ => panic!("Expected to find Node::EnterScope. Found {:?}", n),
+                            }
+                            
 
                             found_true_edge = true;
                         } else if let Edge::False = *edge.weight() {
@@ -501,23 +711,29 @@ if (test) {
             }
 
             let merge = merge.unwrap();
+            let mut merge_neighbors = neighbors!(cfg, merge);
 
             let return_n = cfg.graph.neighbors(merge).next().unwrap();
-            let return_weight = cfg.graph.node_weight(return_n).unwrap();
-            if let Node::Return(_) = *return_weight {
-                let edges = cfg.graph.edges_directed(return_n, Direction::Outgoing);
-                assert_eq!(edges.clone().count(), 1);
-            } else {
-                panic!("After Node::Merge should be Node::Return");
+            let mut return_neighbors = neighbors!(cfg, return_n);
+            match *node_w!(cfg, return_n) {
+                Node::Return(_) => (),
+                ref n @ _ => panic!("Expected to find Node::Return. Found {:?}", n),
             }
 
-            let end = cfg.graph.neighbors(return_n).next().unwrap();
-            let end_weight = cfg.graph.node_weight(end).unwrap();
-            if let Node::End = *end_weight {
-                let edges = cfg.graph.edges_directed(end, Direction::Outgoing);
-                assert_eq!(edges.clone().count(), 0);
-            } else {
-                panic!("After Node::Return should be Node::End");
+            let exit = return_neighbors.next().unwrap();
+            let mut exit_neighbors = neighbors!(cfg, exit);
+            match *node_w!(cfg, exit) {
+                Node::ExitScope => (),
+                ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
+            }
+
+            let end = exit_neighbors.next().unwrap();
+            let mut end_neighbors = neighbors!(cfg, end);
+            match *node_w!(cfg, end) {
+                Node::End => {
+                    assert_eq!(end_neighbors.count(), 0);
+                },
+                ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
             }
         }
     }
@@ -536,8 +752,8 @@ let input =
 }";
         let universe = Universe::std();
         let fn_type = FunctionType {
-            args: vec![Rc::new(SmplType::Int)],
-            return_type: Rc::new(SmplType::Unit)
+            args: vec![universe.int()],
+            return_type: universe.unit(),
         };
         let fn_def = parse_FnDecl(input).unwrap();
         let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
@@ -545,9 +761,11 @@ let input =
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
         {
-            // start -> branch_split(A) -> condition(B)
+            // start -> enter_scope -> condition(B)
             //      -[true]> {
-            //          local_var_decl
+            //          enter_scope ->
+            //          local_var_decl ->
+            //          exit_scope ->
             //      } -> branch_merge(A)
             //
             //      -[false]> condition(C)
@@ -555,24 +773,22 @@ let input =
             //
             //           -[false]> branch_merge(A) 
             //
-            // branch_merge(A) -> implicit_return -> end
+            // branch_merge(A) -> implicit_return -> exit_scope -> end
             //
             
-            assert_eq!(cfg.graph.node_count(), 8);
+            assert_eq!(cfg.graph.node_count(), 11);
 
             let mut start_neighbors = neighbors!(cfg, cfg.start);
             assert_eq!(start_neighbors.clone().count(), 1);
 
-            let split = start_neighbors.next().unwrap();
-            match *node_w!(cfg, split) {
-                Node::BranchSplit => (),    // Success
-                _ => panic!("Expected Node::BranchSplit"),
+            let enter = start_neighbors.next().unwrap();
+            let mut enter_neighbors = neighbors!(cfg, enter);
+            match *node_w!(cfg, enter) {
+                Node::EnterScope => (),
+                ref n @ _ => panic!("Expected to find Node::Enter. Found {:?}", n),
             }
 
-            let mut split_neighbors = neighbors!(cfg, split);
-            assert_eq!(split_neighbors.clone().count(), 1);
-
-            let condition_b = split_neighbors.next().unwrap();
+            let condition_b = enter_neighbors.next().unwrap();
             match *node_w!(cfg, condition_b) {
                 Node::Condition(_) => (), // Success
 
@@ -582,12 +798,12 @@ let input =
 
             let condition_b_edges = edges!(cfg, condition_b);
             let mut condition_c = None;
-            let mut var_decl = None;
+            let mut condition_b_true = None;
 
             assert_eq!(condition_b_edges.clone().count(), 2);
             for edge in condition_b_edges {
                 match *edge.weight() {
-                    Edge::True => var_decl = Some(edge.target()),
+                    Edge::True => condition_b_true = Some(edge.target()),
                     Edge::False => condition_c = Some(edge.target()),
 
                     ref e @ _ => panic!("Expected true or false edge. Found {:?}", e),
@@ -596,16 +812,33 @@ let input =
 
 
             // condition b TRUE branch
-            let var_decl = var_decl.expect("Missing true edge connecting to variable declaration");
+
+            let enter = condition_b_true.expect("Missing true edge connecting to variable declaration");
+            let mut enter_neighbors = neighbors!(cfg, enter);
+            match *node_w!(cfg, enter) {
+                Node::EnterScope => (),
+                ref n @ _ => panic!("Expected Node::EnterScope. Found {:?}", n),
+            }
+
+            let var_decl = enter_neighbors.next().unwrap();
+            let mut var_decl_neighbors = neighbors!(cfg, var_decl);
+            assert_eq!(var_decl_neighbors.clone().count(), 1);
             match *node_w!(cfg, var_decl) {
                 Node::LocalVarDecl(_) => (), 
 
                 ref n @ _ => panic!("Expected local variable declartion. Found {:?}", n),
             }
 
-            let mut var_decl_neighbors = neighbors!(cfg, var_decl);
-            assert_eq!(var_decl_neighbors.clone().count(), 1);
-            match *node_w!(cfg, var_decl_neighbors.next().unwrap()) {
+
+            let exit = var_decl_neighbors.next().unwrap();
+            let mut exit_neighbors = neighbors!(cfg, exit);
+            match *node_w!(cfg, exit) {
+                Node::ExitScope => (),
+                ref n @ _ => panic!("Expected Node::ExitScope. Found {:?}", n),
+            }
+
+            let merge = exit_neighbors.next().unwrap();
+            match *node_w!(cfg, merge) {
                 Node::BranchMerge => (),
 
                 ref n @ _ => panic!("Expected Node::BranchMerge. Found {:?}", n),
@@ -640,15 +873,21 @@ let input =
             assert_eq!(branch_merge_neighbors.clone().count(), 1);
 
             let implicit_return = branch_merge_neighbors.next().unwrap();
+            let mut implicit_return_neighbors = neighbors!(cfg, implicit_return);
+            assert_eq!(implicit_return_neighbors.clone().count(), 1);
             match *node_w!(cfg, implicit_return) {
                 Node::Return(_) => (),
                 ref n @ _ => println!("Expected return node. Found {:?}", n),
             }
 
-            let mut implicit_return_neighbors = neighbors!(cfg, implicit_return);
-            assert_eq!(implicit_return_neighbors.clone().count(), 1);
+            let exit = implicit_return_neighbors.next().unwrap();
+            let mut exit_neighbors = neighbors!(cfg, exit);
+            match *node_w!(cfg, exit) {
+                Node::ExitScope => (),
+                ref n @ _ => panic!("Expected to find Node::Exit. Found {:?}", n),
+            }
 
-            let end = implicit_return_neighbors.next().unwrap();
+            let end = exit_neighbors.next().unwrap();
             assert_eq!(*node_w!(cfg, end), Node::End);
         }
     }
@@ -663,28 +902,38 @@ let input =
 }";
         let universe = Universe::std();
         let fn_type = FunctionType {
-            args: vec![Rc::new(SmplType::Int)],
-            return_type: Rc::new(SmplType::Unit)
+            args: vec![universe.int()],
+            return_type: universe.unit(), 
         };
         let fn_def = parse_FnDecl(input).unwrap();
         let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
-        // start -> loop_head(A) -> condition(B)
+        // start -> enter_scope -> loop_head(A) -> condition(B)
         //       -[true]> loop_foot(A)
         //       -[false]> loop_foot(A)
-        // loop_foot(A) -> implicit_return -> end
+        // loop_foot(A) -> implicit_return -> exit_scope -> end
         // loop_head(A) << loop_foot(A)
         //
 
-        assert_eq!(cfg.graph.node_count(), 6);
+        assert_eq!(cfg.graph.node_count(), 8);
 
         let mut start_neighbors = neighbors!(cfg, cfg.start);
         assert_eq!(start_neighbors.clone().count(), 1);
 
-        let loop_head = start_neighbors.next().unwrap();
-        assert_eq!(*node_w!(cfg, loop_head), Node::LoopHead);
+        let enter = start_neighbors.next().unwrap();
+        let mut enter_neighbors = neighbors!(cfg, enter);
+        match *node_w!(cfg, enter) {
+            Node::EnterScope => (),
+            ref n @ _ => panic!("Expected to find Node::Enter. Found {:?}", n),
+        }
+
+        let loop_head = enter_neighbors.next().unwrap();
+        match *node_w!(cfg, loop_head) {
+            Node::LoopHead(_) => (),
+            ref n @ _ => panic!("Expected to find Node::LoopHead. Found {:?}", n),
+        }
 
         let mut head_neighbors = neighbors!(cfg, loop_head);
         assert_eq!(head_neighbors.clone().count(), 1);
@@ -711,7 +960,10 @@ let input =
 
         let truth_target = truth_target.unwrap();
         let false_target = false_target.unwrap();
-        assert_eq!(*node_w!(cfg, truth_target), Node::LoopFoot);
+        match *node_w!(cfg, truth_target) {
+            Node::LoopFoot(_) => (),
+            ref n @ _ => panic!("Expected to find Node::Foot. Found {:?}", n),
+        }
         assert_eq!(truth_target, false_target);
 
         let foot = truth_target;
@@ -719,15 +971,26 @@ let input =
         assert_eq!(foot_neighbors.clone().count(), 2);
 
         let implicit_return = foot_neighbors.next().unwrap();
+        let mut return_neighbors = neighbors!(cfg, implicit_return);
+        assert_eq!(return_neighbors.clone().count(), 1);
         match *node_w!(cfg, implicit_return) {
             Node::Return(_) => (),
             ref n @ _ => panic!("Expected return node. Found {:?}", n),
         }
-        
-        let mut return_neighbors = neighbors!(cfg, implicit_return);
-        assert_eq!(return_neighbors.clone().count(), 1);
 
-        let end = return_neighbors.next().unwrap();
-        assert_eq!(*node_w!(cfg, end), Node::End);
+        let exit = return_neighbors.next().unwrap();
+        let mut exit_neighbors = neighbors!(cfg, exit);
+        match *node_w!(cfg, exit) {
+            Node::ExitScope => (),
+            ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
+        }
+
+        let end = exit_neighbors.next().unwrap();
+        let mut end_neighbors = neighbors!(cfg, end);
+        assert_eq!(end_neighbors.count(), 0);
+        match *node_w!(cfg, end) {
+            Node::End => (),
+            ref n @ _ => panic!("Expected to find Node::End. Found {:?}", n),
+        }
     }
 }

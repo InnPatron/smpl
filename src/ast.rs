@@ -1,5 +1,7 @@
 use std::str::FromStr;
 use std::fmt;
+use std::slice::Iter;
+
 use super::Span;
 use smpl_type::SmplType;
 use ascii::AsciiString;
@@ -229,6 +231,12 @@ impl fmt::Display for Ident {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Path(pub Vec<Ident>);
+
+impl Path {
+    pub fn iter(&self) -> Iter<Ident> {
+        self.0.iter()
+    }
+}
 
 impl From<Ident> for Path {
     fn from(ident: Ident) -> Path {
