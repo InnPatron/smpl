@@ -213,7 +213,8 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
             Value::Literal(ref literal) => {
                 use ast::Literal;
                 match *literal {
-                    Literal::Number(ref num) => unimplemented!(),
+                    Literal::Int(_) => tmp_type = universe.int(),
+                    Literal::Float(_) => tmp_type = universe.float(),
                     Literal::String(_) => tmp_type = universe.string(),
                     Literal::Bool(_) => tmp_type = universe.boolean(),
                 }

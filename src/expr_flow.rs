@@ -31,9 +31,8 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
         AstExpr::Literal(literal) => {
             let lit_type = match literal {
                 Literal::String(_) => Some(universe.string()),
-                Literal::Number(ref num) => {
-                    None
-                },
+                Literal::Int(_) => Some(universe.int()),
+                Literal::Float(_) => Some(universe.float()),
                 Literal::Bool(_) => Some(universe.boolean()),
             };
 
