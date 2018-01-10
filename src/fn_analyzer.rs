@@ -473,8 +473,8 @@ mod tests {
         let root_var_id = universe.new_var_id();
         scope.insert_var(ident!("baz"), root_var_id, struct_type_2_id);
 
-        let path = path!("foo_field", "field1");
-        let field_type_id = walk_field_access(&universe, struct_type_2_id, path.iter()).unwrap();
+        let path = path!("root (ignored", "foo_field", "field1");
+        let field_type_id = walk_field_access(&universe, struct_type_2_id, path).unwrap();
 
         assert_eq!(field_type_id, universe.int());
     }
