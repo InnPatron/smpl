@@ -76,8 +76,7 @@ pub enum Node {
     End,
 
     Expr(typed_ast::Expr),
-
-    BranchSplit,
+    
     BranchMerge,
 
     Assignment(typed_ast::Assignment),
@@ -357,10 +356,6 @@ impl CFG {
 
                     // All if statements begin and and with Node::BranchSplit and Node::BranchMerge
                     ExprStmt::If(if_data) => {
-
-                        // Any potential branching starst off with at a Node::BranchSplit
-                        let split_node = cfg.graph.add_node(Node::BranchSplit);
-                        append_node_index!(cfg, head, previous, split_node);
 
                         // All branches come back together at a Node::BranchMerge
                         let merge_node = cfg.graph.add_node(Node::BranchMerge);
@@ -648,7 +643,7 @@ if (test) {
             assert_eq!(*cfg.graph.node_weight(cfg.start).unwrap(), Node::Start);
             assert_eq!(*cfg.graph.node_weight(cfg.end).unwrap(), Node::End);
 
-            // start -> enter_scope -> branch_split -> condition 
+            // start -> enter_scope -> condition 
             //      -[true]> {
             //          -> enter_scope
             //          -> var decl
@@ -656,7 +651,7 @@ if (test) {
             //      } ->        >>___ branch_merge ->
             //        -[false]> >>
             //      implicit return -> exit_scope -> end
-            assert_eq!(cfg.graph.node_count(), 11);
+            assert_eq!(cfg.graph.node_count(), 10);
 
             let mut start_neighbors = neighbors!(cfg, cfg.start);
 
@@ -667,16 +662,9 @@ if (test) {
                 ref n @ _ => panic!("Expected to find Node::EnterScope. Found {:?}", n),
             }
 
-            // Check split node
-            let split = enter_neighbors.next().unwrap();
-            match *node_w!(cfg, split) {
-                Node::BranchSplit => (),
-                ref n @ _ => panic!("Expected to find Node::BranchSplit. Found {:?}", n),
-            }
-
             let mut merge = None;
             // Check condition node
-            let condition = cfg.graph.neighbors(split).next().expect("Looking for condition node");
+            let condition = enter_neighbors.next().expect("Looking for condition node");
             let condition_node = cfg.graph.node_weight(condition).unwrap();
             {
                 if let Node::Condition(_) = *condition_node {
@@ -786,7 +774,7 @@ let input =
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
         {
-            // start -> enter_scope -> branch_split(A) -> condition(B)
+            // start -> enter_scope -> condition(B)
             //      -[true]> {
             //          enter_scope ->
             //          local_var_decl ->
@@ -801,7 +789,7 @@ let input =
             // branch_merge(A) -> implicit_return -> exit_scope -> end
             //
             
-            assert_eq!(cfg.graph.node_count(), 12);
+            assert_eq!(cfg.graph.node_count(), 11);
 
             let mut start_neighbors = neighbors!(cfg, cfg.start);
             assert_eq!(start_neighbors.clone().count(), 1);
@@ -813,16 +801,7 @@ let input =
                 ref n @ _ => panic!("Expected to find Node::Enter. Found {:?}", n),
             }
 
-            let split = enter_neighbors.next().unwrap();
-            match *node_w!(cfg, split) {
-                Node::BranchSplit => (),    // Success
-                ref n @ _ => panic!("Expected to find Node::BranchSplit. Found {:?}", n),
-            }
-
-            let mut split_neighbors = neighbors!(cfg, split);
-            assert_eq!(split_neighbors.clone().count(), 1);
-
-            let condition_b = split_neighbors.next().unwrap();
+            let condition_b = enter_neighbors.next().unwrap();
             match *node_w!(cfg, condition_b) {
                 Node::Condition(_) => (), // Success
 

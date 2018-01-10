@@ -57,7 +57,7 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
 fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack: &mut Vec<ScopedData>, to_check: NodeIndex) -> Result<Option<NodeIndex>, Err> {
     match *node_w!(data.cfg, to_check) {
         Node::End => Ok(None),
-        Node::Start | Node::BranchSplit | Node::BranchMerge | Node::LoopHead => {
+        Node::Start | Node::BranchMerge | Node::LoopHead => {
             Ok(Some(data.cfg.next(to_check)))
         }
 
