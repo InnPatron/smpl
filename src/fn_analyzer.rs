@@ -5,7 +5,7 @@ use std::rc::Rc;
 use ast;
 use control_flow::*;
 use typed_ast::*;
-use err::Err;
+use err::*;
 use semantic_ck::{Universe, ScopedData, TypeId, FnId};
 use smpl_type::*;
 
@@ -15,15 +15,18 @@ struct FnAnalyzerData<'a, 'b> {
     universe: &'a Universe,
     cfg: &'b CFG,
     fn_return_type: Rc<SmplType>,
+    fn_return_type_id: TypeId,
 }
 
 pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_id: FnId) -> Result<(), Err> {
 
     let fn_return_type;
+    let fn_return_type_id;
     let func = universe.get_fn(fn_id);
     match *universe.get_type(func.type_id()) {
         SmplType::Function(ref fn_type) => {
             fn_return_type = universe.get_type(fn_type.return_type);
+            fn_return_type_id = fn_type.return_type;
         }
 
         ref t @ _ => panic!("{} not mapped to a function but a {:?}", fn_id, t),
@@ -32,7 +35,8 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
     let analyzer_data = FnAnalyzerData {
         universe: universe,
         cfg: cfg,
-        fn_return_type: fn_return_type
+        fn_return_type: fn_return_type,
+        fn_return_type_id: fn_return_type_id,
     };
 
     let mut scope_stack = Vec::new();
@@ -87,7 +91,7 @@ fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack
             if var_type == expr_type {
                 current_scope.insert_var(name, var_id, var_type_id);
             } else {
-                unimplemented!("LHS type != RHS type");
+                return Err(TypeErr::LhsRhsInEq(var_type_id, expr_type_id).into());
             }
 
             Ok(Some(data.cfg.next(to_check)))
@@ -99,7 +103,7 @@ fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack
 
             let (root_var_id, root_var_type_id) = current_scope.var_info(root_var_name)?;
 
-            let assignee_type_id = walk_field_access(data.universe, root_var_type_id, assignee)?;
+            let assignee_type_id = walk_field_access(data.universe, root_var_type_id, assignment.name().clone())?;
             assignment.set_var_id(root_var_id);
             assignment.set_type_id(assignee_type_id);
 
@@ -109,7 +113,7 @@ fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack
             let expr_type = data.universe.get_type(expr_type_id);
 
             if assignee_type != expr_type {
-                unimplemented!("LHS Type != RGHS Type");
+                return Err(TypeErr::LhsRhsInEq(assignee_type_id, expr_type_id).into());
             }
 
             Ok(Some(data.cfg.next(to_check)))
@@ -128,7 +132,10 @@ fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack
             };
 
             if data.universe.get_type(expr_type_id) != data.fn_return_type {
-                unimplemented!("Return expr type and Fn Return types do not match");
+                return Err(TypeErr::InEqFnReturn {
+                    expr: expr_type_id,
+                    fn_return: data.fn_return_type_id,
+                }.into());
             }
 
             Ok(Some(data.cfg.next(to_check)))
@@ -138,7 +145,10 @@ fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack
             let expr_type_id = resolve_expr(data.universe, current_scope, condition_expr)?;
 
             if *data.universe.get_type(expr_type_id) != SmplType::Bool {
-                unimplemented!("Expr to a condition must be of type Bool.");
+                return Err(TypeErr::UnexpectedType {
+                    found: expr_type_id,
+                    expected: data.universe.boolean(),
+                }.into());
             }
 
             let mut merge_node = None;
@@ -243,35 +253,51 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                 let fn_type = universe.get_type(fn_type_id);
 
                 if let SmplType::Function(ref fn_type) = *fn_type {
-                    let arg_types = fn_call.args()
+                    let arg_type_ids = fn_call.args()
                                            .map(|ref vec| {
                                                vec.iter().map(|ref tmp_id| {
                                                    let tmp = expr.get_tmp(*tmp_id.data());
                                                    let tmp_value = tmp.value();
                                                    let tmp_value_type_id = tmp_value.type_id().unwrap();
                                                    tmp_id.set_type_id(tmp_value_type_id);
-                                                   universe.get_type(tmp_value_type_id)
+                                                   tmp_value_type_id
                                                }).collect::<Vec<_>>()
                                            });
 
-                    match arg_types {
-                        Some(arg_types) => {
-                            if fn_type.args.len() != arg_types.len() {
-                                unimplemented!("Arity error: Arg length does not match fn definition.");
+                    match arg_type_ids {
+                        Some(arg_type_ids) => {
+                            if fn_type.args.len() != arg_type_ids.len() {
+                                return Err(TypeErr::Arity {
+                                    fn_type: fn_type_id,
+                                    found_args: arg_type_ids.len(),
+                                    expected_param: fn_type.args.len(),
+
+                                }.into());
                             }
 
-                            let fn_param_types = fn_type.args.iter().map(|id| universe.get_type(*id));
+                            let fn_param_type_ids = fn_type.args.iter();
 
-                            for (arg, param) in arg_types.iter().zip(fn_param_types) {
-                                if (*arg != param) {
-                                    unimplemented!("Arg does not match param type.");
+                            for (index, (arg, param)) in arg_type_ids.iter().zip(fn_param_type_ids).enumerate() {
+                                let arg_type = universe.get_type(*arg);
+                                let param_type = universe.get_type(*param);
+                                if (arg_type != param_type) {
+                                    return Err(TypeErr::ArgMismatch {
+                                        fn_id: fn_id,
+                                        index: index,
+                                        arg: *arg,
+                                        param: *param,
+                                    }.into());
                                 }
                             }
                         }
 
                         None => {
                             if fn_type.args.len() != 0 {
-                                unimplemented!("Arg lengths do not match");
+                                return Err(TypeErr::Arity {
+                                    fn_type: fn_type_id,
+                                    found_args: 0,
+                                    expected_param: fn_type.args.len(),
+                                }.into());
                             }
                         }
                     }
@@ -300,14 +326,29 @@ fn resolve_bin_op(universe: &Universe, op: &ast::BinOp, lhs: TypeId, rhs: TypeId
             match (&*lh_type, &*rh_type) {
                 (&SmplType::Int, &SmplType::Int) => Ok(universe.int()),
                 (&SmplType::Float, &SmplType::Float) => Ok(universe.float()),
-                _ => unimplemented!("Err"),
+
+                _ => {
+                    Err(TypeErr::BinOp {
+                        op: op.clone(),
+                        expected: vec![universe.int(), universe.float()],
+                        lhs: lhs,
+                        rhs: rhs,
+                    }.into())
+                }
             }
         },
 
         LogicalAnd | LogicalOr => {
             match (&*lh_type, &*rh_type) {
                 (&SmplType::Bool, &SmplType::Bool) => Ok(universe.boolean()),
-                _ => unimplemented!("Err"),
+                _ => {
+                    Err(TypeErr::BinOp {
+                        op: op.clone(),
+                        expected: vec![universe.boolean()],
+                        lhs: lhs,
+                        rhs: rhs,
+                    }.into())
+                }
             }
         }
 
@@ -315,7 +356,7 @@ fn resolve_bin_op(universe: &Universe, op: &ast::BinOp, lhs: TypeId, rhs: TypeId
             if *lh_type == *rh_type {
                 Ok(universe.boolean())
             } else {
-                unimplemented!("Err")
+                Err(TypeErr::LhsRhsInEq(lhs, rhs).into())
             }
         }
     }
@@ -330,14 +371,26 @@ fn resolve_uni_op(universe: &Universe, op: &ast::UniOp, tmp_type_id: TypeId) -> 
         Negate => {
             match &*tmp_type {
                 &SmplType::Int | &SmplType::Float => Ok(tmp_type_id),
-                _ => unimplemented!("Err"),
+                _ => {
+                    Err(TypeErr::UniOp {
+                        op: op.clone(),
+                        expected: vec![universe.int(), universe.float()],
+                        expr: tmp_type_id,
+                    }.into())
+                }
             }
         },
 
         LogicalInvert => {
             match &*tmp_type {
                 &SmplType::Bool => Ok(tmp_type_id),
-                _ => unimplemented!("Err"),
+                _ => {
+                    Err(TypeErr::UniOp {
+                        op: op.clone(),
+                        expected: vec![universe.boolean()],
+                        expr: tmp_type_id,
+                    }.into())
+                },
             }
         }
 
@@ -345,16 +398,32 @@ fn resolve_uni_op(universe: &Universe, op: &ast::UniOp, tmp_type_id: TypeId) -> 
     }
 }
 
-fn walk_field_access(universe: &Universe, root_type_id: TypeId, path: Iter<ast::Ident>) -> Result<TypeId, Err> {
+fn walk_field_access(universe: &Universe, root_type_id: TypeId, full_path: ast::Path) -> Result<TypeId, Err> {
     let mut current_type_id = root_type_id;
     let mut current_type = universe.get_type(root_type_id);
-    for field in path {
+
+    let mut path_iter = full_path.iter();
+    path_iter.next();
+
+    for (index, field) in path_iter.enumerate() {
         match *current_type {
             SmplType::Struct(ref struct_type) => {
-                current_type_id = *struct_type.fields.get(field).ok_or(Err::UnknownField(field.clone()))?;
+                current_type_id = *struct_type.fields
+                                              .get(field)
+                                              .ok_or(TypeErr::UnknownField {
+                                                  name: field.clone(),
+                                                  struct_type: current_type_id,
+                                              })?;
              }
 
-            _ => unimplemented!("Unexpected field access on non-struct type"),
+            _ => {
+                return Err(TypeErr::NotAStruct {
+                    path: full_path.clone(),
+                    index: index,
+                    invalid_type: current_type_id,
+                    root_type: root_type_id,
+                }.into());
+            },
         }
 
         current_type = universe.get_type(current_type_id);
