@@ -54,7 +54,6 @@
 /// path -> ident ["." ident]*
 
 use std::str::FromStr;
-use smpl_type::SmplType;
 use ast::*;
 use ascii::*;
 

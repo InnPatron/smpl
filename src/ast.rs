@@ -2,8 +2,6 @@ use std::str::FromStr;
 use std::fmt;
 use std::slice::Iter;
 
-use super::Span;
-use smpl_type::SmplType;
 use ascii::AsciiString;
 
 pub struct Program(pub Vec<DeclStmt>);

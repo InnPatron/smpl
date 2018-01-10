@@ -1,3 +1,4 @@
+#[allow(unused_macros)]
 macro_rules! boolean {
     ($val: expr) => {{
         Literal::Bool($val)
@@ -12,6 +13,7 @@ macro_rules! boolean {
     }}
 }
 
+#[allow(unused_macros)]
 macro_rules! number {
     ($str_num: expr) => {{
         Literal::Number($str_num.to_string())
@@ -26,6 +28,7 @@ macro_rules! number {
     }}
 }
 
+#[allow(unused_macros)]
 macro_rules! ident {
     ($ident: expr) => {{
         Ident(AsciiString::from_str($ident).unwrap())
@@ -40,6 +43,7 @@ macro_rules! ident {
     }}
 }
 
+#[allow(unused_macros)]
 macro_rules! path {
     ($($segment: expr),*) => {{
         let mut v = Vec::new();
@@ -48,6 +52,7 @@ macro_rules! path {
     }};
 }
 
+#[allow(unused_macros)]
 macro_rules! bin_expr {
     ($lhs: expr, $op: expr, $rhs: expr) => {{
         BinExpr {

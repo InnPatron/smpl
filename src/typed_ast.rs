@@ -8,9 +8,7 @@ use std::slice::Iter;
 
 use semantic_ck::*;
 use expr_flow;
-use smpl_type::{ SmplType, FunctionType };
 use ast;
-use ascii::{AsciiString, AsciiStr};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {

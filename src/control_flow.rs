@@ -1,7 +1,3 @@
-use std::collections::HashMap;
-use std::cell::Cell;
-
-use petgraph;
 use petgraph::graph;
 use petgraph::Direction;
 use petgraph::visit::EdgeRef;
@@ -9,7 +5,7 @@ use typed_ast;
 use ast;
 use expr_flow;
 use err::ControlFlowErr;
-use semantic_ck::{Universe, TypeId, LoopId};
+use semantic_ck::{Universe, LoopId};
 use smpl_type::{ SmplType, FunctionType };
 
 macro_rules! node_w {
@@ -280,6 +276,7 @@ impl CFG {
         }
     }
 
+    #[allow(unused_assignments)]
     ///
     /// Generate the control flow graph.
     /// Only performs continue/break statement checking (necessary for CFG generation).
@@ -325,12 +322,12 @@ impl CFG {
         Ok(cfg)
     }
 
+    #[allow(unused_assignments)]
     /// 
     /// Returns the first and the last node in a code branch.
     /// 
     fn get_branch(universe: &Universe, cfg: &mut CFG, instructions: Vec<ast::Stmt>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex, LoopId)>) -> Result<BranchData, ControlFlowErr> {
         use ast::*;
-        use typed_ast::Expr as ExprFlow;
         
         let mut previous = None;
         let mut head = None;
@@ -338,7 +335,7 @@ impl CFG {
         // Go through all the instructions
         for stmt in instructions.into_iter() {
             if let Stmt::ExprStmt(expr_stmt) = stmt {
-                match (expr_stmt) {
+                match expr_stmt {
 
                     // All if statements begin and and with Node::BranchSplit and Node::BranchMerge
                     ExprStmt::If(if_data) => {

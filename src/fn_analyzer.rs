@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-use std::slice::Iter;
 use std::rc::Rc;
 
 use ast;
@@ -280,7 +278,7 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                             for (index, (arg, param)) in arg_type_ids.iter().zip(fn_param_type_ids).enumerate() {
                                 let arg_type = universe.get_type(*arg);
                                 let param_type = universe.get_type(*param);
-                                if (arg_type != param_type) {
+                                if arg_type != param_type {
                                     return Err(TypeErr::ArgMismatch {
                                         fn_id: fn_id,
                                         index: index,

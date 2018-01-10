@@ -1,10 +1,7 @@
-#[macro_use]
 use std::collections::HashMap;
-use std::str::FromStr;
-use std::borrow::{Borrow, BorrowMut};
 use std::cell::Cell;
+use std::str::FromStr;
 use std::rc::Rc;
-use std::fmt::Debug;
 
 use ascii::*;
 
@@ -35,7 +32,7 @@ impl Program {
     }
 }
 
-pub fn check(mut program: AstProgram) -> Result<Program, Err> {
+pub fn check(program: AstProgram) -> Result<Program, Err> {
     let mut universe = Universe::std();
     let mut global_scope = universe.std_scope.clone();
 
@@ -44,7 +41,7 @@ pub fn check(mut program: AstProgram) -> Result<Program, Err> {
     for decl_stmt in program.0.into_iter() {
         match decl_stmt {
             DeclStmt::Struct(struct_def) => {
-                let struct_t = generate_struct_type(&global_scope, &universe, struct_def)?;
+                let struct_t = generate_struct_type(&global_scope, struct_def)?;
                 let id = universe.new_type_id();
                 
                 global_scope.insert_type(struct_t.name.clone().into(), id);
@@ -104,7 +101,7 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunctio
     })
 }
 
-fn generate_struct_type(scope: &ScopedData, universe: &Universe, struct_def: Struct) -> Result<StructType, Err> {
+fn generate_struct_type(scope: &ScopedData, struct_def: Struct) -> Result<StructType, Err> {
     let struct_name = struct_def.name;
     let mut fields = HashMap::new();
     if let Some(body) = struct_def.body.0 {
@@ -208,7 +205,7 @@ impl Universe {
         let string = (TypeId(3), path!("String"), SmplType::String);
         let boolean = (TypeId(4), path!("bool"), SmplType::Bool);
 
-        let mut type_map = vec![
+        let type_map = vec![
             unit.clone(),
             int.clone(),
             float.clone(),

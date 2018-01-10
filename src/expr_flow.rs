@@ -1,10 +1,6 @@
-use std::cell::Cell;
-use std::collections::HashMap;
-use std::slice::Iter;
-
-use semantic_ck::{Universe, FnId, TypeId, VarId, TmpId};
+use semantic_ck::{Universe, TmpId};
 use typed_ast::*;
-use ast::{FnCall as AstFnCall, Ident as AstIdent, Literal, UniOp, BinOp, Expr as AstExpr};
+use ast::{Literal, Expr as AstExpr};
 
 pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
