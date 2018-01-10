@@ -57,13 +57,13 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
 fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack: &mut Vec<ScopedData>, to_check: NodeIndex) -> Result<Option<NodeIndex>, Err> {
     match *node_w!(data.cfg, to_check) {
         Node::End => Ok(None),
-        Node::Start | Node::BranchMerge | Node::LoopHead => {
+        Node::Start | Node::BranchMerge | Node::LoopHead(_) => {
             Ok(Some(data.cfg.next(to_check)))
         }
 
-        Node::LoopFoot => Ok(Some(data.cfg.after_loop_foot(to_check))),
-        Node::Continue => Ok(Some(data.cfg.after_continue(to_check))),
-        Node::Break => Ok(Some(data.cfg.after_break(to_check))),
+        Node::LoopFoot(_) => Ok(Some(data.cfg.after_loop_foot(to_check))),
+        Node::Continue(_) => Ok(Some(data.cfg.after_continue(to_check))),
+        Node::Break(_) => Ok(Some(data.cfg.after_break(to_check))),
 
         Node::EnterScope => {
             scope_stack.push(current_scope.clone());

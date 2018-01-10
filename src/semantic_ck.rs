@@ -160,6 +160,15 @@ impl ::std::fmt::Display for TmpId {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct LoopId(u64);
+
+impl ::std::fmt::Display for LoopId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "LoopId[{}]", self.0)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Function {
     fn_type: TypeId,
@@ -301,6 +310,10 @@ impl Universe {
 
     pub fn new_tmp_id(&self) -> TmpId {
         TmpId(self.inc_counter())
+    }
+
+    pub fn new_loop_id(&self) -> LoopId {
+        LoopId(self.inc_counter())
     }
 }
 

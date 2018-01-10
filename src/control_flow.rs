@@ -9,7 +9,7 @@ use typed_ast;
 use ast;
 use expr_flow;
 use err::ControlFlowErr;
-use semantic_ck::{Universe, TypeId};
+use semantic_ck::{Universe, TypeId, LoopId};
 use smpl_type::{ SmplType, FunctionType };
 
 macro_rules! node_w {
@@ -83,15 +83,15 @@ pub enum Node {
     LocalVarDecl(typed_ast::LocalVarDecl),
     Condition(typed_ast::Expr),
 
-    LoopHead,
-    LoopFoot,
+    LoopHead(LoopId),
+    LoopFoot(LoopId),
 
     EnterScope,
     ExitScope,
 
     Return(Option<typed_ast::Expr>),
-    Break,
-    Continue,
+    Break(LoopId),
+    Continue(LoopId),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -117,7 +117,7 @@ impl CFG {
     pub fn after_loop_foot(&self, id: graph::NodeIndex) -> graph::NodeIndex {
 
         match *node_w!(self, id) {
-            Node::LoopFoot => (),
+            Node::LoopFoot(_) => (),
             _ => panic!("Should only be given a Node::LoopFoot"),
         }
 
@@ -130,7 +130,7 @@ impl CFG {
          
         for n in neighbors {
             match *node_w!(self, n) {
-                Node::LoopHead => (),
+                Node::LoopHead(_) => (),
                 _ => return n,
             }
         }
@@ -199,7 +199,7 @@ impl CFG {
     pub fn after_continue(&self, id: graph::NodeIndex) -> graph::NodeIndex {
 
         match *node_w!(self, id) {
-            Node::Continue => (),
+            Node::Continue(_) => (),
             _ => panic!("Should only be given a Node::Continue"),
         }
 
@@ -210,7 +210,7 @@ impl CFG {
             let mut found_first = false;
             for n in neighbors {
                 match *node_w!(self, n) {
-                    Node::LoopHead => {
+                    Node::LoopHead(_) => {
                         if found_first {    
                             return n;
                         } else {
@@ -232,7 +232,7 @@ impl CFG {
     pub fn after_break(&self, id: graph::NodeIndex) -> graph::NodeIndex {
 
         match *node_w!(self, id) {
-            Node::Break => (),
+            Node::Break(_) => (),
             _ => panic!("Should only be given a Node::Break"),
         }
 
@@ -243,8 +243,8 @@ impl CFG {
             let mut found_first = false;
             for n in neighbors {
                 match *node_w!(self, n) {
-                    Node::LoopFoot => {
-                        if found_first {    
+                    Node::LoopFoot(_) => {
+                        if found_first {
                             return n;
                         } else {
                             found_first = true;
@@ -342,7 +342,7 @@ impl CFG {
     /// 
     /// Returns the first and the last node in a code branch.
     /// 
-    fn get_branch(universe: &Universe, cfg: &mut CFG, instructions: Vec<ast::Stmt>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex)>) -> Result<BranchData, ControlFlowErr> {
+    fn get_branch(universe: &Universe, cfg: &mut CFG, instructions: Vec<ast::Stmt>, mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex, LoopId)>) -> Result<BranchData, ControlFlowErr> {
         use ast::*;
         use typed_ast::Expr as ExprFlow;
         
@@ -435,15 +435,16 @@ impl CFG {
 
                     // All loops being and end with Node::LoopHead and Node::LoopFoot
                     ExprStmt::While(while_data) => {
-                        let loop_head = cfg.graph.add_node(Node::LoopHead);
-                        let loop_foot = cfg.graph.add_node(Node::LoopFoot);
+                        let loop_id = universe.new_loop_id();
+                        let loop_head = cfg.graph.add_node(Node::LoopHead(loop_id));
+                        let loop_foot = cfg.graph.add_node(Node::LoopFoot(loop_id));
 
                         cfg.graph.add_edge(loop_foot, loop_head, Edge::BackEdge);
 
                         append_node_index!(cfg, head, previous, loop_head);
 
                         let instructions = while_data.block.0;
-                        let loop_body = CFG::get_branch(universe, cfg, instructions, Some((loop_head, loop_foot)))?;
+                        let loop_body = CFG::get_branch(universe, cfg, instructions, Some((loop_head, loop_foot, loop_id)))?;
                         let condition = {
                             let expr = expr_flow::flatten(universe, while_data.conditional);
                             cfg.graph.add_node(Node::Condition(expr))
@@ -470,10 +471,10 @@ impl CFG {
                     }
 
                     ExprStmt::Break => {
-                        let break_id = cfg.graph.add_node(Node::Break);
-                        append_node_index!(cfg, head, previous, break_id);
-                        
-                        if let Some((_, foot)) = loop_data {
+                        if let Some((_, foot, loop_id)) = loop_data {
+                            let break_id = cfg.graph.add_node(Node::Break(loop_id));
+                            append_node_index!(cfg, head, previous, break_id);
+
                             // Add an edge to the foot of the loop.
                             cfg.graph.add_edge(break_id, foot, Edge::Normal);
                         } else {
@@ -482,13 +483,13 @@ impl CFG {
                         }
                     }
 
-                    ExprStmt::Continue => {
-                        let continue_id = cfg.graph.add_node(Node::Continue);
-                        append_node_index!(cfg, head, previous, continue_id);
-                        
-                        if let Some((head, _)) = loop_data {
+                    ExprStmt::Continue => {                    
+                        if let Some((loop_head, _, loop_id)) = loop_data {
+                            let continue_id = cfg.graph.add_node(Node::Continue(loop_id));
+                            append_node_index!(cfg, head, previous, continue_id);
+
                             // Add a backedge to the head of the loop.
-                            cfg.graph.add_edge(continue_id, head, Edge::BackEdge);
+                            cfg.graph.add_edge(continue_id, loop_head, Edge::BackEdge);
                         } else {
                             // Found a continue statement not inside a loop.
                             return Err(ControlFlowErr::BadContinue);
@@ -943,7 +944,10 @@ let input =
         }
 
         let loop_head = enter_neighbors.next().unwrap();
-        assert_eq!(*node_w!(cfg, loop_head), Node::LoopHead);
+        match *node_w!(cfg, loop_head) {
+            Node::LoopHead(_) => (),
+            ref n @ _ => panic!("Expected to find Node::LoopHead. Found {:?}", n),
+        }
 
         let mut head_neighbors = neighbors!(cfg, loop_head);
         assert_eq!(head_neighbors.clone().count(), 1);
@@ -970,7 +974,10 @@ let input =
 
         let truth_target = truth_target.unwrap();
         let false_target = false_target.unwrap();
-        assert_eq!(*node_w!(cfg, truth_target), Node::LoopFoot);
+        match *node_w!(cfg, truth_target) {
+            Node::LoopFoot(_) => (),
+            ref n @ _ => panic!("Expected to find Node::Foot. Found {:?}", n),
+        }
         assert_eq!(truth_target, false_target);
 
         let foot = truth_target;
