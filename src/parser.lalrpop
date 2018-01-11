@@ -374,7 +374,12 @@ pub Literal: Literal = {
 			Literal::Int(number.parse::<i64>().unwrap())
 		}
 	},
-	"\"" <string: "r[.]*"> "\"" => Literal::String(string.to_string()),
+	<string: r##""[[:ascii:]]*""##>  => {
+		let mut string = AsciiString::from_str(string).unwrap();
+		string.remove(0);
+		string.pop();
+		Literal::String(string)
+	},
 	"true" => Literal::Bool(true),
 	"false" => Literal::Bool(false), 
 
