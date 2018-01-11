@@ -100,7 +100,6 @@ struct TestStruct {
     }
 
     #[test]
-    #[ignore]
     fn test_parse_MathExpr_no_spaces() {
         {
             let input = "1+2";
