@@ -7,11 +7,12 @@
 ///
 /// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" path]? block
 /// param_list -> param ["," param]*
-/// param -> path ident
+/// param -> ident ":" path
 ///
 ///
-/// struct_decl -> "struct" ident "{" struct_fields "}"
-/// struct_fields -> struct_field  ["," struct_field]*
+/// struct_decl -> "struct" ident "{" struct_field_list "}"
+/// struct_field_list -> struct_field "," struct_field_list
+///		      -> struct_field ","?
 /// struct_field -> ident ":" path
 ///
 ///
@@ -22,7 +23,7 @@
 /// expr_stmt -> if_stmt | while_stmt | local_var_decl | assignment
 /// if_stmt -> "if" expr block
 /// while_stmt -> "while" expr block
-/// local_var_decl -> path ident "=" expr ";"
+/// local_var_decl -> "let" ident ":" path  "=" expr ";"
 /// assignment -> path "=" expr ";"
 ///
 ///
@@ -40,7 +41,7 @@
 /// expr_leaf -> "(" uni_expr ")" | literal | fn_call | ident
 ///
 /// 
-/// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "\"" [.] "\""
+/// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "[[:ASCII:]]"
 ///
 ///
 /// fn_call -> ident "(" fn_call_args ")"
@@ -93,14 +94,14 @@ FnParameterList: Vec<FnParameter> = {
 	}
 };
 
-/// param -> path ident
+/// param -> ident ":" path
 FnParameter: FnParameter = {
-	<param_type: Path> <name: Ident> => {
+	<name: Ident> ":"  <param_type: Path> => {
 		FnParameter::new(name, param_type)
 	}
 };
 
-/// struct_decl -> "struct" ident "{" struct_fields "}"
+/// struct_decl -> "struct" ident "{" struct_field_list "}"
 pub StructDecl: Struct = {
 	"struct" <name: Ident> "{" <fields: StructFieldList?>"}" => {
 		Struct {
@@ -110,12 +111,19 @@ pub StructDecl: Struct = {
 	}
 };
 
-/// struct_fields -> struct_field  ["," struct_field]*
+/// struct_decl -> "struct" ident "{" struct_field_list "}"
+/// struct_field_list -> struct_field "," struct_field_list
+///		      -> struct_field ","?
+/// struct_field -> ident ":" path
 StructFieldList: Vec<StructField> = {
-	<first: StructField> <tail: ("," <StructField>)*> => {
+	<first: StructField> "," <tail: StructFieldList> => {
 		let mut v = vec![first];
 		v.extend(tail);
 		v
+	},
+
+	<single: StructField> ","? => {
+		vec![single]
 	}
 };
 
@@ -154,9 +162,9 @@ ReturnStmt: Expr = {
 	"return" <e: Expr> ";" => e,
 };
 
-/// local_var_decl -> path ident "=" expr ";"
+/// local_var_decl -> "let" ident ":" path  "=" expr ";"
 LocalVarDecl: LocalVarDecl = {
-	<var_type: Path> <name: Ident> "=" <e: Expr> ";" => {
+	"let" <name: Ident> ":" <var_type: Path> "=" <e: Expr> ";" => {
 		LocalVarDecl::new(
 			var_type,
 			name,
@@ -365,7 +373,7 @@ UniOp: UniOp = {
 	"*" => UniOp::Deref,
 };
 
-/// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "\"" [.] "\""
+/// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "[[:ASCII:]]"
 pub Literal: Literal = {
 	<number: r"[0-9]+[.[0-9]*]?"> => {
 		if number.contains(".") {
@@ -374,7 +382,12 @@ pub Literal: Literal = {
 			Literal::Int(number.parse::<i64>().unwrap())
 		}
 	},
-	"\"" <string: "r[.]*"> "\"" => Literal::String(string.to_string()),
+	<string: r##""[[:ascii:]]*""##>  => {
+		let mut string = AsciiString::from_str(string).unwrap();
+		string.remove(0);
+		string.pop();
+		Literal::String(string)
+	},
 	"true" => Literal::Bool(true),
 	"false" => Literal::Bool(false), 
 

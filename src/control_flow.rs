@@ -535,9 +535,9 @@ mod tests {
     fn linear_cfg_generation() {
     
         let input =
-"fn test(int arg) {
-int a = 2;
-int b = 3;
+"fn test(arg: int) {
+let a: int = 2;
+let b: int = 3;
 }";
         let universe = Universe::std();
         let fn_type = FunctionType {
@@ -606,9 +606,9 @@ int b = 3;
     fn branching_cfg_generation() {
     
         let input =
-"fn test(int arg) {
+"fn test(arg: int) {
 if (test) {
-    int c = 4;
+    let c: int = 4;
 }
 }";
         let universe = Universe::std();
@@ -735,9 +735,9 @@ if (test) {
     #[test]
     fn complex_branching_cfg_generation() {
 let input =
-"fn test(int arg) {
+"fn test(arg: int) {
     if (false) {
-        int c = 4;
+        let c: int = 4;
     } elif (true) {
 
     } else {
@@ -889,7 +889,7 @@ let input =
     #[test]
     fn while_loop_generation() {
         let input =
-"fn test(int arg) {
+"fn test(arg: int) {
     while (true) {
         
     }

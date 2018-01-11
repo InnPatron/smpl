@@ -6,6 +6,92 @@ mod parser_tests {
     use ast::*;
 
     #[test]
+    fn test_parse_complex_expr() {
+        let input = r##"5 != 3 || "something" == false && true"##;
+        let expr = parse_Expr(input).unwrap();
+
+        let lhs;
+        let rhs;
+        let op;
+        match expr {
+            Expr::Bin(bin_expr) => {
+                op = bin_expr.op;
+                lhs = bin_expr.lhs;
+                rhs = bin_expr.rhs;
+            }
+
+            e @ _ => panic!("Expected BinExpr. Found {:?}", e),
+        }
+
+        assert_eq!(op, BinOp::LogicalAnd);
+        // Check left hand of &&
+        {
+            let lower_lhs;
+            let lower_rhs;
+            let lower_op;
+            match *lhs {
+                Expr::Bin(bin_expr) => {
+                    lower_lhs = bin_expr.lhs;
+                    lower_rhs = bin_expr.rhs;
+                    lower_op = bin_expr.op;
+                }
+
+                e @ _ => panic!("Expected BinExpr. Found {:?}", e),
+            }
+
+            assert_eq!(lower_op, BinOp::LogicalOr);
+
+            // Check left hand of ||
+            {
+                match *lower_lhs {
+                    Expr::Bin(bin_expr) => {
+                        assert_eq!(bin_expr.op, BinOp::InEq);
+                        assert_eq!(*bin_expr.lhs, Expr::Literal(Literal::Int(5)));
+                        assert_eq!(*bin_expr.rhs, Expr::Literal(Literal::Int(3)));
+                    }
+
+                    e @ _ => panic!("Expected BinExpr. Found {:?}", e),
+                }
+            }
+
+            // Check right hand of ||
+            {
+                match *lower_rhs {
+                    Expr::Bin(bin_expr) => {
+                        assert_eq!(bin_expr.op, BinOp::Eq);
+                        assert_eq!(*bin_expr.lhs,
+                                   Expr::Literal(Literal::String(AsciiString::from_str("something").unwrap())));
+                        assert_eq!(*bin_expr.rhs, Expr::Literal(Literal::Bool(false)));
+                    }
+
+                    e @ _ => panic!("Expected BinExpr. Found {:?}", e),
+                }
+            }
+        }
+
+        // Check right hand of &&
+        {
+            match *rhs {
+                Expr::Literal(lit) => {
+                    assert_eq!(lit, Literal::Bool(true));
+                },
+
+                e @ _ => panic!("Expected Bool. Found {:?}", e),
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_string() {
+        let input = r##""test""##;
+        let literal = parse_Literal(input).unwrap();
+        match literal {
+            Literal::String(ref string) => assert_eq!(string, "test"),
+            _ => panic!(),
+        }
+    }
+
+    #[test]
     fn test_parse_numbers() {
         let input = "21";
         let literal = parse_Literal(input).unwrap();
@@ -31,7 +117,7 @@ mod parser_tests {
 
     #[test]
     fn test_parse_local_var_decl() {
-        let input = "int a = 10;";
+        let input = "let a: int = 10;";
         let stmt = parse_ExprStmt(input).unwrap();
         if let ExprStmt::LocalVarDecl(ref decl) = stmt {
             assert_eq!(decl.var_type, path!("int"));
@@ -41,7 +127,7 @@ mod parser_tests {
 
     #[test]
     fn test_parse_FnDecl() {
-        let input = "fn test_fn(i32 arg, float test, String next) { }";
+        let input = "fn test_fn(arg: i32, test: float, next: String) { }";
         let func = parse_FnDecl(input).unwrap();
         assert_eq!(func.name, ident!("test_fn"));
         assert_eq!(func.body, Block(Vec::new()));
@@ -62,7 +148,15 @@ struct TestStruct {
     field1: Type1,
     field2: Type2
 }";
+        let input2 = "
+struct TestStruct {
+    field1: Type1,
+    field2: Type2,
+}";
+
         let _struct = parse_StructDecl(input).unwrap();
+        let _struct2 = parse_StructDecl(input2).unwrap();
+
 
         assert_eq!(_struct.name, ident!("TestStruct"));
         assert_eq!(_struct.body, StructBody(Some(vec![
@@ -76,10 +170,12 @@ struct TestStruct {
                 field_type: path!("Type2"),
             },
         ])));
+
+        assert_eq!(_struct.name, _struct2.name);
+        assert_eq!(_struct.body, _struct2.body);
     }
 
     #[test]
-    #[ignore]
     fn test_parse_MathExpr_no_spaces() {
         {
             let input = "1+2";

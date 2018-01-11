@@ -391,7 +391,7 @@ mod tests {
 }
 
 fn main() {
-    bool truthy = true;
+    let truthy: bool = true;
     if true {
         truthy = false;
     } else {
