@@ -204,7 +204,7 @@ pub enum UniOp {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
-    String(String),
+    String(AsciiString),
     Int(i64),
     Float(f64),
     Bool(bool),
