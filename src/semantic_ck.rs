@@ -87,16 +87,16 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunctio
         None => universe.unit(),
     };
 
-    let args: Vec<_> = match fn_def.args {
-        Some(ref args) => args.iter()
-                              .map(|ref fn_param| scope.type_id(&fn_param.arg_type))
+    let params: Vec<_> = match fn_def.params {
+        Some(ref params) => params.iter()
+                              .map(|ref fn_param| scope.type_id(&fn_param.param_type))
                               .collect::<Result<Vec<_>, Err>>()?,
 
         None => Vec::new(),
     };
 
     Ok(FunctionType {
-        args: args,
+        params: params,
         return_type: ret_type,
     })
 }

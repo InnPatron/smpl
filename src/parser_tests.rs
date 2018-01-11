@@ -49,9 +49,9 @@ mod parser_tests {
         let expected = vec![(ident!("arg"), path!("i32")),
                             (ident!("test"), path!("float")),
                             (ident!("next"), path!("String"))];
-        for (param, expected) in func.args.unwrap().iter().zip(expected.iter()) {
+        for (param, expected) in func.params.unwrap().iter().zip(expected.iter()) {
             assert_eq!(param.name, expected.0);
-            assert_eq!(param.arg_type, expected.1);
+            assert_eq!(param.param_type, expected.1);
         }
     }
 

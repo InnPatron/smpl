@@ -5,9 +5,9 @@
 /// decl_stmt -> fn_decl | struct_decl
 ///
 ///
-/// fn_decl -> "fn" ident "(" [arg_list]? ")" ["->" path]? block
-/// arg_list -> arg ["," arg]*
-/// arg -> path ident
+/// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" path]? block
+/// param_list -> param ["," param]*
+/// param -> path ident
 ///
 ///
 /// struct_decl -> "struct" ident "{" struct_fields "}"
@@ -72,19 +72,19 @@ DeclStmt: DeclStmt = {
 	<s: StructDecl> => s.into(),
 };
 
-/// fn_decl -> "fn" ident "(" [arg_list]? ")" ["->" path]? block
+/// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" path]? block
 pub FnDecl: Function = {
-	"fn" <name: Ident> "(" <args: FnParameterList?> ")" <return_type: ("->" Path)?> <b: Block> => {
+	"fn" <name: Ident> "(" <params: FnParameterList?> ")" <return_type: ("->" Path)?> <b: Block> => {
 		Function::new(
 			name,
-			args,
+			params,
 			return_type.map(|r| r.1),
 			b,
 		)
 	}
 };
 
-/// arg_list -> arg ["," arg]*
+/// param_list -> param ["," param]*
 FnParameterList: Vec<FnParameter> = {
 	<first: FnParameter> <tail: ("," <FnParameter>)*> => {
 		let mut v = vec![first];
@@ -93,10 +93,10 @@ FnParameterList: Vec<FnParameter> = {
 	}
 };
 
-/// arg -> path ident
+/// param -> path ident
 FnParameter: FnParameter = {
-	<arg_type: Path> <name: Ident> => {
-		FnParameter::new(name, arg_type)
+	<param_type: Path> <name: Ident> => {
+		FnParameter::new(name, param_type)
 	}
 };
 
