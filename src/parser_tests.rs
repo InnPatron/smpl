@@ -6,6 +6,16 @@ mod parser_tests {
     use ast::*;
 
     #[test]
+    fn test_parse_string() {
+        let input = r##""test""##;
+        let literal = parse_Literal(input).unwrap();
+        match literal {
+            Literal::String(ref string) => assert_eq!(string, "test"),
+            _ => panic!(),
+        }
+    }
+
+    #[test]
     fn test_parse_numbers() {
         let input = "21";
         let literal = parse_Literal(input).unwrap();
