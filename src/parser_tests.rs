@@ -72,7 +72,15 @@ struct TestStruct {
     field1: Type1,
     field2: Type2
 }";
+        let input2 = "
+struct TestStruct {
+    field1: Type1,
+    field2: Type2,
+}";
+
         let _struct = parse_StructDecl(input).unwrap();
+        let _struct2 = parse_StructDecl(input2).unwrap();
+
 
         assert_eq!(_struct.name, ident!("TestStruct"));
         assert_eq!(_struct.body, StructBody(Some(vec![
@@ -86,6 +94,9 @@ struct TestStruct {
                 field_type: path!("Type2"),
             },
         ])));
+
+        assert_eq!(_struct.name, _struct2.name);
+        assert_eq!(_struct.body, _struct2.body);
     }
 
     #[test]

@@ -10,8 +10,9 @@
 /// param -> ident ":" path
 ///
 ///
-/// struct_decl -> "struct" ident "{" struct_fields "}"
-/// struct_fields -> struct_field  ["," struct_field]*
+/// struct_decl -> "struct" ident "{" struct_field_list "}"
+/// struct_field_list -> struct_field "," struct_field_list
+///		      -> struct_field ","?
 /// struct_field -> ident ":" path
 ///
 ///
@@ -100,7 +101,7 @@ FnParameter: FnParameter = {
 	}
 };
 
-/// struct_decl -> "struct" ident "{" struct_fields "}"
+/// struct_decl -> "struct" ident "{" struct_field_list "}"
 pub StructDecl: Struct = {
 	"struct" <name: Ident> "{" <fields: StructFieldList?>"}" => {
 		Struct {
@@ -110,12 +111,19 @@ pub StructDecl: Struct = {
 	}
 };
 
-/// struct_fields -> struct_field  ["," struct_field]*
+/// struct_decl -> "struct" ident "{" struct_field_list "}"
+/// struct_field_list -> struct_field "," struct_field_list
+///		      -> struct_field ","?
+/// struct_field -> ident ":" path
 StructFieldList: Vec<StructField> = {
-	<first: StructField> <tail: ("," <StructField>)*> => {
+	<first: StructField> "," <tail: StructFieldList> => {
 		let mut v = vec![first];
 		v.extend(tail);
 		v
+	},
+
+	<single: StructField> ","? => {
+		vec![single]
 	}
 };
 
