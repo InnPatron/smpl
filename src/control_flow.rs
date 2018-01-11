@@ -536,8 +536,8 @@ mod tests {
     
         let input =
 "fn test(arg: int) {
-int a = 2;
-int b = 3;
+let a: int = 2;
+let b: int = 3;
 }";
         let universe = Universe::std();
         let fn_type = FunctionType {
@@ -608,7 +608,7 @@ int b = 3;
         let input =
 "fn test(arg: int) {
 if (test) {
-    int c = 4;
+    let c: int = 4;
 }
 }";
         let universe = Universe::std();
@@ -737,7 +737,7 @@ if (test) {
 let input =
 "fn test(arg: int) {
     if (false) {
-        int c = 4;
+        let c: int = 4;
     } elif (true) {
 
     } else {

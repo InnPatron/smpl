@@ -41,7 +41,7 @@ mod parser_tests {
 
     #[test]
     fn test_parse_local_var_decl() {
-        let input = "int a = 10;";
+        let input = "let a: int = 10;";
         let stmt = parse_ExprStmt(input).unwrap();
         if let ExprStmt::LocalVarDecl(ref decl) = stmt {
             assert_eq!(decl.var_type, path!("int"));
