@@ -89,7 +89,10 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunctio
 
     let params: Vec<_> = match fn_def.params {
         Some(ref params) => params.iter()
-                              .map(|ref fn_param| scope.type_id(&fn_param.param_type))
+                              .map(|ref fn_param| {
+                                  scope.type_id(&fn_param.param_type)
+                                       .map(|id| (fn_param.name.clone(), id))
+                              })
                               .collect::<Result<Vec<_>, Err>>()?,
 
         None => Vec::new(),

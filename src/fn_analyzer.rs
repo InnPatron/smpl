@@ -21,10 +21,13 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
     let fn_return_type;
     let fn_return_type_id;
     let func = universe.get_fn(fn_id);
-    match *universe.get_type(func.type_id()) {
+    let unknown_type = universe.get_type(func.type_id());
+    let func_type;
+    match *unknown_type {
         SmplType::Function(ref fn_type) => {
-            fn_return_type = universe.get_type(fn_type.return_type);
+            fn_return_type = universe.get_type(fn_type.return_type.clone());
             fn_return_type_id = fn_type.return_type;
+            func_type = fn_type;
         }
 
         ref t @ _ => panic!("{} not mapped to a function but a {:?}", fn_id, t),
@@ -39,6 +42,12 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
 
     let mut scope_stack = Vec::new();
     let mut current_scope = global_scope.clone();
+
+    // Add parameters to the current scope.
+    for param in func_type.params.iter() {
+        let var_id = universe.new_var_id();
+        current_scope.insert_var(param.0.clone(), var_id, param.1);
+    }
 
     let mut to_check = cfg.after_start();
     loop {
@@ -277,13 +286,13 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
 
                             for (index, (arg, param)) in arg_type_ids.iter().zip(fn_param_type_ids).enumerate() {
                                 let arg_type = universe.get_type(*arg);
-                                let param_type = universe.get_type(*param);
+                                let param_type = universe.get_type(param.1);
                                 if arg_type != param_type {
                                     return Err(TypeErr::ArgMismatch {
                                         fn_id: fn_id,
                                         index: index,
                                         arg: *arg,
-                                        param: *param,
+                                        param: param.1,
                                     }.into());
                                 }
                             }

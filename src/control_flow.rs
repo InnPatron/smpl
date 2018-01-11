@@ -541,7 +541,7 @@ int b = 3;
 }";
         let universe = Universe::std();
         let fn_type = FunctionType {
-            params: vec![universe.int()],
+            params: vec![(ident!("arg"), universe.int())],
             return_type: universe.unit()
         };
         let fn_def = parse_FnDecl(input).unwrap();
@@ -613,7 +613,7 @@ if (test) {
 }";
         let universe = Universe::std();
         let fn_type = FunctionType {
-            params: vec![universe.int()],
+            params: vec![(ident!("arg"), universe.int())],
             return_type: universe.unit(), 
         };
         let fn_def = parse_FnDecl(input).unwrap();
@@ -746,7 +746,7 @@ let input =
 }";
         let universe = Universe::std();
         let fn_type = FunctionType {
-            params: vec![universe.int()],
+            params: vec![(ident!("arg"), universe.int())],
             return_type: universe.unit(),
         };
         let fn_def = parse_FnDecl(input).unwrap();
@@ -896,7 +896,7 @@ let input =
 }";
         let universe = Universe::std();
         let fn_type = FunctionType {
-            params: vec![universe.int()],
+            params: vec![(ident!("arg"), universe.int())],
             return_type: universe.unit(), 
         };
         let fn_def = parse_FnDecl(input).unwrap();
