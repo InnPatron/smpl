@@ -22,7 +22,7 @@
 /// expr_stmt -> if_stmt | while_stmt | local_var_decl | assignment
 /// if_stmt -> "if" expr block
 /// while_stmt -> "while" expr block
-/// local_var_decl -> path ident "=" expr ";"
+/// local_var_decl -> "let" ident ":" path  "=" expr ";"
 /// assignment -> path "=" expr ";"
 ///
 ///
@@ -154,9 +154,9 @@ ReturnStmt: Expr = {
 	"return" <e: Expr> ";" => e,
 };
 
-/// local_var_decl -> path ident "=" expr ";"
+/// local_var_decl -> "let" ident ":" path  "=" expr ";"
 LocalVarDecl: LocalVarDecl = {
-	<var_type: Path> <name: Ident> "=" <e: Expr> ";" => {
+	"let" <name: Ident> ":" <var_type: Path> "=" <e: Expr> ";" => {
 		LocalVarDecl::new(
 			var_type,
 			name,
