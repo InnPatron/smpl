@@ -26,16 +26,16 @@ impl From<Function> for DeclStmt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: Ident,
-    pub args: Option<Vec<FnParameter>>,
+    pub params: Option<Vec<FnParameter>>,
     pub return_type: Option<Path>,
     pub body: Block,
 }
 
 impl Function {
-    pub fn new(name: Ident, args: Option<Vec<FnParameter>>, return_type: Option<Path>, body: Block) -> Function {
+    pub fn new(name: Ident, params: Option<Vec<FnParameter>>, return_type: Option<Path>, body: Block) -> Function {
         Function {
             name: name,
-            args: args,
+            params: params,
             return_type: return_type,
             body: body,
         }
@@ -45,14 +45,14 @@ impl Function {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnParameter {
     pub name: Ident,
-    pub arg_type: Path,
+    pub param_type: Path,
 }
 
 impl FnParameter {
-    pub fn new(name: Ident, arg_type: Path) -> FnParameter {
+    pub fn new(name: Ident, param_type: Path) -> FnParameter {
         FnParameter {
             name: name,
-            arg_type: arg_type,
+            param_type: param_type,
         }
     }
 }

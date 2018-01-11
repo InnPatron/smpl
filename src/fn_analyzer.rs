@@ -21,10 +21,13 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
     let fn_return_type;
     let fn_return_type_id;
     let func = universe.get_fn(fn_id);
-    match *universe.get_type(func.type_id()) {
+    let unknown_type = universe.get_type(func.type_id());
+    let func_type;
+    match *unknown_type {
         SmplType::Function(ref fn_type) => {
-            fn_return_type = universe.get_type(fn_type.return_type);
+            fn_return_type = universe.get_type(fn_type.return_type.clone());
             fn_return_type_id = fn_type.return_type;
+            func_type = fn_type;
         }
 
         ref t @ _ => panic!("{} not mapped to a function but a {:?}", fn_id, t),
@@ -40,8 +43,13 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
     let mut scope_stack = Vec::new();
     let mut current_scope = global_scope.clone();
 
-    let mut to_check = cfg.after_start();
+    // Add parameters to the current scope.
+    for param in func_type.params.iter() {
+        let var_id = universe.new_var_id();
+        current_scope.insert_var(param.0.clone(), var_id, param.1);
+    }
 
+    let mut to_check = cfg.after_start();
     loop {
         match visit_node(&analyzer_data, &mut current_scope, &mut scope_stack, to_check)? {
             Some(next) => to_check = next,
@@ -265,37 +273,37 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
 
                     match arg_type_ids {
                         Some(arg_type_ids) => {
-                            if fn_type.args.len() != arg_type_ids.len() {
+                            if fn_type.params.len() != arg_type_ids.len() {
                                 return Err(TypeErr::Arity {
                                     fn_type: fn_type_id,
                                     found_args: arg_type_ids.len(),
-                                    expected_param: fn_type.args.len(),
+                                    expected_param: fn_type.params.len(),
 
                                 }.into());
                             }
 
-                            let fn_param_type_ids = fn_type.args.iter();
+                            let fn_param_type_ids = fn_type.params.iter();
 
                             for (index, (arg, param)) in arg_type_ids.iter().zip(fn_param_type_ids).enumerate() {
                                 let arg_type = universe.get_type(*arg);
-                                let param_type = universe.get_type(*param);
+                                let param_type = universe.get_type(param.1);
                                 if arg_type != param_type {
                                     return Err(TypeErr::ArgMismatch {
                                         fn_id: fn_id,
                                         index: index,
                                         arg: *arg,
-                                        param: *param,
+                                        param: param.1,
                                     }.into());
                                 }
                             }
                         }
 
                         None => {
-                            if fn_type.args.len() != 0 {
+                            if fn_type.params.len() != 0 {
                                 return Err(TypeErr::Arity {
                                     fn_type: fn_type_id,
                                     found_args: 0,
-                                    expected_param: fn_type.args.len(),
+                                    expected_param: fn_type.params.len(),
                                 }.into());
                             }
                         }
