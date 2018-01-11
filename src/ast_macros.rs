@@ -1,10 +1,12 @@
 #[allow(unused_macros)]
 macro_rules! boolean {
     ($val: expr) => {{
+        use ast::Literal;
         Literal::Bool($val)
     }};
 
     ($val: expr => Expr) => {{
+        use ast::Expr;
         Expr::Literal(boolean!($val))
     }};
 
@@ -16,10 +18,12 @@ macro_rules! boolean {
 #[allow(unused_macros)]
 macro_rules! int {
     ($int: expr) => {{
+        use ast::Literal;
         Literal::Int($int)
     }};
 
     ($int: expr => Expr) => {{
+        use ast::Expr;
         Expr::Literal(int!($int))
     }};
 
@@ -31,10 +35,14 @@ macro_rules! int {
 #[allow(unused_macros)]
 macro_rules! ident {
     ($ident: expr) => {{
+        use ast::Ident;
+        use ascii::*;
+        use std::str::FromStr;
         Ident(AsciiString::from_str($ident).unwrap())
     }};
 
     ($ident: expr => Expr) => {{ 
+        use ast::Expr;
         Expr::Ident(ident!($ident))
     }};
 
@@ -55,6 +63,7 @@ macro_rules! path {
 #[allow(unused_macros)]
 macro_rules! bin_expr {
     ($lhs: expr, $op: expr, $rhs: expr) => {{
+        use ast::BinExpr;
         BinExpr {
             op: $op,
             lhs: $lhs,
@@ -63,6 +72,7 @@ macro_rules! bin_expr {
     }};
 
     (($lhs: expr, $op: expr, $rhs: expr) => Expr) => {{
+        use ast::Expr;
         Expr::Bin(bin_expr!($lhs, $op, $rhs))
     }};
 
