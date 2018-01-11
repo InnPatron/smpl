@@ -41,11 +41,18 @@ mod parser_tests {
 
     #[test]
     fn test_parse_FnDecl() {
-        let input = "fn test_fn(i32 arg) { }";
+        let input = "fn test_fn(i32 arg, float test, String next) { }";
         let func = parse_FnDecl(input).unwrap();
         assert_eq!(func.name, ident!("test_fn"));
-        assert_eq!(func.args, Some(vec![FnParameter::new(ident!("arg"), path!("i32"))]));
         assert_eq!(func.body, Block(Vec::new()));
+
+        let expected = vec![(ident!("arg"), path!("i32")),
+                            (ident!("test"), path!("float")),
+                            (ident!("next"), path!("String"))];
+        for (param, expected) in func.args.unwrap().iter().zip(expected.iter()) {
+            assert_eq!(param.name, expected.0);
+            assert_eq!(param.arg_type, expected.1);
+        }
     }
 
     #[test]
