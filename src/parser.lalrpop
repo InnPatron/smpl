@@ -7,7 +7,7 @@
 ///
 /// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" path]? block
 /// param_list -> param ["," param]*
-/// param -> path ident
+/// param -> ident ":" path
 ///
 ///
 /// struct_decl -> "struct" ident "{" struct_fields "}"
@@ -93,9 +93,9 @@ FnParameterList: Vec<FnParameter> = {
 	}
 };
 
-/// param -> path ident
+/// param -> ident ":" path
 FnParameter: FnParameter = {
-	<param_type: Path> <name: Ident> => {
+	<name: Ident> ":"  <param_type: Path> => {
 		FnParameter::new(name, param_type)
 	}
 };
