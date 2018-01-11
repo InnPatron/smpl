@@ -51,7 +51,7 @@ mod parser_tests {
 
     #[test]
     fn test_parse_FnDecl() {
-        let input = "fn test_fn(i32 arg, float test, String next) { }";
+        let input = "fn test_fn(arg: i32, test: float, next: String) { }";
         let func = parse_FnDecl(input).unwrap();
         assert_eq!(func.name, ident!("test_fn"));
         assert_eq!(func.body, Block(Vec::new()));

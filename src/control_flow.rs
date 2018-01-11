@@ -535,7 +535,7 @@ mod tests {
     fn linear_cfg_generation() {
     
         let input =
-"fn test(int arg) {
+"fn test(arg: int) {
 int a = 2;
 int b = 3;
 }";
@@ -606,7 +606,7 @@ int b = 3;
     fn branching_cfg_generation() {
     
         let input =
-"fn test(int arg) {
+"fn test(arg: int) {
 if (test) {
     int c = 4;
 }
@@ -735,7 +735,7 @@ if (test) {
     #[test]
     fn complex_branching_cfg_generation() {
 let input =
-"fn test(int arg) {
+"fn test(arg: int) {
     if (false) {
         int c = 4;
     } elif (true) {
@@ -889,7 +889,7 @@ let input =
     #[test]
     fn while_loop_generation() {
         let input =
-"fn test(int arg) {
+"fn test(arg: int) {
     while (true) {
         
     }
