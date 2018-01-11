@@ -6,6 +6,82 @@ mod parser_tests {
     use ast::*;
 
     #[test]
+    fn test_parse_complex_expr() {
+        let input = r##"5 != 3 || "something" == false && true"##;
+        let expr = parse_Expr(input).unwrap();
+
+        let lhs;
+        let rhs;
+        let op;
+        match expr {
+            Expr::Bin(bin_expr) => {
+                op = bin_expr.op;
+                lhs = bin_expr.lhs;
+                rhs = bin_expr.rhs;
+            }
+
+            e @ _ => panic!("Expected BinExpr. Found {:?}", e),
+        }
+
+        assert_eq!(op, BinOp::LogicalAnd);
+        // Check left hand of &&
+        {
+            let lower_lhs;
+            let lower_rhs;
+            let lower_op;
+            match *lhs {
+                Expr::Bin(bin_expr) => {
+                    lower_lhs = bin_expr.lhs;
+                    lower_rhs = bin_expr.rhs;
+                    lower_op = bin_expr.op;
+                }
+
+                e @ _ => panic!("Expected BinExpr. Found {:?}", e),
+            }
+
+            assert_eq!(lower_op, BinOp::LogicalOr);
+
+            // Check left hand of ||
+            {
+                match *lower_lhs {
+                    Expr::Bin(bin_expr) => {
+                        assert_eq!(bin_expr.op, BinOp::InEq);
+                        assert_eq!(*bin_expr.lhs, Expr::Literal(Literal::Int(5)));
+                        assert_eq!(*bin_expr.rhs, Expr::Literal(Literal::Int(3)));
+                    }
+
+                    e @ _ => panic!("Expected BinExpr. Found {:?}", e),
+                }
+            }
+
+            // Check right hand of ||
+            {
+                match *lower_rhs {
+                    Expr::Bin(bin_expr) => {
+                        assert_eq!(bin_expr.op, BinOp::Eq);
+                        assert_eq!(*bin_expr.lhs,
+                                   Expr::Literal(Literal::String(AsciiString::from_str("something").unwrap())));
+                        assert_eq!(*bin_expr.rhs, Expr::Literal(Literal::Bool(false)));
+                    }
+
+                    e @ _ => panic!("Expected BinExpr. Found {:?}", e),
+                }
+            }
+        }
+
+        // Check right hand of &&
+        {
+            match *rhs {
+                Expr::Literal(lit) => {
+                    assert_eq!(lit, Literal::Bool(true));
+                },
+
+                e @ _ => panic!("Expected Bool. Found {:?}", e),
+            }
+        }
+    }
+
+    #[test]
     fn test_parse_string() {
         let input = r##""test""##;
         let literal = parse_Literal(input).unwrap();
