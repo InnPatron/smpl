@@ -38,7 +38,7 @@
 /// math_expr -> math_expr ["+" | "-"] factor | factor
 /// factor -> factor ["*" | "/" | "%"] term | term
 /// term -> "(" expr ")" | expr_leaf
-/// expr_leaf -> "(" uni_expr ")" | literal | fn_call | ident
+/// expr_leaf -> "(" uni_expr ")" | literal | fn_call | path
 ///
 /// 
 /// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "[[:ASCII:]]"
@@ -334,10 +334,17 @@ Term: Expr = {
 	<e: ExprLeaf> => e,
 };
 
-/// expr_leaf -> "(" uni_expr ")" | literal | fn_call
+/// expr_leaf -> "(" uni_expr ")" | literal | fn_call | path
 ExprLeaf: Expr = {
 	"(" <u: UniExpr> ")" => Expr::Uni(u),
-	<i: Ident> => Expr::Ident(i),
+	<path: Path> => {
+		let mut path = path;
+		if path.0.len() == 1 {
+			Expr::Variable(path.0.pop().unwrap())
+		} else {
+			Expr::FieldAccess(path)
+		}
+	},
 	<l: Literal> => Expr::Literal(l),
 	<f: FnCall> => Expr::FnCall(f),
 };

@@ -235,6 +235,18 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                 tmp_type = type_id;
             }
 
+            Value::FieldAccess(ref field_access) => {
+                let root_var_name = field_access.path().iter().next().unwrap();
+                let (root_var_id, root_var_type_id) = scope.var_info(root_var_name)?;
+
+                let accessed_field_type_id = walk_field_access(universe, root_var_type_id, field_access.path().clone())?;
+
+                field_access.set_field_type_id(accessed_field_type_id);
+                field_access.set_root_var_id(root_var_id);
+
+                tmp_type = accessed_field_type_id;
+            }
+
             Value::BinExpr(ref op, ref lhs, ref rhs) => {
                 let lhs_type_id = expr.get_tmp(*lhs.data()).value().type_id().unwrap();
                 let rhs_type_id = expr.get_tmp(*rhs.data()).value().type_id().unwrap();

@@ -214,9 +214,55 @@ impl Tmp {
 pub enum Value {
     Literal(ast::Literal),
     Variable(self::Variable),
+    FieldAccess(self::FieldAccess),
     FnCall(self::FnCall),
     BinExpr(ast::BinOp, Typed<TmpId>, Typed<TmpId>),
     UniExpr(ast::UniOp, Typed<TmpId>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldAccess {
+    path: ast::Path,
+    root_var: Cell<Option<VarId>>,
+    field_type_id: Cell<Option<TypeId>>
+}
+
+impl FieldAccess {
+    pub fn new(path: ast::Path) -> FieldAccess {
+        FieldAccess {
+            path: path,
+            root_var: Cell::new(None),
+            field_type_id: Cell::new(None),
+        }
+    }
+
+    pub fn path(&self) -> &ast::Path {
+        &self.path
+    }
+
+    pub fn set_root_var_id(&self, id: VarId) {
+        if self.root_var.get().is_some() {
+            panic!("Attempting to overwrite root variable {} of the FieldAccess {:?} with {}", self.root_var.get().unwrap(), self.path, id);
+        } else {
+            self.root_var.set(Some(id));
+        }
+    }
+
+    pub fn get_root_var_id(&self) -> Option<VarId> {
+        self.root_var.get()
+    }
+
+    pub fn set_field_type_id(&self, id: TypeId) {
+        if self.field_type_id.get().is_some() {
+            panic!("Attempting to override {} for local variable declarration {:?}", id, self);
+        } else {
+            self.field_type_id.set(Some(id));
+        }
+    }
+
+    pub fn field_type_id(&self) -> Option<TypeId> {
+        self.field_type_id.get()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

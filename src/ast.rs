@@ -144,7 +144,8 @@ pub enum Expr {
     Bin(BinExpr),
     Uni(UniExpr),
     Literal(Literal),
-    Ident(Ident),
+    Variable(Ident),
+    FieldAccess(Path),
     FnCall(FnCall),
 }
 
