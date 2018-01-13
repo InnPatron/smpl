@@ -153,6 +153,7 @@ pub enum Expr {
     Variable(Ident),
     FieldAccess(Path),
     FnCall(FnCall),
+    StructInit(StructInit),
 }
 
 #[derive(Clone, Debug, PartialEq)]

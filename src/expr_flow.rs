@@ -39,6 +39,17 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
             scope.map_tmp(universe, Value::Literal(literal), lit_type)
         }
 
+        AstExpr::StructInit(init) => {
+            let struct_name = init.struct_name;
+            let field_init = init.field_init
+                                 .map(|field_init_list| field_init_list.into_iter()
+                                                                       .map(|(name, expr)| {
+                                     let expr = Typed::untyped(flatten_expr(universe, scope, *expr));
+                                     (name, expr)
+                                 }).collect::<Vec<_>>());
+            scope.map_tmp(universe, Value::StructInit(StructInit::new(struct_name, field_init)), None)
+        },
+
         AstExpr::Variable(ident) => scope.map_tmp(universe, Value::Variable(Variable::new(ident)), None),
 
         AstExpr::FieldAccess(path) => scope.map_tmp(universe, Value::FieldAccess(FieldAccess::new(path)), None),

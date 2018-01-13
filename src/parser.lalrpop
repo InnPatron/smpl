@@ -353,7 +353,7 @@ ExprLeaf: Expr = {
 	<l: Literal> => Expr::Literal(l),
 	<f: FnCall> => Expr::FnCall(f),
 
-	<struct_init: StructInit> => unimplemented!(),
+	<struct_init: StructInit> => Expr::StructInit(struct_init),
 };
 
 /// struct_init -> "init" path "{" struct_field_init_list "}"
