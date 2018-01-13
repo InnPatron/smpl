@@ -63,11 +63,22 @@ pub enum TypeErr {
         param: TypeId,
     },
 
-    NotAStruct {
+    FieldAccessOnNonStruct {
         path: Path,
         index: usize,
         invalid_type: TypeId,
         root_type: TypeId,
+    },
+
+    NotAStruct {
+        type_name: Path,
+        found: TypeId,
+    },
+
+    StructNotFullyInitialized {
+        type_name: Path,
+        struct_type: TypeId,
+        missing_fields: Vec<Ident>,
     },
 
     UnknownField {

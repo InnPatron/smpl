@@ -228,6 +228,93 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                 }
             },
 
+            Value::StructInit(ref init) => {
+
+                // Get type info
+                let type_name = init.type_name();
+                let unknown_type_id = scope.type_id(&type_name)?;
+                let unknown_type = universe.get_type(unknown_type_id);
+
+                // Check if type is a struct.
+                let struct_type_id = unknown_type_id;
+                let struct_type;
+                match *unknown_type {
+                    SmplType::Struct(ref t) => struct_type = t,
+                    _ => {
+                        return Err(TypeErr::NotAStruct {
+                            type_name: type_name.clone(),
+                            found: struct_type_id,
+                        }.into());
+                    }
+                }
+
+                // Check struct field initialization expressions.
+                match init.field_init() {
+
+                    // Found field initializations
+                    Some(init_list) => {
+                        if init_list.len() != struct_type.fields.len() {
+                            // Missing fields -> struct is not fully initialized
+                            return Err(TypeErr::StructNotFullyInitialized {
+                                type_name: type_name.clone(),
+                                struct_type: struct_type_id,
+                                missing_fields: {
+                                    let inits = init_list.iter().map(|&(ref name, ref id)| name.clone())
+                                                         .collect::<Vec<_>>();
+                                    
+                                    struct_type.fields.keys()
+                                               .cloned().filter(|ident| !inits.contains(ident))
+                                               .collect::<Vec<_>>()
+                                }
+                            }.into());
+                        }
+                        
+                        // Go threw initialization list and check expressions 
+                        for &(ref ident, ref typed_tmp_id) in init_list {
+                            match struct_type.fields.get(ident) {
+                                
+                                // Field being checked exists in the struct type
+                                Some(field_type_id) => {
+                                    let tmp = expr.get_tmp(*typed_tmp_id.data());
+                                    let tmp_type_id = tmp.value().type_id().unwrap();
+                                    typed_tmp_id.set_type_id(tmp_type_id);
+
+                                    // Expression type the same as the field type?
+                                    if (universe.get_type(tmp_type_id) != universe.get_type(*field_type_id)) {
+                                        return Err(TypeErr::UnexpectedType {
+                                            found: tmp_type_id,
+                                            expected: *field_type_id,
+                                        }.into());
+                                    }
+                                }
+
+                                // Field being checked does not exist in the struct type
+                                None => {
+                                    return Err(TypeErr::UnknownField {
+                                        name: ident.clone(),
+                                        struct_type: struct_type_id,
+                                    }.into());
+                                }
+                            }
+                        }
+                    }
+
+                    // No field initializations
+                    None => {
+                        if struct_type.fields.len() != 0 {
+                            // No field initializations but the struct type has fields
+                            return Err(TypeErr::StructNotFullyInitialized {
+                                type_name: type_name.clone(),
+                                struct_type: struct_type_id,
+                                missing_fields: struct_type.fields.keys().cloned().collect::<Vec<_>>(),
+                            }.into());
+                        }
+                    }
+                }
+
+                tmp_type = struct_type_id;
+            },
+
             Value::Variable(ref var) => {
                 let (var_id, type_id) = scope.var_info(var.ident())?;
                 var.set_id(var_id);
@@ -436,7 +523,7 @@ fn walk_field_access(universe: &Universe, root_type_id: TypeId, full_path: ast::
              }
 
             _ => {
-                return Err(TypeErr::NotAStruct {
+                return Err(TypeErr::FieldAccessOnNonStruct {
                     path: full_path.clone(),
                     index: index,
                     invalid_type: current_type_id,

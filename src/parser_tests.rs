@@ -6,6 +6,47 @@ mod parser_tests {
     use ast::*;
 
     #[test]
+    fn test_parse_struct_init() {
+        let init_1 = r##" init NAME { }"##;
+        let init_2 =
+r##"
+init NAME {
+    field1: 1 + 2,
+    field2: true
+}
+"##;
+
+        let init_1 = parse_Expr(init_1).unwrap();
+        let init_2 = parse_Expr(init_2).unwrap();
+
+        // Check init_1
+        {
+            let expected = Expr::StructInit(StructInit {
+                struct_name: path!("NAME"),
+                field_init: None,
+            });
+
+            assert_eq!(init_1, expected);
+        }
+
+        // Check init_2
+            {
+            let field_init = bin_expr!((int!(1 => BoxExpr), 
+                                        BinOp::Add, 
+                                        int!(2 => BoxExpr)) => BoxExpr);
+            let field2_init = boolean!(true => BoxExpr);
+
+            let expected = Expr::StructInit(StructInit {
+                struct_name: path!("NAME"),
+                field_init: Some(vec![(ident!("field1"), field_init), 
+                                      (ident!("field2"), field2_init)]),
+            });
+
+            assert_eq!(init_2, expected);
+        }
+    }
+
+    #[test]
     fn test_parse_complex_expr() {
         let input = r##"5 != 3 || "something" == false && true"##;
         let expr = parse_Expr(input).unwrap();

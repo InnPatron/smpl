@@ -218,6 +218,44 @@ pub enum Value {
     FnCall(self::FnCall),
     BinExpr(ast::BinOp, Typed<TmpId>, Typed<TmpId>),
     UniExpr(ast::UniOp, Typed<TmpId>),
+    StructInit(StructInit),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructInit {
+    struct_type_name: ast::Path,
+    field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>,
+    struct_type: Cell<Option<TypeId>>,
+}
+
+impl StructInit {
+    pub fn new(struct_type_name: ast::Path, field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>) -> StructInit {
+        StructInit {
+            struct_type_name: struct_type_name,
+            struct_type: Cell::new(None),
+            field_init: field_init,
+        }
+    }
+
+    pub fn field_init(&self) -> Option<&Vec<(ast::Ident, Typed<TmpId>)>> {
+        self.field_init.as_ref()
+    }
+
+    pub fn type_name(&self) -> &ast::Path {
+        &self.struct_type_name
+    }
+
+    pub fn set_struct_type(&self, id: TypeId) {
+        if self.struct_type.get().is_some() {
+            panic!("Attempting to overwrite {} of the struct init with {}", self.struct_type.get().unwrap(), id);
+        } else {
+            self.struct_type.set(Some(id));
+        }
+    }
+
+    pub fn struct_type(&self) -> Option<TypeId> {
+        self.struct_type.get()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

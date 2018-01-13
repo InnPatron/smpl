@@ -90,6 +90,12 @@ pub enum ExprStmt {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct StructInit {
+    pub struct_name: Path,
+    pub field_init: Option<Vec<(Ident, Box<Expr>)>>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct Assignment {
     pub name: Path,
     pub value: Expr,
@@ -147,6 +153,7 @@ pub enum Expr {
     Variable(Ident),
     FieldAccess(Path),
     FnCall(FnCall),
+    StructInit(StructInit),
 }
 
 #[derive(Clone, Debug, PartialEq)]
