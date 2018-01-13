@@ -20,13 +20,17 @@ impl RustGen {
 
 // Code generation
 impl RustGen {
-    pub fn generate(&self, program: &Program) -> String {
-        let mut result = String::new();
+    pub fn generate(&self, program: &Program) {
+        self.prelude();
 
-        unimplemented!(); 
+        for t in program.universe().all_types() {
+            if let SmplType::Struct(ref t) = *t {
+                self.emit_struct_type(program.universe(), t);
+            }
+        }
     }
 
-    fn prelude(&self, universe: &Universe, struct_type: &StructType) {
+    fn prelude(&self) {
         let mut output = self.output.borrow_mut();
         output.push_str("use std::cell::RefCell;\n");
     }
