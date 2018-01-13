@@ -3,7 +3,7 @@ use semantic_ck::*;
 use typed_ast::*;
 use control_flow::*;
 use smpl_type::*;
-use ast::{Ident, Path};
+use ast::{Ident, Path, BinOp, UniOp};
 
 pub struct RustGen {
     output: RefCell<String>,
@@ -33,6 +33,121 @@ impl RustGen {
     fn prelude(&self) {
         let mut output = self.output.borrow_mut();
         output.push_str("use std::cell::RefCell;\n");
+    }
+
+    fn emit_expr(&self, universe: &Universe, expr: &Expr) -> TmpId {
+        let execution_order = expr.execution_order();
+
+        let mut last_tmp = None;
+        for tmp in execution_order {
+            self.emit_tmp(expr.get_tmp(*tmp));
+            last_tmp = Some(tmp);
+        }
+
+        *last_tmp.unwrap()
+    }
+
+    fn emit_tmp(&self, tmp: &Tmp) {
+        let id = tmp.id();
+        let value = tmp.value();
+
+        let lhs = RustGen::tmp_id(id);
+        let rhs = match *value.data() {
+            Value::Literal(ref lit) => {
+                match *lit {
+                    Literal::String(ref string) => {
+                        let lit = format!("\"{}\"", string);
+                        lit
+                    }
+
+                    Literal::Int(int) => int.to_string(), 
+
+                    Literal::Float(float) => float.to_string(),
+
+                    Literal::Bool(boolean) => boolean.to_string(),
+                }
+            },
+
+            Value::Variable(ref var) => {
+                let var_id = RustGen::var_id(var.get_id()
+                                             .expect("If the program passed semantic analysis, all IDs should be filled in."));
+                var_id
+            }
+
+            Value::FieldAccess(ref access) => {
+                let var_id = RustGen::var_id(access.get_root_var_id()
+                                             .expect("If the program passed semantic analysis, all IDs should be filled in."));
+                let mut result = var_id;
+                let mut path = access.path().iter();
+
+                path.next();        // Remove root ident
+
+                for field in path {
+                    result.push_str(&format!(".{}", field));
+                }
+
+                result
+            }
+
+            Value::BinExpr(ref op, ref lhs, ref rhs) => {
+                format!("{} {} {}", 
+                        RustGen::tmp_id(*lhs.data()),
+                        RustGen::bin_op(op),
+                        RustGen::tmp_id(*rhs.data()))
+            }
+
+            Value::UniExpr(ref op, ref tmp) => {
+                format!("{}{}",
+                        RustGen::uni_op(op),
+                        RustGen::tmp_id(*tmp.data()))
+            }
+
+            Value::FnCall(_) => unimplemented!(),
+            Value::StructInit(_) => unimplemented!(),
+        };
+
+        self.output.borrow_mut().push_str(&format!("let {} = {};",
+                                                  lhs,
+                                                  rhs));
+    }
+
+    fn uni_op(op: &UniOp) -> String {
+        use self::UniOp::*;
+
+        match *op {
+            Ref => unimplemented!(),
+            Deref => unimplemented!(),
+            Negate => "-".to_string(),
+            LogicalInvert => "!".to_string(),
+        }
+    }
+
+    fn bin_op(op: &BinOp) -> String {
+        use self::BinOp::*;
+        match *op {
+            Add => "+".to_string(),
+            Sub => "-".to_string(),
+            Mul => "*".to_string(),
+            Div => "/".to_string(),
+            Mod => "%".to_string(),
+
+            LogicalAnd => "&&".to_string(),
+            LogicalOr => "||".to_string(),
+            GreaterEq => ">=".to_string(),
+            LesserEq => "<=".to_string(),
+            Greater => ">".to_string(),
+            Lesser => "<".to_string(),
+            Eq => "==".to_string(),
+            InEq => "!=".to_string(),
+        }
+    }
+
+    fn tmp_id(id: TmpId) -> String {
+        format!("_tmp{}", id.raw())
+    }
+
+    fn var_id(id: VarId) -> String {
+        format!("_var{}", id.raw())
     }
 
     fn emit_struct_type(&self, universe: &Universe, struct_type: &StructType) {
