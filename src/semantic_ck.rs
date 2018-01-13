@@ -134,12 +134,24 @@ impl ::std::fmt::Display for TypeId {
     }
 }
 
+impl TypeId {
+    pub fn raw(&self) -> u64 {
+        self.0
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct VarId(u64);
 
 impl ::std::fmt::Display for VarId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         write!(f, "VarId[{}]", self.0)
+    }
+}
+
+impl VarId {
+    pub fn raw(&self) -> u64 {
+        self.0
     }
 }
 
@@ -152,12 +164,24 @@ impl ::std::fmt::Display for FnId {
     }
 }
 
+impl FnId {
+    pub fn raw(&self) -> u64 {
+        self.0
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TmpId(u64);
 
 impl ::std::fmt::Display for TmpId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         write!(f, "TmpId[{}]", self.0)
+    }
+}
+
+impl TmpId {
+    pub fn raw(&self) -> u64 {
+        self.0
     }
 }
 
