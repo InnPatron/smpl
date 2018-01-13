@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use semantic_ck::*;
 use typed_ast::*;
 use control_flow::*;
@@ -6,21 +5,21 @@ use smpl_type::*;
 use ast::{Ident, Path, BinOp, UniOp};
 
 pub struct RustGen {
-    output: RefCell<String>,
+    output: String,
 }
 
 // Config
 impl RustGen {
     pub fn new() -> RustGen {
         RustGen {
-            output: RefCell::new(String::new()),
+            output: String::new(),
         }
     }
 }
 
 // Code generation
 impl RustGen {
-    pub fn generate(&self, program: &Program) {
+    pub fn generate(&mut self, program: &Program) {
         self.prelude();
 
         for t in program.universe().all_types() {
@@ -30,12 +29,11 @@ impl RustGen {
         }
     }
 
-    fn prelude(&self) {
-        let mut output = self.output.borrow_mut();
-        output.push_str("use std::cell::RefCell;\n");
+    fn prelude(&mut self) {
+        self.output.push_str("use std::cell::RefCell;\n");
     }
 
-    fn emit_expr(&self, universe: &Universe, expr: &Expr) -> TmpId {
+    fn emit_expr(&mut self, universe: &Universe, expr: &Expr) -> TmpId {
         let execution_order = expr.execution_order();
 
         let mut last_tmp = None;
@@ -47,7 +45,7 @@ impl RustGen {
         *last_tmp.unwrap()
     }
 
-    fn emit_tmp(&self, tmp: &Tmp) {
+    fn emit_tmp(&mut self, tmp: &Tmp) {
         let id = tmp.id();
         let value = tmp.value();
 
@@ -106,7 +104,7 @@ impl RustGen {
             Value::StructInit(_) => unimplemented!(),
         };
 
-        self.output.borrow_mut().push_str(&format!("let {} = {};",
+        self.output.push_str(&format!("let {} = {};",
                                                   lhs,
                                                   rhs));
     }
@@ -150,7 +148,7 @@ impl RustGen {
         format!("_var{}", id.raw())
     }
 
-    fn emit_struct_type(&self, universe: &Universe, struct_type: &StructType) {
+    fn emit_struct_type(&mut self, universe: &Universe, struct_type: &StructType) {
         let name = struct_type.name.to_string();
         let fields = struct_type.fields.iter()
                                 .map(|(name, id)| (name.clone(), RustGen::string_repr(&*universe.get_type(*id))));
@@ -164,7 +162,7 @@ impl RustGen {
         }
         output.push_str("}\n");
 
-        self.output.borrow_mut().push_str(&output);
+        self.output.push_str(&output);
     }
 
     fn string_repr(t: &SmplType) -> String {
