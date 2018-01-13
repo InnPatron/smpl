@@ -316,6 +316,14 @@ impl Universe {
     pub fn new_loop_id(&self) -> LoopId {
         LoopId(self.inc_counter())
     }
+
+    pub fn all_types(&self) -> Vec<Rc<SmplType>> {
+        self.types.values().cloned().collect()
+    }
+
+    pub fn all_fns(&self) -> Vec<&Function> {
+        self.fn_map.values().collect()
+    }
 }
 
 #[derive(Clone, Debug)]
