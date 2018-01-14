@@ -173,7 +173,16 @@ impl RustGen {
             }
 
             Node::LocalVarDecl(ref var_decl) => {
-                unimplemented!();
+                let var_id = var_decl.var_id();
+                let type_id = var_decl.type_id().unwrap();
+                let expr = self.emit_expr(var_decl.init_expr());
+
+                let name = RustGen::var_id(var_id);
+                let var_type = RustGen::type_id(type_id);
+                let expr = RustGen::tmp_id(expr);
+
+                self.emit_line(&format!("let {}: {} = {};",
+                                        name, var_type, expr));
                 Some(cfg.next(to_check))
             }
 
