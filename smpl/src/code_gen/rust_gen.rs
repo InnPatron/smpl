@@ -204,7 +204,7 @@ impl RustGen {
                 let var_type = RustGen::type_id(type_id);
                 let expr = RustGen::tmp_id(expr);
 
-                self.emit_line(&format!("let {}: {} = {};",
+                self.emit_line(&format!("let mut {}: {} = {};",
                                         name, var_type, expr));
                 Some(cfg.next(to_check))
             }
