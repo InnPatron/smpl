@@ -21,3 +21,11 @@ mod parser_tests;
 use std::ops::Range;
 
 pub type Span = Range<usize>;
+
+pub use self::ast::Program as Ast;
+pub use self::semantic_ck::Program as Program;
+pub use self::code_gen::RustCodeGenerator;
+pub use self::err::Err;
+
+pub use self::semantic_ck::check as check_ast;
+pub use self::parser::parse_Program as parse_program;
