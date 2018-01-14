@@ -95,6 +95,8 @@ fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack
             let expr_type_id = resolve_expr(data.universe, &current_scope, var_decl.init_expr())?;
             let expr_type = data.universe.get_type(expr_type_id);
 
+            var_decl.set_type_id(var_type_id);
+
             if var_type == expr_type {
                 current_scope.insert_var(name, var_id, var_type_id);
             } else {

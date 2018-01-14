@@ -18,10 +18,11 @@ fn main() {
     let output_val = matches.value_of("OUTPUT").unwrap();
 
     let input_path = Path::new(input_val);
-    let mut file = match File::open(input_path) {
+    let mut file = match File::open(input_path.clone()) {
         Ok(file) => file,
         Err(err) => {
-            eprintln!("{}", err);
+            eprintln!("Cannot open input file ({}):\n{}",
+                      input_path.display(), err);
             return;
         }
     };
@@ -30,7 +31,8 @@ fn main() {
     match file.read_to_string(&mut input) {
         Ok(_) => (),
         Err(err) => {
-            eprintln!("{}", err);
+            eprintln!("Failed to read input file ({}) contents:\n{}", 
+                      input_path.display(), err);
             return;
         }
     }
@@ -49,19 +51,21 @@ fn main() {
         return;
     }
 
-    let mut output_file = {
-        let mut output_path = output_dir.to_path_buf();
-        output_path.push(input_path.file_stem().unwrap());
-        output_path.set_extension(".rs");
+    let mut output_path = output_dir.to_path_buf();
+    output_path.push(input_path.file_stem().unwrap());
+    output_path.set_extension("rs");
 
+    let mut output_file = {
         let open_result = OpenOptions::new()
+                                        .write(true)
                                         .append(false)
-                                        .create_new(true)
-                                        .open(output_path);
+                                        .create(true)
+                                        .open(output_path.clone());
         match open_result {
             Ok(file) => file,
             Err(err) => {
-                eprintln!("{}", err);
+                eprintln!("Failed to open output file ({}):\n{}",
+                          output_path.display(), err);
                 return;
             }
         }
@@ -74,13 +78,14 @@ fn main() {
     let output = match result {
         Ok(output) => output,
         Err(err) => {
-            eprintln!("{}", err);
+            eprintln!("Compilation error: {}", err);
             return;
         }
     };
 
     if let Err(err) = output_file.write_all(output.as_bytes()) {
-        eprintln!("{}", err);
+        eprintln!("Failed to write to output file ({}):\n{}", 
+                  output_path.display(), err);
         return;
     }
 }
