@@ -57,8 +57,9 @@ fn main() {
 
     let mut output_file = {
         let open_result = OpenOptions::new()
+                                        .write(true)
                                         .append(false)
-                                        .create_new(true)
+                                        .create(true)
                                         .open(output_path.clone());
         match open_result {
             Ok(file) => file,
