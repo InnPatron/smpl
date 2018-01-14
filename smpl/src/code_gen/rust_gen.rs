@@ -187,8 +187,8 @@ impl RustGen {
                 Some(cfg.next(to_check))
             }
             Node::ExitScope => {
-                self.emit_line("}");
                 self.shift_left();
+                self.emit_line("}");
                 Some(cfg.next(to_check))
             }
 
