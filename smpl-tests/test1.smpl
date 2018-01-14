@@ -2,8 +2,28 @@ fn main() {
 	let hello: String = "Hello!";
 }
 
-fn test() -> bool {
+fn if_basic() -> i32 {
 	if true {
-		return true;
+		return 0;
+	}
+}
+
+fn if_default() -> i32 {
+	if false {
+		return 0;
+	} elif false {
+		return 0;
+	}
+	
+	return 1;
+}
+
+fn if_complex() -> i32 {
+	if true {
+		return 1;
+	} elif false {
+		return 0;
+	} else {
+		return 0;
 	}
 }
