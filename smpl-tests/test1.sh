@@ -6,4 +6,4 @@ if [ ! -d "./target" ]; then
 	mkdir ./target
 fi
 
-../target/debug/smplc --input test1.smpl --backend 0 --output target
+../target/debug/smplc --input test1.smpl --backend 0 --output ./target/
