@@ -62,6 +62,22 @@ impl RustGen {
             self.shift = self.shift - 1;
         }
     }
+
+    fn tmp_id(id: TmpId) -> String {
+        format!("_tmp{}", id.raw())
+    }
+
+    fn var_id(id: VarId) -> String {
+        format!("_var{}", id.raw())
+    }
+
+    fn fn_id(id: FnId) -> String {
+        format!("_fn{}", id.raw())
+    }
+
+    fn type_id(id: TypeId) -> String {
+        format!("_type{}", id.raw())
+    }
 }
 
 // Code generation
@@ -96,15 +112,15 @@ impl RustGen {
 
                 // Gather parameters 
                 for param in fn_type.params.iter() {
-                    let param_type = program.universe().get_type(param.param_type);
+                    let param_type = param.param_type;
                     args.push_str(&format!("{}: {}, ", 
                                            RustGen::var_id(param.var_id().unwrap()),
-                                           RustGen::string_repr(&*param_type)));
+                                           RustGen::type_id(param_type)));
                 }
             } else {
                 panic!("{} did not map to a function type", func.type_id());
             }
-            let return_type = RustGen::string_repr(&*program.universe().get_type(return_type_id));
+            let return_type = RustGen::type_id(return_type_id);
 
             // Emit fn signature
             self.emit(&format!("fn {} (", name));
@@ -350,22 +366,10 @@ impl RustGen {
         }
     }
 
-    fn tmp_id(id: TmpId) -> String {
-        format!("_tmp{}", id.raw())
-    }
-
-    fn var_id(id: VarId) -> String {
-        format!("_var{}", id.raw())
-    }
-
-    fn fn_id(id: FnId) -> String {
-        format!("_fn{}", id.raw())
-    }
-
     fn emit_struct_type(&mut self, universe: &Universe, struct_type: &StructType) {
         let name = struct_type.name.to_string();
         let fields = struct_type.fields.iter()
-                                .map(|(name, id)| (name.clone(), RustGen::string_repr(&*universe.get_type(*id))));
+                                .map(|(name, id)| (name.clone(), RustGen::type_id(*id)));
 
         
         self.emit_line("#[derive(Clone, Debug, PartialEq)]");
@@ -374,17 +378,5 @@ impl RustGen {
             self.emit_line(&format!("\t{}: RefCell<{}>", name, string_type));
         }
         self.emit_line("}");
-    }
-
-    fn string_repr(t: &SmplType) -> String {
-        match *t {
-            SmplType::Int => "i64".to_string(),
-            SmplType::Float => "f64".to_string(),
-            SmplType::String => "String".to_string(),
-            SmplType::Bool => "bool".to_string(),
-            SmplType::Unit => "()".to_string(),
-            SmplType::Struct(ref struct_t) => struct_t.name.to_string(),
-            SmplType::Function(_) => unimplemented!(),
-        }
     }
 }
