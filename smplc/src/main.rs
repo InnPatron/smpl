@@ -53,7 +53,7 @@ fn main() {
 
     let mut output_path = output_dir.to_path_buf();
     output_path.push(input_path.file_stem().unwrap());
-    output_path.set_extension(".rs");
+    output_path.set_extension("rs");
 
     let mut output_file = {
         let open_result = OpenOptions::new()
