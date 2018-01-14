@@ -85,21 +85,23 @@ impl RustGen {
 
             Node::LoopFoot(_) => Some(cfg.after_loop_foot(to_check)),
             Node::Continue(_) => {
-                self.output.push_str("continue;\n");
+                self.emit_line("continue;");
                 Some(cfg.after_continue(to_check))
             }
 
             Node::Break(_) => { 
-                self.output.push_str("break;\n");
+                self.emit_line("break;");
                 Some(cfg.after_break(to_check))
             }
 
             Node::EnterScope => {
-                self.output.push_str("{\n");
+                self.emit_line("{");
+                self.shift_right();
                 Some(cfg.next(to_check))
             }
             Node::ExitScope => {
-                self.output.push_str("}\n");
+                self.emit_line("}");
+                self.shift_left();
                 Some(cfg.next(to_check))
             }
 
@@ -112,9 +114,9 @@ impl RustGen {
                 let var_id = assignment.var_id().unwrap();
                 let expr = self.emit_expr(assignment.value());
 
-                self.output.push_str(&format!("{} = {};\n",
-                                              RustGen::var_id(var_id),
-                                              RustGen::tmp_id(expr)));
+                self.emit_line(&format!("{} = {};",
+                                        RustGen::var_id(var_id),
+                                        RustGen::tmp_id(expr)));
 
                 Some(cfg.next(to_check))
             },
@@ -128,11 +130,11 @@ impl RustGen {
                 match *return_expr {
                     Some(ref expr) => {
                         let expr = self.emit_expr(expr);
-                        self.output.push_str(&format!("return {};\n", 
-                                                      RustGen::tmp_id(expr)));
+                        self.emit_line(&format!("return {};", 
+                                                RustGen::tmp_id(expr)));
                     }
 
-                    None => self.output.push_str("return;\n"),
+                    None => self.emit_line("return;"),
 
                 }
                 Some(cfg.next(to_check))
@@ -140,7 +142,7 @@ impl RustGen {
 
             Node::Condition(ref condition_expr) => {
                 let expr = self.emit_expr(condition_expr);
-                self.output.push_str(&format!("if {} \n", RustGen::tmp_id(expr)));
+                self.emit_line(&format!("if {} ", RustGen::tmp_id(expr)));
 
 
                 let mut merge_node = None;
@@ -167,7 +169,7 @@ impl RustGen {
                     }
                 }
 
-                self.output.push_str("else");
+                self.emit(" else ");
                 loop {
                     match *node_w!(cfg, current_false_node) {
                         Node::BranchMerge => {
@@ -260,9 +262,9 @@ impl RustGen {
             Value::StructInit(_) => unimplemented!(),
         };
 
-        self.output.push_str(&format!("let {} = {};\n",
-                                                  lhs,
-                                                  rhs));
+        self.emit_line(&format!("let {} = {};\n",
+                                lhs,
+                                rhs));
     }
 
     fn uni_op(op: &UniOp) -> String {
@@ -309,16 +311,13 @@ impl RustGen {
         let fields = struct_type.fields.iter()
                                 .map(|(name, id)| (name.clone(), RustGen::string_repr(&*universe.get_type(*id))));
 
-        let mut output = String::new();
         
-        output.push_str("#[derive(Clone, Debug, PartialEq)]\n");
-        output.push_str(&format!("struct {} {{\n", name));
+        self.emit_line("#[derive(Clone, Debug, PartialEq)]");
+        self.emit_line(&format!("struct {} {{", name));
         for (name, string_type) in fields {
-            output.push_str(&format!("\t{}: RefCell<{}>,\n", name, string_type));
+            self.emit_line(&format!("\t{}: RefCell<{}>", name, string_type));
         }
-        output.push_str("}\n");
-
-        self.output.push_str(&output);
+        self.emit_line("}");
     }
 
     fn string_repr(t: &SmplType) -> String {
