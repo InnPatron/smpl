@@ -8,13 +8,54 @@ use petgraph::graph::NodeIndex;
 
 pub struct RustGen {
     output: String,
+    shift: u32,
 }
 
-// Config
+// Misc
 impl RustGen {
     pub fn new() -> RustGen {
         RustGen {
             output: String::new(),
+            shift: 0,
+        }
+    }
+
+    fn emit(&mut self, str: &str) {
+        self.output.push_str(str);
+    }
+
+    fn emit_line(&mut self, line: &str) {
+        self.emit_shift();
+        self.output.push_str(line);
+        self.output.push('\n');
+    }
+
+    fn emit_line_with_padding(&mut self, line: &str, pre: u32, post: u32) {
+        for i in 0..pre {
+            self.output.push('\n');
+        }
+
+        self.emit_shift();
+        self.output.push_str(line);
+
+        for i in 0..pre {
+            self.output.push('\n');
+        }
+    }
+
+    fn emit_shift(&mut self) {
+        for i in 0..self.shift {
+            self.output.push('\t');
+        }
+    }
+
+    fn shift_right(&mut self) {
+        self.shift = self.shift + 1;
+    }
+
+    fn shift_left(&mut self) {
+        if self.shift > 0 {
+            self.shift = self.shift - 1;
         }
     }
 }
