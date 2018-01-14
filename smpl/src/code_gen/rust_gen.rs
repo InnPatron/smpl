@@ -31,6 +31,10 @@ impl RustGen {
     }
 
     fn emit(&mut self, str: &str) {
+        self.output.push_str(str);
+    }
+
+    fn emit_fmt(&mut self, str: &str) {
         self.emit_shift();
         self.output.push_str(str);
     }
@@ -179,7 +183,7 @@ impl RustGen {
             }
 
             Node::LoopHead(_) => {
-                self.emit("loop ");
+                self.emit_fmt("loop ");
                 self.previous_is_loop_head = true;
                 Some(cfg.next(to_check))
             }
@@ -273,7 +277,7 @@ impl RustGen {
             }
 
             Node::Condition(ref condition_expr) => {
-                self.emit("if {\n");
+                self.emit_fmt("if {\n");
                 self.shift_right();
                 let expr = self.emit_expr(condition_expr);
                 self.emit_line(&format!("{} }}", RustGen::tmp_id(expr)));
@@ -334,7 +338,7 @@ impl RustGen {
                         }
                     }
 
-                    self.emit(" else ");
+                    self.emit_fmt(" else ");
                     loop {
                         match *node_w!(cfg, current_false_node) {
                             Node::BranchMerge => {
