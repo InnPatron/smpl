@@ -88,9 +88,9 @@ impl RustGen {
         self.emit_line("//#### START STRUCT DEFINITIONS ####");
 
         // Emit struct definitions
-        for t in program.universe().all_types() {
-            if let SmplType::Struct(ref t) = *t {
-                self.emit_struct_type(program.universe(), t);
+        for (id, t) in program.universe().all_types() {
+            if let SmplType::Struct(ref struct_t) = *t {
+                self.emit_struct_type(program.universe(), id, struct_t);
                 self.line_pad();
             }
         }
@@ -99,8 +99,7 @@ impl RustGen {
         self.emit_line("//#### START FUNCTION DEFINITIONS ####");
 
         // Emit function definitions
-        for fn_id in program.universe().all_fns() {
-            let func = program.universe().get_fn(fn_id);
+        for (fn_id, ref func) in program.universe().all_fns() {
             let func_type = program.universe().get_type(func.type_id());
             let name = RustGen::fn_id(fn_id);
 
@@ -366,8 +365,8 @@ impl RustGen {
         }
     }
 
-    fn emit_struct_type(&mut self, universe: &Universe, struct_type: &StructType) {
-        let name = struct_type.name.to_string();
+    fn emit_struct_type(&mut self, universe: &Universe, id: TypeId, struct_type: &StructType) {
+        let name = RustGen::type_id(id);
         let fields = struct_type.fields.iter()
                                 .map(|(name, id)| (name.clone(), RustGen::type_id(*id)));
 

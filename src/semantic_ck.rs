@@ -341,12 +341,12 @@ impl Universe {
         LoopId(self.inc_counter())
     }
 
-    pub fn all_types(&self) -> Vec<Rc<SmplType>> {
-        self.types.values().cloned().collect()
+    pub fn all_types(&self) -> Vec<(TypeId, Rc<SmplType>)> {
+        self.types.iter().map(|(id, t)| (id.clone(), t.clone())).collect()
     }
 
-    pub fn all_fns(&self) -> Vec<FnId> {
-        self.fn_map.keys().cloned().collect()
+    pub fn all_fns(&self) -> Vec<(FnId, &Function)> {
+        self.fn_map.iter().map(|(id, f)| (id.clone(), f)).collect()
     }
 }
 
