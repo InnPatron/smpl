@@ -87,7 +87,7 @@ impl RustGen {
 // Code generation
 impl RustGen {
     pub fn emit_program(&mut self, program: &Program) {
-        self.prelude();
+        self.prelude(program.universe());
 
         self.emit_line("//#### START STRUCT DEFINITIONS ####");
 
@@ -143,8 +143,24 @@ impl RustGen {
         self.emit_line("//#### END FUNCTION DEFINITIONS ####");
     }
 
-    fn prelude(&mut self) {
+    fn prelude(&mut self, universe: &Universe) {
         self.output.push_str("use std::cell::RefCell;\n");
+
+        // Create TypeId aliases for primitives
+        self.emit_line(&format!("type {} = i64;",
+                                RustGen::type_id(universe.int())));
+
+        self.emit_line(&format!("type {} = f64;",
+                                RustGen::type_id(universe.float())));
+
+        self.emit_line(&format!("type {} = bool;",
+                                RustGen::type_id(universe.boolean())));
+
+        self.emit_line(&format!("type {} = String;",
+                                RustGen::type_id(universe.string())));
+
+        self.emit_line(&format!("type {} = ();",
+                                RustGen::type_id(universe.unit())));
     }
 
     fn emit_node(&mut self, cfg: &CFG, to_check: NodeIndex) -> Option<NodeIndex> {
