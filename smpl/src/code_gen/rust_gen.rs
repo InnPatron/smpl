@@ -9,6 +9,7 @@ use petgraph::graph::NodeIndex;
 pub struct RustGen {
     output: String,
     shift: u32,
+    previous_is_loop_head: bool,
 }
 
 // Misc
@@ -17,6 +18,7 @@ impl RustGen {
         RustGen {
             output: String::new(),
             shift: 0,
+            previous_is_loop_head: false,
         }
     }
 
@@ -169,33 +171,57 @@ impl RustGen {
     fn emit_node(&mut self, cfg: &CFG, to_check: NodeIndex) -> Option<NodeIndex> {
         match *node_w!(cfg, to_check) {
             Node::End => None,
-            Node::Start | Node::BranchMerge | Node::LoopHead(_) => {
+            Node::Start | Node::BranchMerge => {
+                self.previous_is_loop_head = false;
+
                 Some(cfg.next(to_check))
             }
 
-            Node::LoopFoot(_) => Some(cfg.after_loop_foot(to_check)),
+            Node::LoopHead(_) => {
+                self.emit("loop ");
+                self.previous_is_loop_head = true;
+                Some(cfg.next(to_check))
+            }
+
+            Node::LoopFoot(_) => {
+                if self.previous_is_loop_head {
+                    self.emit_line("{ break; }");
+                    self.previous_is_loop_head = false;
+                }
+                Some(cfg.after_loop_foot(to_check))
+            }
             Node::Continue(_) => {
+                self.previous_is_loop_head = false;
+
                 self.emit_line("continue;");
                 Some(cfg.after_continue(to_check))
             }
 
             Node::Break(_) => { 
+                self.previous_is_loop_head = false;
+
                 self.emit_line("break;");
                 Some(cfg.after_break(to_check))
             }
 
             Node::EnterScope => {
+                self.previous_is_loop_head = false;
+
                 self.emit_line("{");
                 self.shift_right();
                 Some(cfg.next(to_check))
             }
             Node::ExitScope => {
+                self.previous_is_loop_head = false;
+
                 self.shift_left();
                 self.emit_line("}");
                 Some(cfg.next(to_check))
             }
 
             Node::LocalVarDecl(ref var_decl) => {
+                self.previous_is_loop_head = false;
+
                 let var_id = var_decl.var_id();
                 let type_id = var_decl.type_id().unwrap();
                 let expr = self.emit_expr(var_decl.init_expr());
@@ -210,6 +236,8 @@ impl RustGen {
             }
 
             Node::Assignment(ref assignment) => {
+                self.previous_is_loop_head = false;
+
                 let var_id = assignment.var_id().unwrap();
                 let expr = self.emit_expr(assignment.value());
 
@@ -221,11 +249,15 @@ impl RustGen {
             },
 
             Node::Expr(ref expr) => {
+                self.previous_is_loop_head = false;
+
                 self.emit_expr(expr);
                 Some(cfg.next(to_check))
             }
 
             Node::Return(ref return_expr) => {
+                self.previous_is_loop_head = false;
+
                 match *return_expr {
                     Some(ref expr) => {
                         let expr = self.emit_expr(expr);
@@ -249,43 +281,75 @@ impl RustGen {
                 let mut current_true_node = true_branch_head;
                 let mut current_false_node = false_branch_head;
 
-                // Go through all the nodes in each branch until each branch hits the
-                // Node::BranchMerge.
-                //
-                // Can continue going through the CFG linearly afterwords.
-                loop {
-                    match *node_w!(cfg, current_true_node) {
-                        Node::BranchMerge => {
-                            merge_node = Some(current_true_node);
-                            break;
+                let loop_condition = match *node_w!(cfg, false_branch_head) {
+                    Node::LoopFoot(_) => true,
+                    _ => false,
+                };
+
+                if loop_condition {
+                    if self.previous_is_loop_head == false {
+                        panic!("Found a condition connected to a LoopFoot at the false edge. Previous node was not a LoopHead.");
+                    }
+
+                    self.previous_is_loop_head = false;
+
+                    loop {
+                        match *node_w!(cfg, current_true_node) {
+                            Node::LoopFoot(_) => {
+                                merge_node = Some(current_true_node);
+                                break;
+                            }
+
+                            _ => (),
                         }
-
-                        _ => (),
-                    }
-                    match self.emit_node(cfg, current_true_node) {
-                        Some(next) => current_true_node = next,
-                        None => return None,
-                    }
-                }
-
-                self.emit(" else ");
-                loop {
-                    match *node_w!(cfg, current_false_node) {
-                        Node::BranchMerge => {
-                            merge_node = Some(current_false_node);
-                            break; 
+                        match self.emit_node(cfg, current_true_node) {
+                            Some(next) => current_true_node = next,
+                            None => return None,
                         }
+                    }
 
-                        _ => (),
+                    Some(current_true_node)
+                } else {
+                    self.previous_is_loop_head = false;
+
+                    // Go through all the nodes in each branch until each branch hits the
+                    // Node::BranchMerge.
+                    //
+                    // Can continue going through the CFG linearly afterwords.
+                    loop {
+                        match *node_w!(cfg, current_true_node) {
+                            Node::BranchMerge => {
+                                merge_node = Some(current_true_node);
+                                break;
+                            }
+
+                            _ => (),
+                        }
+                        match self.emit_node(cfg, current_true_node) {
+                            Some(next) => current_true_node = next,
+                            None => return None,
+                        }
                     }
-                    match self.emit_node(cfg, current_false_node) {
-                        Some(next) => current_false_node = next,
-                        None => return None,
+
+                    self.emit(" else ");
+                    loop {
+                        match *node_w!(cfg, current_false_node) {
+                            Node::BranchMerge => {
+                                merge_node = Some(current_false_node);
+                                break; 
+                            }
+
+                            _ => (),
+                        }
+                        match self.emit_node(cfg, current_false_node) {
+                            Some(next) => current_false_node = next,
+                            None => return None,
+                        }
                     }
+
+                    let merge_node = merge_node.unwrap();
+                    Some(merge_node)
                 }
-
-                let merge_node = merge_node.unwrap();
-                Some(merge_node)
             }
         }
     }
