@@ -355,7 +355,26 @@ impl RustGen {
                         arg_string)
             },
 
-            Value::StructInit(_) => unimplemented!(),
+            Value::StructInit(ref struct_init) => {
+                let struct_id = struct_init.struct_type().unwrap();
+
+                let mut field_init = String::new();
+                match struct_init.field_init() {
+                    Some(init_list) => {
+                        for &(ref field, ref typed_tmp) in init_list {
+                            field_init.push_str(&format!("{}: {},\n",
+                                                         field.to_string(),
+                                                         RustGen::tmp_id(*typed_tmp.data())));
+                        }
+                    },
+                    
+                    None => (),
+                }
+
+                format!("{} {{ {} }}",
+                        RustGen::type_id(struct_id),
+                        field_init)
+            }
         };
 
         self.emit_line(&format!("let {} = {};\n",
