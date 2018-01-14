@@ -1,0 +1,9 @@
+[package]
+name = "smplc"
+version = "0.1.0"
+authors = ["Random_Civvy <vomalexander@gmail.com>"]
+workspace = ".."
+
+[dependencies]
+smpl = { path = "../smpl/" }
+clap = { version = "2.29.1", features = ["yaml"]}
