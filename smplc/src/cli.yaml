@@ -1,4 +1,4 @@
-name: smpl-c
+name: smpl
 version: "v0.0.1"
 author: Alexander Vo
 about: "Compiler for SMPL"

@@ -1,5 +1,5 @@
 [package]
-name = "smpl-c"
+name = "smplc"
 version = "0.1.0"
 authors = ["Random_Civvy <vomalexander@gmail.com>"]
 workspace = ".."
