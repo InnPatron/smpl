@@ -299,10 +299,13 @@ impl RustGen {
                     }
 
                     self.previous_is_loop_head = false;
-
+                    let mut first_node = true;
                     loop {
                         match *node_w!(cfg, current_true_node) {
                             Node::LoopFoot(_) => {
+                                if first_node {
+                                    self.emit_line("{ /* EMPTY */}");
+                                }
                                 merge_node = Some(current_true_node);
                                 break;
                             }
@@ -313,6 +316,8 @@ impl RustGen {
                             Some(next) => current_true_node = next,
                             None => return None,
                         }
+
+                        first_node = false;
                     }
 
                     Some(current_true_node)
@@ -323,9 +328,15 @@ impl RustGen {
                     // Node::BranchMerge.
                     //
                     // Can continue going through the CFG linearly afterwords.
+
+
+                    let mut first_node = true;
                     loop {
                         match *node_w!(cfg, current_true_node) {
                             Node::BranchMerge => {
+                                if first_node {
+                                    self.emit_line("{ /* EMPTY */ }");
+                                }
                                 merge_node = Some(current_true_node);
                                 break;
                             }
@@ -336,23 +347,38 @@ impl RustGen {
                             Some(next) => current_true_node = next,
                             None => return None,
                         }
+
+                        first_node = false;
                     }
 
-                    self.emit_fmt(" else ");
+                    let mut first_node = true;
                     loop {
                         match *node_w!(cfg, current_false_node) {
                             Node::BranchMerge => {
+                                if first_node {
+                                    self.emit_line("{ /* EMPTY */ }");
+                                }
                                 merge_node = Some(current_false_node);
                                 break; 
                             }
 
-                            _ => (),
+                            Node::Condition(_) => {
+                                self.emit_fmt(" else ");
+                            }
+
+                            _ => {
+                                if first_node {
+                                    self.emit_fmt(" else ");
+                                }
+                            },
                         }
 
                         match self.emit_node(cfg, current_false_node) {
                             Some(next) => current_false_node = next,
                             None => return None,
                         }
+
+                        first_node = false;
                     }
 
                     let merge_node = merge_node.unwrap();
