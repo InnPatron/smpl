@@ -8,9 +8,10 @@ use ascii::*;
 use err::Err;
 use control_flow::CFG;
 use fn_analyzer::analyze_fn;
-use smpl_type::*;
 use ast::*;
 use ast::{Function as AstFunction, Program as AstProgram};
+use smpl_type::*;
+use smpl_type::FnParameter as FnParameter;
 
 pub struct Program {
     universe: Universe,
@@ -91,7 +92,7 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunctio
         Some(ref params) => params.iter()
                               .map(|ref fn_param| {
                                   scope.type_id(&fn_param.param_type)
-                                       .map(|id| (fn_param.name.clone(), id))
+                                       .map(|id| FnParameter::new(fn_param.name.clone(), id))
                               })
                               .collect::<Result<Vec<_>, Err>>()?,
 

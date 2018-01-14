@@ -23,7 +23,7 @@ pub struct StructType {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionType {
-    pub params: Vec<(Ident, TypeId)>,
+    pub params: Vec<FnParameter>,
     pub return_type: TypeId,
 }
 
