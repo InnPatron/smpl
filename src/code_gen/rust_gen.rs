@@ -4,6 +4,8 @@ use control_flow::*;
 use smpl_type::*;
 use ast::{Ident, Path, BinOp, UniOp};
 
+use petgraph::graph::NodeIndex;
+
 pub struct RustGen {
     output: String,
 }
@@ -33,7 +35,120 @@ impl RustGen {
         self.output.push_str("use std::cell::RefCell;\n");
     }
 
-    fn emit_expr(&mut self, universe: &Universe, expr: &Expr) -> TmpId {
+    fn emit_node(&mut self, cfg: &CFG, to_check: NodeIndex) -> Option<NodeIndex> {
+        match *node_w!(cfg, to_check) {
+            Node::End => None,
+            Node::Start | Node::BranchMerge | Node::LoopHead(_) => {
+                Some(cfg.next(to_check))
+            }
+
+            Node::LoopFoot(_) => Some(cfg.after_loop_foot(to_check)),
+            Node::Continue(_) => {
+                self.output.push_str("continue;\n");
+                Some(cfg.after_continue(to_check))
+            }
+
+            Node::Break(_) => { 
+                self.output.push_str("break;\n");
+                Some(cfg.after_break(to_check))
+            }
+
+            Node::EnterScope => {
+                self.output.push_str("{\n");
+                Some(cfg.next(to_check))
+            }
+            Node::ExitScope => {
+                self.output.push_str("}\n");
+                Some(cfg.next(to_check))
+            }
+
+            Node::LocalVarDecl(ref var_decl) => {
+                unimplemented!();
+                Some(cfg.next(to_check))
+            }
+
+            Node::Assignment(ref assignment) => {
+                let var_id = assignment.var_id().unwrap();
+                let expr = self.emit_expr(assignment.value());
+
+                self.output.push_str(&format!("{} = {};\n",
+                                              RustGen::var_id(var_id),
+                                              RustGen::tmp_id(expr)));
+
+                Some(cfg.next(to_check))
+            },
+
+            Node::Expr(ref expr) => {
+                self.emit_expr(expr);
+                Some(cfg.next(to_check))
+            }
+
+            Node::Return(ref return_expr) => {
+                match *return_expr {
+                    Some(ref expr) => {
+                        let expr = self.emit_expr(expr);
+                        self.output.push_str(&format!("return {};\n", 
+                                                      RustGen::tmp_id(expr)));
+                    }
+
+                    None => self.output.push_str("return;\n"),
+
+                }
+                Some(cfg.next(to_check))
+            }
+
+            Node::Condition(ref condition_expr) => {
+                let expr = self.emit_expr(condition_expr);
+                self.output.push_str(&format!("if {} \n", RustGen::tmp_id(expr)));
+
+
+                let mut merge_node = None;
+                let (true_branch_head, false_branch_head) = cfg.after_condition(to_check);
+                let mut current_true_node = true_branch_head;
+                let mut current_false_node = false_branch_head;
+
+                // Go through all the nodes in each branch until each branch hits the
+                // Node::BranchMerge.
+                //
+                // Can continue going through the CFG linearly afterwords.
+                loop {
+                    match *node_w!(cfg, current_true_node) {
+                        Node::BranchMerge => {
+                            merge_node = Some(current_true_node);
+                            break;
+                        }
+
+                        _ => (),
+                    }
+                    match self.emit_node(cfg, current_true_node) {
+                        Some(next) => current_true_node = next,
+                        None => return None,
+                    }
+                }
+
+                self.output.push_str("else");
+                loop {
+                    match *node_w!(cfg, current_false_node) {
+                        Node::BranchMerge => {
+                            merge_node = Some(current_false_node);
+                            break; 
+                        }
+
+                        _ => (),
+                    }
+                    match self.emit_node(cfg, current_false_node) {
+                        Some(next) => current_false_node = next,
+                        None => return None,
+                    }
+                }
+
+                let merge_node = merge_node.unwrap();
+                Some(merge_node)
+            }
+        }
+    }
+
+    fn emit_expr(&mut self, expr: &Expr) -> TmpId {
         let execution_order = expr.execution_order();
 
         let mut last_tmp = None;
@@ -104,7 +219,7 @@ impl RustGen {
             Value::StructInit(_) => unimplemented!(),
         };
 
-        self.output.push_str(&format!("let {} = {};",
+        self.output.push_str(&format!("let {} = {};\n",
                                                   lhs,
                                                   rhs));
     }
