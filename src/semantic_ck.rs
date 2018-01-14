@@ -345,8 +345,8 @@ impl Universe {
         self.types.values().cloned().collect()
     }
 
-    pub fn all_fns(&self) -> Vec<&Function> {
-        self.fn_map.values().collect()
+    pub fn all_fns(&self) -> Vec<FnId> {
+        self.fn_map.keys().cloned().collect()
     }
 }
 
