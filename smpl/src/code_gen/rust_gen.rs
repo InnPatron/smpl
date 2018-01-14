@@ -31,6 +31,7 @@ impl RustGen {
     }
 
     fn emit(&mut self, str: &str) {
+        self.emit_shift();
         self.output.push_str(str);
     }
 
@@ -272,9 +273,11 @@ impl RustGen {
             }
 
             Node::Condition(ref condition_expr) => {
+                self.emit("if {\n");
+                self.shift_right();
                 let expr = self.emit_expr(condition_expr);
-                self.emit_line(&format!("if {} ", RustGen::tmp_id(expr)));
-
+                self.emit_line(&format!("{} }}", RustGen::tmp_id(expr)));
+                self.shift_left();
 
                 let mut merge_node = None;
                 let (true_branch_head, false_branch_head) = cfg.after_condition(to_check);
