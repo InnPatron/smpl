@@ -16,6 +16,61 @@ mod parser_tests {
 }";
             parse_Program(input).unwrap();
         }
+
+        {
+            let input =
+"fn main() {
+	let hello: String = \"Hello!\";
+}
+
+fn if_basic() -> i32 {
+	let name: String = \"if_basic\";
+
+	if true {
+		return 0;
+	}
+}
+
+fn if_default() -> i32 {
+	let name: String = \"if_default\";
+
+	if false {
+		return 0;
+	} elif false {
+		return 1;
+	}
+	
+	return 2;
+}
+
+fn if_empty() -> i32 {
+	let name: String = \"if_empty\";
+
+	if false { } elif false { } elif true { } else { }
+
+	return 100;
+}
+
+fn if_complex() -> i32 {
+	let name: String = \"if_complex\";
+
+	if true {
+		return 0;
+	} elif false {
+		return 1;
+	} else {
+		return 2;
+	}
+}";
+            let ast = parse_Program(input).unwrap();
+            for decl in ast.0.iter() {
+                match *decl {
+                    DeclStmt::Struct(ref s) => println!("{:?}", s),
+                    DeclStmt::Function(ref f) => println!("{:?}", f),
+                }
+            }
+            assert_eq!(ast.0.len(), 5);
+    }
     }
 
     #[test]

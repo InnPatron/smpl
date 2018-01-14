@@ -425,7 +425,7 @@ pub Literal: Literal = {
 			Literal::Int(number.parse::<i64>().unwrap())
 		}
 	},
-	<string: r##""[[:ascii:]]*""##>  => {
+	<string: r##"".*""##>  => {
 		let mut string = AsciiString::from_str(string).unwrap();
 		string.remove(0);
 		string.pop();
