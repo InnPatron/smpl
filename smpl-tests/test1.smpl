@@ -3,6 +3,7 @@ fn main() {
 }
 
 fn if_basic() -> i32 {
+	let name: String = "if_basic";
 
 	if true {
 		return 0;
@@ -10,6 +11,7 @@ fn if_basic() -> i32 {
 }
 
 fn if_default() -> i32 {
+	let name: String = "if_default";
 
 	if false {
 		return 0;
@@ -21,6 +23,7 @@ fn if_default() -> i32 {
 }
 
 fn if_empty() -> i32 {
+	let name: String = "if_empty";
 
 	if false { } elif false { } elif true { } else { }
 
@@ -28,6 +31,7 @@ fn if_empty() -> i32 {
 }
 
 fn if_complex() -> i32 {
+	let name: String = "if_complex";
 
 	if true {
 		return 0;
