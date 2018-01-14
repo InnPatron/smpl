@@ -4,6 +4,20 @@ author: Alexander Vo
 about: "Compiler for SMPL"
 args:    
     - INPUT:
+        short: in
+        long: input
         help: "Source file to compile"
         required: true
-        index: 1
+        takes_value: true
+    - BACKEND:
+        short: b
+        long: backend
+        help: "0: Rust"
+        takes_value: true
+        required: true
+    - OUTPUT:
+        short: out
+        long: output
+        help: "Output directory"
+        required: true
+        takes_value: true
