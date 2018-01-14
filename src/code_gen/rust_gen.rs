@@ -334,7 +334,27 @@ impl RustGen {
                         RustGen::tmp_id(*tmp.data()))
             }
 
-            Value::FnCall(_) => unimplemented!(),
+            Value::FnCall(ref fn_call) => {
+                let fn_id = fn_call.get_id().unwrap();
+                
+                // Gather argument expressions
+                let mut arg_string = String::new();
+                match fn_call.args() {
+                    Some(ref args) => {
+                        for a in args.iter() {
+                            arg_string.push_str(&format!("{}, ", 
+                                                         RustGen::tmp_id(*a.data())));
+                        }
+                    }
+
+                    None => (),
+                }
+
+                format!("{}({})", 
+                        RustGen::fn_id(fn_id),
+                        arg_string)
+            },
+
             Value::StructInit(_) => unimplemented!(),
         };
 
