@@ -308,7 +308,7 @@ impl RustGen {
             Value::Literal(ref lit) => {
                 match *lit {
                     Literal::String(ref string) => {
-                        let lit = format!("\"{}\"", string);
+                        let lit = format!("\"{}\".to_string()", string);
                         lit
                     }
 
