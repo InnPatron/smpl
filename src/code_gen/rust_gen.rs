@@ -20,6 +20,10 @@ impl RustGen {
         }
     }
 
+    pub fn program(&self) -> &str {
+        &self.output
+    }
+
     fn line_pad(&mut self) {
         self.output.push('\n');
     }
@@ -82,7 +86,7 @@ impl RustGen {
 
 // Code generation
 impl RustGen {
-    pub fn generate(&mut self, program: &Program) {
+    pub fn emit_program(&mut self, program: &Program) {
         self.prelude();
 
         self.emit_line("//#### START STRUCT DEFINITIONS ####");
