@@ -69,11 +69,59 @@ impl RustGen {
     pub fn generate(&mut self, program: &Program) {
         self.prelude();
 
+        self.emit_line("//#### START STRUCT DEFINITIONS ####");
+
+        // Emit struct definitions
         for t in program.universe().all_types() {
             if let SmplType::Struct(ref t) = *t {
                 self.emit_struct_type(program.universe(), t);
+                self.line_pad();
             }
         }
+
+        self.emit_line("//#### END  STRUCT DEFINITIONS ####");
+        self.emit_line("//#### START FUNCTION DEFINITIONS ####");
+
+        // Emit function definitions
+        for fn_id in program.universe().all_fns() {
+            let func = program.universe().get_fn(fn_id);
+            let func_type = program.universe().get_type(func.type_id());
+            let name = RustGen::fn_id(fn_id);
+
+            let return_type_id;
+            let mut args = String::new();
+            if let SmplType::Function(ref fn_type) = *func_type {
+                // Get return type
+                return_type_id = fn_type.return_type;
+
+                // Gather parameters 
+                for param in fn_type.params.iter() {
+                    let param_type = program.universe().get_type(param.param_type);
+                    args.push_str(&format!("{}: {}, ", 
+                                           RustGen::var_id(param.var_id().unwrap()),
+                                           RustGen::string_repr(&*param_type)));
+                }
+            } else {
+                panic!("{} did not map to a function type", func.type_id());
+            }
+            let return_type = RustGen::string_repr(&*program.universe().get_type(return_type_id));
+
+            // Emit fn signature
+            self.emit(&format!("fn {} (", name));
+            self.emit(&args);
+            self.emit(&format!(") -> {}", return_type));
+
+            // Emit CFG
+            let mut to_check = func.cfg().after_start();
+            loop {
+                match self.emit_node(func.cfg(), to_check) {
+                    Some(next) => to_check = next,
+                    None => break,
+                }
+            }
+            self.line_pad();
+        }
+        self.emit_line("//#### END FUNCTION DEFINITIONS ####");
     }
 
     fn prelude(&mut self) {
@@ -308,6 +356,10 @@ impl RustGen {
 
     fn var_id(id: VarId) -> String {
         format!("_var{}", id.raw())
+    }
+
+    fn fn_id(id: FnId) -> String {
+        format!("_fn{}", id.raw())
     }
 
     fn emit_struct_type(&mut self, universe: &Universe, struct_type: &StructType) {
