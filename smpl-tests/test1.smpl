@@ -3,12 +3,14 @@ fn main() {
 }
 
 fn if_basic() -> i32 {
+
 	if true {
 		return 0;
 	}
 }
 
 fn if_default() -> i32 {
+
 	if false {
 		return 0;
 	} elif false {
@@ -18,7 +20,15 @@ fn if_default() -> i32 {
 	return 2;
 }
 
+fn if_empty() -> i32 {
+
+	if false { } elif false { } elif true { } else { }
+
+	return 100;
+}
+
 fn if_complex() -> i32 {
+
 	if true {
 		return 0;
 	} elif false {
