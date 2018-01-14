@@ -233,7 +233,7 @@ impl RustGen {
                     None => self.emit_line("return;"),
 
                 }
-                Some(cfg.next(to_check))
+                Some(cfg.after_return(to_check))
             }
 
             Node::Condition(ref condition_expr) => {

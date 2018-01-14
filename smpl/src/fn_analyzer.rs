@@ -147,7 +147,7 @@ fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack
                 }.into());
             }
 
-            Ok(Some(data.cfg.next(to_check)))
+            Ok(Some(data.cfg.after_return(to_check)))
         }
 
         Node::Condition(ref condition_expr) => {

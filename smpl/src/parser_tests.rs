@@ -6,6 +6,19 @@ mod parser_tests {
     use ast::*;
 
     #[test]
+    fn parse_programs() {
+        {
+            let input =
+"fn test() -> bla {
+    if test {
+
+    }
+}";
+            parse_Program(input).unwrap();
+        }
+    }
+
+    #[test]
     fn test_parse_struct_init() {
         let init_1 = r##" init NAME { }"##;
         let init_2 =
