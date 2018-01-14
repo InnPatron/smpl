@@ -46,7 +46,8 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
     // Add parameters to the current scope.
     for param in func_type.params.iter() {
         let var_id = universe.new_var_id();
-        current_scope.insert_var(param.0.clone(), var_id, param.1);
+        current_scope.insert_var(param.name.clone(), var_id, param.param_type);
+        param.set_var_id(var_id);
     }
 
     let mut to_check = cfg.after_start();
@@ -385,13 +386,13 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
 
                             for (index, (arg, param)) in arg_type_ids.iter().zip(fn_param_type_ids).enumerate() {
                                 let arg_type = universe.get_type(*arg);
-                                let param_type = universe.get_type(param.1);
+                                let param_type = universe.get_type(param.param_type);
                                 if arg_type != param_type {
                                     return Err(TypeErr::ArgMismatch {
                                         fn_id: fn_id,
                                         index: index,
                                         arg: *arg,
-                                        param: param.1,
+                                        param: param.param_type,
                                     }.into());
                                 }
                             }
