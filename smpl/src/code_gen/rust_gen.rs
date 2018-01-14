@@ -331,7 +331,6 @@ impl RustGen {
                         }
                     }
 
-                    self.emit(" else ");
                     loop {
                         match *node_w!(cfg, current_false_node) {
                             Node::BranchMerge => {
@@ -341,6 +340,8 @@ impl RustGen {
 
                             _ => (),
                         }
+
+                        self.emit(" else ");
                         match self.emit_node(cfg, current_false_node) {
                             Some(next) => current_false_node = next,
                             None => return None,
