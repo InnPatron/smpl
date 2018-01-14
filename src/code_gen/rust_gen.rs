@@ -20,6 +20,10 @@ impl RustGen {
         }
     }
 
+    fn line_pad(&mut self) {
+        self.output.push('\n');
+    }
+
     fn emit(&mut self, str: &str) {
         self.output.push_str(str);
     }
@@ -32,14 +36,14 @@ impl RustGen {
 
     fn emit_line_with_padding(&mut self, line: &str, pre: u32, post: u32) {
         for i in 0..pre {
-            self.output.push('\n');
+            self.line_pad();
         }
 
         self.emit_shift();
         self.output.push_str(line);
 
         for i in 0..pre {
-            self.output.push('\n');
+            self.line_pad();
         }
     }
 
