@@ -22,3 +22,16 @@ fn while_data() {
 		let test2: i32 = 500;
 	}
 }
+
+fn while_sequence() {
+	let name: String = "while_sequence";
+	
+	while true {
+		let test: i32 = 100;
+		let test2: i32 = test;
+	}
+
+	while true {
+
+	}
+}
