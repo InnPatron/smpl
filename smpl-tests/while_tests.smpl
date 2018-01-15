@@ -1,0 +1,7 @@
+fn while_basic() -> i32 {
+	let name: String = "while_basic";
+
+	while true {
+		break;
+	}
+}
