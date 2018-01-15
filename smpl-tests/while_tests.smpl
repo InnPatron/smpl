@@ -1,7 +1,15 @@
-fn while_basic() -> i32 {
+fn while_basic() {
 	let name: String = "while_basic";
 
 	while true {
 		break;
+	}
+}
+
+fn while_empty() {
+	let name: String = "while_empty";
+
+	while true {
+
 	}
 }
