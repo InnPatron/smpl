@@ -323,6 +323,8 @@ impl RustGen {
                         first_node = false;
                     }
 
+                    self.emit_line(" else { break; }");
+
                     Some(current_true_node)
                 } else {
                     self.previous_is_loop_head = false;
