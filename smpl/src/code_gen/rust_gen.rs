@@ -183,7 +183,7 @@ impl RustGen {
             }
 
             Node::LoopHead(_) => {
-                self.emit_fmt("loop {");
+                self.emit_line("loop {");
                 self.previous_is_loop_head = true;
                 self.shift_right();
                 Some(cfg.next(to_check))
@@ -323,7 +323,7 @@ impl RustGen {
                         first_node = false;
                     }
 
-                    self.emit_line(" else { break; }");
+                    self.emit_line("else { break; }");
 
                     Some(current_true_node)
                 } else {
