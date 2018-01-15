@@ -194,8 +194,8 @@ impl RustGen {
                     self.emit_line("{ break; }");
                     self.previous_is_loop_head = false;
                 }
-                self.emit_line("}");
                 self.shift_left();
+                self.emit_line("}");
                 Some(cfg.after_loop_foot(to_check))
             }
             Node::Continue(_) => {
