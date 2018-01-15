@@ -452,19 +452,18 @@ impl CFG {
 
                         append_node_index!(cfg, head, previous, condition);
 
-                        if let Some(branch_head) = loop_body.head {
-                            let scope_enter = cfg.graph.add_node(Node::EnterScope);
-                            let scope_exit = cfg.graph.add_node(Node::ExitScope);
+                        let scope_enter = cfg.graph.add_node(Node::EnterScope);
+                        let scope_exit = cfg.graph.add_node(Node::ExitScope);
 
-                            cfg.graph.add_edge(condition, scope_enter, Edge::True);
+                        cfg.graph.add_edge(condition, scope_enter, Edge::True);
+                        cfg.graph.add_edge(scope_exit, loop_foot, Edge::Normal);
+                        cfg.graph.add_edge(condition, loop_foot, Edge::False);
+
+                        if let Some(branch_head) = loop_body.head {
                             cfg.graph.add_edge(scope_enter, branch_head, Edge::Normal);
                             cfg.graph.add_edge(loop_body.foot.unwrap(), scope_exit, Edge::Normal);
-                            cfg.graph.add_edge(scope_exit, loop_foot, Edge::Normal);
-
-                            cfg.graph.add_edge(condition, loop_foot, Edge::False);
                         } else {
-                            cfg.graph.add_edge(condition, loop_foot, Edge::True);
-                            cfg.graph.add_edge(condition, loop_foot, Edge::False);
+                            cfg.graph.add_edge(scope_enter, scope_exit, Edge::Normal);
                         }
 
                         previous = Some(loop_foot);
