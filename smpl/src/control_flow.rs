@@ -120,8 +120,9 @@ impl CFG {
 
     pub fn after_loop_foot(&self, id: graph::NodeIndex) -> graph::NodeIndex {
 
+        let loop_id;
         match *node_w!(self, id) {
-            Node::LoopFoot(_) => (),
+            Node::LoopFoot(id) => loop_id = id,
             _ => panic!("Should only be given a Node::LoopFoot"),
         }
 
@@ -134,7 +135,11 @@ impl CFG {
          
         for n in neighbors {
             match *node_w!(self, n) {
-                Node::LoopHead(_) => (),
+                Node::LoopHead(id) => {
+                    if loop_id != id {
+                        return n;
+                    }
+                }
                 _ => return n,
             }
         }
