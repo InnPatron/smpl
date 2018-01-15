@@ -13,3 +13,12 @@ fn while_empty() {
 
 	}
 }
+
+fn while_data() {
+	let name: String = "while_data";
+
+	while true {
+		let test: i32 = 100;
+		let test2: i32 = 500;
+	}
+}
