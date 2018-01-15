@@ -921,13 +921,13 @@ let input =
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
         // start -> enter_scope -> loop_head(A) -> condition(B)
-        //       -[true]> loop_foot(A)
+        //       -[true]> enter_scope exit_scope loop_foot(A)
         //       -[false]> loop_foot(A)
         // loop_foot(A) -> implicit_return -> exit_scope -> end
         // loop_head(A) << loop_foot(A)
         //
 
-        assert_eq!(cfg.graph.node_count(), 8);
+        assert_eq!(cfg.graph.node_count(), 10);
 
         let mut start_neighbors = neighbors!(cfg, cfg.start);
         assert_eq!(start_neighbors.clone().count(), 1);
@@ -939,9 +939,10 @@ let input =
             ref n @ _ => panic!("Expected to find Node::Enter. Found {:?}", n),
         }
 
+        let loop_id;
         let loop_head = enter_neighbors.next().unwrap();
         match *node_w!(cfg, loop_head) {
-            Node::LoopHead(_) => (),
+            Node::LoopHead(id) => loop_id = id,
             ref n @ _ => panic!("Expected to find Node::LoopHead. Found {:?}", n),
         }
 
@@ -971,13 +972,27 @@ let input =
         let truth_target = truth_target.unwrap();
         let false_target = false_target.unwrap();
         match *node_w!(cfg, truth_target) {
-            Node::LoopFoot(_) => (),
-            ref n @ _ => panic!("Expected to find Node::Foot. Found {:?}", n),
+            Node::EnterScope => (),
+            ref n @ _ => panic!("Expected to find Node::EnterScope. Found {:?}", n),
         }
-        assert_eq!(truth_target, false_target);
 
-        let foot = truth_target;
+        let mut enter_neighbors = neighbors!(cfg, truth_target);
+        let exit = enter_neighbors.next().unwrap();
+        let mut exit_neighbors = neighbors!(cfg, exit);
+        match *node_w!(cfg, exit) {
+            Node::ExitScope => (),
+            ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
+        }
+
+        let foot = exit_neighbors.next().unwrap();
         let mut foot_neighbors = neighbors!(cfg, foot);
+        match *node_w!(cfg, foot) {
+            Node::LoopFoot(id) => assert_eq!(id, loop_id),
+            ref n @ _ => panic!("Expected to find Node::LoopFoot. Found {:?}", n),
+        }
+
+        assert_eq!(foot, false_target);
+
         assert_eq!(foot_neighbors.clone().count(), 2);
 
         let implicit_return = foot_neighbors.next().unwrap();
