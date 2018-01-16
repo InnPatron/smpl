@@ -484,7 +484,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
     fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), ()> {
         if let Node::BranchMerge = *self.cfg.node_weight(id) {
-            self.emit_line("{ /* EMPTY */}");
+            self.emit_line("else { /* EMPTY */}");
         } else {
             self.emit_fmt(" else ");
         }
