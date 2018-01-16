@@ -414,6 +414,8 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
     fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), ()> {
         self.emit_line("else { break; }");
+        self.shift_left();
+        self.emit_line("}");
         Ok(())
     }
 
