@@ -271,6 +271,10 @@ impl CFG {
         unreachable!();
     }
 
+    pub fn start(&self) -> graph::NodeIndex {
+        self.start
+    }
+
     pub fn after_start(&self) -> graph::NodeIndex {
         self.next(self.start)
     }
