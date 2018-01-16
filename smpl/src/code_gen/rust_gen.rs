@@ -440,10 +440,6 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
     fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), ()> {
         self.is_branch = false;
-        
-        if let Node::LoopFoot(_) = *self.cfg.node_weight(id) {
-            self.emit_line("{ /* EMPTY */}");
-        }
 
         Ok(())
     }
