@@ -448,6 +448,58 @@ fn main() {
     }
 
     #[test]
+    fn call_fn_success() {
+        use control_flow::*;
+        use typed_ast::*;
+
+        let input = 
+"fn arg_usage(a1: i32, a2: bool) {
+	let b1: i32 = a1;
+	let b2: bool = a2;
+}
+
+fn main() {
+	arg_usage(5, false);
+}";
+        
+        let ast = parse_Program(input).unwrap();
+        let program = check(ast).unwrap();
+
+        let main = program.main().unwrap();
+
+        let mut called_fn = None;
+        for (id, _) in program.universe().all_fns() {
+            if id != main {
+                called_fn = Some(id);
+                break;
+            }
+        }
+
+        let main = program.universe.get_fn(main);
+        let called_fn = called_fn.unwrap();
+        
+        let fn_call = {
+            let scope_enter = main.cfg().after_start();
+            main.cfg().next(scope_enter)
+        };
+        match *main.cfg().node_weight(fn_call) {
+            Node::Expr(ref e) => {
+                let mut iter = e.execution_order();
+                let tmp = e.get_tmp(*iter.last().unwrap());
+                match *tmp.value().data() {
+                    Value::FnCall(ref call) => {
+                        assert_eq!(call.get_id().unwrap(), called_fn);
+                    },
+
+                    ref v => panic!("Expected Value::FnCall. Found {:?}", v),
+                }
+            }
+            
+            ref n @ _ => panic!("Expected Node::Expr. Found {:?}", n),
+        }
+    }
+
+    #[test]
     fn embedded_ifs_analysis() {
         let input =
 "fn test() {
