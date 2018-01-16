@@ -203,6 +203,8 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                 let fn_type_id = func.type_id();
                 let fn_type = universe.get_type(fn_type_id);
 
+                fn_call.set_id(fn_id);
+
                 if let SmplType::Function(ref fn_type) = *fn_type {
                     let arg_type_ids = fn_call.args()
                                            .map(|ref vec| {
