@@ -39,13 +39,13 @@ struct Traverser<'a, 'b, E: 'b> {
 
 impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
-    pub fn traverse(&mut self) {
+    pub fn traverse(mut self) -> Result<(), E> {
         let mut current = Some(self.graph.start());
 
         // Traverser::visit_node should be called AT MAX the number of nodes in the graph
         for _ in 0..self.graph.graph().node_count() {
             match current {
-                Some(current) => current = self.visit_node(current),
+                Some(to_visit) => current = self.visit_node(to_visit)?,
                 None => break,
             }
         }
@@ -53,6 +53,8 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
         if current.is_some() {
             panic!("Graph traversal error. Node::End should have returned None. If Node::End was reached, this panic should not be triggered.")
         }
+
+        Ok(())
     }
 
     ///
