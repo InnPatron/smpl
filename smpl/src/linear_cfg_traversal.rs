@@ -157,7 +157,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
         match *self.graph.node_weight(current) {
             Node::End => {
                 self.passenger.end(current)?;
-                Ok(Some(self.next(current)))
+                Ok(None)
             },
 
             Node::Start => {
