@@ -17,6 +17,7 @@ mod fn_analyzer;
 mod code_gen;
 #[cfg(test)]
 mod parser_tests;
+mod linear_cfg_traversal;
 
 use std::ops::Range;
 

@@ -1,7 +1,8 @@
 use std::rc::Rc;
 
 use ast;
-use control_flow::*;
+use linear_cfg_traversal::*;
+use control_flow::CFG;
 use typed_ast::*;
 use err::*;
 use semantic_ck::{Universe, ScopedData, TypeId, FnId};
@@ -9,15 +10,15 @@ use smpl_type::*;
 
 use petgraph::graph::NodeIndex;
 
-struct FnAnalyzerData<'a, 'b> {
+struct FnAnalyzer<'a> {
     universe: &'a Universe,
-    cfg: &'b CFG,
     fn_return_type: Rc<SmplType>,
     fn_return_type_id: TypeId,
+    current_scope: ScopedData,
+    scope_stack: Vec<ScopedData>,
 }
 
 pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_id: FnId) -> Result<(), Err> {
-
     let fn_return_type;
     let fn_return_type_id;
     let func = universe.get_fn(fn_id);
@@ -33,185 +34,26 @@ pub fn analyze_fn(universe: &Universe, global_scope: &ScopedData, cfg: &CFG, fn_
         ref t @ _ => panic!("{} not mapped to a function but a {:?}", fn_id, t),
     }
 
-    let analyzer_data = FnAnalyzerData {
+    let mut analyzer = FnAnalyzer {
         universe: universe,
-        cfg: cfg,
         fn_return_type: fn_return_type,
         fn_return_type_id: fn_return_type_id,
+        current_scope: global_scope.clone(),
+        scope_stack: Vec::new(),
     };
-
-    let mut scope_stack = Vec::new();
-    let mut current_scope = global_scope.clone();
 
     // Add parameters to the current scope.
     for param in func_type.params.iter() {
         let var_id = universe.new_var_id();
-        current_scope.insert_var(param.name.clone(), var_id, param.param_type);
+        analyzer.current_scope.insert_var(param.name.clone(), 
+                                          var_id, 
+                                          param.param_type);
         param.set_var_id(var_id);
     }
 
-    let mut to_check = cfg.after_start();
-    loop {
-        match visit_node(&analyzer_data, &mut current_scope, &mut scope_stack, to_check)? {
-            Some(next) => to_check = next,
-            None => break,
-        }
-    }
+    let traverser = Traverser::new(cfg, &mut analyzer);
 
-    if scope_stack.len() != 0 {
-        panic!("Should be no left over scopes if CFG was generated properly and fully-walked.");
-    }
-
-    Ok(())
-}
-
-fn visit_node(data: &FnAnalyzerData, current_scope: &mut ScopedData, scope_stack: &mut Vec<ScopedData>, to_check: NodeIndex) -> Result<Option<NodeIndex>, Err> {
-    match *node_w!(data.cfg, to_check) {
-        Node::End => Ok(None),
-        Node::Start | Node::BranchMerge | Node::LoopHead(_) => {
-            Ok(Some(data.cfg.next(to_check)))
-        }
-
-        Node::LoopFoot(_) => Ok(Some(data.cfg.after_loop_foot(to_check))),
-        Node::Continue(_) => Ok(Some(data.cfg.after_continue(to_check))),
-        Node::Break(_) => Ok(Some(data.cfg.after_break(to_check))),
-
-        Node::EnterScope => {
-            scope_stack.push(current_scope.clone());
-            Ok(Some(data.cfg.next(to_check)))
-        }
-        Node::ExitScope => {
-            *current_scope = scope_stack.pop().expect("If CFG was generated properly and the graph is being walked correctly, there should be a scope to pop");
-            Ok(Some(data.cfg.next(to_check)))
-        }
-
-        Node::LocalVarDecl(ref var_decl) => {
-            let name = var_decl.var_name().clone();
-            let var_id = var_decl.var_id();
-            let var_type_path = var_decl.type_path();
-            let var_type_id = current_scope.type_id(var_type_path)?;
-            let var_type = data.universe.get_type(var_type_id);
-
-            let expr_type_id = resolve_expr(data.universe, &current_scope, var_decl.init_expr())?;
-            let expr_type = data.universe.get_type(expr_type_id);
-
-            var_decl.set_type_id(var_type_id);
-
-            if var_type == expr_type {
-                current_scope.insert_var(name, var_id, var_type_id);
-            } else {
-                return Err(TypeErr::LhsRhsInEq(var_type_id, expr_type_id).into());
-            }
-
-            Ok(Some(data.cfg.next(to_check)))
-        }
-
-        Node::Assignment(ref assignment) => {
-            let mut assignee = assignment.name().iter();
-            let root_var_name = assignee.next().unwrap();
-
-            let (root_var_id, root_var_type_id) = current_scope.var_info(root_var_name)?;
-
-            let assignee_type_id = walk_field_access(data.universe, root_var_type_id, assignment.name().clone())?;
-            assignment.set_var_id(root_var_id);
-            assignment.set_type_id(assignee_type_id);
-
-            let expr_type_id = resolve_expr(data.universe, &current_scope, assignment.value())?;
-
-            let assignee_type = data.universe.get_type(assignee_type_id);
-            let expr_type = data.universe.get_type(expr_type_id);
-
-            if assignee_type != expr_type {
-                return Err(TypeErr::LhsRhsInEq(assignee_type_id, expr_type_id).into());
-            }
-
-            Ok(Some(data.cfg.next(to_check)))
-        },
-
-        Node::Expr(ref expr) => {
-            resolve_expr(data.universe, &current_scope, expr)?;
-            Ok(Some(data.cfg.next(to_check)))
-        }
-
-        Node::Return(ref return_expr) => {
-            let expr_type_id = match return_expr.as_ref() {
-                Some(ref expr) => resolve_expr(data.universe, &current_scope, expr)?,
-
-                None => data.universe.unit(),
-            };
-
-            if data.universe.get_type(expr_type_id) != data.fn_return_type {
-                return Err(TypeErr::InEqFnReturn {
-                    expr: expr_type_id,
-                    fn_return: data.fn_return_type_id,
-                }.into());
-            }
-
-            Ok(Some(data.cfg.after_return(to_check)))
-        }
-
-        Node::Condition(ref condition_expr) => {
-            let expr_type_id = resolve_expr(data.universe, current_scope, condition_expr)?;
-
-            if *data.universe.get_type(expr_type_id) != SmplType::Bool {
-                return Err(TypeErr::UnexpectedType {
-                    found: expr_type_id,
-                    expected: data.universe.boolean(),
-                }.into());
-            }
-
-            let mut merge_node = None;
-            let (true_branch_head, false_branch_head) = data.cfg.after_condition(to_check);
-
-            let mut current_true_node = true_branch_head;
-            let mut current_false_node = false_branch_head;
-            let mut true_merged = false;
-            let mut false_merged = false;
-
-            // Go through all the nodes in each branch until each branch hits the
-            // Node::BranchMerge.
-            //
-            // Can continue going through the CFG linearly afterwords.
-            loop {
-                if true_merged == false {
-                    match *node_w!(data.cfg, current_true_node) {
-                        Node::BranchMerge => {
-                            merge_node = Some(current_true_node);
-                            true_merged = true;
-                        }
-
-                        _ => (),
-                    }
-                    match visit_node(data, current_scope, scope_stack, current_true_node)? {
-                        Some(next) => current_true_node = next,
-                        None => return Ok(None),
-                    }
-                }
-
-                if false_merged == false {
-                    match *node_w!(data.cfg, current_false_node) {
-                        Node::BranchMerge => {
-                            merge_node = Some(current_false_node);
-                            false_merged = true;
-                        }
-
-                        _ => (),
-                    }
-                    match visit_node(data, current_scope, scope_stack, current_false_node)? {
-                        Some(next) => current_false_node = next,
-                        None => return Ok(None),
-                    }
-                }
-
-                if true_merged && false_merged {
-                    break;
-                }
-            }
-
-            let merge_node = merge_node.unwrap();
-            Ok(Some(merge_node))
-        }
-    }
+    traverser.traverse()
 }
 
 fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<TypeId, Err> {
@@ -504,6 +346,175 @@ fn resolve_uni_op(universe: &Universe, op: &ast::UniOp, tmp_type_id: TypeId) -> 
         }
 
         _ => unimplemented!(),
+    }
+}
+
+impl<'a> Passenger<Err> for FnAnalyzer<'a> {
+    fn start(&mut self, id: NodeIndex) -> Result<(), Err> {
+        Ok(())
+    }
+
+    fn end(&mut self, id: NodeIndex) -> Result<(), Err> {
+        Ok(())
+    }
+
+    fn branch_merge(&mut self, id: NodeIndex) -> Result<(), Err> {
+        Ok(())
+    }
+
+    fn loop_head(&mut self, id: NodeIndex) -> Result<(), Err> {
+        Ok(())
+    }
+
+    fn loop_foot(&mut self, id: NodeIndex) -> Result<(), Err> {
+        Ok(())
+    }
+
+    fn cont(&mut self, id: NodeIndex) -> Result<(), Err> {
+        Ok(())
+    }
+
+    fn br(&mut self, id: NodeIndex) -> Result<(), Err> {
+        Ok(())
+    }
+
+    fn enter_scope(&mut self, id: NodeIndex) -> Result<(), Err> {
+        self.scope_stack.push(self.current_scope.clone());
+        Ok(())
+    }
+
+    fn exit_scope(&mut self, id: NodeIndex) -> Result<(), Err> {
+        let popped = self.scope_stack.pop()
+                                     .expect("If CFG was generated properly and the graph is being walked correctly, there should be a scope to pop");
+        self.current_scope = popped;
+        Ok(())
+    }
+
+    fn local_var_decl(&mut self, id: NodeIndex, var_decl: &LocalVarDecl) -> Result<(), Err> {
+        let name = var_decl.var_name().clone();
+        let var_id = var_decl.var_id();
+        let var_type_path = var_decl.type_path();
+        let var_type_id = self.current_scope.type_id(var_type_path)?;
+        let var_type = self.universe.get_type(var_type_id);
+
+        let expr_type_id = resolve_expr(self.universe, 
+                                        &self.current_scope, 
+                                        var_decl.init_expr())?;
+        let expr_type = self.universe.get_type(expr_type_id);
+
+        var_decl.set_type_id(var_type_id);
+
+        if var_type == expr_type {
+            self.current_scope.insert_var(name, var_id, var_type_id);
+        } else {
+            return Err(TypeErr::LhsRhsInEq(var_type_id, expr_type_id).into());
+        }
+
+        Ok(())
+    }
+
+    fn assignment(&mut self, id: NodeIndex, assignment: &Assignment) -> Result<(), Err> {
+        let mut assignee = assignment.name().iter();
+        let root_var_name = assignee.next().unwrap();
+
+        let (root_var_id, root_var_type_id) = self.current_scope.var_info(root_var_name)?;
+
+        let assignee_type_id = walk_field_access(self.universe, 
+                                                 root_var_type_id, 
+                                                 assignment.name().clone())?;
+        assignment.set_var_id(root_var_id);
+        assignment.set_type_id(assignee_type_id);
+
+        let expr_type_id = resolve_expr(self.universe, 
+                                        &self.current_scope, 
+                                        assignment.value())?;
+
+        let assignee_type = self.universe.get_type(assignee_type_id);
+        let expr_type = self.universe.get_type(expr_type_id);
+
+        if assignee_type != expr_type {
+            return Err(TypeErr::LhsRhsInEq(assignee_type_id, expr_type_id).into());
+        }
+
+        Ok(())
+    }
+
+
+    fn expr(&mut self, id: NodeIndex, expr: &Expr) -> Result<(), Err> {
+        resolve_expr(self.universe, &self.current_scope, expr).map(|_| ())
+    }
+
+    fn ret(&mut self, id: NodeIndex, expr: Option<&Expr>) -> Result<(), Err> {
+        let expr_type_id = match expr {
+            Some(ref expr) => resolve_expr(self.universe, &self.current_scope, expr)?,
+
+            None => self.universe.unit(),
+        };
+
+        if self.universe.get_type(expr_type_id) != self.fn_return_type {
+            return Err(TypeErr::InEqFnReturn {
+                expr: expr_type_id,
+                fn_return: self.fn_return_type_id,
+            }.into());
+        }
+
+        Ok(())
+    }
+
+    fn loop_condition(&mut self, id: NodeIndex, condition: &Expr) -> Result<(), Err> {
+        let expr_type_id = resolve_expr(self.universe, &self.current_scope, condition)?;
+
+        if *self.universe.get_type(expr_type_id) != SmplType::Bool {
+            return Err(TypeErr::UnexpectedType {
+                found: expr_type_id,
+                expected: self.universe.boolean(),
+            }.into());
+        }
+
+        Ok(())
+    }
+
+    fn loop_start_true_path(&mut self) -> Result<(), Err> {
+        // Do nothing
+        Ok(())
+    }
+
+    fn loop_end_true_path(&mut self) -> Result<(), Err> {
+        // Do nothing
+        Ok(())
+    }
+
+    fn branch_condition(&mut self, id: NodeIndex, condition: &Expr) -> Result<(), Err> {
+        let expr_type_id = resolve_expr(self.universe, &self.current_scope, condition)?;
+
+        if *self.universe.get_type(expr_type_id) != SmplType::Bool {
+            return Err(TypeErr::UnexpectedType {
+                found: expr_type_id,
+                expected: self.universe.boolean(),
+            }.into());
+        }
+
+        Ok(())
+    }
+
+    fn branch_start_true_path(&mut self) -> Result<(), Err> {
+        // Do nothing
+        Ok(())
+    }
+
+    fn branch_start_false_path(&mut self) -> Result<(), Err> {
+        // Do nothing
+        Ok(())
+    }
+
+    fn branch_end_true_path(&mut self) -> Result<(), Err> {
+        // Do nothing
+        Ok(())
+    }
+
+    fn branch_end_false_path(&mut self) -> Result<(), Err> {
+        // Do nothing
+        Ok(())
     }
 }
 

@@ -110,10 +110,19 @@ impl CFG {
         &self.graph
     }
 
+    pub fn node_weight(&self, node: graph::NodeIndex) -> &Node {
+        self.graph.node_weight(node).unwrap()
+    }
+
+    pub fn neighbors_out(&self, node: graph::NodeIndex) -> graph::Neighbors<Edge> {
+        self.graph.neighbors_directed(node, Direction::Outgoing)
+    }
+
     pub fn after_loop_foot(&self, id: graph::NodeIndex) -> graph::NodeIndex {
 
+        let loop_id;
         match *node_w!(self, id) {
-            Node::LoopFoot(_) => (),
+            Node::LoopFoot(id) => loop_id = id,
             _ => panic!("Should only be given a Node::LoopFoot"),
         }
 
@@ -126,7 +135,11 @@ impl CFG {
          
         for n in neighbors {
             match *node_w!(self, n) {
-                Node::LoopHead(_) => (),
+                Node::LoopHead(id) => {
+                    if loop_id != id {
+                        return n;
+                    }
+                }
                 _ => return n,
             }
         }
@@ -256,6 +269,10 @@ impl CFG {
         }
 
         unreachable!();
+    }
+
+    pub fn start(&self) -> graph::NodeIndex {
+        self.start
     }
 
     pub fn after_start(&self) -> graph::NodeIndex {
@@ -435,19 +452,18 @@ impl CFG {
 
                         append_node_index!(cfg, head, previous, condition);
 
-                        if let Some(branch_head) = loop_body.head {
-                            let scope_enter = cfg.graph.add_node(Node::EnterScope);
-                            let scope_exit = cfg.graph.add_node(Node::ExitScope);
+                        let scope_enter = cfg.graph.add_node(Node::EnterScope);
+                        let scope_exit = cfg.graph.add_node(Node::ExitScope);
 
-                            cfg.graph.add_edge(condition, scope_enter, Edge::True);
+                        cfg.graph.add_edge(condition, scope_enter, Edge::True);
+                        cfg.graph.add_edge(scope_exit, loop_foot, Edge::Normal);
+                        cfg.graph.add_edge(condition, loop_foot, Edge::False);
+
+                        if let Some(branch_head) = loop_body.head {
                             cfg.graph.add_edge(scope_enter, branch_head, Edge::Normal);
                             cfg.graph.add_edge(loop_body.foot.unwrap(), scope_exit, Edge::Normal);
-                            cfg.graph.add_edge(scope_exit, loop_foot, Edge::Normal);
-
-                            cfg.graph.add_edge(condition, loop_foot, Edge::False);
                         } else {
-                            cfg.graph.add_edge(condition, loop_foot, Edge::True);
-                            cfg.graph.add_edge(condition, loop_foot, Edge::False);
+                            cfg.graph.add_edge(scope_enter, scope_exit, Edge::Normal);
                         }
 
                         previous = Some(loop_foot);
@@ -905,13 +921,13 @@ let input =
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
         // start -> enter_scope -> loop_head(A) -> condition(B)
-        //       -[true]> loop_foot(A)
+        //       -[true]> enter_scope exit_scope loop_foot(A)
         //       -[false]> loop_foot(A)
         // loop_foot(A) -> implicit_return -> exit_scope -> end
         // loop_head(A) << loop_foot(A)
         //
 
-        assert_eq!(cfg.graph.node_count(), 8);
+        assert_eq!(cfg.graph.node_count(), 10);
 
         let mut start_neighbors = neighbors!(cfg, cfg.start);
         assert_eq!(start_neighbors.clone().count(), 1);
@@ -923,9 +939,10 @@ let input =
             ref n @ _ => panic!("Expected to find Node::Enter. Found {:?}", n),
         }
 
+        let loop_id;
         let loop_head = enter_neighbors.next().unwrap();
         match *node_w!(cfg, loop_head) {
-            Node::LoopHead(_) => (),
+            Node::LoopHead(id) => loop_id = id,
             ref n @ _ => panic!("Expected to find Node::LoopHead. Found {:?}", n),
         }
 
@@ -955,13 +972,27 @@ let input =
         let truth_target = truth_target.unwrap();
         let false_target = false_target.unwrap();
         match *node_w!(cfg, truth_target) {
-            Node::LoopFoot(_) => (),
-            ref n @ _ => panic!("Expected to find Node::Foot. Found {:?}", n),
+            Node::EnterScope => (),
+            ref n @ _ => panic!("Expected to find Node::EnterScope. Found {:?}", n),
         }
-        assert_eq!(truth_target, false_target);
 
-        let foot = truth_target;
+        let mut enter_neighbors = neighbors!(cfg, truth_target);
+        let exit = enter_neighbors.next().unwrap();
+        let mut exit_neighbors = neighbors!(cfg, exit);
+        match *node_w!(cfg, exit) {
+            Node::ExitScope => (),
+            ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
+        }
+
+        let foot = exit_neighbors.next().unwrap();
         let mut foot_neighbors = neighbors!(cfg, foot);
+        match *node_w!(cfg, foot) {
+            Node::LoopFoot(id) => assert_eq!(id, loop_id),
+            ref n @ _ => panic!("Expected to find Node::LoopFoot. Found {:?}", n),
+        }
+
+        assert_eq!(foot, false_target);
+
         assert_eq!(foot_neighbors.clone().count(), 2);
 
         let implicit_return = foot_neighbors.next().unwrap();
