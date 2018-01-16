@@ -128,7 +128,6 @@ pub struct RustFnGen<'a> {
     output: String,
     shift: u32,
     cfg: &'a CFG,
-    is_branch: bool,
 }
 
 // Misc
@@ -137,7 +136,6 @@ impl<'a> RustFnGen<'a> {
         RustFnGen {
             output: String::new(),
             shift: 0,
-            is_branch: false,
             cfg: cfg,
         }
     }
@@ -299,37 +297,27 @@ impl<'a> RustFnGen<'a> {
 
 impl<'a> Passenger<()> for RustFnGen<'a> {
     fn start(&mut self, id: NodeIndex) -> Result<(), ()> {
-        self.is_branch = false;
-        
         // Emit nothing
         Ok(())
     }
 
     fn end(&mut self, id: NodeIndex) -> Result<(), ()> {
-        self.is_branch = false;
-        
         // Emit nothing
         Ok(())
     }
 
     fn branch_merge(&mut self, id: NodeIndex) -> Result<(), ()> {
-        self.is_branch = false;
-        
         // Emit nothing
         Ok(())
     }
 
     fn loop_head(&mut self, id: NodeIndex) -> Result<(), ()> {
-        self.is_branch = false;
-        
         self.emit_line("loop {");
         self.shift_right();
         Ok(())
     }
 
     fn loop_foot(&mut self, id: NodeIndex) -> Result<(), ()> {
-        self.is_branch = false;
-        
         /*
         if self.previous_is_loop_head {
             self.emit_line("{ break; }");
@@ -344,38 +332,28 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn cont(&mut self, id: NodeIndex) -> Result<(), ()> {
-        self.is_branch = false;
-        
         self.emit_line("continue;");
         Ok(())
     }
 
     fn br(&mut self, id: NodeIndex) -> Result<(), ()> {
-        self.is_branch = false;
-
         self.emit_line("break;");
         Ok(())
     }
 
     fn enter_scope(&mut self, id: NodeIndex) -> Result<(), ()> {
-        self.is_branch = false;
-
         self.emit_line("{");
         self.shift_right();
         Ok(())
     }
 
     fn exit_scope(&mut self, id: NodeIndex) -> Result<(), ()> {
-        self.is_branch = false;
-
         self.shift_left();
         self.emit_line("}");
         Ok(())
     }
 
     fn local_var_decl(&mut self, id: NodeIndex, var_decl: &LocalVarDecl) -> Result<(), ()> {
-        self.is_branch = false;
-
         let var_id = var_decl.var_id();
         let type_id = var_decl.type_id().unwrap();
         let expr = self.emit_expr(var_decl.init_expr());
@@ -391,8 +369,6 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn assignment(&mut self, id: NodeIndex, assignment: &Assignment) -> Result<(), ()> {
-        self.is_branch = false;
-
         let var_id = assignment.var_id().unwrap();
         let expr = self.emit_expr(assignment.value());
 
@@ -404,15 +380,11 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn expr(&mut self, id: NodeIndex, expr: &Expr) -> Result<(), ()> {
-        self.is_branch = false;
-        
         self.emit_expr(expr);
         Ok(())
     }
 
     fn ret(&mut self, id: NodeIndex, expr: Option<&Expr>) -> Result<(), ()> {
-        self.is_branch = false;
-
         match expr {
             Some(ref expr) => {
                 let expr = self.emit_expr(expr);
@@ -427,8 +399,6 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn loop_condition(&mut self, id: NodeIndex, condition_expr: &Expr) -> Result<(), ()> {
-        self.is_branch = false;
-
         self.emit_line("if {");
         self.shift_right();
         let expr = self.emit_expr(condition_expr);
@@ -439,14 +409,10 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), ()> {
-        self.is_branch = false;
-
         Ok(())
     }
 
     fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), ()> {
-        self.is_branch = false;
-
         self.emit_line("else { break; }");
         Ok(())
     }
@@ -462,8 +428,6 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), ()> {
-        self.is_branch = false;
-
         if let Node::BranchMerge = *self.cfg.node_weight(id) {
             self.emit_line("{ /* EMPTY */}");
         }
@@ -472,8 +436,6 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn branch_end_true_path(&mut self, id: NodeIndex) -> Result<(), ()> {
-        self.is_branch = false;
-        
         // Emit nothing
         Ok(())
     }
@@ -485,14 +447,10 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
             self.emit_fmt(" else ");
         }
 
-        self.is_branch = true;
-
         Ok(())
     }
 
     fn branch_end_false_path(&mut self, id: NodeIndex) -> Result<(), ()> {
-        self.is_branch = false;
-
         // Emit nothing
         Ok(())
     }
