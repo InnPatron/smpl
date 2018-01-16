@@ -28,6 +28,22 @@ struct Traverser<'a, 'b, E: 'b> {
 
 impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
+    pub fn traverse(&mut self) {
+        let mut current = Some(self.graph.start());
+
+        // Traverser::visit_node should be called AT MAX the number of nodes in the graph
+        for _ in 0..self.graph.graph().node_count() {
+            match current {
+                Some(current) => current = self.visit_node(current),
+                None => break,
+            }
+        }
+
+        if current.is_some() {
+            panic!("Graph traversal error. Node::End should have returned None. If Node::End was reached, this panic should not be triggered.")
+        }
+    }
+
     ///
     /// Convenience function to get the next node in a linear sequence. If the current node has
     /// multiple outgoing edge (such as Node::Condition, Node::Return, Node::Break, and
