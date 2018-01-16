@@ -341,7 +341,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                         ref n @ _ => println!("Loop condition should be connected to Node::LoopFoot along the false path. Found {:?}.", n),
                     }
 
-                    Ok(Some(false_path))
+                    Ok(Some(self.after_loop_foot(false_path)))
                 } else {
                     // Branch condition
                     self.passenger.branch_condition(current, condition)?;
@@ -392,7 +392,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                         }
                     }
 
-                    Ok(Some(merge.unwrap()))
+                    Ok(Some(self.next(merge.unwrap())))
                 }
             }
         }
