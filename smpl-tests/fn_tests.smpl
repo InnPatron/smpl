@@ -1,4 +1,12 @@
 fn arg_usage(a1: i32, a2: bool) {
+	let name: String = "arg_usage";
+
 	let b1: i32 = a1;
 	let b2: bool = a2;
+}
+
+fn fn_call() {
+	let name: String = "fn_call";
+
+	arg_usage(5, false);
 }
