@@ -35,3 +35,15 @@ fn while_sequence() {
 
 	}
 }
+
+fn while_embedded() {
+	let name: String = "while_embedded";
+
+	while true {
+		while true {
+			let test: i32 = 100;
+		}
+
+		let foo: String = "foo";
+	}
+}
