@@ -41,7 +41,7 @@ macro_rules! ident {
         Ident(AsciiString::from_str($ident).unwrap())
     }};
 
-    ($ident: expr => Expr) => {{ 
+    ($ident: expr => Expr) => {{
         use ast::Expr;
         Expr::Ident(ident!($ident))
     }};

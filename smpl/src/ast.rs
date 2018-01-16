@@ -32,7 +32,12 @@ pub struct Function {
 }
 
 impl Function {
-    pub fn new(name: Ident, params: Option<Vec<FnParameter>>, return_type: Option<Path>, body: Block) -> Function {
+    pub fn new(
+        name: Ident,
+        params: Option<Vec<FnParameter>>,
+        return_type: Option<Path>,
+        body: Block,
+    ) -> Function {
         Function {
             name: name,
             params: params,
@@ -130,7 +135,7 @@ impl LocalVarDecl {
 #[derive(Clone, Debug, PartialEq)]
 pub struct If {
     pub branches: Vec<Branch>,
-    pub default_block: Option<Block>
+    pub default_block: Option<Block>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -166,7 +171,7 @@ impl FnCall {
     pub fn new(name: Ident, args: Option<Vec<Expr>>) -> FnCall {
         FnCall {
             name: name,
-            args: args, 
+            args: args,
         }
     }
 }
@@ -253,11 +258,12 @@ impl From<Ident> for Path {
 
 impl fmt::Display for Path {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let buffer = self.0.iter().fold(AsciiString::new(), 
-                                        |mut buffer, ref item| {
-                                            buffer.push_str(&item.0); 
-                                            buffer
-                                        });
+        let buffer = self.0
+            .iter()
+            .fold(AsciiString::new(), |mut buffer, ref item| {
+                buffer.push_str(&item.0);
+                buffer
+            });
         write!(f, "{}", buffer)
     }
 }

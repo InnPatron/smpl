@@ -1,5 +1,5 @@
-extern crate itertools;
 extern crate ascii;
+extern crate itertools;
 extern crate petgraph;
 
 mod err;
@@ -24,7 +24,7 @@ use std::ops::Range;
 pub type Span = Range<usize>;
 
 pub use self::ast::Program as Ast;
-pub use self::semantic_ck::Program as Program;
+pub use self::semantic_ck::Program;
 pub use self::code_gen::RustCodeGenerator;
 pub use self::err::Err;
 

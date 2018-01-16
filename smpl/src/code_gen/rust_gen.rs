@@ -4,7 +4,7 @@ use linear_cfg_traversal::*;
 use typed_ast::*;
 use control_flow::*;
 use smpl_type::*;
-use ast::{Ident, Path, BinOp, UniOp};
+use ast::{BinOp, Ident, Path, UniOp};
 use petgraph::graph::NodeIndex;
 
 pub struct RustGen {
@@ -13,11 +13,10 @@ pub struct RustGen {
 }
 
 impl RustGen {
-
     pub fn new() -> RustGen {
         RustGen {
             output: String::new(),
-            shift: 0
+            shift: 0,
         }
     }
 
@@ -53,12 +52,14 @@ impl RustGen {
                 // Get return type
                 return_type_id = fn_type.return_type;
 
-                // Gather parameters 
+                // Gather parameters
                 for param in fn_type.params.iter() {
                     let param_type = param.param_type;
-                    args.push_str(&format!("{}: {}, ", 
-                                           RustFnGen::var_id(param.var_id().unwrap()),
-                                           RustFnGen::type_id(param_type)));
+                    args.push_str(&format!(
+                        "{}: {}, ",
+                        RustFnGen::var_id(param.var_id().unwrap()),
+                        RustFnGen::type_id(param_type)
+                    ));
                 }
             } else {
                 panic!("{} did not map to a function type", func.type_id());
@@ -81,7 +82,7 @@ impl RustGen {
 
             let fn_string = fn_gen.function();
             self.emit(&fn_string);
-            
+
             self.line_pad();
         }
         self.emit_line("//#### END FUNCTION DEFINITIONS ####");
@@ -92,29 +93,40 @@ impl RustGen {
         self.line_pad();
 
         // Create TypeId aliases for primitives
-        self.emit_line(&format!("type {} = ();",
-                                RustFnGen::type_id(universe.unit())));
-        self.emit_line(&format!("type {} = i64;",
-                                RustFnGen::type_id(universe.int())));
+        self.emit_line(&format!(
+            "type {} = ();",
+            RustFnGen::type_id(universe.unit())
+        ));
+        self.emit_line(&format!(
+            "type {} = i64;",
+            RustFnGen::type_id(universe.int())
+        ));
 
-        self.emit_line(&format!("type {} = f64;",
-                                RustFnGen::type_id(universe.float())));
+        self.emit_line(&format!(
+            "type {} = f64;",
+            RustFnGen::type_id(universe.float())
+        ));
 
-        self.emit_line(&format!("type {} = bool;",
-                                RustFnGen::type_id(universe.boolean())));
+        self.emit_line(&format!(
+            "type {} = bool;",
+            RustFnGen::type_id(universe.boolean())
+        ));
 
-        self.emit_line(&format!("type {} = String;",
-                                RustFnGen::type_id(universe.string())));
+        self.emit_line(&format!(
+            "type {} = String;",
+            RustFnGen::type_id(universe.string())
+        ));
 
         self.line_pad();
     }
 
     fn emit_struct_type(&mut self, universe: &Universe, id: TypeId, struct_type: &StructType) {
         let name = RustFnGen::type_id(id);
-        let fields = struct_type.fields.iter()
-                                .map(|(name, id)| (name.clone(), RustFnGen::type_id(*id)));
+        let fields = struct_type
+            .fields
+            .iter()
+            .map(|(name, id)| (name.clone(), RustFnGen::type_id(*id)));
 
-        
         self.emit_line("#[derive(Clone, Debug, PartialEq)]");
         self.emit_line(&format!("struct {} {{", name));
         for (name, string_type) in fields {
@@ -147,7 +159,6 @@ impl<'a> RustFnGen<'a> {
 
 // Code generation
 impl<'a> RustFnGen<'a> {
-
     fn emit_expr(&mut self, expr: &Expr) -> TmpId {
         let execution_order = expr.execution_order();
 
@@ -166,34 +177,34 @@ impl<'a> RustFnGen<'a> {
 
         let lhs = RustFnGen::tmp_id(id);
         let rhs = match *value.data() {
-            Value::Literal(ref lit) => {
-                match *lit {
-                    Literal::String(ref string) => {
-                        let lit = format!("\"{}\".to_string()", string);
-                        lit
-                    }
-
-                    Literal::Int(int) => int.to_string(), 
-
-                    Literal::Float(float) => float.to_string(),
-
-                    Literal::Bool(boolean) => boolean.to_string(),
+            Value::Literal(ref lit) => match *lit {
+                Literal::String(ref string) => {
+                    let lit = format!("\"{}\".to_string()", string);
+                    lit
                 }
+
+                Literal::Int(int) => int.to_string(),
+
+                Literal::Float(float) => float.to_string(),
+
+                Literal::Bool(boolean) => boolean.to_string(),
             },
 
             Value::Variable(ref var) => {
-                let var_id = RustFnGen::var_id(var.get_id()
-                                             .expect("If the program passed semantic analysis, all IDs should be filled in."));
+                let var_id = RustFnGen::var_id(var.get_id().expect(
+                    "If the program passed semantic analysis, all IDs should be filled in.",
+                ));
                 var_id
             }
 
             Value::FieldAccess(ref access) => {
-                let var_id = RustFnGen::var_id(access.get_root_var_id()
-                                             .expect("If the program passed semantic analysis, all IDs should be filled in."));
+                let var_id = RustFnGen::var_id(access.get_root_var_id().expect(
+                    "If the program passed semantic analysis, all IDs should be filled in.",
+                ));
                 let mut result = var_id;
                 let mut path = access.path().iter();
 
-                path.next();        // Remove root ident
+                path.next(); // Remove root ident
 
                 for field in path {
                     result.push_str(&format!(".{}", field));
@@ -202,65 +213,56 @@ impl<'a> RustFnGen<'a> {
                 result
             }
 
-            Value::BinExpr(ref op, ref lhs, ref rhs) => {
-                format!("{} {} {}", 
-                        RustFnGen::tmp_id(*lhs.data()),
-                        RustFnGen::bin_op(op),
-                        RustFnGen::tmp_id(*rhs.data()))
-            }
+            Value::BinExpr(ref op, ref lhs, ref rhs) => format!(
+                "{} {} {}",
+                RustFnGen::tmp_id(*lhs.data()),
+                RustFnGen::bin_op(op),
+                RustFnGen::tmp_id(*rhs.data())
+            ),
 
-            Value::UniExpr(ref op, ref tmp) => {
-                format!("{}{}",
-                        RustFnGen::uni_op(op),
-                        RustFnGen::tmp_id(*tmp.data()))
-            }
+            Value::UniExpr(ref op, ref tmp) => format!(
+                "{}{}",
+                RustFnGen::uni_op(op),
+                RustFnGen::tmp_id(*tmp.data())
+            ),
 
             Value::FnCall(ref fn_call) => {
                 let fn_id = fn_call.get_id().unwrap();
-                
+
                 // Gather argument expressions
                 let mut arg_string = String::new();
                 match fn_call.args() {
-                    Some(ref args) => {
-                        for a in args.iter() {
-                            arg_string.push_str(&format!("{}, ", 
-                                                         RustFnGen::tmp_id(*a.data())));
-                        }
-                    }
+                    Some(ref args) => for a in args.iter() {
+                        arg_string.push_str(&format!("{}, ", RustFnGen::tmp_id(*a.data())));
+                    },
 
                     None => (),
                 }
 
-                format!("{}({})", 
-                        RustFnGen::fn_id(fn_id),
-                        arg_string)
-            },
+                format!("{}({})", RustFnGen::fn_id(fn_id), arg_string)
+            }
 
             Value::StructInit(ref struct_init) => {
                 let struct_id = struct_init.struct_type().unwrap();
 
                 let mut field_init = String::new();
                 match struct_init.field_init() {
-                    Some(init_list) => {
-                        for &(ref field, ref typed_tmp) in init_list {
-                            field_init.push_str(&format!("{}: {},\n",
-                                                         field.to_string(),
-                                                         RustFnGen::tmp_id(*typed_tmp.data())));
-                        }
+                    Some(init_list) => for &(ref field, ref typed_tmp) in init_list {
+                        field_init.push_str(&format!(
+                            "{}: {},\n",
+                            field.to_string(),
+                            RustFnGen::tmp_id(*typed_tmp.data())
+                        ));
                     },
-                    
+
                     None => (),
                 }
 
-                format!("{} {{ {} }}",
-                        RustFnGen::type_id(struct_id),
-                        field_init)
+                format!("{} {{ {} }}", RustFnGen::type_id(struct_id), field_init)
             }
         };
 
-        self.emit_line(&format!("let {} = {};\n",
-                                lhs,
-                                rhs));
+        self.emit_line(&format!("let {} = {};\n", lhs, rhs));
     }
 
     fn uni_op(op: &UniOp) -> String {
@@ -362,8 +364,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         let var_type = RustFnGen::type_id(type_id);
         let expr = RustFnGen::tmp_id(expr);
 
-        self.emit_line(&format!("let mut {}: {} = {};",
-                                name, var_type, expr));
+        self.emit_line(&format!("let mut {}: {} = {};", name, var_type, expr));
 
         Ok(())
     }
@@ -372,9 +373,11 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         let var_id = assignment.var_id().unwrap();
         let expr = self.emit_expr(assignment.value());
 
-        self.emit_line(&format!("{} = {};",
-                                RustFnGen::var_id(var_id),
-                                RustFnGen::tmp_id(expr)));
+        self.emit_line(&format!(
+            "{} = {};",
+            RustFnGen::var_id(var_id),
+            RustFnGen::tmp_id(expr)
+        ));
 
         Ok(())
     }
@@ -388,8 +391,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         match expr {
             Some(ref expr) => {
                 let expr = self.emit_expr(expr);
-                self.emit_line(&format!("return {};", 
-                                        RustFnGen::tmp_id(expr)));
+                self.emit_line(&format!("return {};", RustFnGen::tmp_id(expr)));
             }
 
             None => self.emit_line("return;"),

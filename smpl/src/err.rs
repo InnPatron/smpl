@@ -1,5 +1,5 @@
-use semantic_ck::{TypeId, FnId};
-use ast::{Path, Ident, BinOp, UniOp};
+use semantic_ck::{FnId, TypeId};
+use ast::{BinOp, Ident, Path, UniOp};
 
 #[derive(Clone, Debug)]
 pub enum Err {

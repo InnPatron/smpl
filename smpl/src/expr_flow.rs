@@ -1,6 +1,6 @@
-use semantic_ck::{Universe, TmpId};
+use semantic_ck::{TmpId, Universe};
 use typed_ast::*;
-use ast::{Literal, Expr as AstExpr};
+use ast::{Expr as AstExpr, Literal};
 
 pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
@@ -15,17 +15,16 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
         AstExpr::Bin(bin) => {
             let lhs = flatten_expr(universe, scope, *bin.lhs);
             let rhs = flatten_expr(universe, scope, *bin.rhs);
-            scope.map_tmp(universe, Value::BinExpr(bin.op, 
-                                                   Typed::untyped(lhs),
-                                                   Typed::untyped(rhs)),
-                                                   None)
+            scope.map_tmp(
+                universe,
+                Value::BinExpr(bin.op, Typed::untyped(lhs), Typed::untyped(rhs)),
+                None,
+            )
         }
 
         AstExpr::Uni(uni) => {
             let expr = flatten_expr(universe, scope, *uni.expr);
-            scope.map_tmp(universe, Value::UniExpr(uni.op,
-                                                   Typed::untyped(expr)),
-                                                   None)
+            scope.map_tmp(universe, Value::UniExpr(uni.op, Typed::untyped(expr)), None)
         }
 
         AstExpr::Literal(literal) => {
@@ -41,29 +40,43 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
 
         AstExpr::StructInit(init) => {
             let struct_name = init.struct_name;
-            let field_init = init.field_init
-                                 .map(|field_init_list| field_init_list.into_iter()
-                                                                       .map(|(name, expr)| {
-                                     let expr = Typed::untyped(flatten_expr(universe, scope, *expr));
-                                     (name, expr)
-                                 }).collect::<Vec<_>>());
-            scope.map_tmp(universe, Value::StructInit(StructInit::new(struct_name, field_init)), None)
-        },
+            let field_init = init.field_init.map(|field_init_list| {
+                field_init_list
+                    .into_iter()
+                    .map(|(name, expr)| {
+                        let expr = Typed::untyped(flatten_expr(universe, scope, *expr));
+                        (name, expr)
+                    })
+                    .collect::<Vec<_>>()
+            });
+            scope.map_tmp(
+                universe,
+                Value::StructInit(StructInit::new(struct_name, field_init)),
+                None,
+            )
+        }
 
-        AstExpr::Variable(ident) => scope.map_tmp(universe, Value::Variable(Variable::new(ident)), None),
+        AstExpr::Variable(ident) => {
+            scope.map_tmp(universe, Value::Variable(Variable::new(ident)), None)
+        }
 
-        AstExpr::FieldAccess(path) => scope.map_tmp(universe, Value::FieldAccess(FieldAccess::new(path)), None),
+        AstExpr::FieldAccess(path) => {
+            scope.map_tmp(universe, Value::FieldAccess(FieldAccess::new(path)), None)
+        }
 
         AstExpr::FnCall(fn_call) => {
             let name = fn_call.name;
-            let args = fn_call.args.map(|vec| vec.into_iter().map(|e| Typed::untyped(flatten_expr(universe, scope, e))).collect::<Vec<_>>());
+            let args = fn_call.args.map(|vec| {
+                vec.into_iter()
+                    .map(|e| Typed::untyped(flatten_expr(universe, scope, e)))
+                    .collect::<Vec<_>>()
+            });
 
             let fn_call = FnCall::new(name, args);
 
             scope.map_tmp(universe, Value::FnCall(fn_call), None)
         }
     }
-    
 }
 
 #[cfg(test)]
@@ -133,7 +146,7 @@ mod tests {
             assert_eq!(l_id, _2_id);
             assert_eq!(r_id, _3_id);
         }
-        
+
         let add_id = order.next().unwrap();
         {
             let (l_id, r_id) = match *expr.get_tmp(*add_id).value().data() {
@@ -147,7 +160,6 @@ mod tests {
 
             assert_eq!(l_id, _5_id);
             assert_eq!(r_id, div_id);
-
         }
     }
 }

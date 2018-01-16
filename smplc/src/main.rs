@@ -21,8 +21,11 @@ fn main() {
     let mut file = match File::open(input_path.clone()) {
         Ok(file) => file,
         Err(err) => {
-            eprintln!("Cannot open input file ({}):\n{}",
-                      input_path.display(), err);
+            eprintln!(
+                "Cannot open input file ({}):\n{}",
+                input_path.display(),
+                err
+            );
             return;
         }
     };
@@ -31,8 +34,11 @@ fn main() {
     match file.read_to_string(&mut input) {
         Ok(_) => (),
         Err(err) => {
-            eprintln!("Failed to read input file ({}) contents:\n{}", 
-                      input_path.display(), err);
+            eprintln!(
+                "Failed to read input file ({}) contents:\n{}",
+                input_path.display(),
+                err
+            );
             return;
         }
     }
@@ -57,15 +63,18 @@ fn main() {
 
     let mut output_file = {
         let open_result = OpenOptions::new()
-                                        .write(true)
-                                        .append(false)
-                                        .create(true)
-                                        .open(output_path.clone());
+            .write(true)
+            .append(false)
+            .create(true)
+            .open(output_path.clone());
         match open_result {
             Ok(file) => file,
             Err(err) => {
-                eprintln!("Failed to open output file ({}):\n{}",
-                          output_path.display(), err);
+                eprintln!(
+                    "Failed to open output file ({}):\n{}",
+                    output_path.display(),
+                    err
+                );
                 return;
             }
         }
@@ -84,8 +93,11 @@ fn main() {
     };
 
     if let Err(err) = output_file.write_all(output.as_bytes()) {
-        eprintln!("Failed to write to output file ({}):\n{}", 
-                  output_path.display(), err);
+        eprintln!(
+            "Failed to write to output file ({}):\n{}",
+            output_path.display(),
+            err
+        );
         return;
     }
 }
@@ -103,7 +115,7 @@ fn rust_gen(input: &str) -> Result<String, String> {
 }
 
 enum Backend {
-    Rust
+    Rust,
 }
 
 impl Backend {

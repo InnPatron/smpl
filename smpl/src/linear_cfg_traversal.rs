@@ -14,7 +14,7 @@ pub trait Passenger<E> {
     fn cont(&mut self, id: NodeIndex) -> Result<(), E>;
     fn br(&mut self, id: NodeIndex) -> Result<(), E>;
     fn enter_scope(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn exit_scope(&mut self, id: NodeIndex) -> Result<(), E>; 
+    fn exit_scope(&mut self, id: NodeIndex) -> Result<(), E>;
     fn local_var_decl(&mut self, id: NodeIndex, decl: &LocalVarDecl) -> Result<(), E>;
     fn assignment(&mut self, id: NodeIndex, assign: &Assignment) -> Result<(), E>;
     fn expr(&mut self, id: NodeIndex, expr: &Expr) -> Result<(), E>;
@@ -38,12 +38,11 @@ pub struct Traverser<'a, 'b, E: 'b> {
 }
 
 impl<'a, 'b, E> Traverser<'a, 'b, E> {
-
     pub fn new(graph: &'a CFG, passenger: &'b mut Passenger<E>) -> Traverser<'a, 'b, E> {
         Traverser {
             graph: graph,
             passenger: passenger,
-            previous_is_loop_head: false
+            previous_is_loop_head: false,
         }
     }
 
@@ -81,7 +80,6 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
     }
 
     fn after_return(&self, id: NodeIndex) -> NodeIndex {
-
         match *self.graph.node_weight(id) {
             Node::Return(_) => (),
             _ => panic!("Should only be given a Node::Return"),
@@ -89,7 +87,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
         let mut neighbors = self.graph.neighbors_out(id);
         let neighbor_count = neighbors.clone().count();
-         
+
         if neighbor_count == 2 {
             let mut found_first_end = false;
             for n in neighbors {
@@ -100,7 +98,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                         } else {
                             found_first_end = true;
                         }
-                    },
+                    }
                     _ => return n,
                 }
             }
@@ -114,7 +112,6 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
     }
 
     fn after_condition(&self, id: NodeIndex) -> (NodeIndex, NodeIndex) {
-
         match *self.graph.node_weight(id) {
             Node::Condition(_) => (),
             _ => panic!("Should only be given a Node::Condition"),
@@ -122,7 +119,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
         let edges = self.graph.graph().edges_directed(id, Direction::Outgoing);
         assert_eq!(edges.clone().count(), 2);
-         
+
         let mut true_branch = None;
         let mut false_branch = None;
         for e in edges {
@@ -137,7 +134,6 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
     }
 
     fn after_break(&self, id: NodeIndex) -> NodeIndex {
-
         match *self.graph.node_weight(id) {
             Node::Break(_) => (),
             _ => panic!("Should only be given a Node::Break"),
@@ -145,7 +141,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
         let neighbors = self.graph.neighbors_out(id);
         let neighbor_count = neighbors.clone().count();
-        
+
         if neighbor_count == 2 {
             let mut found_first = false;
             for n in neighbors {
@@ -170,7 +166,6 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
     }
 
     fn after_continue(&self, id: NodeIndex) -> NodeIndex {
-
         match *self.graph.node_weight(id) {
             Node::Continue(_) => (),
             _ => panic!("Should only be given a Node::Continue"),
@@ -184,7 +179,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
             for n in neighbors {
                 match *self.graph.node_weight(n) {
                     Node::LoopHead(_) => {
-                        if found_first {    
+                        if found_first {
                             return n;
                         } else {
                             found_first = true;
@@ -198,12 +193,11 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
         } else {
             panic!("Node::Continue points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
         }
-        
+
         unreachable!();
     }
 
     fn after_loop_foot(&self, id: NodeIndex) -> NodeIndex {
-
         let loop_id;
         match *self.graph.node_weight(id) {
             Node::LoopFoot(id) => loop_id = id,
@@ -212,11 +206,11 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
         let neighbors = self.graph.neighbors_out(id);
         let neighbor_count = neighbors.clone().count();
-        
+
         if neighbor_count != 2 {
             panic!("Loop foot should always be pointing to LoopHead and the next Node. Need two directed neighbors, found {}", neighbor_count);
         }
-         
+
         for n in neighbors {
             match *self.graph.node_weight(n) {
                 Node::LoopHead(id) => {
@@ -236,7 +230,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 self.passenger.end(current)?;
                 self.previous_is_loop_head = false;
                 Ok(None)
-            },
+            }
 
             Node::Start => {
                 self.passenger.start(current)?;
@@ -315,7 +309,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     // Loop condition
                     self.previous_is_loop_head = false;
                     self.passenger.loop_condition(current, condition)?;
-                    
+
                     let (true_path, false_path) = self.after_condition(current);
                     self.passenger.loop_start_true_path(true_path)?;
 
@@ -347,7 +341,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     self.passenger.branch_condition(current, condition)?;
 
                     let (true_path, false_path) = self.after_condition(current);
-                    
+
                     self.passenger.branch_start_true_path(true_path)?;
 
                     let mut merge = None;
