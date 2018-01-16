@@ -474,12 +474,12 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn loop_start_true_path(&mut self) -> Result<(), Err> {
+    fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), Err> {
         // Do nothing
         Ok(())
     }
 
-    fn loop_end_true_path(&mut self) -> Result<(), Err> {
+    fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), Err> {
         // Do nothing
         Ok(())
     }
@@ -497,22 +497,22 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn branch_start_true_path(&mut self) -> Result<(), Err> {
+    fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), Err> {
         // Do nothing
         Ok(())
     }
 
-    fn branch_start_false_path(&mut self) -> Result<(), Err> {
+    fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), Err> {
         // Do nothing
         Ok(())
     }
 
-    fn branch_end_true_path(&mut self) -> Result<(), Err> {
+    fn branch_end_true_path(&mut self, id: NodeIndex) -> Result<(), Err> {
         // Do nothing
         Ok(())
     }
 
-    fn branch_end_false_path(&mut self) -> Result<(), Err> {
+    fn branch_end_false_path(&mut self, id: NodeIndex) -> Result<(), Err> {
         // Do nothing
         Ok(())
     }

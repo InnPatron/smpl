@@ -21,14 +21,14 @@ pub trait Passenger<E> {
     fn ret(&mut self, id: NodeIndex, expr: Option<&Expr>) -> Result<(), E>;
 
     fn loop_condition(&mut self, id: NodeIndex, e: &Expr) -> Result<(), E>;
-    fn loop_start_true_path(&mut self) -> Result<(), E>;
-    fn loop_end_true_path(&mut self) -> Result<(), E>;
+    fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
 
     fn branch_condition(&mut self, id: NodeIndex, e: &Expr) -> Result<(), E>;
-    fn branch_start_true_path(&mut self) -> Result<(), E>;
-    fn branch_start_false_path(&mut self) -> Result<(), E>;
-    fn branch_end_true_path(&mut self) -> Result<(), E>;
-    fn branch_end_false_path(&mut self) -> Result<(), E>;
+    fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn branch_end_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn branch_end_false_path(&mut self, id: NodeIndex) -> Result<(), E>;
 }
 
 pub struct Traverser<'a, 'b, E: 'b> {
@@ -317,13 +317,13 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     self.passenger.loop_condition(current, condition)?;
                     
                     let (true_path, false_path) = self.after_condition(current);
-                    self.passenger.loop_start_true_path()?;
+                    self.passenger.loop_start_true_path(true_path)?;
 
                     let mut current_node = true_path;
                     loop {
                         match *self.graph.node_weight(current_node) {
                             Node::LoopFoot(_) => {
-                                self.passenger.loop_end_true_path()?;
+                                self.passenger.loop_end_true_path(current_node)?;
                                 break;
                             }
 
@@ -348,7 +348,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
                     let (true_path, false_path) = self.after_condition(current);
                     
-                    self.passenger.branch_start_true_path()?;
+                    self.passenger.branch_start_true_path(true_path)?;
 
                     let mut merge = None;
 
@@ -357,7 +357,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     loop {
                         match *self.graph.node_weight(current_node) {
                             Node::BranchMerge => {
-                                self.passenger.branch_end_true_path()?;
+                                self.passenger.branch_end_true_path(current_node)?;
                                 merge = Some(current_node);
                                 break;
                             }
@@ -371,14 +371,14 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                         }
                     }
 
-                    self.passenger.branch_start_false_path()?;
+                    self.passenger.branch_start_false_path(false_path)?;
 
                     // False path
                     let mut current_node = false_path;
                     loop {
                         match *self.graph.node_weight(current_node) {
                             Node::BranchMerge => {
-                                self.passenger.branch_end_false_path()?;
+                                self.passenger.branch_end_false_path(current_node)?;
                                 merge = Some(current_node);
                                 break;
                             }
