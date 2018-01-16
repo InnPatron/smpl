@@ -110,6 +110,14 @@ impl CFG {
         &self.graph
     }
 
+    pub fn node_weight(&self, node: graph::NodeIndex) -> &Node {
+        self.graph.node_weight(node).unwrap()
+    }
+
+    pub fn neighbors_out(&self, node: graph::NodeIndex) -> graph::Neighbors<Edge> {
+        self.graph.neighbors_directed(node, Direction::Outgoing)
+    }
+
     pub fn after_loop_foot(&self, id: graph::NodeIndex) -> graph::NodeIndex {
 
         match *node_w!(self, id) {
