@@ -19,11 +19,22 @@ pub trait Passenger<E> {
     fn assignment(&mut self, id: NodeIndex, assign: &Assignment) -> Result<(), E>;
     fn expr(&mut self, id: NodeIndex, expr: &Expr) -> Result<(), E>;
     fn ret(&mut self, id: NodeIndex, expr: Option<&Expr>) -> Result<(), E>;
+
+    fn loop_condition(&mut self, id: NodeIndex, e: &Expr) -> Result<(), E>;
+    fn loop_start_true_path(&mut self) -> Result<(), E>;
+    fn loop_end_true_path(&mut self) -> Result<(), E>;
+
+    fn branch_condition(&mut self, id: NodeIndex, e: &Expr) -> Result<(), E>;
+    fn branch_start_true_path(&mut self) -> Result<(), E>;
+    fn branch_start_false_path(&mut self) -> Result<(), E>;
+    fn branch_end_true_path(&mut self) -> Result<(), E>;
+    fn branch_end_false_path(&mut self) -> Result<(), E>;
 }
 
 struct Traverser<'a, 'b, E: 'b> {
     graph: &'a CFG,
     passenger: &'b mut Passenger<E>,
+    previous_is_loop_head: bool,
 }
 
 impl<'a, 'b, E> Traverser<'a, 'b, E> {
@@ -57,6 +68,29 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
         } else {
             neighbors.next().unwrap()
         }
+    }
+
+    fn after_condition(&self, id: NodeIndex) -> (NodeIndex, NodeIndex) {
+
+        match *self.graph.node_weight(id) {
+            Node::Condition(_) => (),
+            _ => panic!("Should only be given a Node::Condition"),
+        }
+
+        let edges = self.graph.graph().edges_directed(id, Direction::Outgoing);
+        assert_eq!(edges.clone().count(), 2);
+         
+        let mut true_branch = None;
+        let mut false_branch = None;
+        for e in edges {
+            match *e.weight() {
+                Edge::True => true_branch = Some(e.target()),
+                Edge::False => false_branch = Some(e.target()),
+                ref e @ _ => panic!("Unexpected edge {:?} coming out of a condition node.", e),
+            }
+        }
+
+        (true_branch.unwrap(), false_branch.unwrap())
     }
 
     fn after_break(&self, id: NodeIndex) -> NodeIndex {
@@ -157,71 +191,166 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
         match *self.graph.node_weight(current) {
             Node::End => {
                 self.passenger.end(current)?;
+                self.previous_is_loop_head = false;
                 Ok(None)
             },
 
             Node::Start => {
                 self.passenger.start(current)?;
+                self.previous_is_loop_head = false;
                 Ok(Some(self.next(current)))
             }
 
             Node::BranchMerge => {
                 self.passenger.branch_merge(current)?;
+                self.previous_is_loop_head = false;
                 Ok(Some(self.next(current)))
             }
 
             Node::LoopHead(_) => {
                 self.passenger.loop_head(current)?;
+                self.previous_is_loop_head = true;
                 Ok(Some(self.next(current)))
             }
 
             Node::LoopFoot(_) => {
                 self.passenger.loop_foot(current)?;
+                self.previous_is_loop_head = false;
                 Ok(Some(self.after_loop_foot(current)))
             }
 
             Node::Continue(_) => {
                 self.passenger.cont(current)?;
+                self.previous_is_loop_head = false;
                 Ok(Some(self.after_continue(current)))
             }
 
             Node::Break(_) => {
                 self.passenger.br(current)?;
+                self.previous_is_loop_head = false;
                 Ok(Some(self.after_break(current)))
             }
 
             Node::EnterScope => {
                 self.passenger.enter_scope(current)?;
+                self.previous_is_loop_head = false;
                 Ok(Some(self.next(current)))
             }
 
             Node::ExitScope => {
                 self.passenger.exit_scope(current)?;
+                self.previous_is_loop_head = false;
                 Ok(Some(self.next(current)))
             }
 
             Node::LocalVarDecl(ref decl) => {
                 self.passenger.local_var_decl(current, decl)?;
+                self.previous_is_loop_head = false;
                 Ok(Some(self.next(current)))
             }
 
             Node::Assignment(ref assign) => {
                 self.passenger.assignment(current, assign)?;
+                self.previous_is_loop_head = false;
                 Ok(Some(self.next(current)))
             }
 
             Node::Expr(ref expr) => {
                 self.passenger.expr(current, expr)?;
+                self.previous_is_loop_head = false;
                 Ok(Some(self.next(current)))
             }
 
             Node::Return(ref ret_expr) => {
                 self.passenger.ret(current, ret_expr.as_ref())?;
+                self.previous_is_loop_head = false;
                 Ok(Some(self.next(current)))
             }
 
             Node::Condition(ref condition) => {
-                unimplemented!()
+                if self.previous_is_loop_head {
+                    // Loop condition
+                    self.previous_is_loop_head = false;
+                    self.passenger.loop_condition(current, condition)?;
+                    
+                    let (true_path, false_path) = self.after_condition(current);
+                    self.passenger.loop_start_true_path()?;
+
+                    let mut current_node = true_path;
+                    loop {
+                        match *self.graph.node_weight(current_node) {
+                            Node::LoopFoot(_) => {
+                                self.passenger.loop_end_true_path()?;
+                                break;
+                            }
+
+                            _ => (),
+                        }
+
+                        match self.visit_node(current_node)? {
+                            Some(next) => current_node = next,
+                            None => return Ok(None),
+                        }
+                    }
+
+                    match *self.graph.node_weight(false_path) {
+                        Node::LoopFoot(_) => (),
+                        ref n @ _ => println!("Loop condition should be connected to Node::LoopFoot along the false path. Found {:?}.", n),
+                    }
+
+                    Ok(Some(false_path))
+                } else {
+                    // Branch condition
+                    self.passenger.branch_condition(current, condition)?;
+
+                    let (true_path, false_path) = self.after_condition(current);
+                    
+                    self.passenger.branch_start_true_path()?;
+
+                    let mut merge = None;
+
+                    // True path
+                    let mut current_node = true_path;
+                    loop {
+                        match *self.graph.node_weight(current_node) {
+                            Node::BranchMerge => {
+                                self.passenger.branch_end_true_path()?;
+                                merge = Some(current_node);
+                                break;
+                            }
+
+                            _ => (),
+                        }
+
+                        match self.visit_node(current_node)? {
+                            Some(next) => current_node = next,
+                            None => return Ok(None),
+                        }
+                    }
+
+                    self.passenger.branch_start_false_path()?;
+
+                    // False path
+                    let mut current_node = false_path;
+                    loop {
+                        match *self.graph.node_weight(current_node) {
+                            Node::BranchMerge => {
+                                self.passenger.branch_end_false_path()?;
+                                merge = Some(current_node);
+                                break;
+                            }
+
+                            _ => (),
+                        }
+
+                        match self.visit_node(current_node)? {
+                            Some(next) => current_node = next,
+                            None => return Ok(None),
+                        }
+                    }
+
+                    Ok(Some(merge.unwrap()))
+                }
             }
         }
     }
