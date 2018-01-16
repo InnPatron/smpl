@@ -456,11 +456,6 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn branch_condition(&mut self, id: NodeIndex, condition_expr: &Expr) -> Result<(), ()> {
-        if self.is_branch {
-            self.emit_fmt(" else ");
-            self.is_branch = false;
-        }
-
         self.emit_line("if {");
         self.shift_right();
         let expr = self.emit_expr(condition_expr);
