@@ -68,7 +68,7 @@ impl RustGen {
             // Emit fn signature
             self.emit(&format!("fn {} (", name));
             self.emit(&args);
-            self.emit(&format!(") -> {}", return_type));
+            self.emit(&format!(") -> {} ", return_type));
 
             // Emit CFG
             let mut cfg = func.cfg();
