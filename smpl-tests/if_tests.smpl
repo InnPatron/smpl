@@ -41,3 +41,17 @@ fn if_complex() -> i32 {
 		return 2;
 	}
 }
+
+fn embedded_if() {
+	let name: String = "if_embedded";
+
+	if true {
+
+		if false {
+
+
+		} else {
+			let a: i32 = 10;
+		}
+	}
+}
