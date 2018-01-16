@@ -1,0 +1,4 @@
+fn arg_usage(a1: i32, a2: bool) {
+	let b1: i32 = a1;
+	let b2: bool = a2;
+}

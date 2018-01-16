@@ -19,3 +19,10 @@ echo
 
 rm ./target/while_tests.rs
 ../target/debug/smplc --input while_tests.smpl --backend 0 --output ./target/
+
+echo **fn_tests**
+
+echo
+
+rm ./target/fn_tests.rs > /dev/null
+../target/debug/smplc --input fn_tests.smpl --backend 0 --output ./target/
