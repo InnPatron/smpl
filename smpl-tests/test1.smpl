@@ -1,9 +1,0 @@
-fn main() {
-	let hello: String = "Hello!";
-}
-
-fn test() -> bool {
-	if true {
-		return true;
-	}
-}

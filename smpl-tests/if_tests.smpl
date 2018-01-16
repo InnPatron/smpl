@@ -1,0 +1,57 @@
+fn main() {
+	let hello: String = "Hello!";
+}
+
+fn if_basic() -> i32 {
+	let name: String = "if_basic";
+
+	if true {
+		return 0;
+	}
+}
+
+fn if_default() -> i32 {
+	let name: String = "if_default";
+
+	if false {
+		return 0;
+	} elif false {
+		return 1;
+	}
+	
+	return 2;
+}
+
+fn if_empty() -> i32 {
+	let name: String = "if_empty";
+
+	if false { } elif false { } elif true { } else { }
+
+	return 100;
+}
+
+fn if_complex() -> i32 {
+	let name: String = "if_complex";
+
+	if true {
+		return 0;
+	} elif false {
+		return 1;
+	} else {
+		return 2;
+	}
+}
+
+fn embedded_if() {
+	let name: String = "if_embedded";
+
+	if true {
+
+		if false {
+
+
+		} else {
+			let a: i32 = 10;
+		}
+	}
+}

@@ -1,0 +1,49 @@
+fn while_basic() {
+	let name: String = "while_basic";
+
+	while true {
+		break;
+	}
+}
+
+fn while_empty() {
+	let name: String = "while_empty";
+
+	while true {
+
+	}
+}
+
+fn while_data() {
+	let name: String = "while_data";
+
+	while true {
+		let test: i32 = 100;
+		let test2: i32 = 500;
+	}
+}
+
+fn while_sequence() {
+	let name: String = "while_sequence";
+	
+	while true {
+		let test: i32 = 100;
+		let test2: i32 = test;
+	}
+
+	while true {
+
+	}
+}
+
+fn while_embedded() {
+	let name: String = "while_embedded";
+
+	while true {
+		while true {
+			let test: i32 = 100;
+		}
+
+		let foo: String = "foo";
+	}
+}
