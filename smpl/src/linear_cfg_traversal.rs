@@ -80,6 +80,39 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
         }
     }
 
+    fn after_return(&self, id: NodeIndex) -> NodeIndex {
+
+        match *self.graph.node_weight(id) {
+            Node::Return(_) => (),
+            _ => panic!("Should only be given a Node::Return"),
+        }
+
+        let mut neighbors = self.graph.neighbors_out(id);
+        let neighbor_count = neighbors.clone().count();
+         
+        if neighbor_count == 2 {
+            let mut found_first_end = false;
+            for n in neighbors {
+                match *self.graph.node_weight(n) {
+                    Node::End => {
+                        if found_first_end {
+                            return n;
+                        } else {
+                            found_first_end = true;
+                        }
+                    },
+                    _ => return n,
+                }
+            }
+        } else if neighbor_count == 1 {
+            return neighbors.next().unwrap();
+        } else {
+            panic!("Node::Return points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
+        }
+
+        unreachable!();
+    }
+
     fn after_condition(&self, id: NodeIndex) -> (NodeIndex, NodeIndex) {
 
         match *self.graph.node_weight(id) {
@@ -274,7 +307,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
             Node::Return(ref ret_expr) => {
                 self.passenger.ret(current, ret_expr.as_ref())?;
                 self.previous_is_loop_head = false;
-                Ok(Some(self.next(current)))
+                Ok(Some(self.after_return(current)))
             }
 
             Node::Condition(ref condition) => {
