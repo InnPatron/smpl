@@ -446,4 +446,34 @@ fn main() {
         }
 
     }
+
+    #[test]
+    fn embedded_ifs_analysis() {
+        let input =
+"fn test() {
+    if true {
+        if false {
+
+        } else {
+            let a: i32 = 100;
+        }
+
+        let b: i32 = a;
+    }
+}";
+
+        let ast = parse_Program(input).unwrap();
+        match check(ast) {
+            Ok(_) => panic!("Passed analysis. Expected Err::UnknownVar"),
+            Err(e) => {
+                match e {
+                    Err::UnknownVar(ident) => {
+                        assert_eq!(ident, ident!("a"));
+                    }
+
+                    e @ _ => panic!("Expected Err::UnknownVar. Found {:?}", e),
+                }
+            }
+        }
+    }
 }
