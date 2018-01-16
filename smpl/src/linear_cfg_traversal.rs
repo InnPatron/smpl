@@ -31,13 +31,21 @@ pub trait Passenger<E> {
     fn branch_end_false_path(&mut self) -> Result<(), E>;
 }
 
-struct Traverser<'a, 'b, E: 'b> {
+pub struct Traverser<'a, 'b, E: 'b> {
     graph: &'a CFG,
     passenger: &'b mut Passenger<E>,
     previous_is_loop_head: bool,
 }
 
 impl<'a, 'b, E> Traverser<'a, 'b, E> {
+
+    pub fn new(graph: &'a CFG, passenger: &'b mut Passenger<E>) -> Traverser<'a, 'b, E> {
+        Traverser {
+            graph: graph,
+            passenger: passenger,
+            previous_is_loop_head: false
+        }
+    }
 
     pub fn traverse(mut self) -> Result<(), E> {
         let mut current = Some(self.graph.start());
