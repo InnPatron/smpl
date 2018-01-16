@@ -5,29 +5,28 @@ use petgraph::visit::EdgeRef;
 use control_flow::*;
 use typed_ast::*;
 
-pub trait Passenger {
-    fn start(&mut self, id: NodeIndex);
-    fn end(&mut self, id: NodeIndex);
-    fn branch_merge(&mut self, id: NodeIndex);
-    fn loop_head(&mut self, id: NodeIndex);
-    fn loop_foot(&mut self, id: NodeIndex);
-    fn cont(&mut self, id: NodeIndex);
-    fn br(&mut self, id: NodeIndex);
-    fn enter_scope(&mut self, id: NodeIndex);
-    fn exit_scope(&mut self, id: NodeIndex);
-    fn local_var_decl(&mut self, id: NodeIndex, decl: &LocalVarDecl);
-    fn assignment(&mut self, id: NodeIndex, assign: &Assignment);
-    fn expr(&mut self, id: NodeIndex, expr: &Expr);
-    fn ret(&mut self, id: NodeIndex, expr: Option<&Expr>);
+pub trait Passenger<E> {
+    fn start(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn end(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn branch_merge(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn loop_head(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn loop_foot(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn cont(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn br(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn enter_scope(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn exit_scope(&mut self, id: NodeIndex) -> Result<(), E>; 
+    fn local_var_decl(&mut self, id: NodeIndex, decl: &LocalVarDecl) -> Result<(), E>;
+    fn assignment(&mut self, id: NodeIndex, assign: &Assignment) -> Result<(), E>;
+    fn expr(&mut self, id: NodeIndex, expr: &Expr) -> Result<(), E>;
+    fn ret(&mut self, id: NodeIndex, expr: Option<&Expr>) -> Result<(), E>;
 }
 
-struct Traverser<'a, 'b> {
+struct Traverser<'a, 'b, E: 'b> {
     graph: &'a CFG,
-    passenger: &'b mut Passenger,
+    passenger: &'b mut Passenger<E>,
 }
 
-impl<'a, 'b> Traverser<'a, 'b> {
-
+impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
     ///
     /// Convenience function to get the next node in a linear sequence. If the current node has
@@ -138,71 +137,71 @@ impl<'a, 'b> Traverser<'a, 'b> {
         unreachable!();
     }
 
-    fn visit_node(&mut self, current: NodeIndex) -> Option<NodeIndex> {
+    fn visit_node(&mut self, current: NodeIndex) -> Result<Option<NodeIndex>, E> {
         match *self.graph.node_weight(current) {
             Node::End => {
-                self.passenger.end(current);
-                Some(self.next(current))
+                self.passenger.end(current)?;
+                Ok(Some(self.next(current)))
             },
 
             Node::Start => {
-                self.passenger.start(current);
-                Some(self.next(current))
+                self.passenger.start(current)?;
+                Ok(Some(self.next(current)))
             }
 
             Node::BranchMerge => {
-                self.passenger.branch_merge(current);
-                Some(self.next(current))
+                self.passenger.branch_merge(current)?;
+                Ok(Some(self.next(current)))
             }
 
             Node::LoopHead(_) => {
-                self.passenger.loop_head(current);
-                Some(self.next(current))
+                self.passenger.loop_head(current)?;
+                Ok(Some(self.next(current)))
             }
 
             Node::LoopFoot(_) => {
-                self.passenger.loop_foot(current);
-                Some(self.after_loop_foot(current))
+                self.passenger.loop_foot(current)?;
+                Ok(Some(self.after_loop_foot(current)))
             }
 
             Node::Continue(_) => {
-                self.passenger.cont(current);
-                Some(self.after_continue(current))
+                self.passenger.cont(current)?;
+                Ok(Some(self.after_continue(current)))
             }
 
             Node::Break(_) => {
-                self.passenger.br(current);
-                Some(self.after_break(current))
+                self.passenger.br(current)?;
+                Ok(Some(self.after_break(current)))
             }
 
             Node::EnterScope => {
-                self.passenger.enter_scope(current);
-                Some(self.next(current))
+                self.passenger.enter_scope(current)?;
+                Ok(Some(self.next(current)))
             }
 
             Node::ExitScope => {
-                self.passenger.exit_scope(current);
-                Some(self.next(current))
+                self.passenger.exit_scope(current)?;
+                Ok(Some(self.next(current)))
             }
 
             Node::LocalVarDecl(ref decl) => {
-                self.passenger.local_var_decl(current, decl);
-                Some(self.next(current))
+                self.passenger.local_var_decl(current, decl)?;
+                Ok(Some(self.next(current)))
             }
 
             Node::Assignment(ref assign) => {
-                self.passenger.assignment(current, assign);
-                Some(self.next(current))
+                self.passenger.assignment(current, assign)?;
+                Ok(Some(self.next(current)))
             }
 
             Node::Expr(ref expr) => {
-                self.passenger.expr(current, expr);
-                Some(self.next(current))
+                self.passenger.expr(current, expr)?;
+                Ok(Some(self.next(current)))
             }
 
             Node::Return(ref ret_expr) => {
-                self.passenger.ret(current, ret_expr.as_ref());
-                Some(self.next(current))
+                self.passenger.ret(current, ret_expr.as_ref())?;
+                Ok(Some(self.next(current)))
             }
 
             Node::Condition(ref condition) => {
