@@ -516,9 +516,6 @@ impl CFG {
                         let expr = expr_flow::flatten(universe, expr);
                         let ret = cfg.graph.add_node(Node::Return(Some(expr)));
                         append_node_index!(cfg, head, previous, ret);
-
-                        // Add an edge to the Node::End of the function
-                        cfg.graph.add_edge(ret, cfg.end, Edge::Normal);
                     }
 
                     ExprStmt::LocalVarDecl(decl) => {
