@@ -415,7 +415,7 @@ mod tests {
         let program =
 "struct Test {
     field_1: i32,
-    field_2: float,
+    field_2: f32,
     field_3: String,
     field_4: bool
 }
