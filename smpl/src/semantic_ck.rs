@@ -407,6 +407,7 @@ impl ScopedData {
 
 #[cfg(test)]
 mod tests {
+    use err::*;
     use super::*;
     use parser::*;
 
@@ -523,6 +524,32 @@ fn main() {
                     e @ _ => panic!("Expected Err::UnknownVar. Found {:?}", e),
                 }
             }
+        }
+    }
+
+    #[test]
+    fn missing_return_empty_body() {
+        let input =
+"fn test() -> i32 {
+    
+}";
+        let ast = parse_Program(input).unwrap();
+        match check(ast) {
+            Ok(_) => panic!("Passed analysis. Expected Err::ControlFlowErr(ControlFlowErr::MissingReturn"),
+            Err(e) => {
+                match e {
+                    Err::ControlFlowErr(e) => {
+                        match e {
+                            ControlFlowErr::MissingReturn => (),
+
+                            e @ _ => panic!("Expected ControlFlowErr::MissingReturn. Found {:?}", e),
+                        }
+                    }
+
+                    e @ _ => panic!("Expected Err::ControlFlowErr. Found {:?}", e),
+                }
+            }
+
         }
     }
 }
