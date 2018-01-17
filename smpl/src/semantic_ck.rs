@@ -226,7 +226,7 @@ impl Universe {
 
         let unit = (TypeId(0), path!("Unit"), SmplType::Unit);
         let int = (TypeId(1), path!("i32"), SmplType::Int);
-        let float = (TypeId(2), path!("float"), SmplType::Float);
+        let float = (TypeId(2), path!("f32"), SmplType::Float);
         let string = (TypeId(3), path!("String"), SmplType::String);
         let boolean = (TypeId(4), path!("bool"), SmplType::Bool);
 
