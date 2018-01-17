@@ -4,7 +4,7 @@ use linear_cfg_traversal::*;
 use typed_ast::*;
 use control_flow::*;
 use smpl_type::*;
-use ast::{BinOp, Ident, Path, UniOp};
+use ast::{BinOp, UniOp};
 use petgraph::graph::NodeIndex;
 
 pub struct RustGen {
@@ -32,7 +32,7 @@ impl RustGen {
         // Emit struct definitions
         for (id, t) in program.universe().all_types() {
             if let SmplType::Struct(ref struct_t) = *t {
-                self.emit_struct_type(program.universe(), id, struct_t);
+                self.emit_struct_type(id, struct_t);
                 self.line_pad();
             }
         }
@@ -120,7 +120,7 @@ impl RustGen {
         self.line_pad();
     }
 
-    fn emit_struct_type(&mut self, universe: &Universe, id: TypeId, struct_type: &StructType) {
+    fn emit_struct_type(&mut self, id: TypeId, struct_type: &StructType) {
         let name = RustFnGen::type_id(id);
         let fields = struct_type
             .fields
@@ -298,28 +298,28 @@ impl<'a> RustFnGen<'a> {
 }
 
 impl<'a> Passenger<()> for RustFnGen<'a> {
-    fn start(&mut self, id: NodeIndex) -> Result<(), ()> {
+    fn start(&mut self, _id: NodeIndex) -> Result<(), ()> {
         // Emit nothing
         Ok(())
     }
 
-    fn end(&mut self, id: NodeIndex) -> Result<(), ()> {
+    fn end(&mut self, _id: NodeIndex) -> Result<(), ()> {
         // Emit nothing
         Ok(())
     }
 
-    fn branch_merge(&mut self, id: NodeIndex) -> Result<(), ()> {
+    fn branch_merge(&mut self, _id: NodeIndex) -> Result<(), ()> {
         // Emit nothing
         Ok(())
     }
 
-    fn loop_head(&mut self, id: NodeIndex) -> Result<(), ()> {
+    fn loop_head(&mut self, _id: NodeIndex) -> Result<(), ()> {
         self.emit_line("loop {");
         self.shift_right();
         Ok(())
     }
 
-    fn loop_foot(&mut self, id: NodeIndex) -> Result<(), ()> {
+    fn loop_foot(&mut self, _id: NodeIndex) -> Result<(), ()> {
         /*
         if self.previous_is_loop_head {
             self.emit_line("{ break; }");
@@ -333,29 +333,29 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn cont(&mut self, id: NodeIndex) -> Result<(), ()> {
+    fn cont(&mut self, _id: NodeIndex) -> Result<(), ()> {
         self.emit_line("continue;");
         Ok(())
     }
 
-    fn br(&mut self, id: NodeIndex) -> Result<(), ()> {
+    fn br(&mut self, _id: NodeIndex) -> Result<(), ()> {
         self.emit_line("break;");
         Ok(())
     }
 
-    fn enter_scope(&mut self, id: NodeIndex) -> Result<(), ()> {
+    fn enter_scope(&mut self, _id: NodeIndex) -> Result<(), ()> {
         self.emit_line("{");
         self.shift_right();
         Ok(())
     }
 
-    fn exit_scope(&mut self, id: NodeIndex) -> Result<(), ()> {
+    fn exit_scope(&mut self, _id: NodeIndex) -> Result<(), ()> {
         self.shift_left();
         self.emit_line("}");
         Ok(())
     }
 
-    fn local_var_decl(&mut self, id: NodeIndex, var_decl: &LocalVarDecl) -> Result<(), ()> {
+    fn local_var_decl(&mut self, _id: NodeIndex, var_decl: &LocalVarDecl) -> Result<(), ()> {
         let var_id = var_decl.var_id();
         let type_id = var_decl.type_id().unwrap();
         let expr = self.emit_expr(var_decl.init_expr());
@@ -369,7 +369,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn assignment(&mut self, id: NodeIndex, assignment: &Assignment) -> Result<(), ()> {
+    fn assignment(&mut self, _id: NodeIndex, assignment: &Assignment) -> Result<(), ()> {
         let var_id = assignment.var_id().unwrap();
         let expr = self.emit_expr(assignment.value());
 
@@ -382,12 +382,12 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn expr(&mut self, id: NodeIndex, expr: &Expr) -> Result<(), ()> {
+    fn expr(&mut self, _id: NodeIndex, expr: &Expr) -> Result<(), ()> {
         self.emit_expr(expr);
         Ok(())
     }
 
-    fn ret(&mut self, id: NodeIndex, expr: Option<&Expr>) -> Result<(), ()> {
+    fn ret(&mut self, _id: NodeIndex, expr: Option<&Expr>) -> Result<(), ()> {
         match expr {
             Some(ref expr) => {
                 let expr = self.emit_expr(expr);
@@ -400,7 +400,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn loop_condition(&mut self, id: NodeIndex, condition_expr: &Expr) -> Result<(), ()> {
+    fn loop_condition(&mut self, _id: NodeIndex, condition_expr: &Expr) -> Result<(), ()> {
         self.emit_line("if {");
         self.shift_right();
         let expr = self.emit_expr(condition_expr);
@@ -410,18 +410,18 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), ()> {
+    fn loop_start_true_path(&mut self, _id: NodeIndex) -> Result<(), ()> {
         Ok(())
     }
 
-    fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), ()> {
+    fn loop_end_true_path(&mut self, _id: NodeIndex) -> Result<(), ()> {
         self.emit_line("else { break; }");
         self.shift_left();
         self.emit_line("}");
         Ok(())
     }
 
-    fn branch_condition(&mut self, id: NodeIndex, condition_expr: &Expr) -> Result<(), ()> {
+    fn branch_condition(&mut self, _id: NodeIndex, condition_expr: &Expr) -> Result<(), ()> {
         self.emit_line("if {");
         self.shift_right();
         let expr = self.emit_expr(condition_expr);
@@ -439,7 +439,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn branch_end_true_path(&mut self, id: NodeIndex) -> Result<(), ()> {
+    fn branch_end_true_path(&mut self, _id: NodeIndex) -> Result<(), ()> {
         // Emit nothing
         Ok(())
     }
@@ -454,7 +454,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn branch_end_false_path(&mut self, id: NodeIndex) -> Result<(), ()> {
+    fn branch_end_false_path(&mut self, _id: NodeIndex) -> Result<(), ()> {
         // Emit nothing
         Ok(())
     }
@@ -514,21 +514,8 @@ trait RustGenFmt {
         self.output().push('\n');
     }
 
-    fn emit_line_with_padding(&mut self, line: &str, pre: u32, post: u32) {
-        for i in 0..pre {
-            self.line_pad();
-        }
-
-        self.emit_shift();
-        self.output().push_str(line);
-
-        for i in 0..pre {
-            self.line_pad();
-        }
-    }
-
     fn emit_shift(&mut self) {
-        for i in 0..self.shift() {
+        for _ in 0..self.shift() {
             self.output().push('\t');
         }
     }

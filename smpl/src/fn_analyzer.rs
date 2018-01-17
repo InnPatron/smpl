@@ -109,7 +109,7 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                                 missing_fields: {
                                     let inits = init_list
                                         .iter()
-                                        .map(|&(ref name, ref id)| name.clone())
+                                        .map(|&(ref name, _)| name.clone())
                                         .collect::<Vec<_>>();
 
                                     struct_type
@@ -132,8 +132,8 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                                     typed_tmp_id.set_type_id(tmp_type_id);
 
                                     // Expression type the same as the field type?
-                                    if (universe.get_type(tmp_type_id)
-                                        != universe.get_type(*field_type_id))
+                                    if universe.get_type(tmp_type_id)
+                                        != universe.get_type(*field_type_id)
                                     {
                                         return Err(TypeErr::UnexpectedType {
                                             found: tmp_type_id,
@@ -366,47 +366,47 @@ fn resolve_uni_op(
 }
 
 impl<'a> Passenger<Err> for FnAnalyzer<'a> {
-    fn start(&mut self, id: NodeIndex) -> Result<(), Err> {
+    fn start(&mut self, _id: NodeIndex) -> Result<(), Err> {
         Ok(())
     }
 
-    fn end(&mut self, id: NodeIndex) -> Result<(), Err> {
+    fn end(&mut self, _id: NodeIndex) -> Result<(), Err> {
         Ok(())
     }
 
-    fn branch_merge(&mut self, id: NodeIndex) -> Result<(), Err> {
+    fn branch_merge(&mut self, _id: NodeIndex) -> Result<(), Err> {
         Ok(())
     }
 
-    fn loop_head(&mut self, id: NodeIndex) -> Result<(), Err> {
+    fn loop_head(&mut self, _id: NodeIndex) -> Result<(), Err> {
         Ok(())
     }
 
-    fn loop_foot(&mut self, id: NodeIndex) -> Result<(), Err> {
+    fn loop_foot(&mut self, _id: NodeIndex) -> Result<(), Err> {
         Ok(())
     }
 
-    fn cont(&mut self, id: NodeIndex) -> Result<(), Err> {
+    fn cont(&mut self, _id: NodeIndex) -> Result<(), Err> {
         Ok(())
     }
 
-    fn br(&mut self, id: NodeIndex) -> Result<(), Err> {
+    fn br(&mut self, _id: NodeIndex) -> Result<(), Err> {
         Ok(())
     }
 
-    fn enter_scope(&mut self, id: NodeIndex) -> Result<(), Err> {
+    fn enter_scope(&mut self, _id: NodeIndex) -> Result<(), Err> {
         self.scope_stack.push(self.current_scope.clone());
         Ok(())
     }
 
-    fn exit_scope(&mut self, id: NodeIndex) -> Result<(), Err> {
+    fn exit_scope(&mut self, _id: NodeIndex) -> Result<(), Err> {
         let popped = self.scope_stack.pop()
                                      .expect("If CFG was generated properly and the graph is being walked correctly, there should be a scope to pop");
         self.current_scope = popped;
         Ok(())
     }
 
-    fn local_var_decl(&mut self, id: NodeIndex, var_decl: &LocalVarDecl) -> Result<(), Err> {
+    fn local_var_decl(&mut self, _id: NodeIndex, var_decl: &LocalVarDecl) -> Result<(), Err> {
         let name = var_decl.var_name().clone();
         let var_id = var_decl.var_id();
         let var_type_path = var_decl.type_path();
@@ -427,7 +427,7 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn assignment(&mut self, id: NodeIndex, assignment: &Assignment) -> Result<(), Err> {
+    fn assignment(&mut self, _id: NodeIndex, assignment: &Assignment) -> Result<(), Err> {
         let mut assignee = assignment.name().iter();
         let root_var_name = assignee.next().unwrap();
 
@@ -450,11 +450,11 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn expr(&mut self, id: NodeIndex, expr: &Expr) -> Result<(), Err> {
+    fn expr(&mut self, _id: NodeIndex, expr: &Expr) -> Result<(), Err> {
         resolve_expr(self.universe, &self.current_scope, expr).map(|_| ())
     }
 
-    fn ret(&mut self, id: NodeIndex, expr: Option<&Expr>) -> Result<(), Err> {
+    fn ret(&mut self, _id: NodeIndex, expr: Option<&Expr>) -> Result<(), Err> {
         let expr_type_id = match expr {
             Some(ref expr) => resolve_expr(self.universe, &self.current_scope, expr)?,
 
@@ -471,7 +471,7 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn loop_condition(&mut self, id: NodeIndex, condition: &Expr) -> Result<(), Err> {
+    fn loop_condition(&mut self, _id: NodeIndex, condition: &Expr) -> Result<(), Err> {
         let expr_type_id = resolve_expr(self.universe, &self.current_scope, condition)?;
 
         if *self.universe.get_type(expr_type_id) != SmplType::Bool {
@@ -484,17 +484,17 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), Err> {
+    fn loop_start_true_path(&mut self, _id: NodeIndex) -> Result<(), Err> {
         // Do nothing
         Ok(())
     }
 
-    fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), Err> {
+    fn loop_end_true_path(&mut self, _id: NodeIndex) -> Result<(), Err> {
         // Do nothing
         Ok(())
     }
 
-    fn branch_condition(&mut self, id: NodeIndex, condition: &Expr) -> Result<(), Err> {
+    fn branch_condition(&mut self, _id: NodeIndex, condition: &Expr) -> Result<(), Err> {
         let expr_type_id = resolve_expr(self.universe, &self.current_scope, condition)?;
 
         if *self.universe.get_type(expr_type_id) != SmplType::Bool {
@@ -507,22 +507,22 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), Err> {
+    fn branch_start_true_path(&mut self, _id: NodeIndex) -> Result<(), Err> {
         // Do nothing
         Ok(())
     }
 
-    fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), Err> {
+    fn branch_start_false_path(&mut self, _id: NodeIndex) -> Result<(), Err> {
         // Do nothing
         Ok(())
     }
 
-    fn branch_end_true_path(&mut self, id: NodeIndex) -> Result<(), Err> {
+    fn branch_end_true_path(&mut self, _id: NodeIndex) -> Result<(), Err> {
         // Do nothing
         Ok(())
     }
 
-    fn branch_end_false_path(&mut self, id: NodeIndex) -> Result<(), Err> {
+    fn branch_end_false_path(&mut self, _id: NodeIndex) -> Result<(), Err> {
         // Do nothing
         Ok(())
     }

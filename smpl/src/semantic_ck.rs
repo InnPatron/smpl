@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 use std::cell::Cell;
-use std::str::FromStr;
 use std::rc::Rc;
-
-use ascii::*;
 
 use err::Err;
 use control_flow::CFG;
