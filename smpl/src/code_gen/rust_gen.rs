@@ -42,7 +42,7 @@ impl RustGen {
         self.emit_line("//#### START FUNCTION DEFINITIONS ####");
 
         if let Some(id) = program.main() {
-            self.emit_line(&format!("fn main() {{ {}(); }}", id));
+            self.emit_line(&format!("fn main() {{ {}(); }}", RustFnGen::fn_id(id)));
         }
 
         // Emit function definitions
