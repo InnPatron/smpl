@@ -273,6 +273,10 @@ impl CFG {
         self.start
     }
 
+    pub fn end(&self) -> graph::NodeIndex {
+        self.end
+    }
+
     pub fn after_start(&self) -> graph::NodeIndex {
         self.next(self.start)
     }
