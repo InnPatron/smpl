@@ -41,6 +41,10 @@ impl RustGen {
         self.line_pad();
         self.emit_line("//#### START FUNCTION DEFINITIONS ####");
 
+        if let Some(id) = program.main() {
+            self.emit_line(&format!("fn main() { {}(); }", id));
+        }
+
         // Emit function definitions
         for (fn_id, ref func) in program.universe().all_fns() {
             let func_type = program.universe().get_type(func.type_id());
