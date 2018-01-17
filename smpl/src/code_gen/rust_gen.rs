@@ -75,9 +75,17 @@ impl RustGen {
             let return_type = RustFnGen::rustify_type(return_type);
 
             // Emit fn signature
-            self.emit(&format!("fn {} (", name));
-            self.emit(&args);
-            self.emit(&format!(") -> {} ", return_type));
+            match *program.universe().get_type(return_type_id) {
+                SmplType::Unit => {
+                    self.emit(&format!("fn {} ({})", name, args));
+                }
+
+                _ => {
+                    self.emit(&format!("fn {} (", name));
+                    self.emit(&args);
+                    self.emit(&format!(") -> {} ", return_type));
+                }
+            }
 
             // Emit CFG
             let mut cfg = func.cfg();
