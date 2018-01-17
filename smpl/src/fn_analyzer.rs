@@ -176,6 +176,7 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
             Value::Variable(ref var) => {
                 let (var_id, type_id) = scope.var_info(var.ident())?;
                 var.set_id(var_id);
+                tmp.value().set_type_id(type_id);
 
                 tmp_type = type_id;
             }
@@ -280,7 +281,6 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                 }
             }
         }
-
         expr_type = Some(tmp_type);
     }
 
