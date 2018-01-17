@@ -381,7 +381,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         let var_id = assignment.var_id().unwrap();
         let expr = self.emit_expr(assignment.value());
 
-        let lhs = RustFnGen::borrow_mut(RustFnGen::var_id(var_id));
+        let lhs = RustFnGen::var_id(var_id);
         let rhs = RustFnGen::tmp_id(expr);
         self.emit_line(&format!(
             "{} = {};",
