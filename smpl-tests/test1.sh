@@ -26,3 +26,10 @@ echo
 
 rm ./target/fn_tests.rs > /dev/null
 ../target/debug/smplc --input fn_tests.smpl --backend 0 --output ./target/
+
+echo **sample_program**
+
+echo
+
+rm ./target/sample_program.rs > /dev/null
+../target/debug/smplc --input sample_program.smpl --backend 0 --output ./target/

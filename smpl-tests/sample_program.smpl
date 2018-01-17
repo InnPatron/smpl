@@ -1,0 +1,37 @@
+struct Point {
+	x: i32,
+	y: i32,
+}
+
+fn test_0() {
+	let foo: String = "Hello world";
+	let bar: String = "Hiya";
+
+	foo = bar;
+}
+
+fn test_1(a: i32, b: i32) {
+	let a: i32 = a;
+	let b: i32 = b;
+
+	let c: i32 = 5 + 6;
+
+	if a == 5 {
+		test_0();
+	}
+
+	c = a + 1;
+}
+
+fn main() {
+	let point: Point = init Point {
+		x: 5,
+		y: 10,
+	};
+
+	test_1(point.x, point.y);
+
+	point.x = 100;
+
+	let test_b: bool = point.x == point.y;
+}

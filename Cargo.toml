@@ -3,3 +3,6 @@ members = [
 	"smpl",
 	"smplc",
 ]
+exclude = [
+	"smpl-tests/tmp_project"
+]
