@@ -35,6 +35,7 @@ pub struct Traverser<'a, 'b, E: 'b> {
     graph: &'a CFG,
     passenger: &'b mut Passenger<E>,
     previous_is_loop_head: bool,
+    node_count: usize,
 }
 
 impl<'a, 'b, E> Traverser<'a, 'b, E> {
@@ -43,6 +44,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
             graph: graph,
             passenger: passenger,
             previous_is_loop_head: false,
+            node_count: graph.graph().node_count(),
         }
     }
 
@@ -50,7 +52,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
         let mut current = Some(self.graph.start());
 
         // Traverser::visit_node should be called AT MAX the number of nodes in the graph
-        for _ in 0..self.graph.graph().node_count() {
+        for _ in 0..self.node_count {
             match current {
                 Some(to_visit) => current = self.visit_node(to_visit)?,
                 None => break,
@@ -314,10 +316,12 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     self.passenger.loop_start_true_path(true_path)?;
 
                     let mut current_node = true_path;
-                    loop {
+                    let mut found_foot = false;
+                    for _ in 0..self.node_count {
                         match *self.graph.node_weight(current_node) {
                             Node::LoopFoot(_) => {
                                 self.passenger.loop_end_true_path(current_node)?;
+                                found_foot = true;
                                 break;
                             }
 
@@ -328,6 +332,10 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                             Some(next) => current_node = next,
                             None => return Ok(None),
                         }
+                    }
+
+                    if found_foot == false {
+                        panic!("Traversed the rest of the graph but did not find a Node::LoopFoot.");
                     }
 
                     match *self.graph.node_weight(false_path) {
@@ -348,7 +356,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
                     // True path
                     let mut current_node = true_path;
-                    loop {
+                    for _ in 0..self.node_count {
                         match *self.graph.node_weight(current_node) {
                             Node::BranchMerge => {
                                 self.passenger.branch_end_true_path(current_node)?;
@@ -365,11 +373,16 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                         }
                     }
 
+                    if merge.is_none() {
+                        panic!("Traversed entire graph and did not find Condition::BranchMerge");
+                    }
+
                     self.passenger.branch_start_false_path(false_path)?;
 
                     // False path
                     let mut current_node = false_path;
-                    loop {
+                    let mut merge = None;
+                    for _ in 0..self.node_count {
                         match *self.graph.node_weight(current_node) {
                             Node::BranchMerge => {
                                 self.passenger.branch_end_false_path(current_node)?;
@@ -384,6 +397,10 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                             Some(next) => current_node = next,
                             None => return Ok(None),
                         }
+                    }
+
+                    if merge.is_none() {
+                        panic!("Traversed entire graph and did not find Condition::BranchMerge");
                     }
 
                     Ok(Some(self.next(merge.unwrap())))
