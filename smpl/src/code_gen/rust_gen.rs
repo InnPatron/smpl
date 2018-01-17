@@ -55,16 +55,20 @@ impl RustGen {
                 // Gather parameters
                 for param in fn_type.params.iter() {
                     let param_type = param.param_type;
+                    let param_type = RustFnGen::type_id(param_type);
+                    let param_type = RustFnGen::rustify_type(param_type);
+
                     args.push_str(&format!(
                         "{}: {}, ",
                         RustFnGen::var_id(param.var_id().unwrap()),
-                        RustFnGen::type_id(param_type)
+                        param_type
                     ));
                 }
             } else {
                 panic!("{} did not map to a function type", func.type_id());
             }
             let return_type = RustFnGen::type_id(return_type_id);
+            let return_type = RustFnGen::rustify_type(return_type);
 
             // Emit fn signature
             self.emit(&format!("fn {} (", name));
@@ -89,7 +93,8 @@ impl RustGen {
     }
 
     fn prelude(&mut self, universe: &Universe) {
-        self.output.push_str("use std::cell::RefCell;\n");
+        self.emit_line("use std::cell::RefCell;");
+        self.emit_line("use std::rc::Rc;");
         self.line_pad();
 
         // Create TypeId aliases for primitives
@@ -130,7 +135,8 @@ impl RustGen {
         self.emit_line("#[derive(Clone, Debug, PartialEq)]");
         self.emit_line(&format!("struct {} {{", name));
         for (name, string_type) in fields {
-            self.emit_line(&format!("\t{}: RefCell<{}>", name, string_type));
+            let field_type = RustGen::rustify_type(string_type);
+            self.emit_line(&field_type);
         }
         self.emit_line("}");
     }
@@ -180,21 +186,21 @@ impl<'a> RustFnGen<'a> {
             Value::Literal(ref lit) => match *lit {
                 Literal::String(ref string) => {
                     let lit = format!("\"{}\".to_string()", string);
-                    lit
+                    RustFnGen::instantiate_value(lit)
                 }
 
-                Literal::Int(int) => int.to_string(),
+                Literal::Int(int) => RustFnGen::instantiate_value(int.to_string()),
 
-                Literal::Float(float) => float.to_string(),
+                Literal::Float(float) => RustFnGen::instantiate_value(float.to_string()),
 
-                Literal::Bool(boolean) => boolean.to_string(),
+                Literal::Bool(boolean) => RustFnGen::instantiate_value(boolean.to_string()),
             },
 
             Value::Variable(ref var) => {
                 let var_id = RustFnGen::var_id(var.get_id().expect(
                     "If the program passed semantic analysis, all IDs should be filled in.",
                 ));
-                var_id
+                RustFnGen::clone_value(var_id)
             }
 
             Value::FieldAccess(ref access) => {
@@ -210,14 +216,14 @@ impl<'a> RustFnGen<'a> {
                     result.push_str(&format!(".{}", field));
                 }
 
-                result
+                RustFnGen::clone_value(result)
             }
 
             Value::BinExpr(ref op, ref lhs, ref rhs) => format!(
                 "{} {} {}",
-                RustFnGen::tmp_id(*lhs.data()),
+                RustFnGen::deref_value(RustFnGen::tmp_id(*lhs.data())),
                 RustFnGen::bin_op(op),
-                RustFnGen::tmp_id(*rhs.data())
+                RustFnGen::deref_value(RustFnGen::tmp_id(*rhs.data())),
             ),
 
             Value::UniExpr(ref op, ref tmp) => format!(
@@ -364,6 +370,8 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         let var_type = RustFnGen::type_id(type_id);
         let expr = RustFnGen::tmp_id(expr);
 
+        let var_type = RustFnGen::rustify_type(var_type);
+
         self.emit_line(&format!("let mut {}: {} = {};", name, var_type, expr));
 
         Ok(())
@@ -373,10 +381,12 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         let var_id = assignment.var_id().unwrap();
         let expr = self.emit_expr(assignment.value());
 
+        let lhs = RustFnGen::borrow_mut(RustFnGen::var_id(var_id));
+        let rhs = RustFnGen::tmp_id(expr);
         self.emit_line(&format!(
             "{} = {};",
-            RustFnGen::var_id(var_id),
-            RustFnGen::tmp_id(expr)
+            lhs,
+            rhs
         ));
 
         Ok(())
@@ -546,5 +556,25 @@ trait RustGenFmt {
 
     fn type_id(id: TypeId) -> String {
         format!("_type{}", id.raw())
+    }
+
+    fn instantiate_value(str: String) -> String {
+        format!("Rc::new(RefCell::new({}))", str)
+    }
+
+    fn clone_value(str: String) -> String {
+        format!("({}).clone()", str)
+    }
+
+    fn borrow_mut(str: String) -> String {
+        format!("({}).borrow_mut()", str)
+    }
+
+    fn rustify_type(str: String) -> String {
+        format!("Rc<RefCell<{}>>", str)
+    }
+
+    fn deref_value(str: String) -> String {
+        format!("*({}).borrow()", str)
     }
 }
