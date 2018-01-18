@@ -30,3 +30,28 @@ pub use self::err::Err;
 
 pub use self::semantic_ck::check as check_ast;
 pub use self::parser::parse_Program as parse_program;
+
+pub fn prune_input(input: &str) -> String {
+    let mut result = String::with_capacity(input.len());
+
+    let mut ignore = false;
+    let mut chars = input.chars().peekable();
+    while let Some(c) = chars.next() {
+        if ignore == false {
+            if c == '/' {
+                match chars.peek() {
+                    Some(&'/') => ignore = true,
+                    _ => (),
+                }
+            }
+        } else if c == '\n' {
+            ignore = false;
+        } 
+
+        if ignore == false {
+            result.push(c);
+        }
+    }
+
+    result
+}
