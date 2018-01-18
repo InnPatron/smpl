@@ -211,14 +211,14 @@ impl<'a> RustFnGen<'a> {
             Value::Literal(ref lit) => match *lit {
                 Literal::String(ref string) => {
                     let lit = format!("\"{}\".to_string()", string);
-                    RustFnGen::instantiate_value(lit)
+                    RustFnGen::new_value(lit)
                 }
 
-                Literal::Int(int) => RustFnGen::instantiate_value(int.to_string()),
+                Literal::Int(int) => RustFnGen::new_value(int.to_string()),
 
-                Literal::Float(float) => RustFnGen::instantiate_value(float.to_string()),
+                Literal::Float(float) => RustFnGen::new_value(float.to_string()),
 
-                Literal::Bool(boolean) => RustFnGen::instantiate_value(boolean.to_string()),
+                Literal::Bool(boolean) => RustFnGen::new_value(boolean.to_string()),
             },
 
             Value::Variable(ref var) => {
@@ -244,7 +244,7 @@ impl<'a> RustFnGen<'a> {
                 RustFnGen::clone_value(result)
             }
 
-            Value::BinExpr(ref op, ref lhs, ref rhs) => RustFnGen::instantiate_value(format!(
+            Value::BinExpr(ref op, ref lhs, ref rhs) => RustFnGen::new_value(format!(
                 "{} {} {}",
                 RustFnGen::deref_value(RustFnGen::tmp_id(*lhs.data())),
                 RustFnGen::bin_op(op),
@@ -289,7 +289,7 @@ impl<'a> RustFnGen<'a> {
                     None => (),
                 }
 
-                RustFnGen::instantiate_value(format!("{} {{ {} }}", RustFnGen::type_id(struct_id), field_init))
+                RustFnGen::new_value(format!("{} {{ {} }}", RustFnGen::type_id(struct_id), field_init))
             }
         };
 
@@ -606,7 +606,7 @@ trait RustGenFmt {
         format!("_type{}", id.raw())
     }
 
-    fn instantiate_value(str: String) -> String {
+    fn new_value(str: String) -> String {
         format!("Rc::new(RefCell::new({}))", str)
     }
 
