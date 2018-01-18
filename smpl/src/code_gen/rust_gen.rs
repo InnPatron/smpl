@@ -280,7 +280,7 @@ impl<'a> RustFnGen<'a> {
                 match struct_init.field_init() {
                     Some(init_list) => for &(ref field, ref typed_tmp) in init_list {
                         field_init.push_str(&format!(
-                            "{}: {},\n",
+                            "{}: {},",
                             field.to_string(),
                             RustFnGen::tmp_id(*typed_tmp.data())
                         ));
@@ -289,7 +289,7 @@ impl<'a> RustFnGen<'a> {
                     None => (),
                 }
 
-                format!("{} {{ {} }}", RustFnGen::type_id(struct_id), field_init)
+                RustFnGen::instantiate_value(format!("{} {{ {} }}", RustFnGen::type_id(struct_id), field_init))
             }
         };
 
