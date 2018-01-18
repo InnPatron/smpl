@@ -103,8 +103,6 @@ fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, E
     match *cfg.node_weight(id) {
         Node::Return(_) => Ok(None),
 
-        Node::LoopFoot(_) => Ok(Some(vec![cfg.before_loop_foot(id)])),
-
         Node::BranchMerge => Ok(Some(cfg.before_branch_merge(id))),
 
         Node::ExitScope => Ok(Some(vec![cfg.previous(id)])),

@@ -591,25 +591,7 @@ fn main() {
     }
 }";
 
-        let input_7 =
-"fn test() -> i32 {
-    while true {
-        
-    }
-}";
-
-        let input_8 =
-"fn test() -> i32 {
-    while true {
-        if true {
-            return 5;
-        } else {
-            
-        }
-    }
-}";
-
-        let input = vec![input_0, input_1, input_2, input_3, input_4, input_5, input_6, input_7, input_8];
+        let input = vec![input_0, input_1, input_2, input_3, input_4, input_5, input_6];
 
         for i in 0..input.len() {
             let ast = parse_Program(input[i]).unwrap();
@@ -697,25 +679,7 @@ fn main() {
     }
 }";
 
-        let input_7 =
-"fn test() -> i32 {
-    while true {
-        return 0;
-    }
-}";
-
-        let input_8 =
-"fn test() -> i32 {
-    while true {
-        if true {
-            return 0;
-        } else {
-            return 0;
-        }
-    }
-}";
-
-        let input = vec![input_0, input_1, input_2, input_3, input_4, input_5, input_6, input_7, input_8];
+        let input = vec![input_0, input_1, input_2, input_3, input_4, input_5, input_6];
 
         for i in 0..input.len() {
             let ast = parse_Program(input[i]).unwrap();
