@@ -631,4 +631,95 @@ fn main() {
             }
         }
     }
+
+    #[test]
+    fn all_required_returns() {
+        let input_0 =
+"fn test() -> i32 {
+    return 0;
+}";
+
+        let input_1 = 
+"fn test() -> i32 {
+    let a: i32 = 5;
+
+    return 0;
+}";
+
+        let input_2 = 
+"fn test() -> i32 {
+    if true {
+        return 0;
+    }
+}";
+
+        let input_3 =
+"fn test() -> i32 {
+    if true {
+        return 0;
+    } else {
+        return 0;
+    }
+}";
+
+        let input_4 =
+"fn test() -> i32 {
+    if true {
+        return 0;
+    } else {
+        return 0;
+    }
+}";
+
+        let input_5 =
+"fn test() -> i32 {
+    if true {
+        if true {
+            return 0;
+        } else {
+            return 0;
+        }
+    } else {
+        return 0;
+    }
+}";
+
+        let input_6 =
+"fn test() -> i32 {
+    if true {
+        return 0;
+    } else {
+        if true {
+            return 0;
+        } else {
+            return 0;
+        }
+    }
+}";
+
+        let input_7 =
+"fn test() -> i32 {
+    while true {
+        return 0;
+    }
+}";
+
+        let input_8 =
+"fn test() -> i32 {
+    while true {
+        if true {
+            return 0;
+        } else {
+            return 0;
+        }
+    }
+}";
+
+        let input = vec![input_0, input_1, input_2, input_3, input_4, input_5, input_6, input_7, input_8];
+
+        for i in 0..input.len() {
+            let ast = parse_Program(input[i]).unwrap();
+            check(ast).unwrap();
+        }
+    }
 }
