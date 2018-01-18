@@ -633,6 +633,8 @@ fn main() {
     if true {
         return 0;
     }
+
+    return 0;
 }";
 
         let input_3 =
