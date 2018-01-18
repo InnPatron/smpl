@@ -177,6 +177,26 @@ impl RustGen {
         self.emit_line("}");
         self.shift_left();
         self.emit_line("}");
+
+        // Emit Default impl
+        self.emit_line(&format!("impl Default for {} {{", name));
+        self.shift_right();
+        self.emit_line(&format!("fn default() -> Self {{"));
+
+        self.shift_right();
+        self.emit_line(&format!("{} {{", name));
+        self.shift_right();
+        for &(ref name, _) in fields.iter() {
+            let value = RustFnGen::new_value("Default::default()".to_string());
+            self.emit_line(&format!("{}: {},", name, value));
+        }
+        self.emit_line("}");
+        self.shift_left();
+        self.shift_left();
+
+        self.emit_line("}");
+        self.shift_left();
+        self.emit_line("}");
     }
 }
 
