@@ -293,7 +293,7 @@ impl<'a> RustFnGen<'a> {
             }
         };
 
-        self.emit_line(&format!("let {} = {};\n", lhs, rhs));
+        self.emit_line(&format!("let {} = {};", lhs, rhs));
     }
 
     fn uni_op(op: &UniOp) -> String {
@@ -361,16 +361,19 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
         self.shift_left();
         self.emit_line("}");
+        self.line_pad();
         Ok(())
     }
 
     fn cont(&mut self, _id: NodeIndex) -> Result<(), ()> {
         self.emit_line("continue;");
+        self.line_pad();
         Ok(())
     }
 
     fn br(&mut self, _id: NodeIndex) -> Result<(), ()> {
         self.emit_line("break;");
+        self.line_pad();
         Ok(())
     }
 
@@ -398,6 +401,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         let var_type = RustFnGen::rustify_type(var_type);
 
         self.emit_line(&format!("let mut {}: {} = {};", name, var_type, expr));
+        self.line_pad();
 
         Ok(())
     }
@@ -406,19 +410,44 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         let var_id = assignment.var_id().unwrap();
         let expr = self.emit_expr(assignment.value());
 
-        let lhs = RustFnGen::var_id(var_id);
-        let rhs = RustFnGen::tmp_id(expr);
+
+        let path = assignment.name().clone();
+        let path_count = path.0.len();
+        let mut path = path.0.into_iter();
+        path.next();        // Get rid of root variable ident
+
+        let lhs = {
+            let mut access_path = if path_count > 1 {
+                RustFnGen::borrow_mut(RustFnGen::var_id(var_id))
+            } else {
+                RustFnGen::var_id(var_id)
+            };
+            
+            for ident in path {
+                access_path.push_str(&format!(".{}", ident));
+            }
+            access_path
+        };
+
+
+        let rhs = {
+            let tmp = RustFnGen::tmp_id(expr);
+            //RustFnGen::borrow(tmp)
+            tmp
+        };
         self.emit_line(&format!(
             "{} = {};",
             lhs,
             rhs
         ));
 
+        self.line_pad();
         Ok(())
     }
 
     fn expr(&mut self, _id: NodeIndex, expr: &Expr) -> Result<(), ()> {
         self.emit_expr(expr);
+        self.line_pad();
         Ok(())
     }
 
@@ -432,6 +461,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
             None => self.emit_line("return;"),
         }
 
+        self.line_pad();
         Ok(())
     }
 
@@ -474,6 +504,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), ()> {
         if let Node::BranchMerge = *self.cfg.node_weight(id) {
             self.emit_line("else { /* EMPTY */}");
+            self.line_pad();
         } else {
             self.emit_fmt(" else ");
         }
@@ -584,7 +615,7 @@ trait RustGenFmt {
     }
 
     fn borrow_mut(str: String) -> String {
-        format!("({}).borrow_mut()", str)
+        format!("(*(({}).borrow_mut()))", str)
     }
 
     fn rustify_type(str: String) -> String {
