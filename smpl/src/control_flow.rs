@@ -590,8 +590,8 @@ impl CFG {
                     }
 
                     ExprStmt::Return(expr) => {
-                        let expr = expr_flow::flatten(universe, expr);
-                        let ret = cfg.graph.add_node(Node::Return(Some(expr)));
+                        let expr = expr.map(|expr| expr_flow::flatten(universe, expr));
+                        let ret = cfg.graph.add_node(Node::Return(expr));
                         append_node_index!(cfg, head, previous, ret);
                     }
 

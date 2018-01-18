@@ -89,7 +89,7 @@ pub enum ExprStmt {
     While(While),
     LocalVarDecl(LocalVarDecl),
     Assignment(Assignment),
-    Return(Expr),
+    Return(Option<Expr>),
     Break,
     Continue,
 }

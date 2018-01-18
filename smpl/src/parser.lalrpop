@@ -165,8 +165,8 @@ pub ExprStmt: ExprStmt = {
 };
 
 /// return -> "return" expr ";"
-ReturnStmt: Expr = {
-	"return" <e: Expr> ";" => e,
+ReturnStmt: Option<Expr> = {
+	"return" <e: Expr?> ";" => e,
 };
 
 /// local_var_decl -> "let" ident ":" path  "=" expr ";"
