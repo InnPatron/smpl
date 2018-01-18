@@ -18,24 +18,16 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
             scope.map_tmp(
                 universe,
                 Value::BinExpr(bin.op, Typed::untyped(lhs), Typed::untyped(rhs)),
-                None,
             )
         }
 
         AstExpr::Uni(uni) => {
             let expr = flatten_expr(universe, scope, *uni.expr);
-            scope.map_tmp(universe, Value::UniExpr(uni.op, Typed::untyped(expr)), None)
+            scope.map_tmp(universe, Value::UniExpr(uni.op, Typed::untyped(expr)))
         }
 
         AstExpr::Literal(literal) => {
-            let lit_type = match literal {
-                Literal::String(_) => Some(universe.string()),
-                Literal::Int(_) => Some(universe.int()),
-                Literal::Float(_) => Some(universe.float()),
-                Literal::Bool(_) => Some(universe.boolean()),
-            };
-
-            scope.map_tmp(universe, Value::Literal(literal), lit_type)
+            scope.map_tmp(universe, Value::Literal(literal))
         }
 
         AstExpr::StructInit(init) => {
@@ -52,16 +44,15 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
             scope.map_tmp(
                 universe,
                 Value::StructInit(StructInit::new(struct_name, field_init)),
-                None,
             )
         }
 
         AstExpr::Variable(ident) => {
-            scope.map_tmp(universe, Value::Variable(Variable::new(ident)), None)
+            scope.map_tmp(universe, Value::Variable(Variable::new(ident)))
         }
 
         AstExpr::FieldAccess(path) => {
-            scope.map_tmp(universe, Value::FieldAccess(FieldAccess::new(path)), None)
+            scope.map_tmp(universe, Value::FieldAccess(FieldAccess::new(path)))
         }
 
         AstExpr::FnCall(fn_call) => {
@@ -74,7 +65,7 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
 
             let fn_call = FnCall::new(name, args);
 
-            scope.map_tmp(universe, Value::FnCall(fn_call), None)
+            scope.map_tmp(universe, Value::FnCall(fn_call))
         }
     }
 }
