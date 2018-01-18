@@ -146,10 +146,13 @@ impl RustGen {
 
         self.emit_line("#[derive(Clone, Debug, PartialEq)]");
         self.emit_line(&format!("struct {} {{", name));
+        self.shift_right();
         for (name, string_type) in fields {
+            let name = name;
             let field_type = RustGen::rustify_type(string_type);
-            self.emit_line(&field_type);
+            self.emit_line(&format!("{}: {},", name, field_type));
         }
+        self.shift_left();
         self.emit_line("}");
     }
 }
