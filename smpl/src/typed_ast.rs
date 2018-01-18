@@ -174,12 +174,12 @@ impl Expr {
         self.execution_order.iter()
     }
 
-    pub fn map_tmp(&mut self, universe: &Universe, val: Value, t: Option<TypeId>) -> TmpId {
+    pub fn map_tmp(&mut self, universe: &Universe, val: Value) -> TmpId {
         let tmp = Tmp {
             id: universe.new_tmp_id(),
             value: Typed {
                 data: val,
-                data_type: Cell::new(t),
+                data_type: Cell::new(None),
             }
         };
         let id = tmp.id;
