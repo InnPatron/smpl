@@ -209,6 +209,13 @@ init NAME {
             _ => panic!(),
         }
 
+        let input = "-21";
+        let literal = parse_Literal(input).unwrap();
+        match literal {
+            Literal::Int(int) => assert_eq!(int, -21),
+            _ => panic!(),
+        }
+
         let input = "21.0";
         let literal = parse_Literal(input).unwrap();
         match literal {
@@ -220,6 +227,13 @@ init NAME {
         let literal = parse_Literal(input).unwrap();
         match literal {
             Literal::Float(float) => assert_eq!(float, 21.0),
+            _ => panic!(),
+        }
+
+        let input = "-21.";
+        let literal = parse_Literal(input).unwrap();
+        match literal {
+            Literal::Float(float) => assert_eq!(float, -21.0),
             _ => panic!(),
         }
     }
