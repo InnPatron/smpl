@@ -229,9 +229,9 @@ impl<'a> RustFnGen<'a> {
             }
 
             Value::FieldAccess(ref access) => {
-                let var_id = RustFnGen::var_id(access.get_root_var_id().expect(
+                let var_id = RustFnGen::borrow(RustFnGen::var_id(access.get_root_var_id().expect(
                     "If the program passed semantic analysis, all IDs should be filled in.",
-                ));
+                )));
                 let mut result = var_id;
                 let mut path = access.path().iter();
 
@@ -246,9 +246,9 @@ impl<'a> RustFnGen<'a> {
 
             Value::BinExpr(ref op, ref lhs, ref rhs) => RustFnGen::new_value(format!(
                 "{} {} {}",
-                RustFnGen::deref_value(RustFnGen::tmp_id(*lhs.data())),
+                RustFnGen::borrow(RustFnGen::tmp_id(*lhs.data())),
                 RustFnGen::bin_op(op),
-                RustFnGen::deref_value(RustFnGen::tmp_id(*rhs.data())),
+                RustFnGen::borrow(RustFnGen::tmp_id(*rhs.data())),
             )),
 
             Value::UniExpr(ref op, ref tmp) => format!(
@@ -622,7 +622,7 @@ trait RustGenFmt {
         format!("Rc<RefCell<{}>>", str)
     }
 
-    fn deref_value(str: String) -> String {
-        format!("*({}).borrow()", str)
+    fn borrow(str: String) -> String {
+        format!("(*(({}).borrow()))", str)
     }
 }
