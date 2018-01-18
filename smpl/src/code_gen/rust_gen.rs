@@ -177,6 +177,16 @@ impl<'a> RustFnGen<'a> {
 
 // Code generation
 impl<'a> RustFnGen<'a> {
+
+    fn emit_condition(&mut self, e: &Expr) {
+        self.emit_line("if {");
+        self.shift_right();
+        let expr = self.emit_expr(e);
+        self.emit_line(&format!("let condition = {}.borrow();", RustFnGen::tmp_id(expr)));
+        self.emit_line("*condition }");
+        self.shift_left();
+    }
+
     fn emit_expr(&mut self, expr: &Expr) -> TmpId {
         let execution_order = expr.execution_order();
 
@@ -423,11 +433,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn loop_condition(&mut self, _id: NodeIndex, condition_expr: &Expr) -> Result<(), ()> {
-        self.emit_line("if {");
-        self.shift_right();
-        let expr = self.emit_expr(condition_expr);
-        self.emit_line(&format!("{} }}", RustFnGen::tmp_id(expr)));
-        self.shift_left();
+        self.emit_condition(condition_expr);
 
         Ok(())
     }
@@ -444,11 +450,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn branch_condition(&mut self, _id: NodeIndex, condition_expr: &Expr) -> Result<(), ()> {
-        self.emit_line("if {");
-        self.shift_right();
-        let expr = self.emit_expr(condition_expr);
-        self.emit_line(&format!("{} }}", RustFnGen::tmp_id(expr)));
-        self.shift_left();
+        self.emit_condition(condition_expr);
 
         Ok(())
     }
