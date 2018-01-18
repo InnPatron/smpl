@@ -147,6 +147,8 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                     }
                 }
 
+                init.set_struct_type(struct_type_id);
+
                 // Check struct field initialization expressions.
                 match init.field_init() {
                     // Found field initializations
