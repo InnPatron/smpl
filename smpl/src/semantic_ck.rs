@@ -683,7 +683,7 @@ fn main() {
 
         for i in 0..input.len() {
             let ast = parse_Program(input[i]).unwrap();
-            check(ast).unwrap();
+            check(ast).expect(&format!("Test  {} failed.", i));
         }
     }
 }
