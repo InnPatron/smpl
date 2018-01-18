@@ -415,39 +415,33 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn assignment(&mut self, _id: NodeIndex, assignment: &Assignment) -> Result<(), ()> {
-        let var_id = assignment.var_id().unwrap();
+        
+        let var_id = RustFnGen::var_id(assignment.var_id().unwrap());
+        self.emit_line("{");
+        self.shift_right();
+
         let expr = self.emit_expr(assignment.value());
+        self.emit_line(&format!("let mut _borrow_{} = {};", var_id,
+                               RustFnGen::borrow_ref_mut(var_id.clone())));
+        
+        let mut previous = var_id;
+        let mut path = assignment.name().iter();
+        path.next(); // Remove root ident
 
-
-        let path = assignment.name().clone();
-        let path_count = path.0.len();
-        let mut path = path.0.into_iter();
-        path.next();        // Get rid of root variable ident
-
-        let lhs = {
-            let mut access_path = if path_count > 1 {
-                RustFnGen::borrow_mut(RustFnGen::var_id(var_id))
-            } else {
-                RustFnGen::var_id(var_id)
-            };
-            
-            for ident in path {
-                access_path.push_str(&format!(".{}", ident));
-            }
-            access_path
-        };
-
-
+        for field in path {
+            let borrow = RustFnGen::borrow_ref_mut(format!("_borrow_{}.{}", previous, field));
+            self.emit_line(&format!("let mut _borrow_{} = {};", field, borrow));
+            previous = field.to_string();
+        }
+        let assignee = format!("*_borrow_{}", previous);
         let rhs = {
             let tmp = RustFnGen::tmp_id(expr);
-            RustFnGen::new_value(tmp)
+            tmp
         };
-        self.emit_line(&format!(
-            "{} = {};",
-            lhs,
-            rhs
-        ));
-
+        let result = format!("{} = {};", assignee, rhs);
+        self.emit_line(&result);
+        self.shift_left();
+        self.emit_line("}");
         self.line_pad();
         Ok(())
     }
@@ -619,6 +613,10 @@ trait RustGenFmt {
 
     fn clone_value(str: String) -> String {
         format!("({}).clone()", str)
+    }
+
+    fn borrow_ref_mut(str: String) -> String {
+        format!("({}).borrow_mut()", str)
     }
 
     fn borrow_ref(str: String) -> String {
