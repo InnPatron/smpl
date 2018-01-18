@@ -41,6 +41,10 @@ impl RustGen {
         self.line_pad();
         self.emit_line("//#### START FUNCTION DEFINITIONS ####");
 
+        if let Some(id) = program.main() {
+            self.emit_line(&format!("fn main() {{ {}(); }}", RustFnGen::fn_id(id)));
+        }
+
         // Emit function definitions
         for (fn_id, ref func) in program.universe().all_fns() {
             let func_type = program.universe().get_type(func.type_id());
@@ -55,21 +59,33 @@ impl RustGen {
                 // Gather parameters
                 for param in fn_type.params.iter() {
                     let param_type = param.param_type;
+                    let param_type = RustFnGen::type_id(param_type);
+                    let param_type = RustFnGen::rustify_type(param_type);
+
                     args.push_str(&format!(
                         "{}: {}, ",
                         RustFnGen::var_id(param.var_id().unwrap()),
-                        RustFnGen::type_id(param_type)
+                        param_type
                     ));
                 }
             } else {
                 panic!("{} did not map to a function type", func.type_id());
             }
             let return_type = RustFnGen::type_id(return_type_id);
+            let return_type = RustFnGen::rustify_type(return_type);
 
             // Emit fn signature
-            self.emit(&format!("fn {} (", name));
-            self.emit(&args);
-            self.emit(&format!(") -> {} ", return_type));
+            match *program.universe().get_type(return_type_id) {
+                SmplType::Unit => {
+                    self.emit(&format!("fn {} ({})", name, args));
+                }
+
+                _ => {
+                    self.emit(&format!("fn {} (", name));
+                    self.emit(&args);
+                    self.emit(&format!(") -> {} ", return_type));
+                }
+            }
 
             // Emit CFG
             let mut cfg = func.cfg();
@@ -89,7 +105,8 @@ impl RustGen {
     }
 
     fn prelude(&mut self, universe: &Universe) {
-        self.output.push_str("use std::cell::RefCell;\n");
+        self.emit_line("use std::cell::RefCell;");
+        self.emit_line("use std::rc::Rc;");
         self.line_pad();
 
         // Create TypeId aliases for primitives
@@ -129,9 +146,13 @@ impl RustGen {
 
         self.emit_line("#[derive(Clone, Debug, PartialEq)]");
         self.emit_line(&format!("struct {} {{", name));
+        self.shift_right();
         for (name, string_type) in fields {
-            self.emit_line(&format!("\t{}: RefCell<{}>", name, string_type));
+            let name = name;
+            let field_type = RustGen::rustify_type(string_type);
+            self.emit_line(&format!("{}: {},", name, field_type));
         }
+        self.shift_left();
         self.emit_line("}");
     }
 }
@@ -159,6 +180,16 @@ impl<'a> RustFnGen<'a> {
 
 // Code generation
 impl<'a> RustFnGen<'a> {
+
+    fn emit_condition(&mut self, e: &Expr) {
+        self.emit_line("if {");
+        self.shift_right();
+        let expr = self.emit_expr(e);
+        self.emit_line(&format!("let condition = {}.borrow();", RustFnGen::tmp_id(expr)));
+        self.emit_line("*condition }");
+        self.shift_left();
+    }
+
     fn emit_expr(&mut self, expr: &Expr) -> TmpId {
         let execution_order = expr.execution_order();
 
@@ -180,27 +211,27 @@ impl<'a> RustFnGen<'a> {
             Value::Literal(ref lit) => match *lit {
                 Literal::String(ref string) => {
                     let lit = format!("\"{}\".to_string()", string);
-                    lit
+                    RustFnGen::new_value(lit)
                 }
 
-                Literal::Int(int) => int.to_string(),
+                Literal::Int(int) => RustFnGen::new_value(int.to_string()),
 
-                Literal::Float(float) => float.to_string(),
+                Literal::Float(float) => RustFnGen::new_value(float.to_string()),
 
-                Literal::Bool(boolean) => boolean.to_string(),
+                Literal::Bool(boolean) => RustFnGen::new_value(boolean.to_string()),
             },
 
             Value::Variable(ref var) => {
                 let var_id = RustFnGen::var_id(var.get_id().expect(
                     "If the program passed semantic analysis, all IDs should be filled in.",
                 ));
-                var_id
+                RustFnGen::clone_value(var_id)
             }
 
             Value::FieldAccess(ref access) => {
-                let var_id = RustFnGen::var_id(access.get_root_var_id().expect(
+                let var_id = RustFnGen::borrow(RustFnGen::var_id(access.get_root_var_id().expect(
                     "If the program passed semantic analysis, all IDs should be filled in.",
-                ));
+                )));
                 let mut result = var_id;
                 let mut path = access.path().iter();
 
@@ -210,15 +241,15 @@ impl<'a> RustFnGen<'a> {
                     result.push_str(&format!(".{}", field));
                 }
 
-                result
+                RustFnGen::clone_value(result)
             }
 
-            Value::BinExpr(ref op, ref lhs, ref rhs) => format!(
+            Value::BinExpr(ref op, ref lhs, ref rhs) => RustFnGen::new_value(format!(
                 "{} {} {}",
-                RustFnGen::tmp_id(*lhs.data()),
+                RustFnGen::borrow(RustFnGen::tmp_id(*lhs.data())),
                 RustFnGen::bin_op(op),
-                RustFnGen::tmp_id(*rhs.data())
-            ),
+                RustFnGen::borrow(RustFnGen::tmp_id(*rhs.data())),
+            )),
 
             Value::UniExpr(ref op, ref tmp) => format!(
                 "{}{}",
@@ -249,7 +280,7 @@ impl<'a> RustFnGen<'a> {
                 match struct_init.field_init() {
                     Some(init_list) => for &(ref field, ref typed_tmp) in init_list {
                         field_init.push_str(&format!(
-                            "{}: {},\n",
+                            "{}: {},",
                             field.to_string(),
                             RustFnGen::tmp_id(*typed_tmp.data())
                         ));
@@ -258,11 +289,11 @@ impl<'a> RustFnGen<'a> {
                     None => (),
                 }
 
-                format!("{} {{ {} }}", RustFnGen::type_id(struct_id), field_init)
+                RustFnGen::new_value(format!("{} {{ {} }}", RustFnGen::type_id(struct_id), field_init))
             }
         };
 
-        self.emit_line(&format!("let {} = {};\n", lhs, rhs));
+        self.emit_line(&format!("let {} = {};", lhs, rhs));
     }
 
     fn uni_op(op: &UniOp) -> String {
@@ -330,16 +361,19 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
         self.shift_left();
         self.emit_line("}");
+        self.line_pad();
         Ok(())
     }
 
     fn cont(&mut self, _id: NodeIndex) -> Result<(), ()> {
         self.emit_line("continue;");
+        self.line_pad();
         Ok(())
     }
 
     fn br(&mut self, _id: NodeIndex) -> Result<(), ()> {
         self.emit_line("break;");
+        self.line_pad();
         Ok(())
     }
 
@@ -364,7 +398,10 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         let var_type = RustFnGen::type_id(type_id);
         let expr = RustFnGen::tmp_id(expr);
 
+        let var_type = RustFnGen::rustify_type(var_type);
+
         self.emit_line(&format!("let mut {}: {} = {};", name, var_type, expr));
+        self.line_pad();
 
         Ok(())
     }
@@ -373,17 +410,44 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         let var_id = assignment.var_id().unwrap();
         let expr = self.emit_expr(assignment.value());
 
+
+        let path = assignment.name().clone();
+        let path_count = path.0.len();
+        let mut path = path.0.into_iter();
+        path.next();        // Get rid of root variable ident
+
+        let lhs = {
+            let mut access_path = if path_count > 1 {
+                RustFnGen::borrow_mut(RustFnGen::var_id(var_id))
+            } else {
+                RustFnGen::var_id(var_id)
+            };
+            
+            for ident in path {
+                access_path.push_str(&format!(".{}", ident));
+            }
+            access_path
+        };
+
+
+        let rhs = {
+            let tmp = RustFnGen::tmp_id(expr);
+            //RustFnGen::borrow(tmp)
+            tmp
+        };
         self.emit_line(&format!(
             "{} = {};",
-            RustFnGen::var_id(var_id),
-            RustFnGen::tmp_id(expr)
+            lhs,
+            rhs
         ));
 
+        self.line_pad();
         Ok(())
     }
 
     fn expr(&mut self, _id: NodeIndex, expr: &Expr) -> Result<(), ()> {
         self.emit_expr(expr);
+        self.line_pad();
         Ok(())
     }
 
@@ -397,15 +461,12 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
             None => self.emit_line("return;"),
         }
 
+        self.line_pad();
         Ok(())
     }
 
     fn loop_condition(&mut self, _id: NodeIndex, condition_expr: &Expr) -> Result<(), ()> {
-        self.emit_line("if {");
-        self.shift_right();
-        let expr = self.emit_expr(condition_expr);
-        self.emit_line(&format!("{} }}", RustFnGen::tmp_id(expr)));
-        self.shift_left();
+        self.emit_condition(condition_expr);
 
         Ok(())
     }
@@ -422,11 +483,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn branch_condition(&mut self, _id: NodeIndex, condition_expr: &Expr) -> Result<(), ()> {
-        self.emit_line("if {");
-        self.shift_right();
-        let expr = self.emit_expr(condition_expr);
-        self.emit_line(&format!("{} }}", RustFnGen::tmp_id(expr)));
-        self.shift_left();
+        self.emit_condition(condition_expr);
 
         Ok(())
     }
@@ -447,6 +504,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), ()> {
         if let Node::BranchMerge = *self.cfg.node_weight(id) {
             self.emit_line("else { /* EMPTY */}");
+            self.line_pad();
         } else {
             self.emit_fmt(" else ");
         }
@@ -546,5 +604,25 @@ trait RustGenFmt {
 
     fn type_id(id: TypeId) -> String {
         format!("_type{}", id.raw())
+    }
+
+    fn new_value(str: String) -> String {
+        format!("Rc::new(RefCell::new({}))", str)
+    }
+
+    fn clone_value(str: String) -> String {
+        format!("({}).clone()", str)
+    }
+
+    fn borrow_mut(str: String) -> String {
+        format!("(*(({}).borrow_mut()))", str)
+    }
+
+    fn rustify_type(str: String) -> String {
+        format!("Rc<RefCell<{}>>", str)
+    }
+
+    fn borrow(str: String) -> String {
+        format!("(*(({}).borrow()))", str)
     }
 }

@@ -2,43 +2,45 @@ fn main() {
 	let hello: String = "Hello!";
 }
 
-fn if_basic() -> i32 {
+fn if_basic() {
 	let name: String = "if_basic";
 
 	if true {
-		return 0;
+		return;
+	} else {
+		return;
 	}
 }
 
-fn if_default() -> i32 {
+fn if_default() {
 	let name: String = "if_default";
 
 	if false {
-		return 0;
+		return;
 	} elif false {
-		return 1;
+		return;
 	}
 	
-	return 2;
+	return;
 }
 
-fn if_empty() -> i32 {
+fn if_empty() {
 	let name: String = "if_empty";
 
 	if false { } elif false { } elif true { } else { }
 
-	return 100;
+	return;
 }
 
-fn if_complex() -> i32 {
+fn if_complex() {
 	let name: String = "if_complex";
 
 	if true {
-		return 0;
+		return;
 	} elif false {
-		return 1;
+		return;
 	} else {
-		return 2;
+		return;
 	}
 }
 
