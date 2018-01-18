@@ -185,8 +185,7 @@ impl<'a> RustFnGen<'a> {
         self.emit_line("if {");
         self.shift_right();
         let expr = self.emit_expr(e);
-        self.emit_line(&format!("let condition = {}.borrow();", RustFnGen::tmp_id(expr)));
-        self.emit_line("*condition }");
+        self.emit_line(&format!("{} }}", RustFnGen::tmp_id(expr)));
         self.shift_left();
     }
 
@@ -211,21 +210,23 @@ impl<'a> RustFnGen<'a> {
             Value::Literal(ref lit) => match *lit {
                 Literal::String(ref string) => {
                     let lit = format!("\"{}\".to_string()", string);
-                    RustFnGen::new_value(lit)
+                    lit
                 }
 
-                Literal::Int(int) => RustFnGen::new_value(int.to_string()),
+                Literal::Int(int) => int.to_string(),
 
-                Literal::Float(float) => RustFnGen::new_value(float.to_string()),
+                Literal::Float(float) => float.to_string(),
 
-                Literal::Bool(boolean) => RustFnGen::new_value(boolean.to_string()),
+                Literal::Bool(boolean) => boolean.to_string(),
             },
 
             Value::Variable(ref var) => {
                 let var_id = RustFnGen::var_id(var.get_id().expect(
                     "If the program passed semantic analysis, all IDs should be filled in.",
                 ));
-                RustFnGen::clone_value(var_id)
+
+                let inner = RustFnGen::borrow(var_id);
+                RustFnGen::clone_value(inner)
             }
 
             Value::FieldAccess(ref access) => {
@@ -241,15 +242,16 @@ impl<'a> RustFnGen<'a> {
                     result.push_str(&format!(".{}", field));
                 }
 
-                RustFnGen::clone_value(result)
+                let inner = RustFnGen::borrow(result);
+                RustFnGen::clone_value(inner)
             }
 
-            Value::BinExpr(ref op, ref lhs, ref rhs) => RustFnGen::new_value(format!(
+            Value::BinExpr(ref op, ref lhs, ref rhs) => format!(
                 "{} {} {}",
-                RustFnGen::borrow(RustFnGen::tmp_id(*lhs.data())),
+                RustFnGen::tmp_id(*lhs.data()),
                 RustFnGen::bin_op(op),
-                RustFnGen::borrow(RustFnGen::tmp_id(*rhs.data())),
-            )),
+                RustFnGen::tmp_id(*rhs.data()),
+            ),
 
             Value::UniExpr(ref op, ref tmp) => format!(
                 "{}{}",
@@ -264,7 +266,8 @@ impl<'a> RustFnGen<'a> {
                 let mut arg_string = String::new();
                 match fn_call.args() {
                     Some(ref args) => for a in args.iter() {
-                        arg_string.push_str(&format!("{}, ", RustFnGen::tmp_id(*a.data())));
+                        let arg = RustFnGen::tmp_id(*a.data());
+                        arg_string.push_str(&format!("{}, ", RustFnGen::new_value(arg)));
                     },
 
                     None => (),
@@ -282,14 +285,14 @@ impl<'a> RustFnGen<'a> {
                         field_init.push_str(&format!(
                             "{}: {},",
                             field.to_string(),
-                            RustFnGen::tmp_id(*typed_tmp.data())
+                            RustFnGen::new_value(RustFnGen::tmp_id(*typed_tmp.data())),
                         ));
                     },
 
                     None => (),
                 }
 
-                RustFnGen::new_value(format!("{} {{ {} }}", RustFnGen::type_id(struct_id), field_init))
+                format!("{} {{ {} }}", RustFnGen::type_id(struct_id), field_init)
             }
         };
 
@@ -396,7 +399,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
         let name = RustFnGen::var_id(var_id);
         let var_type = RustFnGen::type_id(type_id);
-        let expr = RustFnGen::tmp_id(expr);
+        let expr = RustFnGen::new_value(RustFnGen::tmp_id(expr));
 
         let var_type = RustFnGen::rustify_type(var_type);
 
@@ -432,8 +435,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
         let rhs = {
             let tmp = RustFnGen::tmp_id(expr);
-            //RustFnGen::borrow(tmp)
-            tmp
+            RustFnGen::new_value(tmp)
         };
         self.emit_line(&format!(
             "{} = {};",
