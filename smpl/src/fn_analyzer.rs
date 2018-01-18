@@ -223,14 +223,15 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                 }
 
                 tmp_type = struct_type_id;
+                tmp.value().set_type_id(tmp_type);
             }
 
             Value::Variable(ref var) => {
                 let (var_id, type_id) = scope.var_info(var.ident())?;
                 var.set_id(var_id);
-                tmp.value().set_type_id(type_id);
 
                 tmp_type = type_id;
+                tmp.value().set_type_id(tmp_type);
             }
 
             Value::FieldAccess(ref field_access) => {
@@ -244,6 +245,7 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                 field_access.set_root_var_id(root_var_id);
 
                 tmp_type = accessed_field_type_id;
+                tmp.value().set_type_id(tmp_type);
             }
 
             Value::BinExpr(ref op, ref lhs, ref rhs) => {
@@ -254,14 +256,14 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                 rhs.set_type_id(rhs_type_id);
 
                 tmp_type = resolve_bin_op(universe, op, lhs_type_id, rhs_type_id)?;
+                tmp.value().set_type_id(tmp_type);
             }
 
-            Value::UniExpr(ref op, ref tmp) => {
-                let tmp_type_id = expr.get_tmp(*tmp.data()).value().type_id().unwrap();
-
-                tmp.set_type_id(tmp_type_id);
+            Value::UniExpr(ref op, ref uni_e) => {
+                let tmp_type_id = expr.get_tmp(*uni_e.data()).value().type_id().unwrap();
 
                 tmp_type = resolve_uni_op(universe, op, tmp_type_id)?;
+                tmp.value().set_type_id(tmp_type);
             }
 
             Value::FnCall(ref fn_call) => {
@@ -331,6 +333,8 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                         fn_id, fn_type_id, fn_type
                     );
                 }
+
+                tmp.value().set_type_id(tmp_type);
             }
         }
         expr_type = Some(tmp_type);
