@@ -231,12 +231,12 @@ impl<'a> RustFnGen<'a> {
                 RustFnGen::clone_value(result)
             }
 
-            Value::BinExpr(ref op, ref lhs, ref rhs) => format!(
+            Value::BinExpr(ref op, ref lhs, ref rhs) => RustFnGen::instantiate_value(format!(
                 "{} {} {}",
                 RustFnGen::deref_value(RustFnGen::tmp_id(*lhs.data())),
                 RustFnGen::bin_op(op),
                 RustFnGen::deref_value(RustFnGen::tmp_id(*rhs.data())),
-            ),
+            )),
 
             Value::UniExpr(ref op, ref tmp) => format!(
                 "{}{}",
