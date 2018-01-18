@@ -142,16 +142,39 @@ impl RustGen {
         let fields = struct_type
             .fields
             .iter()
-            .map(|(name, id)| (name.clone(), RustFnGen::type_id(*id)));
+            .map(|(name, id)| (name.clone(), RustFnGen::type_id(*id)))
+            .collect::<Vec<_>>();
 
-        self.emit_line("#[derive(Clone, Debug, PartialEq)]");
+        self.emit_line("#[derive(Debug, PartialEq)]");
         self.emit_line(&format!("struct {} {{", name));
         self.shift_right();
-        for (name, string_type) in fields {
+        for &(ref name, ref string_type) in fields.iter() {
             let name = name;
-            let field_type = RustGen::rustify_type(string_type);
+            let field_type = RustGen::rustify_type(string_type.to_string());
             self.emit_line(&format!("{}: {},", name, field_type));
         }
+        self.shift_left();
+        self.emit_line("}");
+
+        self.line_pad();
+
+        // Emit Clone impl
+        self.emit_line(&format!("impl Clone for {} {{", name));
+        self.shift_right();
+        self.emit_line(&format!("fn clone(&self) -> Self {{"));
+
+        self.shift_right();
+        self.emit_line(&format!("{} {{", name));
+        self.shift_right();
+        for &(ref name, _) in fields.iter() {
+            let value = RustFnGen::new_value("Default::default()".to_string());
+            self.emit_line(&format!("{}: {},", name, value));
+        }
+        self.emit_line("}");
+        self.shift_left();
+        self.shift_left();
+
+        self.emit_line("}");
         self.shift_left();
         self.emit_line("}");
     }
