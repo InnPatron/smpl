@@ -230,20 +230,25 @@ impl<'a> RustFnGen<'a> {
             }
 
             Value::FieldAccess(ref access) => {
-                let var_id = RustFnGen::borrow(RustFnGen::var_id(access.get_root_var_id().expect(
-                    "If the program passed semantic analysis, all IDs should be filled in.",
-                )));
-                let mut result = var_id;
+                let var_id = RustFnGen::var_id(access.get_root_var_id().unwrap());
+                let mut borrow_chain = format!("let _borrow_{} = {};\n", var_id,
+                                               RustFnGen::borrow_ref(var_id.clone()));
+                
+                let mut previous = var_id;
                 let mut path = access.path().iter();
-
                 path.next(); // Remove root ident
 
                 for field in path {
-                    result.push_str(&format!(".{}", field));
+                    let borrow = RustFnGen::borrow_ref(format!("_borrow_{}.{}", previous, field));
+                    borrow_chain.push_str(&format!(
+                            "let _borrow_{} = {};", field, borrow));
+                    previous = field.to_string();
                 }
 
-                let inner = RustFnGen::borrow(result);
-                RustFnGen::clone_value(inner)
+                let value = RustFnGen::clone_value(format!("_borrow_{}", previous));
+                let result = format!("{{ {} {} }}", borrow_chain, value);
+
+                result
             }
 
             Value::BinExpr(ref op, ref lhs, ref rhs) => format!(
@@ -614,6 +619,10 @@ trait RustGenFmt {
 
     fn clone_value(str: String) -> String {
         format!("({}).clone()", str)
+    }
+
+    fn borrow_ref(str: String) -> String {
+        format!("({}).borrow()", str)
     }
 
     fn borrow_mut(str: String) -> String {
