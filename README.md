@@ -52,7 +52,11 @@ fn main() {
 
     if a != p.x {
         result = "Failure";
-    }
+    } elif b != p.x {
+		result = "Failure";
+	} else {
+		// Success
+	}
 }
 
 
