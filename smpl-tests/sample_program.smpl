@@ -3,6 +3,10 @@ struct Point {
 	y: i32,
 }
 
+struct Graph {
+	p: Point,
+}
+
 fn test_0() {
 	let foo: String = "Hello world";
 	let bar: String = "Hiya";
@@ -24,14 +28,21 @@ fn test_1(a: i32, b: i32) {
 }
 
 fn main() {
+
 	let point: Point = init Point {
 		x: 5,
 		y: 10,
 	};
 
+	let graph: Graph = init Graph {
+		p: point,
+	};
+
 	test_1(point.x, point.y);
 
-	point.x = 100;
+	graph.p.x = 100;
+
+	point.y = 20;
 
 	let test_b: bool = point.x == point.y;
 }

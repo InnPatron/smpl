@@ -142,16 +142,59 @@ impl RustGen {
         let fields = struct_type
             .fields
             .iter()
-            .map(|(name, id)| (name.clone(), RustFnGen::type_id(*id)));
+            .map(|(name, id)| (name.clone(), RustFnGen::type_id(*id)))
+            .collect::<Vec<_>>();
 
-        self.emit_line("#[derive(Clone, Debug, PartialEq)]");
+        self.emit_line("#[derive(Debug, PartialEq)]");
         self.emit_line(&format!("struct {} {{", name));
         self.shift_right();
-        for (name, string_type) in fields {
+        for &(ref name, ref string_type) in fields.iter() {
             let name = name;
-            let field_type = RustGen::rustify_type(string_type);
+            let field_type = RustGen::rustify_type(string_type.to_string());
             self.emit_line(&format!("{}: {},", name, field_type));
         }
+        self.shift_left();
+        self.emit_line("}");
+
+        self.line_pad();
+
+        // Emit Clone impl
+        self.emit_line(&format!("impl Clone for {} {{", name));
+        self.shift_right();
+        self.emit_line(&format!("fn clone(&self) -> Self {{"));
+
+        self.shift_right();
+        self.emit_line(&format!("{} {{", name));
+        self.shift_right();
+        for &(ref name, _) in fields.iter() {
+            let value = RustFnGen::new_value("Default::default()".to_string());
+            self.emit_line(&format!("{}: {},", name, value));
+        }
+        self.emit_line("}");
+        self.shift_left();
+        self.shift_left();
+
+        self.emit_line("}");
+        self.shift_left();
+        self.emit_line("}");
+
+        // Emit Default impl
+        self.emit_line(&format!("impl Default for {} {{", name));
+        self.shift_right();
+        self.emit_line(&format!("fn default() -> Self {{"));
+
+        self.shift_right();
+        self.emit_line(&format!("{} {{", name));
+        self.shift_right();
+        for &(ref name, _) in fields.iter() {
+            let value = RustFnGen::new_value("Default::default()".to_string());
+            self.emit_line(&format!("{}: {},", name, value));
+        }
+        self.emit_line("}");
+        self.shift_left();
+        self.shift_left();
+
+        self.emit_line("}");
         self.shift_left();
         self.emit_line("}");
     }
@@ -185,8 +228,7 @@ impl<'a> RustFnGen<'a> {
         self.emit_line("if {");
         self.shift_right();
         let expr = self.emit_expr(e);
-        self.emit_line(&format!("let condition = {}.borrow();", RustFnGen::tmp_id(expr)));
-        self.emit_line("*condition }");
+        self.emit_line(&format!("{} }}", RustFnGen::tmp_id(expr)));
         self.shift_left();
     }
 
@@ -211,45 +253,53 @@ impl<'a> RustFnGen<'a> {
             Value::Literal(ref lit) => match *lit {
                 Literal::String(ref string) => {
                     let lit = format!("\"{}\".to_string()", string);
-                    RustFnGen::new_value(lit)
+                    lit
                 }
 
-                Literal::Int(int) => RustFnGen::new_value(int.to_string()),
+                Literal::Int(int) => int.to_string(),
 
-                Literal::Float(float) => RustFnGen::new_value(float.to_string()),
+                Literal::Float(float) => float.to_string(),
 
-                Literal::Bool(boolean) => RustFnGen::new_value(boolean.to_string()),
+                Literal::Bool(boolean) => boolean.to_string(),
             },
 
             Value::Variable(ref var) => {
                 let var_id = RustFnGen::var_id(var.get_id().expect(
                     "If the program passed semantic analysis, all IDs should be filled in.",
                 ));
-                RustFnGen::clone_value(var_id)
+
+                let inner = RustFnGen::borrow(var_id);
+                RustFnGen::clone_value(inner)
             }
 
             Value::FieldAccess(ref access) => {
-                let var_id = RustFnGen::borrow(RustFnGen::var_id(access.get_root_var_id().expect(
-                    "If the program passed semantic analysis, all IDs should be filled in.",
-                )));
-                let mut result = var_id;
+                let var_id = RustFnGen::var_id(access.get_root_var_id().unwrap());
+                let mut borrow_chain = format!("let _borrow_{} = {};\n", var_id,
+                                               RustFnGen::borrow_ref(var_id.clone()));
+                
+                let mut previous = var_id;
                 let mut path = access.path().iter();
-
                 path.next(); // Remove root ident
 
                 for field in path {
-                    result.push_str(&format!(".{}", field));
+                    let borrow = RustFnGen::borrow_ref(format!("_borrow_{}.{}", previous, field));
+                    borrow_chain.push_str(&format!(
+                            "let _borrow_{} = {};", field, borrow));
+                    previous = field.to_string();
                 }
 
-                RustFnGen::clone_value(result)
+                let value = RustFnGen::clone_value(format!("_borrow_{}", previous));
+                let result = format!("{{ {} {} }}", borrow_chain, value);
+
+                result
             }
 
-            Value::BinExpr(ref op, ref lhs, ref rhs) => RustFnGen::new_value(format!(
+            Value::BinExpr(ref op, ref lhs, ref rhs) => format!(
                 "{} {} {}",
-                RustFnGen::borrow(RustFnGen::tmp_id(*lhs.data())),
+                RustFnGen::tmp_id(*lhs.data()),
                 RustFnGen::bin_op(op),
-                RustFnGen::borrow(RustFnGen::tmp_id(*rhs.data())),
-            )),
+                RustFnGen::tmp_id(*rhs.data()),
+            ),
 
             Value::UniExpr(ref op, ref tmp) => format!(
                 "{}{}",
@@ -264,7 +314,8 @@ impl<'a> RustFnGen<'a> {
                 let mut arg_string = String::new();
                 match fn_call.args() {
                     Some(ref args) => for a in args.iter() {
-                        arg_string.push_str(&format!("{}, ", RustFnGen::tmp_id(*a.data())));
+                        let arg = RustFnGen::tmp_id(*a.data());
+                        arg_string.push_str(&format!("{}, ", RustFnGen::new_value(arg)));
                     },
 
                     None => (),
@@ -282,14 +333,14 @@ impl<'a> RustFnGen<'a> {
                         field_init.push_str(&format!(
                             "{}: {},",
                             field.to_string(),
-                            RustFnGen::tmp_id(*typed_tmp.data())
+                            RustFnGen::new_value(RustFnGen::tmp_id(*typed_tmp.data())),
                         ));
                     },
 
                     None => (),
                 }
 
-                RustFnGen::new_value(format!("{} {{ {} }}", RustFnGen::type_id(struct_id), field_init))
+                format!("{} {{ {} }}", RustFnGen::type_id(struct_id), field_init)
             }
         };
 
@@ -396,7 +447,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
         let name = RustFnGen::var_id(var_id);
         let var_type = RustFnGen::type_id(type_id);
-        let expr = RustFnGen::tmp_id(expr);
+        let expr = RustFnGen::new_value(RustFnGen::tmp_id(expr));
 
         let var_type = RustFnGen::rustify_type(var_type);
 
@@ -407,40 +458,33 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn assignment(&mut self, _id: NodeIndex, assignment: &Assignment) -> Result<(), ()> {
-        let var_id = assignment.var_id().unwrap();
+        
+        let var_id = RustFnGen::var_id(assignment.var_id().unwrap());
+        self.emit_line("{");
+        self.shift_right();
+
         let expr = self.emit_expr(assignment.value());
+        self.emit_line(&format!("let mut _borrow_{} = {};", var_id,
+                               RustFnGen::borrow_ref_mut(var_id.clone())));
+        
+        let mut previous = var_id;
+        let mut path = assignment.name().iter();
+        path.next(); // Remove root ident
 
-
-        let path = assignment.name().clone();
-        let path_count = path.0.len();
-        let mut path = path.0.into_iter();
-        path.next();        // Get rid of root variable ident
-
-        let lhs = {
-            let mut access_path = if path_count > 1 {
-                RustFnGen::borrow_mut(RustFnGen::var_id(var_id))
-            } else {
-                RustFnGen::var_id(var_id)
-            };
-            
-            for ident in path {
-                access_path.push_str(&format!(".{}", ident));
-            }
-            access_path
-        };
-
-
+        for field in path {
+            let borrow = RustFnGen::borrow_ref_mut(format!("_borrow_{}.{}", previous, field));
+            self.emit_line(&format!("let mut _borrow_{} = {};", field, borrow));
+            previous = field.to_string();
+        }
+        let assignee = format!("*_borrow_{}", previous);
         let rhs = {
             let tmp = RustFnGen::tmp_id(expr);
-            //RustFnGen::borrow(tmp)
             tmp
         };
-        self.emit_line(&format!(
-            "{} = {};",
-            lhs,
-            rhs
-        ));
-
+        let result = format!("{} = {};", assignee, rhs);
+        self.emit_line(&result);
+        self.shift_left();
+        self.emit_line("}");
         self.line_pad();
         Ok(())
     }
@@ -612,6 +656,14 @@ trait RustGenFmt {
 
     fn clone_value(str: String) -> String {
         format!("({}).clone()", str)
+    }
+
+    fn borrow_ref_mut(str: String) -> String {
+        format!("({}).borrow_mut()", str)
+    }
+
+    fn borrow_ref(str: String) -> String {
+        format!("({}).borrow()", str)
     }
 
     fn borrow_mut(str: String) -> String {
