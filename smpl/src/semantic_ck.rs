@@ -407,6 +407,7 @@ impl ScopedData {
 
 #[cfg(test)]
 mod tests {
+    use err::*;
     use super::*;
     use parser::*;
 
@@ -523,6 +524,168 @@ fn main() {
                     e @ _ => panic!("Expected Err::UnknownVar. Found {:?}", e),
                 }
             }
+        }
+    }
+
+    #[test]
+    fn missing_return() {
+        let input_0 =
+"fn test() -> i32 {
+    
+}";
+
+        let input_1 = 
+"fn test() -> i32 {
+    let a: i32 = 5;
+}";
+
+        let input_2 = 
+"fn test() -> i32 {
+    if true {
+        return 0;
+    }
+}";
+
+        let input_3 =
+"fn test() -> i32 {
+    if true {
+
+
+    } else {
+        return 0;
+    }
+}";
+
+        let input_4 =
+"fn test() -> i32 {
+    if true {
+        return 0;
+    } else {
+    
+    }
+}";
+
+        let input_5 =
+"fn test() -> i32 {
+    if true {
+        if true {
+
+        } else {
+            return 0;
+        }
+    } else {
+        return 0;
+    }
+}";
+
+        let input_6 =
+"fn test() -> i32 {
+    if true {
+        return 0;
+    } else {
+        if true {
+            return 0;
+        } else {
+            
+        }
+    }
+}";
+
+        let input = vec![input_0, input_1, input_2, input_3, input_4, input_5, input_6];
+
+        for i in 0..input.len() {
+            let ast = parse_Program(input[i]).unwrap();
+            match check(ast) {
+                Ok(_) => panic!("Passed analysis. Expected Err::ControlFlowErr(ControlFlowErr::MissingReturn. Test {}", i),
+                Err(e) => {
+                    match e {
+                        Err::ControlFlowErr(e) => {
+                            match e {
+                                ControlFlowErr::MissingReturn => (),
+
+                                e @ _ => panic!("Expected ControlFlowErr::MissingReturn. Test {}. Found {:?}", i, e),
+                            }
+                        }
+
+                        e @ _ => panic!("Expected Err::ControlFlowErr. Test {}. Found {:?}", i, e),
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn all_required_returns() {
+        let input_0 =
+"fn test() -> i32 {
+    return 0;
+}";
+
+        let input_1 = 
+"fn test() -> i32 {
+    let a: i32 = 5;
+
+    return 0;
+}";
+
+        let input_2 = 
+"fn test() -> i32 {
+    if true {
+        return 0;
+    }
+
+    return 0;
+}";
+
+        let input_3 =
+"fn test() -> i32 {
+    if true {
+        return 0;
+    } else {
+        return 0;
+    }
+}";
+
+        let input_4 =
+"fn test() -> i32 {
+    if true {
+        return 0;
+    } else {
+        return 0;
+    }
+}";
+
+        let input_5 =
+"fn test() -> i32 {
+    if true {
+        if true {
+            return 0;
+        } else {
+            return 0;
+        }
+    } else {
+        return 0;
+    }
+}";
+
+        let input_6 =
+"fn test() -> i32 {
+    if true {
+        return 0;
+    } else {
+        if true {
+            return 0;
+        } else {
+            return 0;
+        }
+    }
+}";
+
+        let input = vec![input_0, input_1, input_2, input_3, input_4, input_5, input_6];
+
+        for i in 0..input.len() {
+            let ast = parse_Program(input[i]).unwrap();
+            check(ast).expect(&format!("Test  {} failed.", i));
         }
     }
 }

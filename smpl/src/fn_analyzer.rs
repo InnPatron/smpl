@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::collections::HashSet;
 
 use ast;
 use linear_cfg_traversal::*;
@@ -58,7 +59,56 @@ pub fn analyze_fn(
 
     let traverser = Traverser::new(cfg, &mut analyzer);
 
-    traverser.traverse()
+    traverser.traverse()?;
+
+    return_trace(cfg)
+}
+
+// TODO: maybe add reverse traverser?
+fn return_trace(cfg: &CFG) -> Result<(), Err> {
+
+    let end = cfg.end();
+    let scope_exit = cfg.previous(end);
+
+    let unknown = cfg.previous(scope_exit);
+
+    let mut traced = HashSet::new();
+    let mut node_stack = Vec::new();
+    node_stack.push(unknown);
+
+    for _ in 0..cfg.graph().node_count() {
+        let to_trace = node_stack.pop();
+        match to_trace {
+            Some(id) => {
+                if (traced.contains(&id)) == false {
+                    traced.insert(id);
+
+                    let more_to_trace = return_check_id(cfg, id)?;
+                    if let Some(vec) = more_to_trace {
+                        node_stack.extend(vec);
+                    }
+                }
+            }
+
+            None => return Ok(()),
+        }
+    }
+
+    unreachable!();
+}
+
+fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, Err> {
+    use control_flow::Node;
+ 
+    match *cfg.node_weight(id) {
+        Node::Return(_) => Ok(None),
+
+        Node::BranchMerge => Ok(Some(cfg.before_branch_merge(id))),
+
+        Node::ExitScope => Ok(Some(vec![cfg.previous(id)])),
+
+        _ => return Err(ControlFlowErr::MissingReturn.into()),
+    }
 }
 
 fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<TypeId, Err> {

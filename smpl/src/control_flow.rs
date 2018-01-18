@@ -117,6 +117,10 @@ impl CFG {
         self.graph.neighbors_directed(node, Direction::Outgoing)
     }
 
+    pub fn neighbors_in(&self, node: graph::NodeIndex) -> graph::Neighbors<Edge> {
+        self.graph.neighbors_directed(node, Direction::Incoming)
+    }
+
     pub fn after_loop_foot(&self, id: graph::NodeIndex) -> graph::NodeIndex {
         let loop_id;
         match *node_w!(self, id) {
@@ -269,6 +273,10 @@ impl CFG {
         self.start
     }
 
+    pub fn end(&self) -> graph::NodeIndex {
+        self.end
+    }
+
     pub fn after_start(&self) -> graph::NodeIndex {
         self.next(self.start)
     }
@@ -286,6 +294,75 @@ impl CFG {
             neighbors.next().unwrap()
         }
     }
+
+    pub fn previous(&self, id: graph::NodeIndex) -> graph::NodeIndex {
+        let mut neighbors = self.neighbors_in(id);
+        if neighbors.clone().count() != 1 {
+            panic!("CFG::previous() only works when a Node has 1 neighbor");
+        } else {
+            neighbors.next().unwrap()
+        }
+    }
+
+    pub fn before_branch_merge(&self, id: graph::NodeIndex) -> Vec<graph::NodeIndex> {
+        match *self.node_weight(id) {
+            Node::BranchMerge => {
+                self.neighbors_in(id).collect()
+            }
+
+            ref n @ _ => panic!("CFG::before_branch_merge() only works with Node::BranchMerge. Found {:?}", n),
+        }
+    }
+
+    pub fn before_loop_foot(&self, id: graph::NodeIndex) -> graph::NodeIndex {
+        match *self.node_weight(id) {
+            Node::LoopFoot(loop_id) => {
+                let mut found_loop_break = false;
+                for n in self.neighbors_in(id) {
+                    match *self.node_weight(n) {
+                        Node::Break(break_id) => {
+                            if break_id != loop_id {
+                                return n;
+                            } else if found_loop_break {
+                                return n;
+                            } else {
+                                found_loop_break = true;
+                            }
+                        },
+                        _ => return n,
+                    }
+                }
+
+                unreachable!();
+            }
+
+            ref n @ _ => panic!("CFG::before_loop_foot() only works with Node::LoopFoot. Found {:?}", n),
+        }
+    }
+
+    pub fn before_loop_head(&self, id: graph::NodeIndex) -> graph::NodeIndex {
+        match *self.node_weight(id) {
+            Node::LoopHead(loop_id) => {
+                for n in self.neighbors_in(id) {
+                    match *self.node_weight(n) {
+                        Node::Continue(cont_id) => {
+                            if cont_id != loop_id {
+                                return n;
+                            }
+                        }
+
+                        _ => return n,
+                    }
+                }
+
+                unreachable!();
+            }
+
+            ref n @ _ => panic!("CFG::before_loop_head() only works with Node::LoopHead. Found {:?}", n),
+        }
+    }
+
+
 
     #[allow(unused_assignments)]
     ///
@@ -516,9 +593,6 @@ impl CFG {
                         let expr = expr_flow::flatten(universe, expr);
                         let ret = cfg.graph.add_node(Node::Return(Some(expr)));
                         append_node_index!(cfg, head, previous, ret);
-
-                        // Add an edge to the Node::End of the function
-                        cfg.graph.add_edge(ret, cfg.end, Edge::Normal);
                     }
 
                     ExprStmt::LocalVarDecl(decl) => {
