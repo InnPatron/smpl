@@ -92,6 +92,15 @@ fn main() {
         }
     };
 
+    if let Err(err) = output_file.set_len(0) {
+        eprintln!(
+            "Failed to erase output file ({}):\n{}",
+            output_path.display(),
+            err
+        );
+        return;
+    }
+
     if let Err(err) = output_file.write_all(output.as_bytes()) {
         eprintln!(
             "Failed to write to output file ({}):\n{}",
