@@ -114,7 +114,6 @@ fn main() {
 fn rust_gen(input: &str) -> Result<String, String> {
     use smpl::*;
 
-    let input = prune_input(input);
     let ast = parse_program(&input).map_err(|err| format!("{:?}", err))?;
     let program = check_ast(ast).map_err(|err| format!("{:?}", err))?;
 

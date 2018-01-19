@@ -5,6 +5,7 @@ use ast::{BinOp, Ident, Path, UniOp};
 pub enum Err {
     ControlFlowErr(ControlFlowErr),
     TypeErr(TypeErr),
+    ParseErr(String),
     MultipleMainFns,
     UnknownType(Path),
     UnknownVar(Ident),
