@@ -1,11 +1,10 @@
-use semantic_ck::*;
-
-use linear_cfg_traversal::*;
-use typed_ast::*;
-use control_flow::*;
-use smpl_type::*;
-use ast::{BinOp, UniOp};
 use petgraph::graph::NodeIndex;
+
+use ast::{BinOp, UniOp};
+
+use analysis::*;
+use analysis::smpl_type::*;
+
 
 pub struct RustGen {
     output: String,
