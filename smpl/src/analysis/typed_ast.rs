@@ -1,14 +1,14 @@
-pub use ast::BinOp;
-pub use ast::UniOp;
-pub use ast::Literal;
-
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::slice::Iter;
 
-use semantic_ck::*;
-use expr_flow;
+pub use ast::BinOp;
+pub use ast::UniOp;
+pub use ast::Literal;
 use ast;
+
+use super::semantic_data::*;
+use super::expr_flow;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {

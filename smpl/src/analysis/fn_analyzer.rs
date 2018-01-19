@@ -1,15 +1,17 @@
 use std::rc::Rc;
 use std::collections::HashSet;
 
+use petgraph::graph::NodeIndex;
+
 use ast;
-use linear_cfg_traversal::*;
-use control_flow::CFG;
-use typed_ast::*;
 use err::*;
-use semantic_ck::{FnId, ScopedData, TypeId, Universe};
 use smpl_type::*;
 
-use petgraph::graph::NodeIndex;
+use super::linear_cfg_traversal::*;
+use super::control_flow::CFG;
+use super::typed_ast::*;
+use super::semantic_data::{FnId, ScopedData, TypeId, Universe};
+
 
 struct FnAnalyzer<'a> {
     universe: &'a Universe,
@@ -98,7 +100,7 @@ fn return_trace(cfg: &CFG) -> Result<(), Err> {
 }
 
 fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, Err> {
-    use control_flow::Node;
+    use super::control_flow::Node;
  
     match *cfg.node_weight(id) {
         Node::Return(_) => Ok(None),
@@ -618,11 +620,13 @@ fn walk_field_access(
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use super::*;
-    use ast::*;
-    use semantic_ck::*;
-    use ascii::*;
     use std::str::FromStr;
+
+    use ascii::*;
+    use ast::*;
+
+    use super::*;
+    use super::super::semantic_data::*;
 
     #[test]
     fn test_walk_field_access() {

@@ -1,12 +1,15 @@
 use petgraph::graph;
 use petgraph::Direction;
 use petgraph::visit::EdgeRef;
-use typed_ast;
+
 use ast;
-use expr_flow;
 use err::ControlFlowErr;
-use semantic_ck::{LoopId, Universe};
 use smpl_type::{FunctionType, SmplType};
+
+
+use super::expr_flow;
+use super::typed_ast;
+use super::semantic_data::{LoopId, Universe};
 
 macro_rules! node_w {
     ($CFG: expr, $node: expr) => {
@@ -639,7 +642,7 @@ mod tests {
     use petgraph::Direction;
     use smpl_type::*;
 
-    use semantic_ck::Universe;
+    use super::super::semantic_data::Universe;
 
     macro_rules! edges {
         ($CFG: expr, $node: expr) => {

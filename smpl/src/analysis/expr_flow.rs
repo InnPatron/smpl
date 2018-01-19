@@ -1,5 +1,5 @@
-use semantic_ck::{TmpId, Universe};
-use typed_ast::*;
+use super::semantic_data::{TmpId, Universe};
+use super::typed_ast::*;
 use ast::{Expr as AstExpr, Literal};
 
 pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
@@ -73,7 +73,7 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
 #[cfg(test)]
 mod tests {
     use parser::*;
-    use semantic_ck::*;
+    use super::super::semantic_data::*;
     use super::*;
 
     #[test]

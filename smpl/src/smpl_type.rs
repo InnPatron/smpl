@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::cell::Cell;
 
-use semantic_ck::{TypeId, VarId};
+use analysis::{TypeId, VarId};
 use ast::Ident;
 
 #[derive(Clone, Debug, PartialEq)]

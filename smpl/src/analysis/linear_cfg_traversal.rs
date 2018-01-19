@@ -2,8 +2,8 @@ use petgraph::graph::NodeIndex;
 use petgraph::Direction;
 use petgraph::visit::EdgeRef;
 
-use control_flow::*;
-use typed_ast::*;
+use super::control_flow::*;
+use super::typed_ast::*;
 
 pub trait Passenger<E> {
     fn start(&mut self, id: NodeIndex) -> Result<(), E>;

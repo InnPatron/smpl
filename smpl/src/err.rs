@@ -1,4 +1,4 @@
-use semantic_ck::{FnId, TypeId};
+use analysis::{FnId, TypeId};
 use ast::{BinOp, Ident, Path, UniOp};
 
 #[derive(Clone, Debug)]
