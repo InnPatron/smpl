@@ -8,7 +8,6 @@ mod err;
 mod ast_macros;
 mod parser;
 mod ast;
-mod smpl_type;
 mod analysis;
 mod code_gen;
 

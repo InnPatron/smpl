@@ -4,9 +4,10 @@ use petgraph::visit::EdgeRef;
 
 use ast;
 use err::ControlFlowErr;
-use smpl_type::{FunctionType, SmplType};
 
 
+
+use super::smpl_type::{FunctionType, SmplType};
 use super::expr_flow;
 use super::typed_ast;
 use super::semantic_data::{LoopId, Universe};
@@ -640,8 +641,8 @@ mod tests {
     use parser::*;
     use petgraph::dot::{Config, Dot};
     use petgraph::Direction;
-    use smpl_type::*;
 
+    use super::super::smpl_type::*;
     use super::super::semantic_data::Universe;
 
     macro_rules! edges {

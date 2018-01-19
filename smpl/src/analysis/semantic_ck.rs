@@ -4,8 +4,8 @@ use std::rc::Rc;
 
 use err::Err;
 use ast::{Path, DeclStmt, Struct, Function as AstFunction, Program as AstProgram};
-use smpl_type::*;
 
+use super::smpl_type::*;
 use super::semantic_data::*;
 use super::control_flow::CFG;
 use super::fn_analyzer::analyze_fn;

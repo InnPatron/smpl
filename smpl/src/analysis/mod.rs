@@ -1,3 +1,4 @@
+pub mod smpl_type;
 mod semantic_ck;
 mod semantic_data;
 mod typed_ast;

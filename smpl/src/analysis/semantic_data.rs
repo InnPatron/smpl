@@ -5,9 +5,9 @@ use std::rc::Rc;
 use err::Err;
 use ast::*;
 use ast::{Function as AstFunction, Program as AstProgram};
-use smpl_type::*;
-use smpl_type::FnParameter;
 
+use super::smpl_type::*;
+use super::smpl_type::FnParameter;
 use super::control_flow::CFG;
 
 pub struct Program {

@@ -1,9 +1,10 @@
 use petgraph::graph::NodeIndex;
 
-use smpl_type::*;
 use ast::{BinOp, UniOp};
 
 use analysis::*;
+use analysis::smpl_type::*;
+
 
 pub struct RustGen {
     output: String,

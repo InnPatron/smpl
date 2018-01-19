@@ -5,8 +5,9 @@ use petgraph::graph::NodeIndex;
 
 use ast;
 use err::*;
-use smpl_type::*;
 
+
+use super::smpl_type::*;
 use super::linear_cfg_traversal::*;
 use super::control_flow::CFG;
 use super::typed_ast::*;
