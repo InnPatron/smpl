@@ -66,166 +66,6 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
         Ok(())
     }
 
-    ///
-    /// Convenience function to get the next node in a linear sequence. If the current node has
-    /// multiple outgoing edge (such as Node::Condition, Node::Return, Node::Break, and
-    /// Node::Continue) or none (Node::End), return an error.
-    ///
-    fn next(&self, current: NodeIndex) -> NodeIndex {
-        let mut neighbors = self.graph.neighbors_out(current);
-
-        if neighbors.clone().count() != 1 {
-            panic!("CFG::next() only works when a Node has 1 neighbor");
-        } else {
-            neighbors.next().unwrap()
-        }
-    }
-
-    fn after_return(&self, id: NodeIndex) -> NodeIndex {
-        match *self.graph.node_weight(id) {
-            Node::Return(_) => (),
-            _ => panic!("Should only be given a Node::Return"),
-        }
-
-        let mut neighbors = self.graph.neighbors_out(id);
-        let neighbor_count = neighbors.clone().count();
-
-        if neighbor_count == 2 {
-            let mut found_first_end = false;
-            for n in neighbors {
-                match *self.graph.node_weight(n) {
-                    Node::End => {
-                        if found_first_end {
-                            return n;
-                        } else {
-                            found_first_end = true;
-                        }
-                    }
-                    _ => return n,
-                }
-            }
-        } else if neighbor_count == 1 {
-            return neighbors.next().unwrap();
-        } else {
-            panic!("Node::Return points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
-        }
-
-        unreachable!();
-    }
-
-    fn after_condition(&self, id: NodeIndex) -> (NodeIndex, NodeIndex) {
-        match *self.graph.node_weight(id) {
-            Node::Condition(_) => (),
-            _ => panic!("Should only be given a Node::Condition"),
-        }
-
-        let edges = self.graph.graph().edges_directed(id, Direction::Outgoing);
-        assert_eq!(edges.clone().count(), 2);
-
-        let mut true_branch = None;
-        let mut false_branch = None;
-        for e in edges {
-            match *e.weight() {
-                Edge::True => true_branch = Some(e.target()),
-                Edge::False => false_branch = Some(e.target()),
-                ref e @ _ => panic!("Unexpected edge {:?} coming out of a condition node.", e),
-            }
-        }
-
-        (true_branch.unwrap(), false_branch.unwrap())
-    }
-
-    fn after_break(&self, id: NodeIndex) -> NodeIndex {
-        match *self.graph.node_weight(id) {
-            Node::Break(_) => (),
-            _ => panic!("Should only be given a Node::Break"),
-        }
-
-        let neighbors = self.graph.neighbors_out(id);
-        let neighbor_count = neighbors.clone().count();
-
-        if neighbor_count == 2 {
-            let mut found_first = false;
-            for n in neighbors {
-                match *self.graph.node_weight(n) {
-                    Node::LoopFoot(_) => {
-                        if found_first {
-                            return n;
-                        } else {
-                            found_first = true;
-                        }
-                    }
-                    _ => return n,
-                }
-            }
-        } else if neighbor_count == 1 {
-
-        } else {
-            panic!("Node::Continue points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
-        }
-
-        unreachable!();
-    }
-
-    fn after_continue(&self, id: NodeIndex) -> NodeIndex {
-        match *self.graph.node_weight(id) {
-            Node::Continue(_) => (),
-            _ => panic!("Should only be given a Node::Continue"),
-        }
-
-        let mut neighbors = self.graph.neighbors_out(id);
-        let neighbor_count = neighbors.clone().count();
-
-        if neighbor_count == 2 {
-            let mut found_first = false;
-            for n in neighbors {
-                match *self.graph.node_weight(n) {
-                    Node::LoopHead(_) => {
-                        if found_first {
-                            return n;
-                        } else {
-                            found_first = true;
-                        }
-                    }
-                    _ => return n,
-                }
-            }
-        } else if neighbor_count == 1 {
-            return neighbors.next().unwrap();
-        } else {
-            panic!("Node::Continue points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
-        }
-
-        unreachable!();
-    }
-
-    fn after_loop_foot(&self, id: NodeIndex) -> NodeIndex {
-        let loop_id;
-        match *self.graph.node_weight(id) {
-            Node::LoopFoot(id) => loop_id = id,
-            _ => panic!("Should only be given a Node::LoopFoot"),
-        }
-
-        let neighbors = self.graph.neighbors_out(id);
-        let neighbor_count = neighbors.clone().count();
-
-        if neighbor_count != 2 {
-            panic!("Loop foot should always be pointing to LoopHead and the next Node. Need two directed neighbors, found {}", neighbor_count);
-        }
-
-        for n in neighbors {
-            match *self.graph.node_weight(n) {
-                Node::LoopHead(id) => {
-                    if loop_id != id {
-                        return n;
-                    }
-                }
-                _ => return n,
-            }
-        }
-        unreachable!();
-    }
-
     fn visit_node(&mut self, current: NodeIndex) -> Result<Option<NodeIndex>, E> {
         match *self.graph.node_weight(current) {
             Node::End => {
@@ -237,73 +77,73 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
             Node::Start => {
                 self.passenger.start(current)?;
                 self.previous_is_loop_head = false;
-                Ok(Some(self.next(current)))
+                Ok(Some(self.graph.next(current)))
             }
 
             Node::BranchMerge => {
                 self.passenger.branch_merge(current)?;
                 self.previous_is_loop_head = false;
-                Ok(Some(self.next(current)))
+                Ok(Some(self.graph.next(current)))
             }
 
             Node::LoopHead(_) => {
                 self.passenger.loop_head(current)?;
                 self.previous_is_loop_head = true;
-                Ok(Some(self.next(current)))
+                Ok(Some(self.graph.next(current)))
             }
 
             Node::LoopFoot(_) => {
                 self.passenger.loop_foot(current)?;
                 self.previous_is_loop_head = false;
-                Ok(Some(self.after_loop_foot(current)))
+                Ok(Some(self.graph.after_loop_foot(current)))
             }
 
             Node::Continue(_) => {
                 self.passenger.cont(current)?;
                 self.previous_is_loop_head = false;
-                Ok(Some(self.after_continue(current)))
+                Ok(Some(self.graph.after_continue(current)))
             }
 
             Node::Break(_) => {
                 self.passenger.br(current)?;
                 self.previous_is_loop_head = false;
-                Ok(Some(self.after_break(current)))
+                Ok(Some(self.graph.after_break(current)))
             }
 
             Node::EnterScope => {
                 self.passenger.enter_scope(current)?;
                 self.previous_is_loop_head = false;
-                Ok(Some(self.next(current)))
+                Ok(Some(self.graph.next(current)))
             }
 
             Node::ExitScope => {
                 self.passenger.exit_scope(current)?;
                 self.previous_is_loop_head = false;
-                Ok(Some(self.next(current)))
+                Ok(Some(self.graph.next(current)))
             }
 
             Node::LocalVarDecl(ref decl) => {
                 self.passenger.local_var_decl(current, decl)?;
                 self.previous_is_loop_head = false;
-                Ok(Some(self.next(current)))
+                Ok(Some(self.graph.next(current)))
             }
 
             Node::Assignment(ref assign) => {
                 self.passenger.assignment(current, assign)?;
                 self.previous_is_loop_head = false;
-                Ok(Some(self.next(current)))
+                Ok(Some(self.graph.next(current)))
             }
 
             Node::Expr(ref expr) => {
                 self.passenger.expr(current, expr)?;
                 self.previous_is_loop_head = false;
-                Ok(Some(self.next(current)))
+                Ok(Some(self.graph.next(current)))
             }
 
             Node::Return(ref ret_expr) => {
                 self.passenger.ret(current, ret_expr.as_ref())?;
                 self.previous_is_loop_head = false;
-                Ok(Some(self.after_return(current)))
+                Ok(Some(self.graph.after_return(current)))
             }
 
             Node::Condition(ref condition) => {
@@ -312,7 +152,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     self.previous_is_loop_head = false;
                     self.passenger.loop_condition(current, condition)?;
 
-                    let (true_path, false_path) = self.after_condition(current);
+                    let (true_path, false_path) = self.graph.after_condition(current);
                     self.passenger.loop_start_true_path(true_path)?;
 
                     let mut current_node = true_path;
@@ -343,12 +183,12 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                         ref n @ _ => println!("Loop condition should be connected to Node::LoopFoot along the false path. Found {:?}.", n),
                     }
 
-                    Ok(Some(self.after_loop_foot(false_path)))
+                    Ok(Some(self.graph.after_loop_foot(false_path)))
                 } else {
                     // Branch condition
                     self.passenger.branch_condition(current, condition)?;
 
-                    let (true_path, false_path) = self.after_condition(current);
+                    let (true_path, false_path) = self.graph.after_condition(current);
 
                     self.passenger.branch_start_true_path(true_path)?;
 
@@ -403,7 +243,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                         panic!("Traversed entire graph and did not find Condition::BranchMerge");
                     }
 
-                    Ok(Some(self.next(merge.unwrap())))
+                    Ok(Some(self.graph.next(merge.unwrap())))
                 }
             }
         }
