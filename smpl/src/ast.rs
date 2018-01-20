@@ -4,7 +4,7 @@ use std::slice::Iter;
 
 use ascii::AsciiString;
 
-pub struct Module(pub Vec<DeclStmt>);
+pub struct Module(pub Option<Ident>, pub Vec<DeclStmt>);
 
 pub enum DeclStmt {
     Use(UseDecl),

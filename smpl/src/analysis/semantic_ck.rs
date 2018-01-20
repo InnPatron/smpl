@@ -19,7 +19,11 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
 fn check_module(universe: &mut Universe, module: AstModule) -> Result<Module, Err> {
     let mut module_scope = universe.std_scope().clone();
 
-    for decl_stmt in module.0.into_iter() {
+    let module_name = match module.0 {
+        Some(name) => name,
+        _ => unimplemented!("No module name."),
+    };
+    for decl_stmt in module.1.into_iter() {
         match decl_stmt {
             DeclStmt::Struct(struct_def) => {
                 let struct_t = generate_struct_type(&module_scope, struct_def)?;

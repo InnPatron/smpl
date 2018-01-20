@@ -1,7 +1,8 @@
 /// --------------SMPL Grammar----------------
 ///
 ///
-/// module -> decl_stmt+
+/// module -> mod_decl? decl_stmt+
+///	mod_decl -> "mod" ident;
 /// decl_stmt -> fn_decl | struct_decl | use_decl
 ///
 ///	use_decl -> "use" path ";"
@@ -66,10 +67,11 @@ use ascii::*;
 
 grammar;
 
-/// module -> decl_stmt+
+/// module -> mod_decl? decl_stmt+
+/// mod_decl -> "mod" ident ";"
 pub Module: Module = {
-	<decl: DeclStmt+> => {
-		Module(decl)
+	<mod_decl: ("mod" Ident ";")?> <decl: DeclStmt+> => {
+		Module(mod_decl.map(|(_, ident, _)| ident), decl)
 	}
 };
 
