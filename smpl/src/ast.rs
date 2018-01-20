@@ -25,7 +25,7 @@ impl From<Function> for DeclStmt {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct UseDecl(pub Path);
+pub struct UseDecl(pub Ident);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {

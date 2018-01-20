@@ -5,7 +5,7 @@
 ///	mod_decl -> "mod" ident;
 /// decl_stmt -> fn_decl | struct_decl | use_decl
 ///
-///	use_decl -> "use" path ";"
+///	use_decl -> "use" ident ";"
 ///
 /// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" path]? block
 /// param_list -> param ["," param]*
@@ -79,10 +79,11 @@ pub Module: Module = {
 DeclStmt: DeclStmt = {
 	<f: FnDecl> => f.into(),
 	<s: StructDecl> => s.into(),
+	<u: UseDecl> => DeclStmt::Use(u),
 };
 
 UseDecl: UseDecl = {
-	"use" <p: Path> => UseDecl(p),
+	"use" <i: Ident> ";" => UseDecl(i),
 };
 
 /// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" path]? block
