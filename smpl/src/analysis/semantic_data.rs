@@ -11,26 +11,20 @@ use super::control_flow::CFG;
 
 pub struct Program {
     universe: Universe,
-    global_scope: ScopedData,
     main: Option<FnId>,
 }
 
 impl Program {
 
-    pub fn new(universe: Universe, global_scope: ScopedData, main: Option<FnId>) -> Program {
+    pub fn new(universe: Universe, main: Option<FnId>) -> Program {
         Program {
             universe: universe,
-            global_scope: global_scope,
             main: main,
         }
     }
 
     pub fn universe(&self) -> &Universe {
         &self.universe
-    }
-
-    pub fn global_scope(&self) -> &ScopedData {
-        &self.global_scope
     }
 
     pub fn main(&self) -> Option<FnId> {
@@ -42,6 +36,7 @@ impl Program {
 pub struct Universe {
     types: HashMap<TypeId, Rc<SmplType>>,
     fn_map: HashMap<FnId, Function>,
+    module_map: HashMap<ModuleId, Module>,
     id_counter: Cell<u64>,
     std_scope: ScopedData,
     unit: TypeId,
@@ -72,6 +67,7 @@ impl Universe {
         Universe {
             types: type_map.clone().into_iter().map(|(id, _, t)| (id, Rc::new(t))).collect(),
             fn_map: HashMap::new(),
+            module_map: HashMap::new(),
             id_counter: Cell::new(5),
             std_scope: ScopedData {
                 type_map: type_map.into_iter().map(|(id, path, _)| (path, id)).collect(),
@@ -169,12 +165,39 @@ impl Universe {
         LoopId(self.inc_counter())
     }
 
+    pub fn new_module_id(&self) -> ModuleId {
+        ModuleId(self.inc_counter())
+    }
+
     pub fn all_types(&self) -> Vec<(TypeId, Rc<SmplType>)> {
         self.types.iter().map(|(id, t)| (id.clone(), t.clone())).collect()
     }
 
     pub fn all_fns(&self) -> Vec<(FnId, &Function)> {
         self.fn_map.iter().map(|(id, f)| (id.clone(), f)).collect()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Module {
+    id: ModuleId,
+    module_scope: ScopedData,
+}
+
+impl Module {
+    pub fn new(module_scope: ScopedData, id: ModuleId) -> Module {
+        Module {
+            id: id,
+            module_scope: module_scope,
+        }
+    }
+
+    pub fn module_id(&self) -> ModuleId {
+        self.id
+    }
+
+    pub fn module_scope(&self) -> &ScopedData {
+        &self.module_scope
     }
 }
 
@@ -318,5 +341,20 @@ pub struct LoopId(u64);
 impl ::std::fmt::Display for LoopId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         write!(f, "LoopId[{}]", self.0)
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ModuleId(u64);
+
+impl ::std::fmt::Display for ModuleId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "ModuleId[{}]", self.0)
+    }
+}
+
+impl ModuleId {
+    pub fn raw(&self) -> u64 {
+        self.0
     }
 }

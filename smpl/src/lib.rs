@@ -16,11 +16,11 @@ pub use self::err::Err;
 
 
 pub use self::parser::parse_module;
-pub use self::ast::Module as Ast;
+pub use self::ast::Module;
 
 
 pub use analysis::Program;
-pub use analysis::check_ast;
+pub use analysis::check_program;
 
 
 pub use self::code_gen::RustCodeGenerator;

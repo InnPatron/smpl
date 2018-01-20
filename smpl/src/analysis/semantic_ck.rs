@@ -3,26 +3,29 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use err::Err;
-use ast::{Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
+use ast::{Ident, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
 
 use super::smpl_type::*;
 use super::semantic_data::*;
+use super::semantic_data::Module;
 use super::control_flow::CFG;
 use super::fn_analyzer::analyze_fn;
 
-pub fn check(program: AstModule) -> Result<Program, Err> {
+pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
     let mut universe = Universe::std();
-    let mut global_scope = universe.std_scope().clone();
+    unimplemented!()
+}
 
-    let mut main = None;
+fn check_module(universe: &mut Universe, module: AstModule) -> Result<Module, Err> {
+    let mut module_scope = universe.std_scope().clone();
 
-    for decl_stmt in program.0.into_iter() {
+    for decl_stmt in module.0.into_iter() {
         match decl_stmt {
             DeclStmt::Struct(struct_def) => {
-                let struct_t = generate_struct_type(&global_scope, struct_def)?;
+                let struct_t = generate_struct_type(&module_scope, struct_def)?;
                 let id = universe.new_type_id();
                 
-                global_scope.insert_type(struct_t.name.clone().into(), id);
+                module_scope.insert_type(struct_t.name.clone().into(), id);
                 universe.insert_type(id, SmplType::Struct(struct_t));
             },
 
@@ -31,30 +34,24 @@ pub fn check(program: AstModule) -> Result<Program, Err> {
 
                 let type_id = universe.new_type_id();
 
-                let fn_type = generate_fn_type(&global_scope, &universe, &fn_def)?;
+                let fn_type = generate_fn_type(&module_scope, &universe, &fn_def)?;
                 let cfg = CFG::generate(&universe, fn_def, &fn_type)?;
 
                 let fn_id = universe.new_fn_id();
                 universe.insert_fn(fn_id, type_id, fn_type, cfg);
-                global_scope.insert_fn(name.clone(), fn_id);
+                module_scope.insert_fn(name.clone(), fn_id);
 
                 let func = universe.get_fn(fn_id);
-                analyze_fn(&universe, &global_scope, func.cfg(), fn_id)?;
-
-                if name == path!("main") {
-                    if main.is_some() {
-                        return Err(Err::MultipleMainFns);
-                    } else {
-                        main = Some(fn_id);
-                    }
-                }
+                analyze_fn(&universe, &module_scope, func.cfg(), fn_id)?;
             },
 
             DeclStmt::Use(_) => unimplemented!(),
         }
     }
+
+    let module_id = universe.new_module_id();
     
-    Ok(Program::new(universe, global_scope, main))
+    Ok(Module::new(module_scope, module_id))
 }
 
 fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunction) -> Result<FunctionType, Err> {
