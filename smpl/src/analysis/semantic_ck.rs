@@ -49,6 +49,8 @@ pub fn check(program: AstModule) -> Result<Program, Err> {
                     }
                 }
             },
+
+            DeclStmt::Use(_) => unimplemented!(),
         }
     }
     

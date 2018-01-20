@@ -7,6 +7,7 @@ use ascii::AsciiString;
 pub struct Module(pub Vec<DeclStmt>);
 
 pub enum DeclStmt {
+    Use(UseDecl),
     Struct(Struct),
     Function(Function),
 }
@@ -22,6 +23,9 @@ impl From<Function> for DeclStmt {
         DeclStmt::Function(f)
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UseDecl(pub Path);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {

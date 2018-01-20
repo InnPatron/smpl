@@ -2,8 +2,9 @@
 ///
 ///
 /// module -> decl_stmt+
-/// decl_stmt -> fn_decl | struct_decl
+/// decl_stmt -> fn_decl | struct_decl | use_decl
 ///
+///	use_decl -> "use" path ";"
 ///
 /// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" path]? block
 /// param_list -> param ["," param]*
@@ -72,10 +73,14 @@ pub Module: Module = {
 	}
 };
 
-/// decl_stmt -> fn_decl | struct_decl
+/// decl_stmt -> fn_decl | struct_decl | use_decl
 DeclStmt: DeclStmt = {
 	<f: FnDecl> => f.into(),
 	<s: StructDecl> => s.into(),
+};
+
+UseDecl: UseDecl = {
+	"use" <p: Path> => UseDecl(p),
 };
 
 /// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" path]? block
