@@ -16,7 +16,7 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
     unimplemented!()
 }
 
-fn check_module(universe: &mut Universe, module: AstModule) -> Result<Module, Err> {
+fn check_module(universe: &mut Universe, module: AstModule) -> Result<(Module, Ident), Err> {
     let mut module_scope = universe.std_scope().clone();
 
     let module_name = match module.0 {
@@ -55,7 +55,7 @@ fn check_module(universe: &mut Universe, module: AstModule) -> Result<Module, Er
 
     let module_id = universe.new_module_id();
     
-    Ok(Module::new(module_scope, module_id))
+    Ok((Module::new(module_scope, module_id), module_name))
 }
 
 fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunction) -> Result<FunctionType, Err> {
