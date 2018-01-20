@@ -4,7 +4,6 @@ use std::rc::Rc;
 
 use err::Err;
 use ast::*;
-use ast::{Function as AstFunction, Program as AstProgram};
 
 use super::smpl_type::*;
 use super::smpl_type::FnParameter;

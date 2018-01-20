@@ -1,7 +1,7 @@
 /// --------------SMPL Grammar----------------
 ///
 ///
-/// program -> decl_stmt+
+/// module -> decl_stmt+
 /// decl_stmt -> fn_decl | struct_decl
 ///
 ///
@@ -65,10 +65,10 @@ use ascii::*;
 
 grammar;
 
-/// program -> decl_stmt+
-pub Program: Program = {
+/// module -> decl_stmt+
+pub Module: Module = {
 	<decl: DeclStmt+> => {
-		Program(decl)
+		Module(decl)
 	}
 };
 

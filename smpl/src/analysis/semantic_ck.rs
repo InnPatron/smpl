@@ -3,14 +3,14 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use err::Err;
-use ast::{Path, DeclStmt, Struct, Function as AstFunction, Program as AstProgram};
+use ast::{Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
 
 use super::smpl_type::*;
 use super::semantic_data::*;
 use super::control_flow::CFG;
 use super::fn_analyzer::analyze_fn;
 
-pub fn check(program: AstProgram) -> Result<Program, Err> {
+pub fn check(program: AstModule) -> Result<Program, Err> {
     let mut universe = Universe::std();
     let mut global_scope = universe.std_scope().clone();
 

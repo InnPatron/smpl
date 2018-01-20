@@ -15,8 +15,8 @@ mod code_gen;
 pub use self::err::Err;
 
 
-pub use self::parser::parse_program;
-pub use self::ast::Program as Ast;
+pub use self::parser::parse_module;
+pub use self::ast::Module as Ast;
 
 
 pub use analysis::Program;
