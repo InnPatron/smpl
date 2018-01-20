@@ -3,5 +3,5 @@
 **/*.rs.bk
 Cargo.lock
 *.swp
-parser.rs
+lalr_parser.rs
 /*/tmp_project
