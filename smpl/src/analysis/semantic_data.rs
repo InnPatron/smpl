@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use err::Err;
 use ast::*;
+use ast::Module as AstModule;
 
 use super::smpl_type::*;
 use super::smpl_type::FnParameter;
@@ -357,4 +358,9 @@ impl ModuleId {
     pub fn raw(&self) -> u64 {
         self.0
     }
+}
+
+pub enum ModuleCk {
+    Defer(AstModule),
+    Success(Module, Ident),
 }
