@@ -35,10 +35,10 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
         let end_count = queue.len();
 
         if start_count == end_count {
-            // No modules were resolved. Return error.
+            // no modules were resolved. return error.
             unimplemented!();
         } else if end_count == 0 {
-            // No more missing uses to resolve.
+            // no more missing uses to resolve.
             break;
         } else if start_count > end_count {
             unreachable!();
@@ -68,14 +68,39 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
         return Ok(ModuleCkSignal::Defer(module));
     }
 
-    for struct_decl in module.module_structs.into_iter() {
-        unimplemented!("Allow out-of-order struct declarations.");
+    let mut unresolved = module.module_structs;
+    loop {
+        let start_count = unresolved.len();
+        let mut struct_iter = unresolved.into_iter();
 
-        let struct_t = generate_struct_type(&module_scope, struct_decl)?;
-        let id = universe.new_type_id();
-        
-        module_scope.insert_type(struct_t.name.clone().into(), id);
-        universe.insert_type(id, SmplType::Struct(struct_t));
+        unresolved = Vec::new();
+        let mut err_list = Vec::new();
+        while let Some(struct_decl) = struct_iter.next() {
+            let struct_t = match generate_struct_type(&module_scope, &struct_decl) {
+                Ok(struct_t) => struct_t,
+                Err(e) => {
+                    unresolved.push(struct_decl);
+                    err_list.push(e);
+                    continue;
+                }
+            };
+
+            let id = universe.new_type_id();
+            module_scope.insert_type(struct_t.name.clone().into(), id);
+            universe.insert_type(id, SmplType::Struct(struct_t));
+        }
+
+        let end_count = unresolved.len();
+
+        if start_count == end_count {
+            // no struct declarations were resolved. return error.
+            unimplemented!();
+        } else if end_count == 0 {
+            // no more struct definitions to resolve.
+            break;
+        } else if start_count > end_count {
+            unreachable!();
+        }
     }
 
     for fn_decl in module.module_fns.into_iter() {
@@ -127,20 +152,19 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunctio
     })
 }
 
-fn generate_struct_type(scope: &ScopedData, struct_def: Struct) -> Result<StructType, Err> {
-    let struct_name = struct_def.name;
+fn generate_struct_type(scope: &ScopedData, struct_def: &Struct) -> Result<StructType, Err> {
     let mut fields = HashMap::new();
-    if let Some(body) = struct_def.body.0 {
-        for field in body.into_iter() {
-            let f_name = field.name;
-            let f_type_path = field.field_type;
-            let field_type = scope.type_id(&f_type_path)?;
+    if let Some(ref body) = struct_def.body.0 {
+        for field in body.iter() {
+            let f_name = field.name.clone();
+            let f_type_path = &field.field_type;
+            let field_type = scope.type_id(f_type_path)?;
             fields.insert(f_name, field_type);
         }
     } 
 
     let struct_t = StructType {
-        name: struct_name,
+        name: struct_def.name.clone(),
         fields: fields,
     };
 
