@@ -13,34 +13,62 @@ use super::fn_analyzer::analyze_fn;
 
 pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
     let mut universe = Universe::std();
-    unimplemented!()
-}
 
-fn check_module(universe: &mut Universe, module_map: &HashMap<Ident, ModuleId>, module: AstModule) -> Result<ModuleCk, Err> {
-    let mut module_scope = universe.std_scope().clone();
+    let program = program.into_iter()
+        .map(|ast_module| ModuleCkData::new(ast_module))
+        .collect::<Result<Vec<_>, _>>()?;
 
-    let module_name = match module.0 {
-        Some(name) => name,
-        _ => unimplemented!("No module name."),
-    };
+    let mut queue = program;
 
-    let mut module_uses = Vec::new();
-    let mut module_structs = Vec::new();
-    let mut module_fns = Vec::new();
+    loop {
+        let start_count = queue.len();
+        let mut queue_iter = queue.into_iter();
+        queue = Vec::new();
 
-    for decl_stmt in module.1.into_iter() {
-        match decl_stmt {
-            DeclStmt::Struct(d) => module_structs.push(d),
-            DeclStmt::Function(d) => module_fns.push(d),
-            DeclStmt::Use(d) => module_uses.push(d),
+        while let Some(mut m) = queue_iter.next() {
+            match check_module(&mut universe, m)? {
+                ModuleCkSignal::Success => (),
+                ModuleCkSignal::Defer(data) => queue.push(data),
+            }       
+        }
+
+        let end_count = queue.len();
+
+        if start_count == end_count {
+            // No modules were resolved. Return error.
+            unimplemented!();
+        } else if end_count == 0 {
+            // No more missing uses to resolve.
+            break;
+        } else if start_count > end_count {
+            unreachable!();
         }
     }
 
-    for use_decl in module_uses.into_iter() {
-        unimplemented!();
+    unimplemented!()
+}
+
+fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<ModuleCkSignal, Err> {
+    let mut module_scope = universe.std_scope().clone();
+
+    let module_name = module.name.clone();
+
+    let mut missing_modules = Vec::new();
+    let mut module_uses = module.module_uses.into_iter();
+    while let Some(use_decl) = module_uses.next() {
+        match universe.module_id(&use_decl.0) {
+            Some(id) => module_scope.map_module(module_name.clone(), id),
+            None => missing_modules.push(use_decl),
+        }
     }
 
-    for struct_decl in module_structs.into_iter() {
+    if missing_modules.len() > 0 {
+        module.module_uses = missing_modules;
+        // Unknown module. Differ checking till later
+        return Ok(ModuleCkSignal::Defer(module));
+    }
+
+    for struct_decl in module.module_structs.into_iter() {
         unimplemented!("Allow out-of-order struct declarations.");
 
         let struct_t = generate_struct_type(&module_scope, struct_decl)?;
@@ -50,7 +78,7 @@ fn check_module(universe: &mut Universe, module_map: &HashMap<Ident, ModuleId>, 
         universe.insert_type(id, SmplType::Struct(struct_t));
     }
 
-    for fn_decl in module_fns.into_iter() {
+    for fn_decl in module.module_fns.into_iter() {
         unimplemented!("Allow out-of-order fn declarations.");
 
         let name: Path = fn_decl.name.clone().into();
@@ -69,8 +97,11 @@ fn check_module(universe: &mut Universe, module_map: &HashMap<Ident, ModuleId>, 
     }
 
     let module_id = universe.new_module_id();
+
+    let module = Module::new(module_scope, module_id);
+    universe.map_module(module_id, module_name, module);
     
-    Ok(ModuleCk::Success(Module::new(module_scope, module_id), module_name))
+    Ok(ModuleCkSignal::Success)
 }
 
 fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunction) -> Result<FunctionType, Err> {

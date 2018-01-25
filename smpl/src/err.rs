@@ -10,6 +10,7 @@ pub enum Err {
     UnknownType(Path),
     UnknownVar(Ident),
     UnknownFn(Path),
+    MissingModName,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

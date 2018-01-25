@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use err::Err;
 use ast::*;
-use ast::Module as AstModule;
+use ast::{Module as AstModule, Function as AstFunction};
 
 use super::smpl_type::*;
 use super::smpl_type::FnParameter;
@@ -38,6 +38,7 @@ pub struct Universe {
     types: HashMap<TypeId, Rc<SmplType>>,
     fn_map: HashMap<FnId, Function>,
     module_map: HashMap<ModuleId, Module>,
+    module_name: HashMap<Ident, ModuleId>,
     id_counter: Cell<u64>,
     std_scope: ScopedData,
     unit: TypeId,
@@ -69,12 +70,14 @@ impl Universe {
             types: type_map.clone().into_iter().map(|(id, _, t)| (id, Rc::new(t))).collect(),
             fn_map: HashMap::new(),
             module_map: HashMap::new(),
+            module_name: HashMap::new(),
             id_counter: Cell::new(5),
             std_scope: ScopedData {
                 type_map: type_map.into_iter().map(|(id, path, _)| (path, id)).collect(),
                 var_map: HashMap::new(),
                 var_type_map: HashMap::new(),
                 fn_map: HashMap::new(),
+                module_names: HashMap::new(),
             },
             unit: unit.0,
             int: int.0,
@@ -106,6 +109,22 @@ impl Universe {
 
     pub fn boolean(&self) -> TypeId {
         self.boolean
+    }
+
+    pub fn map_module(&mut self, mod_id: ModuleId, name: Ident, module: Module) {
+        if self.module_name.insert(name, mod_id).is_some() {
+            unimplemented!("Overriding module with the same name.");
+        }
+
+        self.module_map.insert(mod_id, module);
+    }
+
+    pub fn get_module(&self, id: ModuleId) -> &Module {
+       self.module_map.get(&id).unwrap()
+    }
+
+    pub fn module_id(&self, name: &Ident) -> Option<ModuleId> {
+        self.module_name.get(name).map(|id| id.clone())
     }
 
     pub fn insert_fn(&mut self, fn_id: FnId, type_id: TypeId, fn_t: FunctionType, cfg: CFG) {
@@ -208,6 +227,7 @@ pub struct ScopedData {
     var_map: HashMap<Ident, VarId>,
     var_type_map: HashMap<VarId, TypeId>,
     fn_map: HashMap<Path, FnId>,
+    module_names: HashMap<Ident, ModuleId>,
 }
 
 impl ScopedData {
@@ -257,6 +277,16 @@ impl ScopedData {
         self.fn_map.get(path)
                    .map(|id| id.clone())
                    .ok_or(Err::UnknownFn(path.clone()))
+    }
+
+    pub fn map_module(&mut self, name: Ident, id: ModuleId) {
+        if self.module_names.insert(name, id).is_some() {
+            unimplemented!("Overriding module with the same name.");
+        }
+    }
+
+    pub fn get_module(&self, name: &Ident) -> Option<ModuleId> {
+        self.module_names.get(name).map(|id| id.clone())
     }
 }
 
@@ -360,7 +390,37 @@ impl ModuleId {
     }
 }
 
-pub enum ModuleCk {
-    Defer(AstModule),
-    Success(Module, Ident),
+pub struct ModuleCkData {
+    pub name: Ident,
+    pub module_uses: Vec<UseDecl>,
+    pub module_structs: Vec<Struct>,
+    pub module_fns: Vec<AstFunction>,
+}
+
+impl ModuleCkData {
+    pub fn new(module: AstModule) -> Result<ModuleCkData, Err> {
+        let mut module_uses = Vec::new();
+        let mut module_structs = Vec::new();
+        let mut module_fns = Vec::new();
+
+        for decl_stmt in module.1.into_iter() {
+            match decl_stmt {
+                DeclStmt::Struct(d) => module_structs.push(d),
+                DeclStmt::Function(d) => module_fns.push(d),
+                DeclStmt::Use(d) => module_uses.push(d),
+            }
+        }
+
+        Ok(ModuleCkData {
+            name: module.0.ok_or(Err::MissingModName)?,
+            module_uses: module_uses,
+            module_structs: module_structs,
+            module_fns: module_fns,
+        })
+    }
+}
+
+pub enum ModuleCkSignal {
+    Defer(ModuleCkData),
+    Success,
 }
