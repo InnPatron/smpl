@@ -25,8 +25,8 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
         let mut queue_iter = queue.into_iter();
         queue = Vec::new();
 
-        while let Some(mut m) = queue_iter.next() {
-            match check_module(&mut universe, m)? {
+        for mut module in queue_iter.next() {
+            match check_module(&mut universe, module)? {
                 ModuleCkSignal::Success => (),
                 ModuleCkSignal::Defer(data) => queue.push(data),
             }       
@@ -51,8 +51,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
     let module_name = module.name.clone();
 
     let mut missing_modules = Vec::new();
-    let mut module_uses = module.module_uses.into_iter();
-    while let Some(use_decl) = module_uses.next() {
+    for use_decl in module.module_uses.into_iter() {
         match universe.module_id(&use_decl.0) {
             Some(id) => module.module_scope.map_module(module_name.clone(), id),
             None => missing_modules.push(use_decl),
@@ -72,7 +71,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
 
         unresolved = Vec::new();
         let mut err_list = Vec::new();
-        while let Some(struct_decl) = struct_iter.next() {
+        for struct_decl in struct_iter.next() {
             let struct_t = match generate_struct_type(&module.module_scope, &struct_decl) {
                 Ok(struct_t) => struct_t,
                 Err(e) => {
