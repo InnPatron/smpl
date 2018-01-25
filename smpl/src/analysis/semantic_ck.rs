@@ -15,7 +15,7 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
     let mut universe = Universe::std();
 
     let program = program.into_iter()
-        .map(|ast_module| ModuleCkData::new(ast_module))
+        .map(|ast_module| ModuleCkData::new(&universe, ast_module))
         .collect::<Result<Vec<_>, _>>()?;
 
     let mut queue = program;
@@ -48,15 +48,13 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
 }
 
 fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<ModuleCkSignal, Err> {
-    let mut module_scope = universe.std_scope().clone();
-
     let module_name = module.name.clone();
 
     let mut missing_modules = Vec::new();
     let mut module_uses = module.module_uses.into_iter();
     while let Some(use_decl) = module_uses.next() {
         match universe.module_id(&use_decl.0) {
-            Some(id) => module_scope.map_module(module_name.clone(), id),
+            Some(id) => module.module_scope.map_module(module_name.clone(), id),
             None => missing_modules.push(use_decl),
         }
     }
@@ -75,7 +73,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
         unresolved = Vec::new();
         let mut err_list = Vec::new();
         while let Some(struct_decl) = struct_iter.next() {
-            let struct_t = match generate_struct_type(&module_scope, &struct_decl) {
+            let struct_t = match generate_struct_type(&module.module_scope, &struct_decl) {
                 Ok(struct_t) => struct_t,
                 Err(e) => {
                     unresolved.push(struct_decl);
@@ -85,7 +83,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
             };
 
             let id = universe.new_type_id();
-            module_scope.insert_type(struct_t.name.clone().into(), id);
+            module.module_scope.insert_type(struct_t.name.clone().into(), id);
             universe.insert_type(id, SmplType::Struct(struct_t));
         }
 
@@ -113,7 +111,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
 
             let type_id = universe.new_type_id();
 
-            let fn_type = match generate_fn_type(&module_scope, &universe, &fn_decl) {
+            let fn_type = match generate_fn_type(&module.module_scope, &universe, &fn_decl) {
                 Ok(fn_type) => fn_type,
                 Err(e) => {
                     unresolved.push(fn_decl);
@@ -126,10 +124,10 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
 
             let fn_id = universe.new_fn_id();
             universe.insert_fn(fn_id, type_id, fn_type, cfg);
-            module_scope.insert_fn(name.clone(), fn_id);
+            module.module_scope.insert_fn(name.clone(), fn_id);
 
             let func = universe.get_fn(fn_id);
-            analyze_fn(&universe, &module_scope, func.cfg(), fn_id)?;
+            analyze_fn(&universe, &module.module_scope, func.cfg(), fn_id)?;
 
 
             let end_count = unresolved.len();
@@ -147,7 +145,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
 
     let module_id = universe.new_module_id();
 
-    let module = Module::new(module_scope, module_id);
+    let module = Module::new(module.module_scope, module_id);
     universe.map_module(module_id, module_name, module);
     
     Ok(ModuleCkSignal::Success)

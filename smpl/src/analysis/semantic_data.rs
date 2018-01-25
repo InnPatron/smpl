@@ -395,10 +395,11 @@ pub struct ModuleCkData {
     pub module_uses: Vec<UseDecl>,
     pub module_structs: Vec<Struct>,
     pub module_fns: Vec<AstFunction>,
+    pub module_scope: ScopedData,
 }
 
 impl ModuleCkData {
-    pub fn new(module: AstModule) -> Result<ModuleCkData, Err> {
+    pub fn new(universe: &Universe, module: AstModule) -> Result<ModuleCkData, Err> {
         let mut module_uses = Vec::new();
         let mut module_structs = Vec::new();
         let mut module_fns = Vec::new();
@@ -416,6 +417,7 @@ impl ModuleCkData {
             module_uses: module_uses,
             module_structs: module_structs,
             module_fns: module_fns,
+            module_scope: universe.std_scope()
         })
     }
 }
