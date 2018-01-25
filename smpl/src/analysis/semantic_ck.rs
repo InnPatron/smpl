@@ -33,14 +33,13 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
         }
 
         let end_count = queue.len();
-
-        if start_count == end_count {
-            // no modules were resolved. return error.
-            unimplemented!();
-        } else if end_count == 0 {
-            // no more missing uses to resolve.
+        if end_count == 0 {
+            // No more use declarations to resolve.
             break;
-        } else if start_count > end_count {
+        } else if end_count == start_count {
+            // No use declarations were resolved. Return error.
+            unimplemented!();
+        } else if end_count > start_count {
             unreachable!();
         }
     }
@@ -91,14 +90,13 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
         }
 
         let end_count = unresolved.len();
-
-        if start_count == end_count {
-            // no struct declarations were resolved. return error.
-            unimplemented!();
-        } else if end_count == 0 {
-            // no more struct definitions to resolve.
+        if end_count == 0 {
+            // No more struct declarations to resolve.
             break;
-        } else if start_count > end_count {
+        } else if end_count == start_count {
+            // No struct declarations were resolved. Return error.
+            unimplemented!();
+        } else if end_count > start_count {
             unreachable!();
         }
     }
@@ -135,13 +133,13 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
 
 
             let end_count = unresolved.len();
-            if start_count == end_count {
-                // no struct declarations were resolved. return error.
-                unimplemented!();
-            } else if end_count == 0 {
-                // no more struct definitions to resolve.
+            if end_count == 0 {
+                // No more function declarations to resolve.
                 break;
-            } else if start_count > end_count {
+            } else if end_count == start_count {
+                // No function declarations were resolved. Return error.
+                unimplemented!();
+            } else if end_count > start_count {
                 unreachable!();
             }
         }
