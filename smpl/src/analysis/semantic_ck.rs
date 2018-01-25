@@ -53,7 +53,11 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
     let mut missing_modules = Vec::new();
     for use_decl in module.module_uses.into_iter() {
         match universe.module_id(&use_decl.0) {
-            Some(id) => module.module_scope.map_module(module_name.clone(), id),
+            Some(id) => {
+                module.module_scope.map_module(use_decl.0.clone(), id);
+                // TODO: Import module names into scope?
+                // module.module_scope.merge_scope(..)?;
+            }
             None => missing_modules.push(use_decl),
         }
     }

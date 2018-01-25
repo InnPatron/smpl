@@ -288,6 +288,10 @@ impl ScopedData {
     pub fn get_module(&self, name: &Ident) -> Option<ModuleId> {
         self.module_names.get(name).map(|id| id.clone())
     }
+
+    pub fn merge_scope(&mut self, other: &Self) -> Result<(), Err> {
+        unimplemented!();
+    }
 }
 
 #[derive(Clone, Debug)]
