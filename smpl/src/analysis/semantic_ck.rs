@@ -103,22 +103,48 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
         }
     }
 
-    for fn_decl in module.module_fns.into_iter() {
-        unimplemented!("Allow out-of-order fn declarations.");
+    let mut unresolved = module.module_fns;
+    loop {
+        let start_count = unresolved.len();
+        let mut module_fn_iter = unresolved.into_iter();
 
-        let name: Path = fn_decl.name.clone().into();
+        unresolved = Vec::new();
+        let mut err_list = Vec::new();
+        for fn_decl in module_fn_iter {
+            let name: Path = fn_decl.name.clone().into();
 
-        let type_id = universe.new_type_id();
+            let type_id = universe.new_type_id();
 
-        let fn_type = generate_fn_type(&module_scope, &universe, &fn_decl)?;
-        let cfg = CFG::generate(&universe, fn_decl, &fn_type)?;
+            let fn_type = match generate_fn_type(&module_scope, &universe, &fn_decl) {
+                Ok(fn_type) => fn_type,
+                Err(e) => {
+                    unresolved.push(fn_decl);
+                    err_list.push(e);
+                    continue;
+                }
+            };
 
-        let fn_id = universe.new_fn_id();
-        universe.insert_fn(fn_id, type_id, fn_type, cfg);
-        module_scope.insert_fn(name.clone(), fn_id);
+            let cfg = CFG::generate(&universe, fn_decl, &fn_type)?;
 
-        let func = universe.get_fn(fn_id);
-        analyze_fn(&universe, &module_scope, func.cfg(), fn_id)?;
+            let fn_id = universe.new_fn_id();
+            universe.insert_fn(fn_id, type_id, fn_type, cfg);
+            module_scope.insert_fn(name.clone(), fn_id);
+
+            let func = universe.get_fn(fn_id);
+            analyze_fn(&universe, &module_scope, func.cfg(), fn_id)?;
+
+
+            let end_count = unresolved.len();
+            if start_count == end_count {
+                // no struct declarations were resolved. return error.
+                unimplemented!();
+            } else if end_count == 0 {
+                // no more struct definitions to resolve.
+                break;
+            } else if start_count > end_count {
+                unreachable!();
+            }
+        }
     }
 
     let module_id = universe.new_module_id();
