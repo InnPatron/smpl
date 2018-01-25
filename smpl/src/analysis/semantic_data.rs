@@ -196,6 +196,10 @@ impl Universe {
     pub fn all_fns(&self) -> Vec<(FnId, &Function)> {
         self.fn_map.iter().map(|(id, f)| (id.clone(), f)).collect()
     }
+
+    pub fn all_modules(&self) -> Vec<&Module> {
+        self.module_map.iter().map(|(_, module)| module).collect()
+    }
 }
 
 #[derive(Clone, Debug)]

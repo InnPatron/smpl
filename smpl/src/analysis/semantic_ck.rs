@@ -44,7 +44,18 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
         }
     }
 
-    unimplemented!()
+    let mut main = None;
+    for module in universe.all_modules().into_iter() {
+        if let Ok(id) = module.module_scope().get_fn(&path!("main")) {
+            if main.is_none() {
+                main = Some(id)
+            } else {
+                return Err(Err::MultipleMainFns);
+            }
+        }
+    }
+
+    Ok(Program::new(universe, main))
 }
 
 fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<ModuleCkSignal, Err> {
