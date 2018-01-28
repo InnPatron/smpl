@@ -8,14 +8,14 @@ use analysis::*;
 use analysis::smpl_type::*;
 
 pub struct RustBackend {
-    mods: HashMap<Ident, String>,
+    mods: Vec<(Ident, ModuleId, String)>,
     mod_wrap: bool
 }
 
 impl RustBackend {
     pub fn new() -> RustBackend {
         RustBackend {
-            mods: HashMap::new(),
+            mods: Vec::new(),
             mod_wrap: false,
         }
     }
@@ -41,13 +41,13 @@ impl RustBackend {
                 gen.emit_line("}");
             }
 
-            self.mods.insert(ident.clone(), gen.module().to_string());
+            self.mods.push((ident.clone(), id.clone(), gen.module().to_string()));
         }
 
         self
     }
 
-    pub fn mods(&self) -> &HashMap<Ident, String> {
+    pub fn mods(&self) -> &[(Ident, ModuleId, String)] {
         &self.mods
     }
 }
