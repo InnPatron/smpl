@@ -54,7 +54,7 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
         let module = universe.get_module(*mod_id);
         if let Ok(id) = module.module_scope().get_fn(&path!("main")) {
             if main.is_none() {
-                main = Some(id)
+                main = Some((id, *mod_id))
             } else {
                 return Err(Err::MultipleMainFns);
             }

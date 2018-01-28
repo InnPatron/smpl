@@ -12,12 +12,12 @@ use super::control_flow::CFG;
 
 pub struct Program {
     universe: Universe,
-    main: Option<FnId>,
+    main: Option<(FnId, ModuleId)>,
 }
 
 impl Program {
 
-    pub fn new(universe: Universe, main: Option<FnId>) -> Program {
+    pub fn new(universe: Universe, main: Option<(FnId, ModuleId)>) -> Program {
         Program {
             universe: universe,
             main: main,
@@ -28,7 +28,7 @@ impl Program {
         &self.universe
     }
 
-    pub fn main(&self) -> Option<FnId> {
+    pub fn main(&self) -> Option<(FnId, ModuleId)> {
         self.main
     }
 }
