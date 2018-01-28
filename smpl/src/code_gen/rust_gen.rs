@@ -139,11 +139,11 @@ impl RustModGen {
             // Emit fn signature
             match *universe.get_type(return_type_id) {
                 SmplType::Unit => {
-                    self.emit(&format!("fn {} ({})", name, args));
+                    self.emit(&format!("pub fn {} ({})", name, args));
                 }
 
                 _ => {
-                    self.emit(&format!("fn {} (", name));
+                    self.emit(&format!("pub fn {} (", name));
                     self.emit(&args);
                     self.emit(&format!(") -> {} ", return_type));
                 }
@@ -214,12 +214,12 @@ impl RustModGen {
             .collect::<Vec<_>>();
 
         self.emit_line("#[derive(Debug, PartialEq)]");
-        self.emit_line(&format!("struct {} {{", name));
+        self.emit_line(&format!("pub struct {} {{", name));
         self.shift_right();
         for &(ref name, ref string_type) in fields.iter() {
             let name = name;
             let field_type = RustModGen::rustify_type(string_type.to_string());
-            self.emit_line(&format!("{}: {},", name, field_type));
+            self.emit_line(&format!("pub {}: {},", name, field_type));
         }
         self.shift_left();
         self.emit_line("}");
