@@ -404,9 +404,9 @@ impl ModuleId {
 
 pub struct ModuleCkData {
     pub name: Ident,
-    pub module_uses: Vec<UseDecl>,
-    pub module_structs: Vec<Struct>,
-    pub module_fns: Vec<AstFunction>,
+    pub unresolved_module_uses: Vec<UseDecl>,
+    pub unresolved_module_structs: Vec<Struct>,
+    pub unresolved_module_fns: Vec<AstFunction>,
     pub module_scope: ScopedData,
 }
 
@@ -426,9 +426,9 @@ impl ModuleCkData {
 
         Ok(ModuleCkData {
             name: module.0.ok_or(Err::MissingModName)?,
-            module_uses: module_uses,
-            module_structs: module_structs,
-            module_fns: module_fns,
+            unresolved_module_uses: module_uses,
+            unresolved_module_structs: module_structs,
+            unresolved_module_fns: module_fns,
             module_scope: universe.std_scope()
         })
     }

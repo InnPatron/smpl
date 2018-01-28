@@ -38,7 +38,7 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
             break;
         } else if end_count == start_count {
             let mut unresolved = Vec::new();
-            for mod_uses in queue.into_iter().map(|module| module.module_uses) {
+            for mod_uses in queue.into_iter().map(|module| module.unresolved_module_uses) {
                 let mod_uses = mod_uses.into_iter().map(|u| u.0);
                 unresolved.extend(mod_uses);
             }
@@ -68,7 +68,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
     let module_name = module.name.clone();
 
     let mut missing_modules = Vec::new();
-    for use_decl in module.module_uses.into_iter() {
+    for use_decl in module.unresolved_module_uses.into_iter() {
         match universe.module_id(&use_decl.0) {
             Some(id) => {
                 module.module_scope.map_module(use_decl.0.clone(), id);
@@ -112,12 +112,12 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
     }
 
     if missing_modules.len() > 0 {
-        module.module_uses = missing_modules;
+        module.unresolved_module_uses = missing_modules;
         // Unknown module. Differ checking till later
         return Ok(ModuleCkSignal::Defer(module));
     }
 
-    let mut unresolved = module.module_structs;
+    let mut unresolved = module.unresolved_module_structs;
     loop {
         let start_count = unresolved.len();
         let mut struct_iter = unresolved.into_iter();
@@ -154,7 +154,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
         }
     }
 
-    let mut unresolved = module.module_fns;
+    let mut unresolved = module.unresolved_module_fns;
     loop {
         let start_count = unresolved.len();
         let mut module_fn_iter = unresolved.into_iter();
