@@ -175,12 +175,14 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
             module.module_scope.insert_fn(name.clone(), fn_id);
             module.owned_fns.push(fn_id);
 
-            let func = universe.get_fn(fn_id);
-            match analyze_fn(&universe, &module.module_scope, func.cfg(), fn_id)  {
+            match analyze_fn(&universe, &module.module_scope, 
+                             universe.get_fn(fn_id).cfg(), fn_id)  {
                 Ok(f) => f,
                 Err(e) => {
                     match e {
                         Err::UnknownFn(_) => {
+                            module.owned_fns.pop();
+                            universe.unmap_fn(fn_id);
                             unresolved.push(fn_decl);
                             continue;
                         }

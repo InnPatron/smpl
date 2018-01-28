@@ -127,6 +127,12 @@ impl Universe {
         self.module_name.get(name).map(|id| id.clone())
     }
 
+    /// Only used when function analysis returns a recoverable error.
+    /// Unmap to not have a partial function.
+    pub fn unmap_fn(&mut self, fn_id: FnId) {
+        self.fn_map.remove(&fn_id);
+    }
+
     pub fn insert_fn(&mut self, fn_id: FnId, type_id: TypeId, fn_t: FunctionType, cfg: CFG) {
         self.insert_type(type_id, SmplType::Function(fn_t));
 
