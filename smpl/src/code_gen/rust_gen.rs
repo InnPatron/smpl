@@ -9,6 +9,7 @@ use analysis::smpl_type::*;
 
 pub struct RustBackend {
     mods: Vec<(Ident, ModuleId, String)>,
+    main: Option<String>,
     mod_wrap: bool
 }
 
@@ -16,8 +17,13 @@ impl RustBackend {
     pub fn new() -> RustBackend {
         RustBackend {
             mods: Vec::new(),
+            main: None,
             mod_wrap: false,
         }
+    }
+
+    pub fn main(&self) -> Option<&String> {
+        self.main.as_ref()
     }
 
     pub fn wrap_mod(mut self) -> RustBackend {
@@ -26,6 +32,17 @@ impl RustBackend {
     }
 
     pub fn generate(mut self, program: &Program) -> RustBackend {
+
+        self.main = program.main().map(|(fn_id, mod_id)| {
+            if self.mod_wrap {
+                format!("fn main() {{ {}::{}(); }}", 
+                        RustFnGen::mod_id(mod_id),
+                        RustFnGen::fn_id(fn_id))
+            } else {
+                format!("fn main() {{ {}(); }}", RustFnGen::fn_id(fn_id))
+            }
+        });
+
         for &(ident, id) in program.universe().all_modules().iter() {
             let mut gen = RustModGen::new();
 
