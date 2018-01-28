@@ -336,22 +336,22 @@ impl Variable {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnCall {
-    name: ast::Ident,
+    path: ast::Path,
     args: Option<Vec<Typed<TmpId>>>,
     fn_id: Cell<Option<FnId>>,
 }
 
 impl FnCall {
-    pub fn new(name: ast::Ident, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
+    pub fn new(path: ast::Path, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
         FnCall {
-            name: name,
+            path: path,
             args: args,
             fn_id: Cell::new(None),
         }
     }
 
-    pub fn name(&self) -> &ast::Ident {
-        &self.name
+    pub fn path(&self) -> &ast::Path {
+        &self.path
     }
 
     pub fn args(&self) -> Option<&Vec<Typed<TmpId>>> {
@@ -360,7 +360,7 @@ impl FnCall {
 
     pub fn set_id(&self, id: FnId) {
         if self.fn_id.get().is_some() {
-            panic!("Attempting to overwrite {} of the FnCall {:?}", self.fn_id.get().unwrap(), self.name);
+            panic!("Attempting to overwrite {} of the FnCall {:?}", self.fn_id.get().unwrap(), self.path);
         } else {
             self.fn_id.set(Some(id));
         }

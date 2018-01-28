@@ -397,9 +397,10 @@ StructFieldInit: (Ident, Box<Expr>) = {
 
 /// fn_call -> ident "(" fn_call_args ")"
 FnCall: FnCall = {
-	<name: Ident> "(" <args: FnCallArgs?> ")" => {
+	<path: Path> "(" <args: FnCallArgs?> ")" => {
+		let mut path = path;
 		FnCall::new(
-			name, 
+			path,
 			args,
 		)
 	}

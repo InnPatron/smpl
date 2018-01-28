@@ -56,14 +56,14 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
         }
 
         AstExpr::FnCall(fn_call) => {
-            let name = fn_call.name;
+            let path = fn_call.path;
             let args = fn_call.args.map(|vec| {
                 vec.into_iter()
                     .map(|e| Typed::untyped(flatten_expr(universe, scope, e)))
                     .collect::<Vec<_>>()
             });
 
-            let fn_call = FnCall::new(name, args);
+            let fn_call = FnCall::new(path, args);
 
             scope.map_tmp(universe, Value::FnCall(fn_call))
         }

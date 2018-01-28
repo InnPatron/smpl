@@ -167,14 +167,14 @@ pub enum Expr {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
-    pub name: Ident,
+    pub path: Path,
     pub args: Option<Vec<Expr>>,
 }
 
 impl FnCall {
-    pub fn new(name: Ident, args: Option<Vec<Expr>>) -> FnCall {
+    pub fn new(path: Path, args: Option<Vec<Expr>>) -> FnCall {
         FnCall {
-            name: name,
+            path: path,
             args: args,
         }
     }
