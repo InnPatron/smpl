@@ -35,11 +35,11 @@ impl RustBackend {
 
         self.main = program.main().map(|(fn_id, mod_id)| {
             if self.mod_wrap {
-                format!("fn main() {{ {}::{}(); }}", 
+                format!("fn main() {{ {}::{}(); }}\n\n", 
                         RustFnGen::mod_id(mod_id),
                         RustFnGen::fn_id(fn_id))
             } else {
-                format!("fn main() {{ {}(); }}", RustFnGen::fn_id(fn_id))
+                format!("fn main() {{ {}(); }}\n\n", RustFnGen::fn_id(fn_id))
             }
         });
 
