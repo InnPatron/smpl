@@ -293,8 +293,12 @@ impl ScopedData {
         self.module_names.get(name).map(|id| id.clone())
     }
 
-    pub fn merge_scope(&mut self, other: &Self) -> Result<(), Err> {
-        unimplemented!();
+    pub fn all_types(&self) -> Vec<(&Path, &TypeId)> {
+        self.type_map.iter().collect()
+    }
+
+    pub fn all_fns(&self) -> Vec<(&Path, &FnId)> {
+        self.fn_map.iter().collect()
     }
 }
 

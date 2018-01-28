@@ -66,8 +66,40 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
         match universe.module_id(&use_decl.0) {
             Some(id) => {
                 module.module_scope.map_module(use_decl.0.clone(), id);
-                // TODO: Import module names into scope?
-                // module.module_scope.merge_scope(..)?;
+                let imported_name = use_decl.0.clone();
+                let imported_module = universe.get_module(id);
+                let imported_scope = imported_module.module_scope();
+
+                let all_types = imported_scope.all_types()
+                                              .into_iter()
+                                              .map(|(path, id)| {
+                                                  let mut path = path.clone();
+                                                  path.0.insert(0, imported_name.clone());
+                                                  
+                                                  (path, id.clone())
+                                              })
+                                              .collect::<HashMap<_, _>>();
+                let all_fns = imported_scope.all_fns()
+                                            .into_iter()
+                                            .map(|(path, id)| {
+                                                let mut path = path.clone();
+                                                path.0.insert(0, imported_name.clone());
+                                                  
+                                                (path, id.clone())
+                                            })
+                                            .collect::<HashMap<_,_>>();
+
+                // Bring imported types into scope
+                for (path, imported) in all_types.into_iter() {
+                    if module.module_scope.insert_type(path.clone(), imported).is_some() {
+                        panic!("Should not have overrwritten {}. Paths should be unique by prefixing with the originating module.", path);
+                    }
+                }
+
+                // Bring imported functions into scope
+                for(path, imported) in all_fns.into_iter() {
+                    module.module_scope.insert_fn(path, imported);
+                }
             }
             None => missing_modules.push(use_decl),
         }
