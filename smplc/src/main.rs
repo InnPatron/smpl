@@ -1,12 +1,16 @@
 #[macro_use]
 extern crate clap;
 extern crate smpl;
+extern crate ascii;
 
 use clap::App;
 
+use std::str::FromStr;
 use std::fs::{File, OpenOptions};
 use std::path::Path;
 use std::io::{Read, Write};
+
+use ascii::AsciiString;
 
 fn main() {
     let yaml = load_yaml!("cli.yaml");
@@ -81,7 +85,12 @@ fn main() {
     };
 
     let result = match backend {
-        Backend::Rust => rust_gen(&input),
+        Backend::Rust => rust_gen(input_path.file_stem()
+                                            .unwrap()
+                                            .to_str()
+                                            .to_owned()
+                                            .unwrap(), 
+                                  &input),
     };
 
     let output = match result {
@@ -111,16 +120,21 @@ fn main() {
     }
 }
 
-fn rust_gen(input: &str) -> Result<String, String> {
+fn rust_gen(file_name: &str, input: &str) -> Result<String, String> {
     use smpl::*;
 
-    let ast = parse_program(&input).map_err(|err| format!("{:?}", err))?;
-    let program = check_ast(ast).map_err(|err| format!("{:?}", err))?;
+    let mut module = parse_module(&input).map_err(|err| format!("{:?}", err))?;
 
-    let mut gen = RustCodeGenerator::new();
-    gen.emit_program(&program);
+    if module.name().is_none() {
+        module.set_name(AsciiString::from_str(file_name).unwrap());
+    }
+    
+    let program = check_program(vec![module]).map_err(|err| format!("{:?}", err))?;
 
-    Ok(gen.program().to_string())
+    let program = RustBackend::new()
+                              .generate(&program);
+
+    Ok(program.mods().get(0).unwrap().2.to_owned())
 }
 
 enum Backend {

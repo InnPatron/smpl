@@ -9,6 +9,7 @@ args:
         help: "Source file to compile"
         required: true
         takes_value: true
+        min_values: 1
     - BACKEND:
         short: b
         long: backend
