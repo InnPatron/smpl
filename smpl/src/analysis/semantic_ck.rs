@@ -567,4 +567,38 @@ fn test() -> i32 {
             check_program(vec![program]).expect(&format!("Test  {} failed.", i));
         }
     }
+
+    #[test]
+    fn fn_out_of_order() {
+        let input =
+"mod fn_out_of_order;
+
+fn A() {
+    B();
+}
+
+fn B() {
+
+}";
+
+        let program = parse_module(input).unwrap();
+        check_program(vec![program]).unwrap();
+    }
+
+    #[test]
+    fn struct_out_of_order() {
+        let input =
+"mod struct_out_of_order;
+
+struct A {
+    field: B,
+}
+
+struct B{
+    field: i32,
+}";
+
+        let program = parse_module(input).unwrap();
+        check_program(vec![program]).unwrap();
+    }
 }
