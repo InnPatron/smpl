@@ -185,18 +185,17 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
 
             let func = universe.get_fn(fn_id);
             analyze_fn(&universe, &module.module_scope, func.cfg(), fn_id)?;
+        }
 
-
-            let end_count = unresolved.len();
-            if end_count == 0 {
-                // No more function declarations to resolve.
-                break;
-            } else if end_count == start_count {
-                // No function declarations were resolved. Return error.
-                return Err(Err::UnresolvedFns(unresolved.into_iter().map(|f| f.name).collect()));
-            } else if end_count > start_count {
-                unreachable!();
-            }
+        let end_count = unresolved.len();
+        if end_count == 0 {
+            // No more function declarations to resolve.
+            break;
+        } else if end_count == start_count {
+            // No function declarations were resolved. Return error.
+            return Err(Err::UnresolvedFns(unresolved.into_iter().map(|f| f.name).collect()));
+        } else if end_count > start_count {
+            unreachable!();
         }
     }
 
