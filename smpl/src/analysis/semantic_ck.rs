@@ -601,4 +601,27 @@ struct B{
         let program = parse_module(input).unwrap();
         check_program(vec![program]).unwrap();
     }
+
+    #[test]
+    fn mods_out_of_order() {
+        let mod1 =
+"mod mod1;
+
+use mod2;
+
+struct A {
+    field: mod2.B,
+}";
+
+        let mod2 =
+"mod mod2;
+
+struct B {
+    field: i32,
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        let mod2 = parse_module(mod2).unwrap();
+        check_program(vec![mod1, mod2]).unwrap();
+    }
 }
