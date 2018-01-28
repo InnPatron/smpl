@@ -11,6 +11,8 @@ pub enum Err {
     UnknownVar(Ident),
     UnknownFn(Path),
     UnresolvedUses(Vec<Ident>),
+    UnresolvedStructs(Vec<Ident>),
+    UnresolvedFns(Vec<Ident>),
     MissingModName,
 }
 

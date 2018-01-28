@@ -122,16 +122,8 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
         let mut struct_iter = unresolved.into_iter();
 
         unresolved = Vec::new();
-        let mut err_list = Vec::new();
         for struct_decl in struct_iter.next() {
-            let struct_t = match generate_struct_type(&module.module_scope, &struct_decl) {
-                Ok(struct_t) => struct_t,
-                Err(e) => {
-                    unresolved.push(struct_decl);
-                    err_list.push(e);
-                    continue;
-                }
-            };
+            let struct_t = generate_struct_type(&module.module_scope, &struct_decl)?;
 
             let id = universe.new_type_id();
             module.module_scope.insert_type(struct_t.name.clone().into(), id);
@@ -144,7 +136,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
             break;
         } else if end_count == start_count {
             // No struct declarations were resolved. Return error.
-            unimplemented!();
+            return Err(Err::UnresolvedStructs(unresolved.into_iter().map(|s| s.name).collect()));
         } else if end_count > start_count {
             unreachable!();
         }
@@ -156,20 +148,12 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
         let mut module_fn_iter = unresolved.into_iter();
 
         unresolved = Vec::new();
-        let mut err_list = Vec::new();
         for fn_decl in module_fn_iter {
             let name: Path = fn_decl.name.clone().into();
 
             let type_id = universe.new_type_id();
 
-            let fn_type = match generate_fn_type(&module.module_scope, &universe, &fn_decl) {
-                Ok(fn_type) => fn_type,
-                Err(e) => {
-                    unresolved.push(fn_decl);
-                    err_list.push(e);
-                    continue;
-                }
-            };
+            let fn_type = generate_fn_type(&module.module_scope, &universe, &fn_decl)?;
 
             let cfg = CFG::generate(&universe, fn_decl, &fn_type)?;
 
@@ -187,7 +171,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
                 break;
             } else if end_count == start_count {
                 // No function declarations were resolved. Return error.
-                unimplemented!();
+                return Err(Err::UnresolvedFns(unresolved.into_iter().map(|f| f.name).collect()));
             } else if end_count > start_count {
                 unreachable!();
             }
