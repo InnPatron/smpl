@@ -105,6 +105,8 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
                 for(path, imported) in all_fns.into_iter() {
                     module.module_scope.insert_fn(path, imported);
                 }
+
+                module.dependencies.push(id)
             }
             None => missing_modules.push(use_decl),
         }
@@ -208,6 +210,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
     let module = Module::new(module.module_scope, 
                              module.owned_types, 
                              module.owned_fns, 
+                             module.dependencies,
                              module_id);
     universe.map_module(module_id, module_name, module);
     

@@ -213,15 +213,19 @@ pub struct Module {
     module_scope: ScopedData,
     owned_types: Vec<TypeId>,
     owned_fns: Vec<FnId>,
+    dependencies: Vec<ModuleId>,
 }
 
 impl Module {
-    pub fn new(module_scope: ScopedData, owned_t: Vec<TypeId>, owned_fns: Vec<FnId>, id: ModuleId) -> Module {
+    pub fn new(module_scope: ScopedData, owned_t: Vec<TypeId>, 
+               owned_fns: Vec<FnId>, dependencies: Vec<ModuleId>,
+               id: ModuleId) -> Module {
         Module {
             id: id,
             module_scope: module_scope,
             owned_types: owned_t,
             owned_fns: owned_fns,
+            dependencies: dependencies,
         }
     }
 
@@ -239,6 +243,10 @@ impl Module {
 
     pub fn owned_fns(&self) -> &[FnId] {
         &self.owned_fns
+    }
+
+    pub fn dependencies(&self) -> &[ModuleId] {
+        &self.dependencies
     }
 }
 
@@ -416,6 +424,7 @@ pub struct ModuleCkData {
     pub module_scope: ScopedData,
     pub owned_types: Vec<TypeId>,
     pub owned_fns: Vec<FnId>,
+    pub dependencies: Vec<ModuleId>,
 }
 
 impl ModuleCkData {
@@ -440,6 +449,7 @@ impl ModuleCkData {
             module_scope: universe.std_scope(),
             owned_types: Vec::new(),
             owned_fns: Vec::new(),
+            dependencies: Vec::new(),
         })
     }
 }
