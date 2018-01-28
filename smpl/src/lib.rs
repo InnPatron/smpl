@@ -23,7 +23,7 @@ pub use analysis::Program;
 pub use analysis::check_program;
 
 
-pub use self::code_gen::RustCodeGenerator;
+pub use self::code_gen::RustBackend;
 
 
 
