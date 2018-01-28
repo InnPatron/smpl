@@ -25,7 +25,7 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
         let mut queue_iter = queue.into_iter();
         queue = Vec::new();
 
-        for mut module in queue_iter.next() {
+        for mut module in queue_iter {
             match check_module(&mut universe, module)? {
                 ModuleCkSignal::Success => (),
                 ModuleCkSignal::Defer(data) => queue.push(data),
