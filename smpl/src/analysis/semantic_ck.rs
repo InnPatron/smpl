@@ -50,7 +50,8 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
     }
 
     let mut main = None;
-    for module in universe.all_modules().into_iter() {
+    for (_, mod_id) in universe.all_modules().into_iter() {
+        let module = universe.get_module(*mod_id);
         if let Ok(id) = module.module_scope().get_fn(&path!("main")) {
             if main.is_none() {
                 main = Some(id)

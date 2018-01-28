@@ -197,8 +197,8 @@ impl Universe {
         self.fn_map.iter().map(|(id, f)| (id.clone(), f)).collect()
     }
 
-    pub fn all_modules(&self) -> Vec<&Module> {
-        self.module_map.iter().map(|(_, module)| module).collect()
+    pub fn all_modules(&self) -> Vec<(&Ident, &ModuleId)> {
+        self.module_name.iter().collect()
     }
 }
 
