@@ -38,8 +38,13 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Vec<Err>> {
             // No more use declarations to resolve.
             break;
         } else if end_count == start_count {
-            // No use declarations were resolved. Return error.
-            unimplemented!();
+            let mut unresolved = Vec::new();
+            for mod_uses in queue.into_iter().map(|module| module.module_uses) {
+                let mod_uses = mod_uses.into_iter().map(|u| u.0);
+                unresolved.extend(mod_uses);
+            }
+
+            return Err(vec![Err::UnresolvedUses(unresolved)]);
         } else if end_count > start_count {
             unreachable!();
         }

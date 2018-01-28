@@ -10,6 +10,7 @@ pub enum Err {
     UnknownType(Path),
     UnknownVar(Ident),
     UnknownFn(Path),
+    UnresolvedUses(Vec<Ident>),
     MissingModName,
 }
 
