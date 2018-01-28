@@ -256,7 +256,9 @@ mod tests {
     #[test]
     fn basic_test_semantic_analysis() {
         let program =
-"struct Test {
+"mod basic_test_semantic_analysis;
+
+struct Test {
     field_1: i32,
     field_2: f32,
     field_3: String,
@@ -293,7 +295,9 @@ fn main() {
         use super::super::typed_ast::*;
 
         let input = 
-"fn arg_usage(a1: i32, a2: bool) {
+"mod call_fn_success;
+
+fn arg_usage(a1: i32, a2: bool) {
 	let b1: i32 = a1;
 	let b2: bool = a2;
 }
@@ -342,7 +346,9 @@ fn main() {
     #[test]
     fn embedded_ifs_analysis() {
         let input =
-"fn test() {
+"mod embedded_ifs_analysis;
+
+fn test() {
     if true {
         if false {
 
@@ -372,24 +378,32 @@ fn main() {
     #[test]
     fn missing_return() {
         let input_0 =
-"fn test() -> i32 {
+"mod missing_return_0;
+
+fn test() -> i32 {
     
 }";
 
         let input_1 = 
-"fn test() -> i32 {
+"mod missing_return_1;
+
+fn test() -> i32 {
     let a: i32 = 5;
 }";
 
         let input_2 = 
-"fn test() -> i32 {
+"mod missing_return_2;
+
+fn test() -> i32 {
     if true {
         return 0;
     }
 }";
 
         let input_3 =
-"fn test() -> i32 {
+"mod missing_return_3;
+
+fn test() -> i32 {
     if true {
 
 
@@ -399,7 +413,9 @@ fn main() {
 }";
 
         let input_4 =
-"fn test() -> i32 {
+"mod missing_return_4;
+
+fn test() -> i32 {
     if true {
         return 0;
     } else {
@@ -408,7 +424,9 @@ fn main() {
 }";
 
         let input_5 =
-"fn test() -> i32 {
+"mod missing_return_5;
+        
+fn test() -> i32 {
     if true {
         if true {
 
@@ -421,7 +439,10 @@ fn main() {
 }";
 
         let input_6 =
-"fn test() -> i32 {
+
+"mod missing_return_6;
+
+fn test() -> i32 {
     if true {
         return 0;
     } else {
@@ -459,19 +480,25 @@ fn main() {
     #[test]
     fn all_required_returns() {
         let input_0 =
-"fn test() -> i32 {
+"mod all_required_returns_0;
+
+fn test() -> i32 {
     return 0;
 }";
 
         let input_1 = 
-"fn test() -> i32 {
+"mod all_required_returns_1;
+        
+fn test() -> i32 {
     let a: i32 = 5;
 
     return 0;
 }";
 
         let input_2 = 
-"fn test() -> i32 {
+"mod all_required_returns_2;
+
+fn test() -> i32 {
     if true {
         return 0;
     }
@@ -480,7 +507,9 @@ fn main() {
 }";
 
         let input_3 =
-"fn test() -> i32 {
+"mod all_required_returns_3;
+
+fn test() -> i32 {
     if true {
         return 0;
     } else {
@@ -489,7 +518,9 @@ fn main() {
 }";
 
         let input_4 =
-"fn test() -> i32 {
+"mod all_required_returns_4;
+
+fn test() -> i32 {
     if true {
         return 0;
     } else {
@@ -498,7 +529,9 @@ fn main() {
 }";
 
         let input_5 =
-"fn test() -> i32 {
+"mod all_required_returns_5;
+
+fn test() -> i32 {
     if true {
         if true {
             return 0;
@@ -511,7 +544,9 @@ fn main() {
 }";
 
         let input_6 =
-"fn test() -> i32 {
+"mod all_required_returns_6;
+
+fn test() -> i32 {
     if true {
         return 0;
     } else {
