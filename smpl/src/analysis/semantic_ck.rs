@@ -272,8 +272,8 @@ fn main() {
     }
 }
 ";
-        let program = parse_Program(program).unwrap();
-        let program = check(program).unwrap();
+        let program = parse_module(program).unwrap();
+        let program = check_program(vec![program]).unwrap();
 
         let universe = program.universe();
 
@@ -302,8 +302,8 @@ fn main() {
 	arg_usage(5, false);
 }";
         
-        let ast = parse_Program(input).unwrap();
-        let program = check(ast).unwrap();
+        let program = parse_module(input).unwrap();
+        let program = check_program(vec![program]).unwrap();
 
         let main = program.main().unwrap();
 
@@ -354,16 +354,16 @@ fn main() {
     }
 }";
 
-        let ast = parse_Program(input).unwrap();
-        match check(ast) {
+        let program = parse_module(input).unwrap();
+        match check_program(vec![program]) {
             Ok(_) => panic!("Passed analysis. Expected Err::UnknownVar"),
             Err(e) => {
-                match e {
-                    Err::UnknownVar(ident) => {
-                        assert_eq!(ident, ident!("a"));
+                match *e.get(0).unwrap() {
+                    Err::UnknownVar(ref ident) => {
+                        assert_eq!(*ident, ident!("a"));
                     }
 
-                    e @ _ => panic!("Expected Err::UnknownVar. Found {:?}", e),
+                    ref e @ _ => panic!("Expected Err::UnknownVar. Found {:?}", e),
                 }
             }
         }
@@ -436,20 +436,20 @@ fn main() {
         let input = vec![input_0, input_1, input_2, input_3, input_4, input_5, input_6];
 
         for i in 0..input.len() {
-            let ast = parse_Program(input[i]).unwrap();
-            match check(ast) {
+            let program = parse_module(input[i]).unwrap();
+            match check_program(vec![program]) {
                 Ok(_) => panic!("Passed analysis. Expected Err::ControlFlowErr(ControlFlowErr::MissingReturn. Test {}", i),
                 Err(e) => {
-                    match e {
-                        Err::ControlFlowErr(e) => {
-                            match e {
+                    match *e.get(0).unwrap() {
+                        Err::ControlFlowErr(ref e) => {
+                            match *e {
                                 ControlFlowErr::MissingReturn => (),
 
-                                e @ _ => panic!("Expected ControlFlowErr::MissingReturn. Test {}. Found {:?}", i, e),
+                                ref e @ _ => panic!("Expected ControlFlowErr::MissingReturn. Test {}. Found {:?}", i, e),
                             }
                         }
 
-                        e @ _ => panic!("Expected Err::ControlFlowErr. Test {}. Found {:?}", i, e),
+                        ref e @ _ => panic!("Expected Err::ControlFlowErr. Test {}. Found {:?}", i, e),
                     }
                 }
             }
@@ -526,8 +526,8 @@ fn main() {
         let input = vec![input_0, input_1, input_2, input_3, input_4, input_5, input_6];
 
         for i in 0..input.len() {
-            let ast = parse_Program(input[i]).unwrap();
-            check(ast).expect(&format!("Test  {} failed.", i));
+            let program = parse_module(input[i]).unwrap();
+            check_program(vec![program]).expect(&format!("Test  {} failed.", i));
         }
     }
 }
