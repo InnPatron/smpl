@@ -126,7 +126,8 @@ fn rust_gen(file_name: &str, input: &str) -> Result<Vec<u8>, String> {
     let mut module = parse_module(&input).map_err(|err| format!("{:?}", err))?;
 
     if module.name().is_none() {
-        module.set_name(AsciiString::from_str(file_name).unwrap());
+        module.set_name(AsciiString::from_str(file_name)
+                                    .map_err(|_| format!("Unable to use file name {} as module name. Only ASCII strings.", file_name))?);
     }
     
     let program = check_program(vec![module]).map_err(|err| format!("{:?}", err))?;
