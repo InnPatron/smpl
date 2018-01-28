@@ -17,33 +17,39 @@ fn main() {
     let matches = App::from_yaml(yaml).get_matches();
 
     // Required
-    let input_val = matches.value_of("INPUT").unwrap();
+    let input_vals: Vec<_> = matches.values_of("INPUT").unwrap().collect();
     let backend_val = matches.value_of("BACKEND").unwrap();
     let output_val = matches.value_of("OUTPUT").unwrap();
 
-    let input_path = Path::new(input_val);
-    let mut file = match File::open(input_path.clone()) {
-        Ok(file) => file,
-        Err(err) => {
-            eprintln!(
-                "Cannot open input file ({}):\n{}",
-                input_path.display(),
-                err
-            );
-            return;
-        }
-    };
+    let input_path_list: Vec<_> = input_vals.iter().map(|input| Path::new(input)).collect();
+    let mut files = Vec::new();
+    for path in input_path_list.iter() {
+        let mut file = match File::open(path.clone()) {
+            Ok(file) => files.push(file),
+            Err(err) => {
+                eprintln!(
+                    "Cannot open input file ({}):\n{}",
+                    path.display(),
+                    err
+                );
+                return;
+            }
+        };
+    }
 
-    let mut input = String::new();
-    match file.read_to_string(&mut input) {
-        Ok(_) => (),
-        Err(err) => {
-            eprintln!(
-                "Failed to read input file ({}) contents:\n{}",
-                input_path.display(),
-                err
-            );
-            return;
+    let mut file_inputs = Vec::new();
+    for (ref mut file, ref path) in files.iter_mut().zip(input_path_list.iter()) {
+        let mut input = String::new();
+        match file.read_to_string(&mut input) {
+            Ok(_) => file_inputs.push(input),
+            Err(err) => {
+                eprintln!(
+                    "Failed to read input file ({}) contents:\n{}",
+                    path.display(),
+                    err
+                );
+                return;
+            }
         }
     }
 
@@ -55,16 +61,14 @@ fn main() {
         }
     };
 
-    let output_dir = Path::new(output_val);
-    if output_dir.is_dir() == false {
-        eprintln!("Output path '{}' should be a directory", output_val);
-        return;
+    let mut output_path = Path::new(output_val).to_path_buf();
+    if output_path.is_dir() {
+        // Default output name
+        output_path.push("output");
+        output_path.set_extension("rs");
     }
-
-    let mut output_path = output_dir.to_path_buf();
-    output_path.push(input_path.file_stem().unwrap());
-    output_path.set_extension("rs");
-
+    
+    
     let mut output_file = {
         let open_result = OpenOptions::new()
             .write(true)
@@ -84,13 +88,24 @@ fn main() {
         }
     };
 
+    let mut input = Vec::new();
+    for (file_path, code) in input_path_list.iter().zip(file_inputs.iter()) {
+        let file_name = file_path.file_stem().map(|s| s.to_str()).unwrap();
+        let file_name = match file_name {
+            Some(name) => name,
+            None => {
+                eprintln!(
+                    "Path to file {} is not a valid UTF8 String",
+                    file_path.display());
+                return;
+            }
+        };
+
+        input.push((file_name, code.as_str()));
+    }
+           
     let result = match backend {
-        Backend::Rust => rust_gen(input_path.file_stem()
-                                            .unwrap()
-                                            .to_str()
-                                            .to_owned()
-                                            .unwrap(), 
-                                  &input),
+        Backend::Rust => rust_gen(input),
     };
 
     let output = match result {
@@ -120,23 +135,35 @@ fn main() {
     }
 }
 
-fn rust_gen(file_name: &str, input: &str) -> Result<Vec<u8>, String> {
+fn rust_gen(input: Vec<(&str, &str)>) -> Result<Vec<u8>, String> {
     use smpl::*;
 
-    let mut module = parse_module(&input).map_err(|err| format!("{:?}", err))?;
+    let mut modules = Vec::new();
+    for (file_name, code) in input {
 
-    if module.name().is_none() {
-        module.set_name(AsciiString::from_str(file_name)
-                                    .map_err(|_| format!("Unable to use file name {} as module name. Only ASCII strings.", file_name))?);
+        let mut module = parse_module(code).map_err(|err| format!("{:?}", err))?;
+    
+        if module.name().is_none() {
+            module.set_name(AsciiString::from_str(file_name)
+                                        .map_err(|_| format!("Unable to use file name {} as module name. Only ASCII strings.", file_name))?);
+        }
+
+        modules.push(module);
     }
     
-    let program = check_program(vec![module]).map_err(|err| format!("{:?}", err))?;
+    let program = check_program(modules).map_err(|err| format!("{:?}", err))?;
 
     let program = RustBackend::new()
                               .generate(&program);
 
+    let mut result = Vec::new();
     let mut mods = program.finalize();
-    Ok(mods.remove(0).2.into_bytes())
+
+    for m in mods {
+        result.extend(m.2.into_bytes());
+    }
+
+    Ok(result)
 }
 
 enum Backend {
