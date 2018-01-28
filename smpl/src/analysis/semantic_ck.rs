@@ -611,6 +611,10 @@ use mod2;
 
 struct A {
     field: mod2.B,
+}
+
+fn test() {
+    mod2.test();
 }";
 
         let mod2 =
@@ -618,7 +622,12 @@ struct A {
 
 struct B {
     field: i32,
-}";
+}
+
+fn test() {
+    
+}
+";
 
         let mod1 = parse_module(mod1).unwrap();
         let mod2 = parse_module(mod2).unwrap();
