@@ -233,6 +233,14 @@ impl Module {
     pub fn module_scope(&self) -> &ScopedData {
         &self.module_scope
     }
+
+    pub fn owned_types(&self) -> &[TypeId] {
+        &self.owned_types
+    }
+
+    pub fn owned_fns(&self) -> &[FnId] {
+        &self.owned_fns
+    }
 }
 
 #[derive(Clone, Debug)]
