@@ -70,7 +70,7 @@ impl RustModGen {
     }
 
     fn emit_mod(&mut self, universe: &Universe, module: &Module) {
-        self.prelude(universe);
+        self.prelude(universe, module);
 
         self.emit_line("//#### START STRUCT DEFINITIONS ####");
 
@@ -149,9 +149,15 @@ impl RustModGen {
         self.emit_line("//#### END FUNCTION DEFINITIONS ####");
     }
 
-    fn prelude(&mut self, universe: &Universe) {
+    fn prelude(&mut self, universe: &Universe, module: &Module) {
         self.emit_line("use std::cell::RefCell;");
         self.emit_line("use std::rc::Rc;");
+        self.line_pad();
+
+        // Import other SMPL modules
+        for d in module.dependencies() {
+            self.emit_line(&format!("use {}::*;", RustModGen::mod_id(*d)));
+        }
         self.line_pad();
 
         // Create TypeId aliases for primitives
