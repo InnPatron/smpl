@@ -110,7 +110,7 @@ fn main() {
         return;
     }
 
-    if let Err(err) = output_file.write_all(output.as_bytes()) {
+    if let Err(err) = output_file.write_all(&output) {
         eprintln!(
             "Failed to write to output file ({}):\n{}",
             output_path.display(),
@@ -120,7 +120,7 @@ fn main() {
     }
 }
 
-fn rust_gen(file_name: &str, input: &str) -> Result<String, String> {
+fn rust_gen(file_name: &str, input: &str) -> Result<Vec<u8>, String> {
     use smpl::*;
 
     let mut module = parse_module(&input).map_err(|err| format!("{:?}", err))?;
@@ -134,7 +134,8 @@ fn rust_gen(file_name: &str, input: &str) -> Result<String, String> {
     let program = RustBackend::new()
                               .generate(&program);
 
-    Ok(program.mods().get(0).unwrap().2.to_owned())
+    let mut mods = program.finalize();
+    Ok(mods.remove(0).2.into_bytes())
 }
 
 enum Backend {
