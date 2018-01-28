@@ -122,7 +122,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
         let mut struct_iter = unresolved.into_iter();
 
         unresolved = Vec::new();
-        for struct_decl in struct_iter.next() {
+        for struct_decl in struct_iter {
             let struct_t = match generate_struct_type(&module.module_scope, &struct_decl) {
                 Ok(s) => s,
                 Err(e) => {
