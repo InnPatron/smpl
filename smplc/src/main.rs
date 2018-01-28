@@ -157,6 +157,10 @@ fn rust_gen(input: Vec<(&str, &str)>) -> Result<Vec<u8>, String> {
                               .generate(&program);
 
     let mut result = Vec::new();
+    if let Some(m) = program.main() {
+        result.extend(m.as_bytes());
+    }
+
     let mut mods = program.finalize();
 
     for m in mods {
