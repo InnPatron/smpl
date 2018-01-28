@@ -11,13 +11,12 @@ use super::semantic_data::Module;
 use super::control_flow::CFG;
 use super::fn_analyzer::analyze_fn;
 
-pub fn check_program(program: Vec<AstModule>) -> Result<Program, Vec<Err>> {
+pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
     let mut universe = Universe::std();
 
     let program = program.into_iter()
         .map(|ast_module| ModuleCkData::new(&universe, ast_module))
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| vec![e])?;
+        .collect::<Result<Vec<_>, _>>()?;
 
     let mut queue = program;
 
@@ -44,7 +43,7 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Vec<Err>> {
                 unresolved.extend(mod_uses);
             }
 
-            return Err(vec![Err::UnresolvedUses(unresolved)]);
+            return Err(Err::UnresolvedUses(unresolved));
         } else if end_count > start_count {
             unreachable!();
         }
@@ -56,7 +55,7 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Vec<Err>> {
             if main.is_none() {
                 main = Some(id)
             } else {
-                return Err(vec![Err::MultipleMainFns]);
+                return Err(Err::MultipleMainFns);
             }
         }
     }
@@ -64,7 +63,7 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Vec<Err>> {
     Ok(Program::new(universe, main))
 }
 
-fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<ModuleCkSignal, Vec<Err>> {
+fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<ModuleCkSignal, Err> {
     let module_name = module.name.clone();
 
     let mut missing_modules = Vec::new();
@@ -145,7 +144,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
             break;
         } else if end_count == start_count {
             // No struct declarations were resolved. Return error.
-            return Err(err_list);
+            unimplemented!();
         } else if end_count > start_count {
             unreachable!();
         }
@@ -172,16 +171,14 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
                 }
             };
 
-            let cfg = CFG::generate(&universe, fn_decl, &fn_type)
-                .map_err(|e| vec![Err::ControlFlowErr(e)])?;
+            let cfg = CFG::generate(&universe, fn_decl, &fn_type)?;
 
             let fn_id = universe.new_fn_id();
             universe.insert_fn(fn_id, type_id, fn_type, cfg);
             module.module_scope.insert_fn(name.clone(), fn_id);
 
             let func = universe.get_fn(fn_id);
-            analyze_fn(&universe, &module.module_scope, func.cfg(), fn_id)
-                .map_err(|e| vec![e])?;
+            analyze_fn(&universe, &module.module_scope, func.cfg(), fn_id)?;
 
 
             let end_count = unresolved.len();
@@ -190,7 +187,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
                 break;
             } else if end_count == start_count {
                 // No function declarations were resolved. Return error.
-                return Err(err_list);
+                unimplemented!();
             } else if end_count > start_count {
                 unreachable!();
             }
@@ -364,12 +361,12 @@ fn test() {
         match check_program(vec![program]) {
             Ok(_) => panic!("Passed analysis. Expected Err::UnknownVar"),
             Err(e) => {
-                match *e.get(0).unwrap() {
-                    Err::UnknownVar(ref ident) => {
-                        assert_eq!(*ident, ident!("a"));
+                match e {
+                    Err::UnknownVar(ident) => {
+                        assert_eq!(ident, ident!("a"));
                     }
 
-                    ref e @ _ => panic!("Expected Err::UnknownVar. Found {:?}", e),
+                    e @ _ => panic!("Expected Err::UnknownVar. Found {:?}", e),
                 }
             }
         }
@@ -461,16 +458,16 @@ fn test() -> i32 {
             match check_program(vec![program]) {
                 Ok(_) => panic!("Passed analysis. Expected Err::ControlFlowErr(ControlFlowErr::MissingReturn. Test {}", i),
                 Err(e) => {
-                    match *e.get(0).unwrap() {
-                        Err::ControlFlowErr(ref e) => {
-                            match *e {
+                    match e {
+                        Err::ControlFlowErr(e) => {
+                            match e {
                                 ControlFlowErr::MissingReturn => (),
 
-                                ref e @ _ => panic!("Expected ControlFlowErr::MissingReturn. Test {}. Found {:?}", i, e),
+                                e @ _ => panic!("Expected ControlFlowErr::MissingReturn. Test {}. Found {:?}", i, e),
                             }
                         }
 
-                        ref e @ _ => panic!("Expected Err::ControlFlowErr. Test {}. Found {:?}", i, e),
+                        e @ _ => panic!("Expected Err::ControlFlowErr. Test {}. Found {:?}", i, e),
                     }
                 }
             }
