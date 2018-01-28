@@ -6,6 +6,16 @@ use ascii::AsciiString;
 
 pub struct Module(pub Option<Ident>, pub Vec<DeclStmt>);
 
+impl Module {
+    pub fn name(&self) -> Option<&Ident> {
+        self.0.as_ref()
+    }
+
+    pub fn set_name(&mut self, new: AsciiString) {
+        self.0 = Some(Ident(new));
+    }
+}
+
 pub enum DeclStmt {
     Use(UseDecl),
     Struct(Struct),
