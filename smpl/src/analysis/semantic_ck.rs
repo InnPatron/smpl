@@ -164,7 +164,16 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
 
             let type_id = universe.new_type_id();
 
-            let fn_type = match generate_fn_type(&module.module_scope, &universe, &fn_decl) {
+            let fn_type = generate_fn_type(&module.module_scope, &universe, &fn_decl)?;
+
+            let cfg = CFG::generate(&universe, fn_decl.clone(), &fn_type)?;
+
+            let fn_id = universe.new_fn_id();
+            universe.insert_fn(fn_id, type_id, fn_type, cfg);
+            module.module_scope.insert_fn(name.clone(), fn_id);
+
+            let func = universe.get_fn(fn_id);
+            match analyze_fn(&universe, &module.module_scope, func.cfg(), fn_id)  {
                 Ok(f) => f,
                 Err(e) => {
                     match e {
@@ -175,16 +184,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
                         e => return Err(e),
                     }
                 }
-            };
-
-            let cfg = CFG::generate(&universe, fn_decl, &fn_type)?;
-
-            let fn_id = universe.new_fn_id();
-            universe.insert_fn(fn_id, type_id, fn_type, cfg);
-            module.module_scope.insert_fn(name.clone(), fn_id);
-
-            let func = universe.get_fn(fn_id);
-            analyze_fn(&universe, &module.module_scope, func.cfg(), fn_id)?;
+            }
         }
 
         let end_count = unresolved.len();
