@@ -14,7 +14,7 @@ if [ -f "./target/sample_program.rs" ]; then
 	rm ./target/sample_program.rs
 fi
 
-../target/debug/smplc --input sample_program.smpl --backend 0 --output ./target/sample_program.rs
+../target/debug/smplc --input sample_program.smpl sample_dependency.smpl --backend 0 --output ./target/sample_program.rs
 
 rm ./tmp_project/src/main.rs
 
