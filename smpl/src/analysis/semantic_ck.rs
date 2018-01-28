@@ -291,7 +291,8 @@ fn main() {
 
         let universe = program.universe();
 
-        let main = universe.get_fn(program.main().unwrap());
+        let (main, _) = program.main().unwrap();
+        let main = universe.get_fn(main);
         let main_type = universe.get_type(main.type_id());
         if let SmplType::Function(ref fn_type) = *main_type {
             assert_eq!(SmplType::Unit, *universe.get_type(fn_type.return_type));
@@ -321,7 +322,7 @@ fn main() {
         let program = parse_module(input).unwrap();
         let program = check_program(vec![program]).unwrap();
 
-        let main = program.main().unwrap();
+        let (main, _) = program.main().unwrap();
 
         let mut called_fn = None;
         for (id, _) in program.universe().all_fns() {
