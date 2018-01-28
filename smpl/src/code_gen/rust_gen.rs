@@ -47,8 +47,8 @@ impl RustBackend {
         self
     }
 
-    pub fn mods(&self) -> &[(Ident, ModuleId, String)] {
-        &self.mods
+    pub fn finalize(self) -> Vec<(Ident, ModuleId, String)> {
+        self.mods
     }
 }
 
