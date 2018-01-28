@@ -206,13 +206,17 @@ impl Universe {
 pub struct Module {
     id: ModuleId,
     module_scope: ScopedData,
+    owned_types: Vec<TypeId>,
+    owned_fns: Vec<FnId>,
 }
 
 impl Module {
-    pub fn new(module_scope: ScopedData, id: ModuleId) -> Module {
+    pub fn new(module_scope: ScopedData, owned_t: Vec<TypeId>, owned_fns: Vec<FnId>, id: ModuleId) -> Module {
         Module {
             id: id,
             module_scope: module_scope,
+            owned_types: owned_t,
+            owned_fns: owned_fns,
         }
     }
 
@@ -408,6 +412,8 @@ pub struct ModuleCkData {
     pub unresolved_module_structs: Vec<Struct>,
     pub unresolved_module_fns: Vec<AstFunction>,
     pub module_scope: ScopedData,
+    pub owned_types: Vec<TypeId>,
+    pub owned_fns: Vec<FnId>,
 }
 
 impl ModuleCkData {
@@ -429,7 +435,9 @@ impl ModuleCkData {
             unresolved_module_uses: module_uses,
             unresolved_module_structs: module_structs,
             unresolved_module_fns: module_fns,
-            module_scope: universe.std_scope()
+            module_scope: universe.std_scope(),
+            owned_types: Vec::new(),
+            owned_fns: Vec::new(),
         })
     }
 }

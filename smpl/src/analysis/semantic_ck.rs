@@ -140,6 +140,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
             let id = universe.new_type_id();
             module.module_scope.insert_type(struct_t.name.clone().into(), id);
             universe.insert_type(id, SmplType::Struct(struct_t));
+            module.owned_types.push(id);
         }
 
         let end_count = unresolved.len();
@@ -172,6 +173,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
             let fn_id = universe.new_fn_id();
             universe.insert_fn(fn_id, type_id, fn_type, cfg);
             module.module_scope.insert_fn(name.clone(), fn_id);
+            module.owned_fns.push(fn_id);
 
             let func = universe.get_fn(fn_id);
             match analyze_fn(&universe, &module.module_scope, func.cfg(), fn_id)  {
@@ -202,7 +204,10 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
 
     let module_id = universe.new_module_id();
 
-    let module = Module::new(module.module_scope, module_id);
+    let module = Module::new(module.module_scope, 
+                             module.owned_types, 
+                             module.owned_fns, 
+                             module_id);
     universe.map_module(module_id, module_name, module);
     
     Ok(ModuleCkSignal::Success)
