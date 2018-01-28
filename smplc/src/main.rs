@@ -154,7 +154,8 @@ fn rust_gen(input: Vec<(&str, &str)>) -> Result<Vec<u8>, String> {
     let program = check_program(modules).map_err(|err| format!("{:?}", err))?;
 
     let program = RustBackend::new()
-                              .generate(&program);
+        .wrap_mod()
+        .generate(&program);
 
     let mut result = Vec::new();
     if let Some(m) = program.main() {
