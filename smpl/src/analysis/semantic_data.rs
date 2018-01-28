@@ -77,7 +77,6 @@ impl Universe {
                 var_map: HashMap::new(),
                 var_type_map: HashMap::new(),
                 fn_map: HashMap::new(),
-                module_names: HashMap::new(),
             },
             unit: unit.0,
             int: int.0,
@@ -249,7 +248,6 @@ pub struct ScopedData {
     var_map: HashMap<Ident, VarId>,
     var_type_map: HashMap<VarId, TypeId>,
     fn_map: HashMap<Path, FnId>,
-    module_names: HashMap<Ident, ModuleId>,
 }
 
 impl ScopedData {
@@ -299,16 +297,6 @@ impl ScopedData {
         self.fn_map.get(path)
                    .map(|id| id.clone())
                    .ok_or(Err::UnknownFn(path.clone()))
-    }
-
-    pub fn map_module(&mut self, name: Ident, id: ModuleId) {
-        if self.module_names.insert(name, id).is_some() {
-            unimplemented!("Overriding module with the same name.");
-        }
-    }
-
-    pub fn get_module(&self, name: &Ident) -> Option<ModuleId> {
-        self.module_names.get(name).map(|id| id.clone())
     }
 
     pub fn all_types(&self) -> Vec<(&Path, &TypeId)> {

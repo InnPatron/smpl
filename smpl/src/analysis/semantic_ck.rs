@@ -71,7 +71,6 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
     for use_decl in module.unresolved_module_uses.into_iter() {
         match universe.module_id(&use_decl.0) {
             Some(id) => {
-                module.module_scope.map_module(use_decl.0.clone(), id);
                 let imported_name = use_decl.0.clone();
                 let imported_module = universe.get_module(id);
                 let imported_scope = imported_module.module_scope();
