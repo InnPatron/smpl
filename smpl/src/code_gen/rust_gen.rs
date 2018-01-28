@@ -1,35 +1,100 @@
+use std::collections::HashMap;
+
 use petgraph::graph::NodeIndex;
 
-use ast::{BinOp, UniOp};
+use ast::{Ident, BinOp, UniOp};
 
 use analysis::*;
 use analysis::smpl_type::*;
 
+pub struct RustBackend {
+    mods: Vec<(Ident, ModuleId, String)>,
+    main: Option<String>,
+    mod_wrap: bool
+}
 
-pub struct RustGen {
+impl RustBackend {
+    pub fn new() -> RustBackend {
+        RustBackend {
+            mods: Vec::new(),
+            main: None,
+            mod_wrap: false,
+        }
+    }
+
+    pub fn main(&self) -> Option<&String> {
+        self.main.as_ref()
+    }
+
+    pub fn wrap_mod(mut self) -> RustBackend {
+        self.mod_wrap = true;
+        self
+    }
+
+    pub fn generate(mut self, program: &Program) -> RustBackend {
+
+        self.main = program.main().map(|(fn_id, mod_id)| {
+            if self.mod_wrap {
+                format!("fn main() {{ {}::{}(); }}\n\n", 
+                        RustFnGen::mod_id(mod_id),
+                        RustFnGen::fn_id(fn_id))
+            } else {
+                format!("fn main() {{ {}(); }}\n\n", RustFnGen::fn_id(fn_id))
+            }
+        });
+
+        for &(ident, id) in program.universe().all_modules().iter() {
+            let mut gen = RustModGen::new();
+
+            if self.mod_wrap {
+                gen.emit_line(&format!("mod {} {{", RustModGen::mod_id(*id)));
+                gen.shift_right();
+            }
+
+            gen.emit_mod(program.universe(), program.universe().get_module(*id));
+
+            if self.mod_wrap {
+                gen.shift_left();
+                gen.emit_line("}");
+            }
+
+            self.mods.push((ident.clone(), id.clone(), gen.module().to_string()));
+        }
+
+        self
+    }
+
+    pub fn finalize(self) -> Vec<(Ident, ModuleId, String)> {
+        self.mods
+    }
+}
+
+struct RustModGen {
     output: String,
     shift: u32,
 }
 
-impl RustGen {
-    pub fn new() -> RustGen {
-        RustGen {
+impl RustModGen {
+    fn new() -> RustModGen {
+        RustModGen {
             output: String::new(),
             shift: 0,
         }
     }
 
-    pub fn program(&self) -> &str {
+    fn module(&self) -> &str {
         &self.output
     }
 
-    pub fn emit_program(&mut self, program: &Program) {
-        self.prelude(program.universe());
+    fn emit_mod(&mut self, universe: &Universe, module: &Module) {
+        self.prelude(universe, module);
 
         self.emit_line("//#### START STRUCT DEFINITIONS ####");
 
         // Emit struct definitions
-        for (id, t) in program.universe().all_types() {
+        for id in module.owned_types() {
+            let id = *id;
+            let t = universe.get_type(id);
             if let SmplType::Struct(ref struct_t) = *t {
                 self.emit_struct_type(id, struct_t);
                 self.line_pad();
@@ -40,13 +105,11 @@ impl RustGen {
         self.line_pad();
         self.emit_line("//#### START FUNCTION DEFINITIONS ####");
 
-        if let Some(id) = program.main() {
-            self.emit_line(&format!("fn main() {{ {}(); }}", RustFnGen::fn_id(id)));
-        }
-
         // Emit function definitions
-        for (fn_id, ref func) in program.universe().all_fns() {
-            let func_type = program.universe().get_type(func.type_id());
+        for fn_id in module.owned_fns() {
+            let fn_id = *fn_id;
+            let func = universe.get_fn(fn_id);
+            let func_type = universe.get_type(func.type_id());
             let name = RustFnGen::fn_id(fn_id);
 
             let return_type_id;
@@ -74,13 +137,13 @@ impl RustGen {
             let return_type = RustFnGen::rustify_type(return_type);
 
             // Emit fn signature
-            match *program.universe().get_type(return_type_id) {
+            match *universe.get_type(return_type_id) {
                 SmplType::Unit => {
-                    self.emit(&format!("fn {} ({})", name, args));
+                    self.emit(&format!("pub fn {} ({})", name, args));
                 }
 
                 _ => {
-                    self.emit(&format!("fn {} (", name));
+                    self.emit(&format!("pub fn {} (", name));
                     self.emit(&args);
                     self.emit(&format!(") -> {} ", return_type));
                 }
@@ -103,9 +166,15 @@ impl RustGen {
         self.emit_line("//#### END FUNCTION DEFINITIONS ####");
     }
 
-    fn prelude(&mut self, universe: &Universe) {
+    fn prelude(&mut self, universe: &Universe, module: &Module) {
         self.emit_line("use std::cell::RefCell;");
         self.emit_line("use std::rc::Rc;");
+        self.line_pad();
+
+        // Import other SMPL modules
+        for d in module.dependencies() {
+            self.emit_line(&format!("use {}::*;", RustModGen::mod_id(*d)));
+        }
         self.line_pad();
 
         // Create TypeId aliases for primitives
@@ -145,12 +214,12 @@ impl RustGen {
             .collect::<Vec<_>>();
 
         self.emit_line("#[derive(Debug, PartialEq)]");
-        self.emit_line(&format!("struct {} {{", name));
+        self.emit_line(&format!("pub struct {} {{", name));
         self.shift_right();
         for &(ref name, ref string_type) in fields.iter() {
             let name = name;
-            let field_type = RustGen::rustify_type(string_type.to_string());
-            self.emit_line(&format!("{}: {},", name, field_type));
+            let field_type = RustModGen::rustify_type(string_type.to_string());
+            self.emit_line(&format!("pub {}: {},", name, field_type));
         }
         self.shift_left();
         self.emit_line("}");
@@ -575,7 +644,7 @@ impl<'a> RustGenFmt for RustFnGen<'a> {
     }
 }
 
-impl RustGenFmt for RustGen {
+impl RustGenFmt for RustModGen {
     fn output(&mut self) -> &mut String {
         &mut self.output
     }
@@ -647,6 +716,10 @@ trait RustGenFmt {
 
     fn type_id(id: TypeId) -> String {
         format!("_type{}", id.raw())
+    }
+
+    fn mod_id(id: ModuleId) -> String {
+        format!("_mod{}", id.raw())
     }
 
     fn new_value(str: String) -> String {

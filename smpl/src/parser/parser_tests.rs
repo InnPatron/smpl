@@ -14,7 +14,7 @@ mod parser_tests {
 
     }
 }";
-            parse_Program(input).unwrap();
+            parse_module(input).unwrap();
         }
 
         {
@@ -62,15 +62,9 @@ fn if_complex() -> i32 {
 		return 2;
 	}
 }";
-            let ast = parse_Program(input).unwrap();
-            for decl in ast.0.iter() {
-                match *decl {
-                    DeclStmt::Struct(ref s) => println!("{:?}", s),
-                    DeclStmt::Function(ref f) => println!("{:?}", f),
-                }
-            }
-            assert_eq!(ast.0.len(), 5);
-    }
+            let ast = parse_module(input).unwrap();
+            assert_eq!(ast.1.len(), 5);
+        }
     }
 
     #[test]

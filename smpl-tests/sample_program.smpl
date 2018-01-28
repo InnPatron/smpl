@@ -1,3 +1,5 @@
+use sample_dependency;
+
 struct Point {
 	x: i32,
 	y: i32,
@@ -28,6 +30,10 @@ fn test_1(a: i32, b: i32) {
 }
 
 fn main() {
+
+	let t: sample_dependency.Test = init sample_dependency.Test {
+		field: false,
+	};
 
 	let point: Point = init Point {
 		x: 5,

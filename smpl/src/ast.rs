@@ -4,9 +4,20 @@ use std::slice::Iter;
 
 use ascii::AsciiString;
 
-pub struct Program(pub Vec<DeclStmt>);
+pub struct Module(pub Option<Ident>, pub Vec<DeclStmt>);
+
+impl Module {
+    pub fn name(&self) -> Option<&Ident> {
+        self.0.as_ref()
+    }
+
+    pub fn set_name(&mut self, new: AsciiString) {
+        self.0 = Some(Ident(new));
+    }
+}
 
 pub enum DeclStmt {
+    Use(UseDecl),
     Struct(Struct),
     Function(Function),
 }
@@ -22,6 +33,9 @@ impl From<Function> for DeclStmt {
         DeclStmt::Function(f)
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UseDecl(pub Ident);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
@@ -163,14 +177,14 @@ pub enum Expr {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
-    pub name: Ident,
+    pub path: Path,
     pub args: Option<Vec<Expr>>,
 }
 
 impl FnCall {
-    pub fn new(name: Ident, args: Option<Vec<Expr>>) -> FnCall {
+    pub fn new(path: Path, args: Option<Vec<Expr>>) -> FnCall {
         FnCall {
-            name: name,
+            path: path,
             args: args,
         }
     }

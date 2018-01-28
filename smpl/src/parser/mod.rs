@@ -1,5 +1,5 @@
 use lalrpop_util::ParseError;
-use super::ast::Program;
+use super::ast::Module;
 use err::Err;
 
 #[cfg(not(test))]
@@ -15,9 +15,9 @@ pub use self::lalr_parser::*;
 mod parser_tests;
 
 
-pub fn parse_program(input: &str) -> Result<Program, Err>{
+pub fn parse_module(input: &str) -> Result<Module, Err>{
     let input = prune_input(input);
-    lalr_parser::parse_Program(&input).map_err(|e| Err::ParseErr(format!("{:?}", e)))
+    lalr_parser::parse_Module(&input).map_err(|e| Err::ParseErr(format!("{:?}", e)))
 }
 
 fn prune_input(input: &str) -> String {

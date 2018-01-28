@@ -3,56 +3,218 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use err::Err;
-use ast::{Path, DeclStmt, Struct, Function as AstFunction, Program as AstProgram};
+use ast::{Ident, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
 
 use super::smpl_type::*;
 use super::semantic_data::*;
+use super::semantic_data::Module;
 use super::control_flow::CFG;
 use super::fn_analyzer::analyze_fn;
 
-pub fn check(program: AstProgram) -> Result<Program, Err> {
+pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
     let mut universe = Universe::std();
-    let mut global_scope = universe.std_scope().clone();
 
-    let mut main = None;
+    let program = program.into_iter()
+        .map(|ast_module| ModuleCkData::new(&universe, ast_module))
+        .collect::<Result<Vec<_>, _>>()?;
 
-    for decl_stmt in program.0.into_iter() {
-        match decl_stmt {
-            DeclStmt::Struct(struct_def) => {
-                let struct_t = generate_struct_type(&global_scope, struct_def)?;
-                let id = universe.new_type_id();
-                
-                global_scope.insert_type(struct_t.name.clone().into(), id);
-                universe.insert_type(id, SmplType::Struct(struct_t));
-            },
+    let mut queue = program;
 
-            DeclStmt::Function(fn_def) => {
-                let name: Path = fn_def.name.clone().into();
+    loop {
+        let start_count = queue.len();
+        let mut queue_iter = queue.into_iter();
+        queue = Vec::new();
 
-                let type_id = universe.new_type_id();
+        for mut module in queue_iter {
+            match check_module(&mut universe, module)? {
+                ModuleCkSignal::Success => (),
+                ModuleCkSignal::Defer(data) => queue.push(data),
+            }       
+        }
 
-                let fn_type = generate_fn_type(&global_scope, &universe, &fn_def)?;
-                let cfg = CFG::generate(&universe, fn_def, &fn_type)?;
+        let end_count = queue.len();
+        if end_count == 0 {
+            // No more use declarations to resolve.
+            break;
+        } else if end_count == start_count {
+            let mut unresolved = Vec::new();
+            for mod_uses in queue.into_iter().map(|module| module.unresolved_module_uses) {
+                let mod_uses = mod_uses.into_iter().map(|u| u.0);
+                unresolved.extend(mod_uses);
+            }
 
-                let fn_id = universe.new_fn_id();
-                universe.insert_fn(fn_id, type_id, fn_type, cfg);
-                global_scope.insert_fn(name.clone(), fn_id);
-
-                let func = universe.get_fn(fn_id);
-                analyze_fn(&universe, &global_scope, func.cfg(), fn_id)?;
-
-                if name == path!("main") {
-                    if main.is_some() {
-                        return Err(Err::MultipleMainFns);
-                    } else {
-                        main = Some(fn_id);
-                    }
-                }
-            },
+            return Err(Err::UnresolvedUses(unresolved));
+        } else if end_count > start_count {
+            unreachable!();
         }
     }
+
+    let mut main = None;
+    for (_, mod_id) in universe.all_modules().into_iter() {
+        let module = universe.get_module(*mod_id);
+        if let Ok(id) = module.module_scope().get_fn(&path!("main")) {
+            if main.is_none() {
+                main = Some((id, *mod_id))
+            } else {
+                return Err(Err::MultipleMainFns);
+            }
+        }
+    }
+
+    Ok(Program::new(universe, main))
+}
+
+fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<ModuleCkSignal, Err> {
+    let module_name = module.name.clone();
+
+    let mut missing_modules = Vec::new();
+    for use_decl in module.unresolved_module_uses.into_iter() {
+        match universe.module_id(&use_decl.0) {
+            Some(id) => {
+                let imported_name = use_decl.0.clone();
+                let imported_module = universe.get_module(id);
+                let imported_scope = imported_module.module_scope();
+
+                let all_types = imported_scope.all_types()
+                                              .into_iter()
+                                              .map(|(path, id)| {
+                                                  let mut path = path.clone();
+                                                  path.0.insert(0, imported_name.clone());
+                                                  
+                                                  (path, id.clone())
+                                              })
+                                              .collect::<HashMap<_, _>>();
+                let all_fns = imported_scope.all_fns()
+                                            .into_iter()
+                                            .map(|(path, id)| {
+                                                let mut path = path.clone();
+                                                path.0.insert(0, imported_name.clone());
+                                                  
+                                                (path, id.clone())
+                                            })
+                                            .collect::<HashMap<_,_>>();
+
+                // Bring imported types into scope
+                for (path, imported) in all_types.into_iter() {
+                    if module.module_scope.insert_type(path.clone(), imported).is_some() {
+                        panic!("Should not have overrwritten {}. Paths should be unique by prefixing with the originating module.", path);
+                    }
+                }
+
+                // Bring imported functions into scope
+                for(path, imported) in all_fns.into_iter() {
+                    module.module_scope.insert_fn(path, imported);
+                }
+
+                module.dependencies.push(id)
+            }
+            None => missing_modules.push(use_decl),
+        }
+    }
+
+    if missing_modules.len() > 0 {
+        module.unresolved_module_uses = missing_modules;
+        // Unknown module. Differ checking till later
+        return Ok(ModuleCkSignal::Defer(module));
+    }
+
+    let mut unresolved = module.unresolved_module_structs;
+    loop {
+        let start_count = unresolved.len();
+        let mut struct_iter = unresolved.into_iter();
+
+        unresolved = Vec::new();
+        for struct_decl in struct_iter {
+            let struct_t = match generate_struct_type(&module.module_scope, &struct_decl) {
+                Ok(s) => s,
+                Err(e) => {
+                    match e {
+                        Err::UnknownType(_) => {
+                            unresolved.push(struct_decl);
+                            continue;
+                        }
+                        e => return Err(e),
+                    }
+                }
+            };
+
+            let id = universe.new_type_id();
+            module.module_scope.insert_type(struct_t.name.clone().into(), id);
+            universe.insert_type(id, SmplType::Struct(struct_t));
+            module.owned_types.push(id);
+        }
+
+        let end_count = unresolved.len();
+        if end_count == 0 {
+            // No more struct declarations to resolve.
+            break;
+        } else if end_count == start_count {
+            // No struct declarations were resolved. Return error.
+            return Err(Err::UnresolvedStructs(unresolved.into_iter().map(|s| s.name).collect()));
+        } else if end_count > start_count {
+            unreachable!();
+        }
+    }
+
+    let mut unresolved = module.unresolved_module_fns;
+    loop {
+        let start_count = unresolved.len();
+        let mut module_fn_iter = unresolved.into_iter();
+
+        unresolved = Vec::new();
+        for fn_decl in module_fn_iter {
+            let name: Path = fn_decl.name.clone().into();
+
+            let type_id = universe.new_type_id();
+
+            let fn_type = generate_fn_type(&module.module_scope, &universe, &fn_decl)?;
+
+            let cfg = CFG::generate(&universe, fn_decl.clone(), &fn_type)?;
+
+            let fn_id = universe.new_fn_id();
+            universe.insert_fn(fn_id, type_id, fn_type, cfg);
+            module.module_scope.insert_fn(name.clone(), fn_id);
+            module.owned_fns.push(fn_id);
+
+            match analyze_fn(&universe, &module.module_scope, 
+                             universe.get_fn(fn_id).cfg(), fn_id)  {
+                Ok(f) => f,
+                Err(e) => {
+                    match e {
+                        Err::UnknownFn(_) => {
+                            module.owned_fns.pop();
+                            universe.unmap_fn(fn_id);
+                            unresolved.push(fn_decl);
+                            continue;
+                        }
+                        e => return Err(e),
+                    }
+                }
+            }
+        }
+
+        let end_count = unresolved.len();
+        if end_count == 0 {
+            // No more function declarations to resolve.
+            break;
+        } else if end_count == start_count {
+            // No function declarations were resolved. Return error.
+            return Err(Err::UnresolvedFns(unresolved.into_iter().map(|f| f.name).collect()));
+        } else if end_count > start_count {
+            unreachable!();
+        }
+    }
+
+    let module_id = universe.new_module_id();
+
+    let module = Module::new(module.module_scope, 
+                             module.owned_types, 
+                             module.owned_fns, 
+                             module.dependencies,
+                             module_id);
+    universe.map_module(module_id, module_name, module);
     
-    Ok(Program::new(universe, global_scope, main))
+    Ok(ModuleCkSignal::Success)
 }
 
 fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunction) -> Result<FunctionType, Err> {
@@ -78,20 +240,19 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunctio
     })
 }
 
-fn generate_struct_type(scope: &ScopedData, struct_def: Struct) -> Result<StructType, Err> {
-    let struct_name = struct_def.name;
+fn generate_struct_type(scope: &ScopedData, struct_def: &Struct) -> Result<StructType, Err> {
     let mut fields = HashMap::new();
-    if let Some(body) = struct_def.body.0 {
-        for field in body.into_iter() {
-            let f_name = field.name;
-            let f_type_path = field.field_type;
-            let field_type = scope.type_id(&f_type_path)?;
+    if let Some(ref body) = struct_def.body.0 {
+        for field in body.iter() {
+            let f_name = field.name.clone();
+            let f_type_path = &field.field_type;
+            let field_type = scope.type_id(f_type_path)?;
             fields.insert(f_name, field_type);
         }
     } 
 
     let struct_t = StructType {
-        name: struct_name,
+        name: struct_def.name.clone(),
         fields: fields,
     };
 
@@ -107,7 +268,9 @@ mod tests {
     #[test]
     fn basic_test_semantic_analysis() {
         let program =
-"struct Test {
+"mod basic_test_semantic_analysis;
+
+struct Test {
     field_1: i32,
     field_2: f32,
     field_3: String,
@@ -123,8 +286,8 @@ fn main() {
     }
 }
 ";
-        let program = parse_Program(program).unwrap();
-        let program = check(program).unwrap();
+        let program = parse_module(program).unwrap();
+        let program = check_program(vec![program]).unwrap();
 
         let universe = program.universe();
 
@@ -144,7 +307,9 @@ fn main() {
         use super::super::typed_ast::*;
 
         let input = 
-"fn arg_usage(a1: i32, a2: bool) {
+"mod call_fn_success;
+
+fn arg_usage(a1: i32, a2: bool) {
 	let b1: i32 = a1;
 	let b2: bool = a2;
 }
@@ -153,8 +318,8 @@ fn main() {
 	arg_usage(5, false);
 }";
         
-        let ast = parse_Program(input).unwrap();
-        let program = check(ast).unwrap();
+        let program = parse_module(input).unwrap();
+        let program = check_program(vec![program]).unwrap();
 
         let main = program.main().unwrap();
 
@@ -193,7 +358,9 @@ fn main() {
     #[test]
     fn embedded_ifs_analysis() {
         let input =
-"fn test() {
+"mod embedded_ifs_analysis;
+
+fn test() {
     if true {
         if false {
 
@@ -205,8 +372,8 @@ fn main() {
     }
 }";
 
-        let ast = parse_Program(input).unwrap();
-        match check(ast) {
+        let program = parse_module(input).unwrap();
+        match check_program(vec![program]) {
             Ok(_) => panic!("Passed analysis. Expected Err::UnknownVar"),
             Err(e) => {
                 match e {
@@ -223,24 +390,32 @@ fn main() {
     #[test]
     fn missing_return() {
         let input_0 =
-"fn test() -> i32 {
+"mod missing_return_0;
+
+fn test() -> i32 {
     
 }";
 
         let input_1 = 
-"fn test() -> i32 {
+"mod missing_return_1;
+
+fn test() -> i32 {
     let a: i32 = 5;
 }";
 
         let input_2 = 
-"fn test() -> i32 {
+"mod missing_return_2;
+
+fn test() -> i32 {
     if true {
         return 0;
     }
 }";
 
         let input_3 =
-"fn test() -> i32 {
+"mod missing_return_3;
+
+fn test() -> i32 {
     if true {
 
 
@@ -250,7 +425,9 @@ fn main() {
 }";
 
         let input_4 =
-"fn test() -> i32 {
+"mod missing_return_4;
+
+fn test() -> i32 {
     if true {
         return 0;
     } else {
@@ -259,7 +436,9 @@ fn main() {
 }";
 
         let input_5 =
-"fn test() -> i32 {
+"mod missing_return_5;
+        
+fn test() -> i32 {
     if true {
         if true {
 
@@ -272,7 +451,10 @@ fn main() {
 }";
 
         let input_6 =
-"fn test() -> i32 {
+
+"mod missing_return_6;
+
+fn test() -> i32 {
     if true {
         return 0;
     } else {
@@ -287,8 +469,8 @@ fn main() {
         let input = vec![input_0, input_1, input_2, input_3, input_4, input_5, input_6];
 
         for i in 0..input.len() {
-            let ast = parse_Program(input[i]).unwrap();
-            match check(ast) {
+            let program = parse_module(input[i]).unwrap();
+            match check_program(vec![program]) {
                 Ok(_) => panic!("Passed analysis. Expected Err::ControlFlowErr(ControlFlowErr::MissingReturn. Test {}", i),
                 Err(e) => {
                     match e {
@@ -310,19 +492,25 @@ fn main() {
     #[test]
     fn all_required_returns() {
         let input_0 =
-"fn test() -> i32 {
+"mod all_required_returns_0;
+
+fn test() -> i32 {
     return 0;
 }";
 
         let input_1 = 
-"fn test() -> i32 {
+"mod all_required_returns_1;
+        
+fn test() -> i32 {
     let a: i32 = 5;
 
     return 0;
 }";
 
         let input_2 = 
-"fn test() -> i32 {
+"mod all_required_returns_2;
+
+fn test() -> i32 {
     if true {
         return 0;
     }
@@ -331,7 +519,9 @@ fn main() {
 }";
 
         let input_3 =
-"fn test() -> i32 {
+"mod all_required_returns_3;
+
+fn test() -> i32 {
     if true {
         return 0;
     } else {
@@ -340,7 +530,9 @@ fn main() {
 }";
 
         let input_4 =
-"fn test() -> i32 {
+"mod all_required_returns_4;
+
+fn test() -> i32 {
     if true {
         return 0;
     } else {
@@ -349,7 +541,9 @@ fn main() {
 }";
 
         let input_5 =
-"fn test() -> i32 {
+"mod all_required_returns_5;
+
+fn test() -> i32 {
     if true {
         if true {
             return 0;
@@ -362,7 +556,9 @@ fn main() {
 }";
 
         let input_6 =
-"fn test() -> i32 {
+"mod all_required_returns_6;
+
+fn test() -> i32 {
     if true {
         return 0;
     } else {
@@ -377,8 +573,74 @@ fn main() {
         let input = vec![input_0, input_1, input_2, input_3, input_4, input_5, input_6];
 
         for i in 0..input.len() {
-            let ast = parse_Program(input[i]).unwrap();
-            check(ast).expect(&format!("Test  {} failed.", i));
+            let program = parse_module(input[i]).unwrap();
+            check_program(vec![program]).expect(&format!("Test  {} failed.", i));
         }
+    }
+
+    #[test]
+    fn fn_out_of_order() {
+        let input =
+"mod fn_out_of_order;
+
+fn A() {
+    B();
+}
+
+fn B() {
+
+}";
+
+        let program = parse_module(input).unwrap();
+        check_program(vec![program]).unwrap();
+    }
+
+    #[test]
+    fn struct_out_of_order() {
+        let input =
+"mod struct_out_of_order;
+
+struct A {
+    field: B,
+}
+
+struct B{
+    field: i32,
+}";
+
+        let program = parse_module(input).unwrap();
+        check_program(vec![program]).unwrap();
+    }
+
+    #[test]
+    fn mods_out_of_order() {
+        let mod1 =
+"mod mod1;
+
+use mod2;
+
+struct A {
+    field: mod2.B,
+}
+
+fn test() {
+    mod2.test();
+}";
+
+        let mod2 =
+"mod mod2;
+
+struct B {
+    field: i32,
+}
+
+fn test() {
+    
+}
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        let mod2 = parse_module(mod2).unwrap();
+        check_program(vec![mod1, mod2]).unwrap();
     }
 }

@@ -265,7 +265,7 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
             }
 
             Value::FnCall(ref fn_call) => {
-                let fn_id = scope.get_fn(&fn_call.name().clone().into())?;
+                let fn_id = scope.get_fn(&fn_call.path().clone())?;
                 let func = universe.get_fn(fn_id);
                 let fn_type_id = func.type_id();
                 let fn_type = universe.get_type(fn_type_id);

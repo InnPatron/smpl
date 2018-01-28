@@ -10,6 +10,10 @@ pub enum Err {
     UnknownType(Path),
     UnknownVar(Ident),
     UnknownFn(Path),
+    UnresolvedUses(Vec<Ident>),
+    UnresolvedStructs(Vec<Ident>),
+    UnresolvedFns(Vec<Ident>),
+    MissingModName,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
