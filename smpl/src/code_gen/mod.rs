@@ -1,7 +1,8 @@
 mod rust_gen;
+mod x86_gen;
 
 pub use self::rust_gen::RustBackend;
-
+pub use self::x86_gen::X86Backend;
 struct StringEmitter {
     output: String,
     shift: u32,
