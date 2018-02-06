@@ -7,7 +7,7 @@ mod control_flow;
 mod expr_flow;
 mod fn_analyzer;
 mod linear_cfg_traversal;
-mod metadata;
+pub mod metadata;
 
 pub use self::semantic_ck::check_program;
 pub use self::typed_ast::*;
@@ -15,4 +15,3 @@ pub use self::semantic_data::*;
 pub use self::linear_cfg_traversal::{Traverser, Passenger};
 pub use self::semantic_data::{Program, Module};
 pub use self::control_flow::{CFG, Node};
-pub use self::metadata::{Metadata, FnMetadata};
