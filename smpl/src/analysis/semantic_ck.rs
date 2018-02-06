@@ -28,7 +28,7 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
         queue = Vec::new();
 
         for mut module in queue_iter {
-            match check_module(&mut universe, module)? {
+            match check_module(&mut universe, &mut metadata, module)? {
                 ModuleCkSignal::Success => (),
                 ModuleCkSignal::Defer(data) => queue.push(data),
             }       
@@ -56,7 +56,7 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
     Ok(Program::new(universe, metadata))
 }
 
-fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<ModuleCkSignal, Err> {
+fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: ModuleCkData) -> Result<ModuleCkSignal, Err> {
     let module_name = module.name.clone();
 
     let mut missing_modules = Vec::new();
@@ -117,7 +117,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
 
         unresolved = Vec::new();
         for struct_decl in struct_iter {
-            let struct_t = match generate_struct_type(&module.module_scope, &struct_decl) {
+            let (struct_t, order) = match generate_struct_type(&module.module_scope, &struct_decl) {
                 Ok(s) => s,
                 Err(e) => {
                     match e {
@@ -134,6 +134,9 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
             module.module_scope.insert_type(struct_t.name.clone().into(), id);
             universe.insert_type(id, SmplType::Struct(struct_t));
             module.owned_types.push(id);
+
+            let struct_metadata = StructMetadata::new(id, order);
+            metadata.insert_struct_data(id, struct_metadata);
         }
 
         let end_count = unresolved.len();
@@ -232,7 +235,7 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunctio
     })
 }
 
-fn generate_struct_type(scope: &ScopedData, struct_def: &Struct) -> Result<StructType, Err> {
+fn generate_struct_type(scope: &ScopedData, struct_def: &Struct) -> Result<(StructType, Vec<Ident>), Err> {
     let mut fields = HashMap::new();
     let mut order = Vec::new();
     if let Some(ref body) = struct_def.body.0 {
@@ -250,7 +253,7 @@ fn generate_struct_type(scope: &ScopedData, struct_def: &Struct) -> Result<Struc
         fields: fields,
     };
 
-    Ok(struct_t)
+    Ok((struct_t, order))
 }
 
 #[cfg(test)]
