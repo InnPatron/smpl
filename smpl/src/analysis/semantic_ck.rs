@@ -171,7 +171,7 @@ fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: Mo
             module.module_scope.insert_fn(name.clone(), fn_id);
             module.owned_fns.push(fn_id);
 
-            match analyze_fn(&universe, &module.module_scope, 
+            match analyze_fn(&universe, metadata, &module.module_scope, 
                              universe.get_fn(fn_id).cfg(), fn_id)  {
                 Ok(f) => f,
                 Err(e) => {

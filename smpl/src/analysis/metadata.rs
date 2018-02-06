@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use ast::Ident;
 use err::Err;
-use analysis::semantic_data::{TypeId, ModuleId, FnId, Universe};
+use analysis::semantic_data::{VarId, TypeId, ModuleId, FnId, Universe};
 
 #[derive(Clone, Debug)]
 pub struct Metadata {
@@ -24,6 +24,12 @@ impl Metadata {
     pub fn insert_struct_data(&mut self, id: TypeId, data: StructMetadata) {
         if self.struct_meta.insert(id, data).is_some() {
             panic!("Overwriting for struct {}", id);
+        }
+    }
+
+    pub fn insert_fn_data(&mut self, id: FnId, data: FnMetadata) {
+        if self.fn_meta.insert(id, data).is_some() {
+            panic!("Overwriting for fn {}", id);
         }
     }
 
@@ -51,7 +57,28 @@ impl Metadata {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnMetadata {
-    local_vars: Vec<TypeId>,
+    locals: Vec<(VarId, TypeId)>,
+    params: Vec<(VarId, TypeId)>,
+
+    ret_ty: TypeId,
+}
+
+impl FnMetadata {
+    pub fn new(locals: Vec<(VarId, TypeId)>, params: Vec<(VarId, TypeId)>, ret_ty: TypeId) -> FnMetadata {
+        FnMetadata {
+            locals: locals,
+            params: params,
+            ret_ty: ret_ty,
+        }
+    }
+
+    pub fn locals(&self) -> &[(VarId, TypeId)] {
+        &self.locals
+    }
+
+    pub fn params(&self) -> &[(VarId, TypeId)] {
+        &self.params
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
