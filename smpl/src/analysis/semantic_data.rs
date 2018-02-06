@@ -6,21 +6,22 @@ use err::Err;
 use ast::*;
 use ast::{Module as AstModule, Function as AstFunction};
 
+use super::metadata::Metadata;
 use super::smpl_type::*;
 use super::smpl_type::FnParameter;
 use super::control_flow::CFG;
 
 pub struct Program {
     universe: Universe,
-    main: Option<(FnId, ModuleId)>,
+    metadata: Metadata,
 }
 
 impl Program {
 
-    pub fn new(universe: Universe, main: Option<(FnId, ModuleId)>) -> Program {
+    pub fn new(universe: Universe, metadata: Metadata) -> Program {
         Program {
             universe: universe,
-            main: main,
+            metadata: metadata,
         }
     }
 
@@ -28,8 +29,8 @@ impl Program {
         &self.universe
     }
 
-    pub fn main(&self) -> Option<(FnId, ModuleId)> {
-        self.main
+    pub fn metadata(&self) -> &Metadata {
+        &self.metadata
     }
 }
 

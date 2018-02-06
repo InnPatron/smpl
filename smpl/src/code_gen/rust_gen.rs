@@ -33,7 +33,7 @@ impl RustBackend {
 
     pub fn generate(mut self, program: &Program) -> RustBackend {
 
-        self.main = program.main().map(|(fn_id, mod_id)| {
+        self.main = program.metadata().main().map(|(fn_id, mod_id)| {
             if self.mod_wrap {
                 format!("fn main() {{ {}::{}(); }}\n\n", 
                         RustFnGen::mod_id(mod_id),

@@ -5,6 +5,7 @@ use std::rc::Rc;
 use err::Err;
 use ast::{Ident, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
 
+use super::metadata::*;
 use super::smpl_type::*;
 use super::semantic_data::*;
 use super::semantic_data::Module;
@@ -12,6 +13,7 @@ use super::control_flow::CFG;
 use super::fn_analyzer::analyze_fn;
 
 pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
+    let mut metadata = Metadata::new();
     let mut universe = Universe::std();
 
     let program = program.into_iter()
@@ -49,19 +51,9 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
         }
     }
 
-    let mut main = None;
-    for (_, mod_id) in universe.all_modules().into_iter() {
-        let module = universe.get_module(*mod_id);
-        if let Ok(id) = module.module_scope().get_fn(&path!("main")) {
-            if main.is_none() {
-                main = Some((id, *mod_id))
-            } else {
-                return Err(Err::MultipleMainFns);
-            }
-        }
-    }
+    metadata.find_main(&universe)?;   
 
-    Ok(Program::new(universe, main))
+    Ok(Program::new(universe, metadata))
 }
 
 fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<ModuleCkSignal, Err> {
