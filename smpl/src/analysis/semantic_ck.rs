@@ -242,18 +242,21 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunctio
 
 fn generate_struct_type(scope: &ScopedData, struct_def: &Struct) -> Result<StructType, Err> {
     let mut fields = HashMap::new();
+    let mut order = Vec::new();
     if let Some(ref body) = struct_def.body.0 {
         for field in body.iter() {
             let f_name = field.name.clone();
             let f_type_path = &field.field_type;
             let field_type = scope.type_id(f_type_path)?;
-            fields.insert(f_name, field_type);
+            fields.insert(f_name.clone(), field_type);
+            order.push(f_name);
         }
     } 
 
     let struct_t = StructType {
         name: struct_def.name.clone(),
         fields: fields,
+        order: order,
     };
 
     Ok(struct_t)
