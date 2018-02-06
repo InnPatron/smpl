@@ -19,7 +19,6 @@ pub enum SmplType {
 pub struct StructType {
     pub name: Ident,
     pub fields: HashMap<Ident, TypeId>,
-    pub order: Vec<Ident>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

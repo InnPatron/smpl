@@ -248,7 +248,6 @@ fn generate_struct_type(scope: &ScopedData, struct_def: &Struct) -> Result<Struc
     let struct_t = StructType {
         name: struct_def.name.clone(),
         fields: fields,
-        order: order,
     };
 
     Ok(struct_t)
