@@ -53,6 +53,14 @@ impl Metadata {
     pub fn main(&self) -> Option<(FnId, ModuleId)> {
         self.main
     }
+
+    pub fn struct_data(&self, id: TypeId) -> &StructMetadata {
+        self.struct_meta.get(&id).unwrap()
+    }
+
+    pub fn fn_data(&self, id: FnId) -> &FnMetadata {
+        self.fn_meta.get(&id).unwrap()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
