@@ -1,8 +1,17 @@
 mod rust_gen;
 mod x86_64_gen;
+mod layout;
 
 pub use self::rust_gen::RustBackend;
 pub use self::x86_64_gen::X86_64Backend;
+
+use analysis::TypeId;
+
+pub trait ASMBackend {
+    fn layout(&self, id: TypeId) -> self::layout::Layout;
+
+    fn byte_alignment(&self) -> usize;
+}
 struct StringEmitter {
     output: String,
     shift: u32,
