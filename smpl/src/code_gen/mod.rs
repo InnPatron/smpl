@@ -8,7 +8,7 @@ pub use self::x86_64_gen::X86_64Backend;
 use analysis::TypeId;
 
 pub trait ASMBackend {
-    fn layout(&self, id: TypeId) -> self::layout::Layout;
+    fn layout(&self, id: TypeId) -> &self::layout::Layout;
 
     fn byte_alignment(&self) -> usize;
 }
