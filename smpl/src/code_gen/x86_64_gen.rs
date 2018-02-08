@@ -6,41 +6,93 @@ use analysis::smpl_type::*;
 use analysis::metadata::*;
 use analysis::{Universe, TypeId};
 
+const FLOAT_SIZE: usize = 4;
+const INT_SIZE: usize = 4;
+const BOOL_SIZE: usize = 1;
+
 const BYTE_ALIGNMENT: usize = 8;
 
 pub struct X86_64Backend {
-    type_sizes: HashMap<TypeId, usize>,
-    struct_layouts: HashMap<TypeId, StructLayout>,
+    layouts: HashMap<TypeId, Layout>,
     byte_alignment: usize,
 }
 
 impl X86_64Backend {
 
-    pub fn new(universe: &Universe) -> X86_64Backend {
+    pub fn new(universe: &Universe, byte_alignment: usize) -> X86_64Backend {
         let std_sizes = vec![
             // (universe.unit(), 0),
-            (universe.int(), 4),
-            (universe.float(), 4),
+            (universe.int(), INT_SIZE),
+            (universe.float(), FLOAT_SIZE),
             // (universe.string(), 8),
-            (universe.boolean(), 1),
+            (universe.boolean(), BOOL_SIZE),
         ];
+
+        let std_layouts = std_sizes.into_iter()
+            .map(|(id, size)| (id, Layout::FlatData(DataLayout::new(size, byte_alignment))));
 
 
         X86_64Backend {
-            type_sizes: std_sizes.into_iter().collect(),
-            struct_layouts: HashMap::new(),
-            byte_alignment: BYTE_ALIGNMENT,
+            layouts: std_layouts.collect(),
+            byte_alignment: byte_alignment,
         }
     }
 
-    fn size(&self, id: TypeId) -> usize {
-        *self.type_sizes.get(&id).unwrap()
+    fn total_size(&self, id: TypeId) -> usize {
+        let layout = self.layouts.get(&id).unwrap();
+        layout.total_size()
     }
 }
 
+#[derive(Debug)]
+enum Layout {
+    FlatData(DataLayout),
+    Struct(StructLayout),
+}
+
+impl Layout {
+    fn total_size(&self) -> usize {
+        match *self {
+            Layout::FlatData(ref l) => l.total_size(),
+            Layout::Struct(ref l) => l.layout().total_size(),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct DataLayout {
+    data_size: usize,
+    padding: usize,
+}
+
+impl DataLayout {
+    pub fn new(size: usize, alignment: usize) -> DataLayout {
+        let data_size = size;
+        let padding = data_size % alignment;
+
+        DataLayout {
+            data_size: data_size,
+            padding: padding
+        }
+    }
+
+    fn total_size(&self) -> usize {
+        self.data_size + self.padding
+    }
+
+    fn data_size(&self) -> usize {
+        self.data_size
+    }
+
+    fn padding(&self) -> usize {
+        self.padding
+    }
+}
+
+#[derive(Debug)]
 struct StructLayout {
-    fields: HashMap<Ident, (usize, usize)>,     // (offset, size)
-    size: usize,
+    fields: HashMap<Ident, (usize, DataLayout)>,        // Offset
+    data_layout: DataLayout,
 }
 
 impl StructLayout {
@@ -53,21 +105,31 @@ impl StructLayout {
         let mut current_offset = 0;
         for field in meta.order() {
             let field_type = *(struct_t.fields.get(field).unwrap());
-            let field_size = backend.size(field_type);
-            let padding = field_size % backend.byte_alignment;
+            let field_size = backend.total_size(field_type);
 
-            let total_field_size = field_size + padding;
+            let data_layout = DataLayout::new(field_size, backend.byte_alignment);
+            let total_field_size = data_layout.total_size();
 
-            fields.insert(field.clone(), (current_offset, total_field_size));
+            fields.insert(field.clone(), (current_offset, data_layout));
 
             current_offset += total_field_size;
             total_size += total_field_size;
         }
+
+        let struct_layout = DataLayout::new(total_size, backend.byte_alignment);
         
         StructLayout {
             fields: fields,
-            size: total_size,
+            data_layout: struct_layout,
         }
+    }
+
+    fn layout(&self) -> &DataLayout {
+        &self.data_layout
+    }
+
+    fn fields(&self) -> &HashMap<Ident, (usize, DataLayout)> {
+        &self.fields
     }
 }
 
