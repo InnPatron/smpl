@@ -5,7 +5,7 @@ use analysis::metadata::*;
 use analysis::{Program, Universe, TypeId};
 
 use super::ASMBackend;
-use code_gen::layout::*;
+use super::layout::*;
 
 const FLOAT_SIZE: usize = 4;
 const INT_SIZE: usize = 4;
