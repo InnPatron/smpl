@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
-use code_gen::layout::*;
-
 use analysis::smpl_type::*;
 use analysis::metadata::*;
-use analysis::{Universe, TypeId};
+use analysis::{Program, Universe, TypeId};
+
+use super::ASMBackend;
+use code_gen::layout::*;
 
 const FLOAT_SIZE: usize = 4;
 const INT_SIZE: usize = 4;
@@ -17,25 +18,85 @@ pub struct X86_64Backend {
     byte_alignment: usize,
 }
 
+impl ASMBackend for X86_64Backend {
+    fn layout(&self, id: TypeId) -> &Layout {
+        self.layouts.get(&id).unwrap().clone()
+    }
+
+    fn byte_alignment(&self) -> usize {
+        self.byte_alignment
+    }
+
+}
+
 impl X86_64Backend {
 
-    pub fn new(universe: &Universe, byte_alignment: usize) -> X86_64Backend {
-        let std_sizes = vec![
-            // (universe.unit(), 0),
-            (universe.int(), INT_SIZE),
-            (universe.float(), FLOAT_SIZE),
-            // (universe.string(), 8),
-            (universe.boolean(), BOOL_SIZE),
-        ];
-
-        let std_layouts = std_sizes.into_iter()
-            .map(|(id, size)| (id, Layout::FlatData(DataLayout::new(size, byte_alignment))));
-
-
-        X86_64Backend {
-            layouts: std_layouts.collect(),
+    pub fn new(program: &Program, byte_alignment: usize) -> X86_64Backend {
+        let mut backend = X86_64Backend {
+            layouts: HashMap::new(),
             byte_alignment: byte_alignment,
+        };
+
+        for (id, t) in program.universe().all_types().into_iter() {
+            if backend.layouts.contains_key(&id) {
+                continue;
+            } else {
+                backend.generate_layout(program, id, &*t);
+            }
         }
+
+
+        backend
+    }
+
+    fn generate_layout(&mut self, program: &Program,
+                       id: TypeId, t: &SmplType) {
+        let id = id;
+        let l = match *t {
+            SmplType::Int => {
+                Layout::FlatData(
+                    DataLayout::new(INT_SIZE, 
+                                    self.byte_alignment))
+            },
+
+            SmplType::Float => {
+                Layout::FlatData(
+                    DataLayout::new(FLOAT_SIZE, 
+                                    self.byte_alignment))
+            }
+
+            SmplType::Bool => {
+                Layout::FlatData(
+                    DataLayout::new(BOOL_SIZE, 
+                                    self.byte_alignment))
+            }
+
+            SmplType::Struct(ref t) => {
+                let universe = program.universe();
+                let metadata = program.metadata();
+                for (_, type_id) in t.fields.iter() {
+                    if self.layouts.contains_key(&type_id) == false {
+                        self.generate_layout(program, *type_id, 
+                                             &*universe.get_type(*type_id));
+                    }
+                }
+
+                let meta = metadata.struct_data(id);
+                Layout::Struct(
+                    StructLayout::new(self, 
+                                      universe, 
+                                      t,
+                                      meta))
+            }
+
+            SmplType::Function(_) => unimplemented!(),
+
+            SmplType::Unit => unimplemented!(),
+
+            SmplType::String => unimplemented!(),
+        };
+
+        self.layouts.insert(id, l);
     }
 
     fn total_size(&self, id: TypeId) -> usize {
