@@ -1,12 +1,13 @@
 use petgraph::graph::NodeIndex;
 
 use analysis::{Traverser, Passenger};
-use analysis::{CFG, Node, Expr, LocalVarDecl, Assignment};
+use analysis::{CFG, Node, Expr, LocalVarDecl, Assignment, FnId};
 
-use super::x86_64_gen::X86_64Backend;
-
+use super::fn_id;
+use super::x86_64_gen::*;
 
 pub struct x86_64FnGenerator<'a> {
+    id: FnId,
     output: String,
     shift: u32,
     cfg: &'a CFG,
@@ -45,11 +46,24 @@ impl<'a> x86_64FnGenerator<'a> {
 
 impl<'a> Passenger<()> for x86_64FnGenerator<'a> {
     fn start(&mut self, id: NodeIndex) -> Result<(), ()> {
-        unimplemented!();
+        let id = self.id;
+        self.emit_line(&format!("{}:", fn_id(id)));
+        self.shift_right();
+
+        // Save the stack base pointer
+        self.emit_line("push rbp");
+
+        // New stack base pointer
+        self.emit_line("mov rbp, rsp");
+        Ok(())
     }
 
     fn end(&mut self, id: NodeIndex) -> Result<(), ()> {
-        unimplemented!();
+        // Get the previous stack base pointer
+        self.emit_line("pop rbp");
+
+        self.emit_line("ret");
+        Ok(())
     }
 
     fn branch_merge(&mut self, id: NodeIndex) -> Result<(), ()> {
