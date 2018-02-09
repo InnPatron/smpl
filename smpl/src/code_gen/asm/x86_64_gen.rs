@@ -11,7 +11,8 @@ const FLOAT_SIZE: usize = 4;
 const INT_SIZE: usize = 4;
 const BOOL_SIZE: usize = 1;
 
-const BYTE_ALIGNMENT: usize = 8;
+pub const BYTE_ALIGNMENT: usize = 8;
+pub const POINTER_SIZE: usize = 8;
 
 pub struct X86_64Backend {
     layouts: HashMap<TypeId, Layout>,
