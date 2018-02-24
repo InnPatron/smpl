@@ -14,6 +14,23 @@ pub struct x86_64FnGenerator<'a> {
 }
 
 impl<'a> x86_64FnGenerator<'a> {
+
+    pub fn generate(id: FnId, cfg: &CFG) -> String {
+        let mut fn_gen = x86_64FnGenerator {
+            id: id,
+            output: String::new(),
+            shift: 0,
+            cfg: cfg,
+        };
+
+        {
+            let traverser = Traverser::new(cfg, &mut fn_gen);
+            traverser.traverse();
+        }
+
+        fn_gen.output
+    }
+
     fn shift_left(&mut self) {
         if self.shift > 0 {
             self.shift -= 1;
