@@ -7,7 +7,7 @@ use analysis::semantic_data::{VarId, TypeId, ModuleId, FnId, Universe};
 #[derive(Clone, Debug)]
 pub struct Metadata {
     fn_meta: HashMap<FnId, FnMetadata>,
-    struct_meta: HashMap<TypeId, StructMetadata>,
+    field_ordering: HashMap<TypeId, FieldOrdering>,
     main: Option<(FnId, ModuleId)>
 }
 
@@ -16,14 +16,14 @@ impl Metadata {
     pub fn new() -> Metadata {
         Metadata {
             fn_meta: HashMap::new(),
-            struct_meta: HashMap::new(),
+            field_ordering: HashMap::new(),
             main: None,
         }
     }
 
-    pub fn insert_struct_data(&mut self, id: TypeId, data: StructMetadata) {
-        if self.struct_meta.insert(id, data).is_some() {
-            panic!("Overwriting for struct {}", id);
+    pub fn insert_field_ordering(&mut self, id: TypeId, data: FieldOrdering) {
+        if self.field_ordering.insert(id, data).is_some() {
+            panic!("Overwriting field ordering for struct {}", id);
         }
     }
 
@@ -54,8 +54,8 @@ impl Metadata {
         self.main
     }
 
-    pub fn struct_data(&self, id: TypeId) -> &StructMetadata {
-        self.struct_meta.get(&id).unwrap()
+    pub fn field_ordering(&self, id: TypeId) -> &FieldOrdering {
+        self.field_ordering.get(&id).unwrap()
     }
 
     pub fn fn_data(&self, id: FnId) -> &FnMetadata {
@@ -90,14 +90,14 @@ impl FnMetadata {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct StructMetadata {
+pub struct FieldOrdering {
     id: TypeId,
     order: Vec<Ident>,
 }
 
-impl StructMetadata {
-    pub fn new(id: TypeId, order: Vec<Ident>) -> StructMetadata {
-        StructMetadata {
+impl FieldOrdering {
+    pub fn new(id: TypeId, order: Vec<Ident>) -> FieldOrdering {
+        FieldOrdering {
             id: id,
             order: order,
         }
