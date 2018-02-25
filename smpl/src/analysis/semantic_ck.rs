@@ -5,6 +5,7 @@ use std::rc::Rc;
 use err::Err;
 use ast::{Ident, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
 
+use super::metadata::*;
 use super::smpl_type::*;
 use super::semantic_data::*;
 use super::semantic_data::Module;
@@ -12,6 +13,7 @@ use super::control_flow::CFG;
 use super::fn_analyzer::analyze_fn;
 
 pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
+    let mut metadata = Metadata::new();
     let mut universe = Universe::std();
 
     let program = program.into_iter()
@@ -26,7 +28,7 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
         queue = Vec::new();
 
         for mut module in queue_iter {
-            match check_module(&mut universe, module)? {
+            match check_module(&mut universe, &mut metadata, module)? {
                 ModuleCkSignal::Success => (),
                 ModuleCkSignal::Defer(data) => queue.push(data),
             }       
@@ -49,22 +51,12 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
         }
     }
 
-    let mut main = None;
-    for (_, mod_id) in universe.all_modules().into_iter() {
-        let module = universe.get_module(*mod_id);
-        if let Ok(id) = module.module_scope().get_fn(&path!("main")) {
-            if main.is_none() {
-                main = Some((id, *mod_id))
-            } else {
-                return Err(Err::MultipleMainFns);
-            }
-        }
-    }
+    metadata.find_main(&universe)?;   
 
-    Ok(Program::new(universe, main))
+    Ok(Program::new(universe, metadata))
 }
 
-fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<ModuleCkSignal, Err> {
+fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: ModuleCkData) -> Result<ModuleCkSignal, Err> {
     let module_name = module.name.clone();
 
     let mut missing_modules = Vec::new();
@@ -125,7 +117,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
 
         unresolved = Vec::new();
         for struct_decl in struct_iter {
-            let struct_t = match generate_struct_type(&module.module_scope, &struct_decl) {
+            let (struct_t, order) = match generate_struct_type(&module.module_scope, &struct_decl) {
                 Ok(s) => s,
                 Err(e) => {
                     match e {
@@ -142,6 +134,9 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
             module.module_scope.insert_type(struct_t.name.clone().into(), id);
             universe.insert_type(id, SmplType::Struct(struct_t));
             module.owned_types.push(id);
+
+            let struct_metadata = StructMetadata::new(id, order);
+            metadata.insert_struct_data(id, struct_metadata);
         }
 
         let end_count = unresolved.len();
@@ -176,7 +171,7 @@ fn check_module(universe: &mut Universe, mut module: ModuleCkData) -> Result<Mod
             module.module_scope.insert_fn(name.clone(), fn_id);
             module.owned_fns.push(fn_id);
 
-            match analyze_fn(&universe, &module.module_scope, 
+            match analyze_fn(&universe, metadata, &module.module_scope, 
                              universe.get_fn(fn_id).cfg(), fn_id)  {
                 Ok(f) => f,
                 Err(e) => {
@@ -240,14 +235,16 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunctio
     })
 }
 
-fn generate_struct_type(scope: &ScopedData, struct_def: &Struct) -> Result<StructType, Err> {
+fn generate_struct_type(scope: &ScopedData, struct_def: &Struct) -> Result<(StructType, Vec<Ident>), Err> {
     let mut fields = HashMap::new();
+    let mut order = Vec::new();
     if let Some(ref body) = struct_def.body.0 {
         for field in body.iter() {
             let f_name = field.name.clone();
             let f_type_path = &field.field_type;
             let field_type = scope.type_id(f_type_path)?;
-            fields.insert(f_name, field_type);
+            fields.insert(f_name.clone(), field_type);
+            order.push(f_name);
         }
     } 
 
@@ -256,7 +253,7 @@ fn generate_struct_type(scope: &ScopedData, struct_def: &Struct) -> Result<Struc
         fields: fields,
     };
 
-    Ok(struct_t)
+    Ok((struct_t, order))
 }
 
 #[cfg(test)]

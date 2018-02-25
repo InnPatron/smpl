@@ -7,6 +7,7 @@ mod control_flow;
 mod expr_flow;
 mod fn_analyzer;
 mod linear_cfg_traversal;
+pub mod metadata;
 
 pub use self::semantic_ck::check_program;
 pub use self::typed_ast::*;

@@ -6,12 +6,14 @@ use petgraph::graph::NodeIndex;
 use ast;
 use err::*;
 
+use super::metadata::{Metadata, FnMetadata};
+
 
 use super::smpl_type::*;
 use super::linear_cfg_traversal::*;
 use super::control_flow::CFG;
 use super::typed_ast::*;
-use super::semantic_data::{FnId, ScopedData, TypeId, Universe};
+use super::semantic_data::{VarId, FnId, ScopedData, TypeId, Universe};
 
 
 struct FnAnalyzer<'a> {
@@ -20,10 +22,14 @@ struct FnAnalyzer<'a> {
     fn_return_type_id: TypeId,
     current_scope: ScopedData,
     scope_stack: Vec<ScopedData>,
+
+    // metadata
+    locals: Vec<(VarId, TypeId)>,
 }
 
 pub fn analyze_fn(
     universe: &Universe,
+    metadata: &mut Metadata,
     global_scope: &ScopedData,
     cfg: &CFG,
     fn_id: FnId,
@@ -49,7 +55,10 @@ pub fn analyze_fn(
         fn_return_type_id: fn_return_type_id,
         current_scope: global_scope.clone(),
         scope_stack: Vec::new(),
+        locals: Vec::new(),
     };
+
+    let mut param_types = Vec::new();
 
     // Add parameters to the current scope.
     for param in func_type.params.iter() {
@@ -58,11 +67,21 @@ pub fn analyze_fn(
             .current_scope
             .insert_var(param.name.clone(), var_id, param.param_type);
         param.set_var_id(var_id);
+
+        param_types.push((var_id, param.param_type));
     }
 
-    let traverser = Traverser::new(cfg, &mut analyzer);
+    // Restrain lifetime of traverser to move analyzer.locals
+    {
+        let traverser = Traverser::new(cfg, &mut analyzer);
 
-    traverser.traverse()?;
+        traverser.traverse()?;
+    }
+
+    metadata.insert_fn_data(fn_id, FnMetadata::new(
+            analyzer.locals, 
+            param_types,
+            fn_return_type_id));
 
     return_trace(cfg)
 }
@@ -477,6 +496,9 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         } else {
             return Err(TypeErr::LhsRhsInEq(var_type_id, expr_type_id).into());
         }
+        
+        // Local variable types metadata
+        self.locals.push((var_id, var_type_id));
 
         Ok(())
     }
