@@ -18,7 +18,7 @@ pub struct X86_64Backend {
     data: String,
 }
 
-struct Context {
+pub struct Context {
     layouts: HashMap<TypeId, Layout>,
     byte_alignment: usize,
 }
@@ -52,6 +52,10 @@ impl Context {
 
 
         backend
+    }
+
+    pub fn get_layout(&self, id: TypeId) -> &Layout {
+        self.layouts.get(&id).unwrap()
     }
 
     fn generate_layout(&mut self, program: &Program,
