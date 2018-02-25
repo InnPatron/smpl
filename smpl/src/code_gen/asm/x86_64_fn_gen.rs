@@ -1,27 +1,50 @@
+use std::collections::HashMap;
+
 use petgraph::graph::NodeIndex;
 
 use analysis::{Traverser, Passenger};
-use analysis::{CFG, Node, Expr, LocalVarDecl, Assignment, FnId};
+use analysis::{CFG, Node, Expr, LocalVarDecl, Assignment, FnId, VarId, TypeId};
+use analysis::smpl_type::FnParameter;
 
 use super::fn_id;
 use super::x86_64_gen::*;
 
-pub struct x86_64FnGenerator<'a> {
+pub struct x86_64FnGenerator<'a, 'b> {
     id: FnId,
     output: String,
     shift: u32,
     cfg: &'a CFG,
+    context: &'b Context,
+
+    stack_offset: usize,                // points to top of stack; in bytes
+    stack_map: HashMap<VarId, usize>,   // points to variables in stack; in bytes
 }
 
-impl<'a> x86_64FnGenerator<'a> {
+impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
-    pub fn generate(id: FnId, cfg: &CFG) -> String {
+    pub fn generate(id: FnId, params: Vec<FnParameter>, cfg: &CFG, context: &Context) -> String {
         let mut fn_gen = x86_64FnGenerator {
             id: id,
             output: String::new(),
             shift: 0,
             cfg: cfg,
+            context: context,
+            stack_offset: 0,
+            stack_map: HashMap::new(),
         };
+
+        // Reserve space on the stack for the return address and old stack pointer
+        fn_gen.reserve_stack_space(2 * POINTER_SIZE);
+        
+        // Reserve space on the stack for parameters
+        for p in params {
+            let var_id = p.var_id().unwrap();
+            let type_id = p.param_type;
+            let layout = fn_gen.context.get_layout(type_id);
+            let param_size = layout.total_size();
+
+            fn_gen.reserve_local_variable(var_id, param_size);
+        }
 
         {
             let traverser = Traverser::new(cfg, &mut fn_gen);
@@ -29,6 +52,15 @@ impl<'a> x86_64FnGenerator<'a> {
         }
 
         fn_gen.output
+    }
+
+    fn reserve_local_variable(&mut self, id: VarId, size: usize) {
+        self.stack_map.insert(id, self.stack_offset);
+        self.reserve_stack_space(size);
+    }
+
+    fn reserve_stack_space(&mut self, size: usize) {
+        self.stack_offset += size;
     }
 
     fn shift_left(&mut self) {
@@ -61,7 +93,7 @@ impl<'a> x86_64FnGenerator<'a> {
     }
 }
 
-impl<'a> Passenger<()> for x86_64FnGenerator<'a> {
+impl<'a, 'b> Passenger<()> for x86_64FnGenerator<'a, 'b> {
     fn start(&mut self, id: NodeIndex) -> Result<(), ()> {
         let id = self.id;
         self.emit_line(&format!("{}:", fn_id(id)));
