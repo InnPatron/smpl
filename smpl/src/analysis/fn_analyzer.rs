@@ -6,7 +6,7 @@ use petgraph::graph::NodeIndex;
 use ast;
 use err::*;
 
-use super::metadata::{Metadata, FnMetadata};
+use super::metadata::{Metadata, FnLayout};
 
 
 use super::smpl_type::*;
@@ -78,7 +78,7 @@ pub fn analyze_fn(
         traverser.traverse()?;
     }
 
-    metadata.insert_fn_data(fn_id, FnMetadata::new(
+    metadata.insert_fn_layout(fn_id, FnLayout::new(
             analyzer.locals, 
             param_types,
             fn_return_type_id));
