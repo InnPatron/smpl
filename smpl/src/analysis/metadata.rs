@@ -6,8 +6,8 @@ use analysis::semantic_data::{VarId, TypeId, ModuleId, FnId, Universe};
 
 #[derive(Clone, Debug)]
 pub struct Metadata {
-    fn_meta: HashMap<FnId, FnMetadata>,
-    struct_meta: HashMap<TypeId, StructMetadata>,
+    fn_layout: HashMap<FnId, FnLayout>,
+    field_ordering: HashMap<TypeId, FieldOrdering>,
     main: Option<(FnId, ModuleId)>
 }
 
@@ -15,20 +15,20 @@ impl Metadata {
 
     pub fn new() -> Metadata {
         Metadata {
-            fn_meta: HashMap::new(),
-            struct_meta: HashMap::new(),
+            fn_layout: HashMap::new(),
+            field_ordering: HashMap::new(),
             main: None,
         }
     }
 
-    pub fn insert_struct_data(&mut self, id: TypeId, data: StructMetadata) {
-        if self.struct_meta.insert(id, data).is_some() {
-            panic!("Overwriting for struct {}", id);
+    pub fn insert_field_ordering(&mut self, id: TypeId, data: FieldOrdering) {
+        if self.field_ordering.insert(id, data).is_some() {
+            panic!("Overwriting field ordering for struct {}", id);
         }
     }
 
-    pub fn insert_fn_data(&mut self, id: FnId, data: FnMetadata) {
-        if self.fn_meta.insert(id, data).is_some() {
+    pub fn insert_fn_layout(&mut self, id: FnId, data: FnLayout) {
+        if self.fn_layout.insert(id, data).is_some() {
             panic!("Overwriting for fn {}", id);
         }
     }
@@ -54,26 +54,26 @@ impl Metadata {
         self.main
     }
 
-    pub fn struct_data(&self, id: TypeId) -> &StructMetadata {
-        self.struct_meta.get(&id).unwrap()
+    pub fn field_ordering(&self, id: TypeId) -> &FieldOrdering {
+        self.field_ordering.get(&id).unwrap()
     }
 
-    pub fn fn_data(&self, id: FnId) -> &FnMetadata {
-        self.fn_meta.get(&id).unwrap()
+    pub fn fn_layout(&self, id: FnId) -> &FnLayout {
+        self.fn_layout.get(&id).unwrap()
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct FnMetadata {
+pub struct FnLayout {
     locals: Vec<(VarId, TypeId)>,
     params: Vec<(VarId, TypeId)>,
 
     ret_ty: TypeId,
 }
 
-impl FnMetadata {
-    pub fn new(locals: Vec<(VarId, TypeId)>, params: Vec<(VarId, TypeId)>, ret_ty: TypeId) -> FnMetadata {
-        FnMetadata {
+impl FnLayout {
+    pub fn new(locals: Vec<(VarId, TypeId)>, params: Vec<(VarId, TypeId)>, ret_ty: TypeId) -> FnLayout {
+        FnLayout {
             locals: locals,
             params: params,
             ret_ty: ret_ty,
@@ -90,14 +90,14 @@ impl FnMetadata {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct StructMetadata {
+pub struct FieldOrdering {
     id: TypeId,
     order: Vec<Ident>,
 }
 
-impl StructMetadata {
-    pub fn new(id: TypeId, order: Vec<Ident>) -> StructMetadata {
-        StructMetadata {
+impl FieldOrdering {
+    pub fn new(id: TypeId, order: Vec<Ident>) -> FieldOrdering {
+        FieldOrdering {
             id: id,
             order: order,
         }

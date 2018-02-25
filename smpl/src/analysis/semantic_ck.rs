@@ -135,8 +135,8 @@ fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: Mo
             universe.insert_type(id, SmplType::Struct(struct_t));
             module.owned_types.push(id);
 
-            let struct_metadata = StructMetadata::new(id, order);
-            metadata.insert_struct_data(id, struct_metadata);
+            let field_ordering = FieldOrdering::new(id, order);
+            metadata.insert_field_ordering(id, field_ordering);
         }
 
         let end_count = unresolved.len();
