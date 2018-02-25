@@ -90,12 +90,12 @@ impl Context {
                     }
                 }
 
-                let meta = metadata.struct_data(id);
                 Layout::Struct(
                     StructLayout::new(self, 
                                       universe, 
                                       t,
-                                      meta))
+                                      id,
+                                      metadata))
             }
 
             SmplType::Function(_) => unimplemented!(),

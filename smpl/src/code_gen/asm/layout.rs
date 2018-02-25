@@ -4,7 +4,7 @@ use super::ASMBackend;
 use ast::Ident;
 use analysis::metadata::*;
 use analysis::smpl_type::StructType;
-use analysis::Universe;
+use analysis::{Universe, TypeId};
 
 #[derive(Debug)]
 pub enum Layout {
@@ -59,13 +59,16 @@ pub struct StructLayout {
 
 impl StructLayout {
     pub fn new(backend: &ASMBackend, universe: &Universe, 
-               struct_t: &StructType, meta: &StructMetadata) -> StructLayout {
+               struct_t: &StructType, id: TypeId, meta: &Metadata) -> StructLayout {
 
         let mut fields = HashMap::new();
 
         let mut total_size = 0;
         let mut current_offset = 0;
-        for field in meta.order() {
+
+        let field_ordering = meta.field_ordering(id);
+
+        for field in field_ordering.order() {
             let field_type = *(struct_t.fields.get(field).unwrap());
             let field_size = backend.layout(field_type).total_size();
 
