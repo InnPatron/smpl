@@ -15,11 +15,15 @@ pub const BYTE_ALIGNMENT: usize = 8;
 pub const POINTER_SIZE: usize = 8;
 
 pub struct X86_64Backend {
+    data: String,
+}
+
+struct Context {
     layouts: HashMap<TypeId, Layout>,
     byte_alignment: usize,
 }
 
-impl ASMBackend for X86_64Backend {
+impl ASMBackend for Context {
     fn layout(&self, id: TypeId) -> &Layout {
         self.layouts.get(&id).unwrap().clone()
     }
@@ -30,10 +34,10 @@ impl ASMBackend for X86_64Backend {
 
 }
 
-impl X86_64Backend {
+impl Context {
 
-    pub fn new(program: &Program, byte_alignment: usize) -> X86_64Backend {
-        let mut backend = X86_64Backend {
+    pub fn new(program: &Program, byte_alignment: usize) -> Context {
+        let mut backend = Context {
             layouts: HashMap::new(),
             byte_alignment: byte_alignment,
         };
