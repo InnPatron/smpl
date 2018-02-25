@@ -4,7 +4,7 @@ use petgraph::graph::NodeIndex;
 
 use analysis::{Traverser, Passenger};
 use analysis::{CFG, Node, Expr, LocalVarDecl, Assignment, FnId, VarId, TypeId};
-use analysis::smpl_type::FnParameter;
+use analysis::metadata::Metadata;
 
 use super::fn_id;
 use super::x86_64_gen::*;
@@ -22,7 +22,7 @@ pub struct x86_64FnGenerator<'a, 'b> {
 
 impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
-    pub fn generate(id: FnId, params: Vec<FnParameter>, cfg: &CFG, context: &Context) -> String {
+    pub fn generate(id: FnId, meta: &Metadata, cfg: &CFG, context: &Context) -> String {
         let mut fn_gen = x86_64FnGenerator {
             id: id,
             output: String::new(),
@@ -36,10 +36,19 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         // Reserve space on the stack for the return address and old stack pointer
         fn_gen.reserve_stack_space(2 * POINTER_SIZE);
         
+        let layout = meta.fn_layout(id);
+
         // Reserve space on the stack for parameters
-        for p in params {
-            let var_id = p.var_id().unwrap();
-            let type_id = p.param_type;
+        for &(var_id, type_id) in layout.params() {
+            let layout = fn_gen.context.get_layout(type_id);
+            let param_size = layout.total_size();
+
+            fn_gen.reserve_local_variable(var_id, param_size);
+        }
+
+
+        // Reserve space on the stack for local variables 
+        for &(var_id, type_id) in layout.locals() {
             let layout = fn_gen.context.get_layout(type_id);
             let param_size = layout.total_size();
 
