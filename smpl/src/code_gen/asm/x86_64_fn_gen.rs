@@ -9,6 +9,11 @@ use analysis::metadata::Metadata;
 use super::fn_id;
 use super::x86_64_gen::*;
 
+pub struct x86_64Fn {
+    output: String,
+    param_total: usize,
+}
+
 pub struct x86_64FnGenerator<'a, 'b> {
     id: FnId,
     output: String,
@@ -22,7 +27,7 @@ pub struct x86_64FnGenerator<'a, 'b> {
 
 impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
-    pub fn generate(id: FnId, meta: &Metadata, cfg: &CFG, context: &Context) -> String {
+    pub fn generate(id: FnId, meta: &Metadata, cfg: &CFG, context: &Context) -> x86_64Fn {
         let mut fn_gen = x86_64FnGenerator {
             id: id,
             output: String::new(),
@@ -38,13 +43,10 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         
         let layout = meta.fn_layout(id);
 
-        // Reserve space on the stack for parameters
-        for &(var_id, type_id) in layout.params() {
+        let param_total = layout.params().iter().fold(0, | acc, &(_, type_id)| {
             let layout = fn_gen.context.get_layout(type_id);
-            let param_size = layout.total_size();
-
-            fn_gen.reserve_local_variable(var_id, param_size);
-        }
+            acc + layout.total_size()
+        });
 
 
         // Reserve space on the stack for local variables 
@@ -60,7 +62,10 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
             traverser.traverse();
         }
 
-        fn_gen.output
+        x86_64Fn {
+            output: fn_gen.output,
+            param_total: param_total
+        }
     }
 
     fn reserve_local_variable(&mut self, id: VarId, size: usize) {
