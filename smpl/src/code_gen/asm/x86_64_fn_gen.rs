@@ -16,8 +16,15 @@ pub struct x86_64Fn {
 
 pub struct x86_64FnGenerator<'a, 'b> {
     id: FnId,
-    output: String,
-    shift: u32,
+
+    prologue: String,
+    body: String,
+    epilogue: String,
+
+    prologue_shift: u32,
+    body_shift: u32,
+    epilogue_shift: u32,
+
     cfg: &'a CFG,
     context: &'b Context,
 
@@ -30,8 +37,14 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
     pub fn generate(id: FnId, meta: &Metadata, cfg: &CFG, context: &Context) -> x86_64Fn {
         let mut fn_gen = x86_64FnGenerator {
             id: id,
-            output: String::new(),
-            shift: 0,
+            prologue: String::new(),
+            body: String::new(),
+            epilogue: String::new(),
+
+            prologue_shift: 0,
+            body_shift: 0,
+            epilogue_shift: 0,
+
             cfg: cfg,
             context: context,
             param_map: HashMap::new(),
@@ -74,8 +87,13 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
             traverser.traverse();
         }
 
+        let mut output = String::new();
+        output.push_str(&fn_gen.prologue);
+        output.push_str(&fn_gen.body);
+        output.push_str(&fn_gen.epilogue);
+
         x86_64Fn {
-            output: fn_gen.output,
+            output: output,
             param_total: param_total
         }
     }
@@ -93,55 +111,136 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
             
     }
 
-    fn shift_left(&mut self) {
-        if self.shift > 0 {
-            self.shift -= 1;
+    fn shift_left(&mut self, loc: EmitLoc) {
+        use self::EmitLoc::*;
+        match loc {
+            Prologue => {
+                if self.prologue_shift > 0 {
+                    self.prologue_shift -= 1;
+                }
+            }
+
+            Body => {
+                if self.body_shift > 0 {
+                    self.body_shift -= 1;
+                }
+            }
+
+            Epilogue => {
+                if self.epilogue_shift > 0 {
+                    self.epilogue_shift -= 1;
+                }
+            }
         }
     }
 
-    fn shift_right(&mut self) {
-        if self.shift < <u32>::max_value() {
-            self.shift += 1;
+    fn shift_right(&mut self, loc: EmitLoc) {
+        use self::EmitLoc::*;
+        match loc {
+            Prologue => {
+                if self.prologue_shift < u32::max_value() {
+                    self.prologue_shift += 1;
+                }
+            }
+
+            Body => {
+                if self.body_shift < u32::max_value(){
+                    self.body_shift += 1;
+                }
+            }
+
+            Epilogue => {
+                if self.epilogue_shift < u32::max_value() {
+                    self.epilogue_shift += 1;
+                }
+            }
         }
     }
 
-    fn padding(&mut self) {
-        for _ in 0..self.shift {
-            self.output.push('\t');
+    fn padding(&mut self, loc: EmitLoc) {
+        use self::EmitLoc::*;
+        match loc {
+            Prologue => {
+                for _ in 0..self.prologue_shift {
+                    self.prologue.push('\t');
+                }
+            }
+
+            Body => {
+                for _ in 0..self.body_shift {
+                    self.body.push('\t');
+                }
+            }
+
+            Epilogue => {
+                for _ in 0..self.epilogue_shift {
+                    self.epilogue.push('\t');
+                }
+            }
         }
     }
 
-    fn emit_line(&mut self, str: &str) {
-        self.padding();
-        self.output.push_str(str);
-        self.output.push('\n');
+    fn emit_line(&mut self, str: &str, loc: EmitLoc) {
+        self.padding(loc);
+
+        use self::EmitLoc::*;
+        match loc {
+            Prologue => {
+                self.prologue.push_str(str);
+                self.prologue.push('\n');
+            }
+
+            Body => {
+                self.body.push_str(str);
+                self.body.push('\n');
+            }
+
+            Epilogue => {
+                self.epilogue.push_str(str);
+                self.epilogue.push('\n');
+            }
+        }
     }
 
-    fn emit(&mut self, str: &str) {
-        self.padding();
-        self.output.push_str(str);
+    fn emit(&mut self, str: &str, loc: EmitLoc) {
+        self.padding(loc);
+
+        use self::EmitLoc::*;
+        match loc {
+            Prologue => {
+                self.prologue.push_str(str);
+            }
+
+            Body => {
+                self.body.push_str(str);
+            }
+
+            Epilogue => {
+                self.epilogue.push_str(str);
+            }
+        }
     }
 }
 
 impl<'a, 'b> Passenger<()> for x86_64FnGenerator<'a, 'b> {
     fn start(&mut self, id: NodeIndex) -> Result<(), ()> {
         let id = self.id;
-        self.emit_line(&format!("{}:", fn_id(id)));
-        self.shift_right();
+        self.emit_line(&format!("{}:", fn_id(id)), EmitLoc::Prologue);
+        self.shift_right(EmitLoc::Prologue);
 
         // Save the stack base pointer
-        self.emit_line("push rbp");
+        self.emit_line("push rbp", EmitLoc::Prologue);
 
         // New stack base pointer
-        self.emit_line("mov rbp, rsp");
+        self.emit_line("mov rbp, rsp", EmitLoc::Prologue);
         Ok(())
     }
 
     fn end(&mut self, id: NodeIndex) -> Result<(), ()> {
         // Get the previous stack base pointer
-        self.emit_line("pop rbp");
+        self.emit_line("pop rbp", EmitLoc::Epilogue);
 
-        self.emit_line("ret");
+        self.emit_line("ret", EmitLoc::Epilogue);
         Ok(())
     }
 
@@ -233,4 +332,11 @@ impl<'a, 'b> Passenger<()> for x86_64FnGenerator<'a, 'b> {
 enum StackData {
     Local(usize),   // Below RBP
     Param(usize),   // Above RBP
+}
+
+#[derive(Clone, Copy)]
+enum EmitLoc {
+    Prologue,
+    Body,
+    Epilogue,
 }
