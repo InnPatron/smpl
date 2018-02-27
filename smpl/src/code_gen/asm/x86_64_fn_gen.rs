@@ -21,8 +21,8 @@ pub struct x86_64FnGenerator<'a, 'b> {
     cfg: &'a CFG,
     context: &'b Context,
 
-    stack_offset: usize,                // points to top of stack; in bytes
-    stack_map: HashMap<VarId, usize>,   // points to variables in stack; in bytes
+    param_map: HashMap<VarId, usize>,   // Above RBP
+    local_map: HashMap<VarId, usize>,   // Below RBP
 }
 
 impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
@@ -34,27 +34,39 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
             shift: 0,
             cfg: cfg,
             context: context,
-            stack_offset: 0,
-            stack_map: HashMap::new(),
+            param_map: HashMap::new(),
+            local_map: HashMap::new(),
         };
 
-        // Reserve space on the stack for the return address and old stack pointer
-        fn_gen.reserve_stack_space(2 * POINTER_SIZE);
-        
         let layout = meta.fn_layout(id);
 
-        let param_total = layout.params().iter().fold(0, | acc, &(_, type_id)| {
+        let mut param_total = 0;
+
+        // Stack grows down (high -> low)
+        
+        // [RBP + 0] is the old RBP
+        // [RBP + 8] is the return address
+        // Paramaters start at [RBP + 16]
+        // Data read/written low -> high (so old RBP is [RBP + 0] to execlusive [RBP + 8])
+        let mut param_tracker = 2 * POINTER_SIZE;
+        for &(var_id, type_id) in layout.params().into_iter().rev() {
             let layout = fn_gen.context.get_layout(type_id);
-            acc + layout.total_size()
-        });
+            param_total += layout.total_size();
 
+            fn_gen.param_map.insert(var_id, param_tracker);
+            param_tracker += layout.total_size();
+        }
 
-        // Reserve space on the stack for local variables 
+        // [RBP + 0] is the old RBP
+        // Data read/written low -> high
+        // First parameter is thus [RBP - Size] to exclusive [RBP + 0]
+        let mut var_tracker = 0;
         for &(var_id, type_id) in layout.locals() {
             let layout = fn_gen.context.get_layout(type_id);
             let param_size = layout.total_size();
 
-            fn_gen.reserve_local_variable(var_id, param_size);
+            var_tracker += layout.total_size();
+            fn_gen.local_map.insert(var_id, var_tracker);
         }
 
         {
@@ -68,13 +80,17 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         }
     }
 
-    fn reserve_local_variable(&mut self, id: VarId, size: usize) {
-        self.stack_map.insert(id, self.stack_offset);
-        self.reserve_stack_space(size);
-    }
+    fn locate_stack_data(&self, id: VarId) -> StackData {
+        if self.param_map.contains_key(&id) && self.local_map.contains_key(&id) {
+            panic!("{} was found in both the parameter and local stack mappings", id);
+        }
 
-    fn reserve_stack_space(&mut self, size: usize) {
-        self.stack_offset += size;
+        if self.param_map.contains_key(&id) {
+            StackData::Param(*self.param_map.get(&id).unwrap())
+        } else {
+            StackData::Local(*self.local_map.get(&id).unwrap())
+        }
+            
     }
 
     fn shift_left(&mut self) {
@@ -212,4 +228,9 @@ impl<'a, 'b> Passenger<()> for x86_64FnGenerator<'a, 'b> {
         // Do nothing
         Ok(())
     }
+}
+
+enum StackData {
+    Local(usize),   // Below RBP
+    Param(usize),   // Above RBP
 }
