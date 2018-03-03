@@ -777,7 +777,7 @@ if (test) {
             let mut branch_split_neighbors = neighbors!(cfg, branch_split);
 
             match *node_w!(cfg, branch_split) {
-                Node::BranchSplit => (),
+                Node::BranchSplit(_) => (),
                 ref n @ _ => panic!("Expected BranchSplit node. Found {:?}", n),
             }
 
@@ -834,7 +834,7 @@ if (test) {
                         } else if let Edge::False = *edge.weight() {
                             let target = edge.target();
 
-                            if let Node::BranchMerge = *cfg.graph.node_weight(target).unwrap() {
+                            if let Node::BranchMerge(_) = *cfg.graph.node_weight(target).unwrap() {
                                 merge = Some(target);
                             }
 
@@ -928,7 +928,7 @@ if (test) {
             let branch_split = enter_neighbors.next().unwrap();
             let mut branch_split_neighbors = neighbors!(cfg, branch_split);
             match *node_w!(cfg, branch_split) {
-                Node::BranchSplit => (), // Success
+                Node::BranchSplit(_) => (), // Success
 
                 ref n @ _ => panic!("Expected a condition node. Found {:?}", n),
             }
@@ -982,7 +982,7 @@ if (test) {
 
             let merge = exit_neighbors.next().unwrap();
             match *node_w!(cfg, merge) {
-                Node::BranchMerge => (),
+                Node::BranchMerge(_) => (),
 
                 ref n @ _ => panic!("Expected Node::BranchMerge. Found {:?}", n),
             }
@@ -1007,8 +1007,15 @@ if (test) {
             let false_target = false_target.unwrap();
 
             assert_eq!(truth_target, false_target);
-            assert_eq!(*node_w!(cfg, truth_target), Node::BranchMerge);
-            assert_eq!(*node_w!(cfg, false_target), Node::BranchMerge);
+            match *node_w!(cfg, truth_target) {
+                Node::BranchMerge(_) => (),
+                ref n @ _ => panic!("Expected BranchMerge. Found {:?}", n),
+            }
+
+            match *node_w!(cfg, false_target) {
+                Node::BranchMerge(_) => (),
+                ref n @ _ => panic!("Expected BranchMerge. Found {:?}", n),
+            }
 
             let branch_merge = truth_target;
             let mut branch_merge_neighbors = neighbors!(cfg, branch_merge);
