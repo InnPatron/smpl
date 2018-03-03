@@ -86,6 +86,11 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
             traverser.traverse();
         }
 
+
+        fn_gen.emit_prologue();
+        fn_gen.emit_epilogue();
+
+
         let mut output = String::new();
         output.push_str(&fn_gen.prologue);
         output.push_str(&fn_gen.body);
@@ -95,6 +100,25 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
             output: output,
             param_total: fn_gen.param_total,
         }
+    }
+
+    fn emit_prologue(&mut self) {
+        let id = self.id;
+        self.emit_line(&format!("{}:", fn_id(id)), EmitLoc::Prologue);
+        self.shift_right(EmitLoc::Prologue);
+
+        // Save the stack base pointer
+        self.emit_line("push rbp", EmitLoc::Prologue);
+
+        // New stack base pointer
+        self.emit_line("mov rbp, rsp", EmitLoc::Prologue);
+    }
+
+    fn emit_epilogue(&mut self) {
+        // Get the previous stack base pointer
+        self.emit_line("pop rbp", EmitLoc::Epilogue);
+
+        self.emit_line("ret", EmitLoc::Epilogue);
     }
 
     fn allocate_param(&mut self, id: VarId, size: usize) {
@@ -239,23 +263,12 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
 impl<'a, 'b> Passenger<()> for x86_64FnGenerator<'a, 'b> {
     fn start(&mut self, id: NodeIndex) -> Result<(), ()> {
-        let id = self.id;
-        self.emit_line(&format!("{}:", fn_id(id)), EmitLoc::Prologue);
-        self.shift_right(EmitLoc::Prologue);
-
-        // Save the stack base pointer
-        self.emit_line("push rbp", EmitLoc::Prologue);
-
-        // New stack base pointer
-        self.emit_line("mov rbp, rsp", EmitLoc::Prologue);
+        // Do nothing
         Ok(())
     }
 
     fn end(&mut self, id: NodeIndex) -> Result<(), ()> {
-        // Get the previous stack base pointer
-        self.emit_line("pop rbp", EmitLoc::Epilogue);
-
-        self.emit_line("ret", EmitLoc::Epilogue);
+        // Do nothing
         Ok(())
     }
 
