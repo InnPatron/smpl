@@ -77,6 +77,7 @@ pub enum Node {
 
     Expr(typed_ast::Expr),
 
+    BranchSplit,
     BranchMerge,
 
     Assignment(typed_ast::Assignment),
@@ -438,6 +439,8 @@ impl CFG {
                 match expr_stmt {
                     // All if statements begin and and with Node::BranchSplit and Node::BranchMerge
                     ExprStmt::If(if_data) => {
+                        append_node!(cfg, head, previous, Node::BranchSplit, Edge::Normal);
+
                         // All branches come back together at a Node::BranchMerge
                         let merge_node = cfg.graph.add_node(Node::BranchMerge);
 
@@ -454,6 +457,7 @@ impl CFG {
 
                             // Check if there was a previous condition / branch
                             let edge = if previous_condition.is_none() {
+                                // First condition, connected normally to Branch split
                                 Edge::Normal
                             } else {
                                 // Means that there was a previous condition and the current branch

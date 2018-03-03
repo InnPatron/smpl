@@ -458,6 +458,11 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
+    fn branch_split(&mut self, _id: NodeIndex) -> Result<(), ()> {
+        // Emit nothing
+        Ok(())
+    }
+
     fn branch_merge(&mut self, _id: NodeIndex) -> Result<(), ()> {
         // Emit nothing
         Ok(())

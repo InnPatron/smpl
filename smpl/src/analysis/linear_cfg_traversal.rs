@@ -8,7 +8,6 @@ use super::typed_ast::*;
 pub trait Passenger<E> {
     fn start(&mut self, id: NodeIndex) -> Result<(), E>;
     fn end(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn branch_merge(&mut self, id: NodeIndex) -> Result<(), E>;
     fn loop_head(&mut self, id: NodeIndex) -> Result<(), E>;
     fn loop_foot(&mut self, id: NodeIndex) -> Result<(), E>;
     fn cont(&mut self, id: NodeIndex) -> Result<(), E>;
@@ -24,6 +23,8 @@ pub trait Passenger<E> {
     fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
 
+    fn branch_split(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn branch_merge(&mut self, id: NodeIndex) -> Result<(), E>;
     fn branch_condition(&mut self, id: NodeIndex, e: &Expr) -> Result<(), E>;
     fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), E>;
@@ -76,6 +77,12 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
             Node::Start => {
                 self.passenger.start(current)?;
+                self.previous_is_loop_head = false;
+                Ok(Some(self.graph.next(current)))
+            }
+
+            Node::BranchSplit => {
+                self.passenger.branch_split(current)?;
                 self.previous_is_loop_head = false;
                 Ok(Some(self.graph.next(current)))
             }

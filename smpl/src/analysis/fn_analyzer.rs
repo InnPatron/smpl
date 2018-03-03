@@ -447,6 +447,10 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         Ok(())
     }
 
+    fn branch_split(&mut self, _id: NodeIndex) -> Result<(), Err> {
+        Ok(())
+    }
+
     fn branch_merge(&mut self, _id: NodeIndex) -> Result<(), Err> {
         Ok(())
     }
