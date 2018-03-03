@@ -112,9 +112,16 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
         // New stack base pointer
         self.emit_line("mov rbp, rsp", EmitLoc::Prologue);
+
+        let local_total = self.local_total;
+        // Allocate stack space for local variables
+        self.emit_line(&format!("sub rsp, {}", local_total), EmitLoc::Prologue);
     }
 
     fn emit_epilogue(&mut self) {
+        // Clear local variables by resetting stack pointer back to base
+        self.emit_line("mov rsp, rsb", EmitLoc::Epilogue);
+
         // Get the previous stack base pointer
         self.emit_line("pop rbp", EmitLoc::Epilogue);
 
