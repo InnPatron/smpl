@@ -99,32 +99,27 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
         let local_total = self.local_total;
         let id = self.id;
-        self.emitter(EmitLoc::Prologue, 
-                     |ref mut e| { 
-                        e.emit_line(&format!("{}:", fn_id(id)));
-                        e.shift_right();
-                        // Save the stack base pointer
-                        e.emit_line("push rbp");
 
-                        // New stack base pointer
-                        e.emit_line("mov rbp, rsp");
+        self.prologue.emit_line(&format!("{}:", fn_id(id)));
+        self.prologue.shift_right();
+        // Save the stack base pointer
+        self.prologue.emit_line("push rbp");
 
-                        // Allocate stack space for local variables
-                        e.emit_line(&format!("sub rsp, {}", local_total));
-                     });
+        // New stack base pointer
+        self.prologue.emit_line("mov rbp, rsp");
+
+        // Allocate stack space for local variables
+        self.prologue.emit_line(&format!("sub rsp, {}", local_total));
     }
 
     fn emit_epilogue(&mut self) {
-        self.emitter(EmitLoc::Epilogue,
-                     |ref mut e| {
-                        // Clear local variables by resetting stack pointer back to base
-                        e.emit_line("mov rsp, rsb");
+        // Clear local variables by resetting stack pointer back to base
+        self.epilogue.emit_line("mov rsp, rsb");
 
-                        // Get the previous stack base pointer
-                        e.emit_line("pop rbp");
+        // Get the previous stack base pointer
+        self.epilogue.emit_line("pop rbp");
 
-                        e.emit_line("ret");
-                     });
+        self.epilogue.emit_line("ret");
     }
 
     fn allocate_param(&mut self, id: VarId, size: usize) {
@@ -154,15 +149,6 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
             StackData::Local(*self.local_map.get(&id).unwrap())
         }
             
-    }
-
-    fn emitter<T>(&mut self, loc: EmitLoc, transform: T)
-        where T: FnOnce(&mut StringEmitter) {
-            match loc {
-                EmitLoc::Prologue => transform(&mut self.prologue),
-                EmitLoc::Body => transform(&mut self.body),
-                EmitLoc::Epilogue => transform(&mut self.epilogue),
-            }
     }
 }
 
@@ -265,11 +251,4 @@ impl<'a, 'b> Passenger<()> for x86_64FnGenerator<'a, 'b> {
 enum StackData {
     Local(usize),   // Below RBP
     Param(usize),   // Above RBP
-}
-
-#[derive(Clone, Copy)]
-enum EmitLoc {
-    Prologue,
-    Body,
-    Epilogue,
 }
