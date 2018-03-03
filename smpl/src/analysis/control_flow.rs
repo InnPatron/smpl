@@ -10,7 +10,7 @@ use err::ControlFlowErr;
 use super::smpl_type::{FunctionType, SmplType};
 use super::expr_flow;
 use super::typed_ast;
-use super::semantic_data::{LoopId, Universe};
+use super::semantic_data::{BranchingId, LoopId, Universe};
 
 macro_rules! node_w {
     ($CFG: expr, $node: expr) => {
@@ -77,8 +77,8 @@ pub enum Node {
 
     Expr(typed_ast::Expr),
 
-    BranchSplit,
-    BranchMerge,
+    BranchSplit(BranchingId),
+    BranchMerge(BranchingId),
 
     Assignment(typed_ast::Assignment),
     LocalVarDecl(typed_ast::LocalVarDecl),
@@ -311,7 +311,7 @@ impl CFG {
 
     pub fn before_branch_merge(&self, id: graph::NodeIndex) -> Vec<graph::NodeIndex> {
         match *self.node_weight(id) {
-            Node::BranchMerge => {
+            Node::BranchMerge(_) => {
                 self.neighbors_in(id).collect()
             }
 
@@ -439,10 +439,11 @@ impl CFG {
                 match expr_stmt {
                     // All if statements begin and and with Node::BranchSplit and Node::BranchMerge
                     ExprStmt::If(if_data) => {
-                        append_node!(cfg, head, previous, Node::BranchSplit, Edge::Normal);
+                        let id = universe.new_branching_id();
+                        append_node!(cfg, head, previous, Node::BranchSplit(id), Edge::Normal);
 
                         // All branches come back together at a Node::BranchMerge
-                        let merge_node = cfg.graph.add_node(Node::BranchMerge);
+                        let merge_node = cfg.graph.add_node(Node::BranchMerge(id));
 
                         let mut previous_condition = None;
 
