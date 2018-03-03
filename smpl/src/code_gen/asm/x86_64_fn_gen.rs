@@ -8,6 +8,7 @@ use analysis::metadata::Metadata;
 
 use super::fn_id;
 use super::x86_64_gen::*;
+use code_gen::StringEmitter;
 
 pub struct x86_64Fn {
     output: String,
@@ -17,13 +18,9 @@ pub struct x86_64Fn {
 pub struct x86_64FnGenerator<'a, 'b> {
     id: FnId,
 
-    prologue: String,
-    body: String,
-    epilogue: String,
-
-    prologue_shift: u32,
-    body_shift: u32,
-    epilogue_shift: u32,
+    prologue: StringEmitter,
+    body: StringEmitter,
+    epilogue: StringEmitter,
 
     cfg: &'a CFG,
     context: &'b Context,
@@ -42,13 +39,9 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
     pub fn generate(id: FnId, meta: &Metadata, cfg: &CFG, context: &Context) -> x86_64Fn {
         let mut fn_gen = x86_64FnGenerator {
             id: id,
-            prologue: String::new(),
-            body: String::new(),
-            epilogue: String::new(),
-
-            prologue_shift: 0,
-            body_shift: 0,
-            epilogue_shift: 0,
+            prologue: StringEmitter::new(),
+            body: StringEmitter::new(),
+            epilogue: StringEmitter::new(),
 
             cfg: cfg,
             context: context,
@@ -92,9 +85,9 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
 
         let mut output = String::new();
-        output.push_str(&fn_gen.prologue);
-        output.push_str(&fn_gen.body);
-        output.push_str(&fn_gen.epilogue);
+        output.push_str(&fn_gen.prologue.output());
+        output.push_str(&fn_gen.body.output());
+        output.push_str(&fn_gen.epilogue.output());
 
         x86_64Fn {
             output: output,
@@ -103,29 +96,35 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
     }
 
     fn emit_prologue(&mut self) {
-        let id = self.id;
-        self.emit_line(&format!("{}:", fn_id(id)), EmitLoc::Prologue);
-        self.shift_right(EmitLoc::Prologue);
-
-        // Save the stack base pointer
-        self.emit_line("push rbp", EmitLoc::Prologue);
-
-        // New stack base pointer
-        self.emit_line("mov rbp, rsp", EmitLoc::Prologue);
 
         let local_total = self.local_total;
-        // Allocate stack space for local variables
-        self.emit_line(&format!("sub rsp, {}", local_total), EmitLoc::Prologue);
+        let id = self.id;
+        self.emitter(EmitLoc::Prologue, 
+                     |ref mut e| { 
+                        e.emit_line(&format!("{}:", fn_id(id)));
+                        e.shift_right();
+                        // Save the stack base pointer
+                        e.emit_line("push rbp");
+
+                        // New stack base pointer
+                        e.emit_line("mov rbp, rsp");
+
+                        // Allocate stack space for local variables
+                        e.emit_line(&format!("sub rsp, {}", local_total));
+                     });
     }
 
     fn emit_epilogue(&mut self) {
-        // Clear local variables by resetting stack pointer back to base
-        self.emit_line("mov rsp, rsb", EmitLoc::Epilogue);
+        self.emitter(EmitLoc::Epilogue,
+                     |ref mut e| {
+                        // Clear local variables by resetting stack pointer back to base
+                        e.emit_line("mov rsp, rsb");
 
-        // Get the previous stack base pointer
-        self.emit_line("pop rbp", EmitLoc::Epilogue);
+                        // Get the previous stack base pointer
+                        e.emit_line("pop rbp");
 
-        self.emit_line("ret", EmitLoc::Epilogue);
+                        e.emit_line("ret");
+                     });
     }
 
     fn allocate_param(&mut self, id: VarId, size: usize) {
@@ -157,114 +156,13 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
             
     }
 
-    fn shift_left(&mut self, loc: EmitLoc) {
-        use self::EmitLoc::*;
-        match loc {
-            Prologue => {
-                if self.prologue_shift > 0 {
-                    self.prologue_shift -= 1;
-                }
+    fn emitter<T>(&mut self, loc: EmitLoc, transform: T)
+        where T: FnOnce(&mut StringEmitter) {
+            match loc {
+                EmitLoc::Prologue => transform(&mut self.prologue),
+                EmitLoc::Body => transform(&mut self.body),
+                EmitLoc::Epilogue => transform(&mut self.epilogue),
             }
-
-            Body => {
-                if self.body_shift > 0 {
-                    self.body_shift -= 1;
-                }
-            }
-
-            Epilogue => {
-                if self.epilogue_shift > 0 {
-                    self.epilogue_shift -= 1;
-                }
-            }
-        }
-    }
-
-    fn shift_right(&mut self, loc: EmitLoc) {
-        use self::EmitLoc::*;
-        match loc {
-            Prologue => {
-                if self.prologue_shift < u32::max_value() {
-                    self.prologue_shift += 1;
-                }
-            }
-
-            Body => {
-                if self.body_shift < u32::max_value(){
-                    self.body_shift += 1;
-                }
-            }
-
-            Epilogue => {
-                if self.epilogue_shift < u32::max_value() {
-                    self.epilogue_shift += 1;
-                }
-            }
-        }
-    }
-
-    fn padding(&mut self, loc: EmitLoc) {
-        use self::EmitLoc::*;
-        match loc {
-            Prologue => {
-                for _ in 0..self.prologue_shift {
-                    self.prologue.push('\t');
-                }
-            }
-
-            Body => {
-                for _ in 0..self.body_shift {
-                    self.body.push('\t');
-                }
-            }
-
-            Epilogue => {
-                for _ in 0..self.epilogue_shift {
-                    self.epilogue.push('\t');
-                }
-            }
-        }
-    }
-
-    fn emit_line(&mut self, str: &str, loc: EmitLoc) {
-        self.padding(loc);
-
-        use self::EmitLoc::*;
-        match loc {
-            Prologue => {
-                self.prologue.push_str(str);
-                self.prologue.push('\n');
-            }
-
-            Body => {
-                self.body.push_str(str);
-                self.body.push('\n');
-            }
-
-            Epilogue => {
-                self.epilogue.push_str(str);
-                self.epilogue.push('\n');
-            }
-        }
-    }
-
-    fn emit(&mut self, str: &str, loc: EmitLoc) {
-        self.padding(loc);
-
-        use self::EmitLoc::*;
-        match loc {
-            Prologue => {
-                self.prologue.push_str(str);
-            }
-
-            Body => {
-                self.body.push_str(str);
-            }
-
-            Epilogue => {
-                self.epilogue.push_str(str);
-            }
-        }
     }
 }
 
