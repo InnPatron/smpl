@@ -30,6 +30,11 @@ pub struct x86_64FnGenerator<'a, 'b> {
 
     param_map: HashMap<VarId, usize>,   // Above RBP
     local_map: HashMap<VarId, usize>,   // Below RBP
+
+    param_total: usize,
+    local_total: usize,
+    param_tracker: usize,
+    local_tracker: usize,
 }
 
 impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
@@ -49,11 +54,14 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
             context: context,
             param_map: HashMap::new(),
             local_map: HashMap::new(),
+
+            param_total: 0,
+            local_total: 0,
+            param_tracker: 0,
+            local_tracker: 0,
         };
 
         let layout = meta.fn_layout(id);
-
-        let mut param_total = 0;
 
         // Stack grows down (high -> low)
         
@@ -64,22 +72,13 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         let mut param_tracker = 2 * POINTER_SIZE;
         for &(var_id, type_id) in layout.params().into_iter().rev() {
             let layout = fn_gen.context.get_layout(type_id);
-            param_total += layout.total_size();
-
-            fn_gen.param_map.insert(var_id, param_tracker);
-            param_tracker += layout.total_size();
+            fn_gen.allocate_param(var_id, layout.total_size());
         }
 
-        // [RBP + 0] is the old RBP
-        // Data read/written low -> high
-        // First parameter is thus [RBP - Size] to exclusive [RBP + 0]
-        let mut var_tracker = 0;
+        
         for &(var_id, type_id) in layout.locals() {
             let layout = fn_gen.context.get_layout(type_id);
-            let param_size = layout.total_size();
-
-            var_tracker += layout.total_size();
-            fn_gen.local_map.insert(var_id, var_tracker);
+            fn_gen.allocate_local(var_id, layout.total_size());
         }
 
         {
@@ -94,8 +93,24 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
         x86_64Fn {
             output: output,
-            param_total: param_total
+            param_total: fn_gen.param_total,
         }
+    }
+
+    fn allocate_param(&mut self, id: VarId, size: usize) {
+        self.param_total += size;
+        self.param_map.insert(id, self.param_tracker);
+        self.param_tracker += size;
+    }
+
+    fn allocate_local(&mut self, id: VarId, size: usize) {
+        // [RBP + 0] is the old RBP
+        // Data read/written low -> high
+        // First parameter is thus [RBP - Size] to exclusive [RBP + 0]
+
+        self.local_total += size;
+        self.local_tracker += size;
+        self.local_map.insert(id, self.local_tracker);
     }
 
     fn locate_stack_data(&self, id: VarId) -> StackData {
