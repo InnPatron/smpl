@@ -10,7 +10,7 @@ use err::ControlFlowErr;
 use super::smpl_type::{FunctionType, SmplType};
 use super::expr_flow;
 use super::typed_ast;
-use super::semantic_data::{LoopId, Universe};
+use super::semantic_data::{BranchingId, LoopId, Universe};
 
 macro_rules! node_w {
     ($CFG: expr, $node: expr) => {
@@ -77,7 +77,8 @@ pub enum Node {
 
     Expr(typed_ast::Expr),
 
-    BranchMerge,
+    BranchSplit(BranchingId),
+    BranchMerge(BranchingId),
 
     Assignment(typed_ast::Assignment),
     LocalVarDecl(typed_ast::LocalVarDecl),
@@ -310,7 +311,7 @@ impl CFG {
 
     pub fn before_branch_merge(&self, id: graph::NodeIndex) -> Vec<graph::NodeIndex> {
         match *self.node_weight(id) {
-            Node::BranchMerge => {
+            Node::BranchMerge(_) => {
                 self.neighbors_in(id).collect()
             }
 
@@ -438,8 +439,11 @@ impl CFG {
                 match expr_stmt {
                     // All if statements begin and and with Node::BranchSplit and Node::BranchMerge
                     ExprStmt::If(if_data) => {
+                        let id = universe.new_branching_id();
+                        append_node!(cfg, head, previous, Node::BranchSplit(id), Edge::Normal);
+
                         // All branches come back together at a Node::BranchMerge
-                        let merge_node = cfg.graph.add_node(Node::BranchMerge);
+                        let merge_node = cfg.graph.add_node(Node::BranchMerge(id));
 
                         let mut previous_condition = None;
 
@@ -454,6 +458,7 @@ impl CFG {
 
                             // Check if there was a previous condition / branch
                             let edge = if previous_condition.is_none() {
+                                // First condition, connected normally to Branch split
                                 Edge::Normal
                             } else {
                                 // Means that there was a previous condition and the current branch
@@ -747,7 +752,7 @@ if (test) {
             assert_eq!(*cfg.graph.node_weight(cfg.start).unwrap(), Node::Start);
             assert_eq!(*cfg.graph.node_weight(cfg.end).unwrap(), Node::End);
 
-            // start -> enter_scope -> condition
+            // start -> enter_scope -> branch_split -> condition
             //      -[true]> {
             //          -> enter_scope
             //          -> var decl
@@ -755,7 +760,7 @@ if (test) {
             //      } ->        >>___ branch_merge ->
             //        -[false]> >>
             //      implicit return -> exit_scope -> end
-            assert_eq!(cfg.graph.node_count(), 10);
+            assert_eq!(cfg.graph.node_count(), 11);
 
             let mut start_neighbors = neighbors!(cfg, cfg.start);
 
@@ -767,8 +772,17 @@ if (test) {
             }
 
             let mut merge = None;
+
+            let branch_split = enter_neighbors.next().expect("Looking for BranchSplit");
+            let mut branch_split_neighbors = neighbors!(cfg, branch_split);
+
+            match *node_w!(cfg, branch_split) {
+                Node::BranchSplit(_) => (),
+                ref n @ _ => panic!("Expected BranchSplit node. Found {:?}", n),
+            }
+
             // Check condition node
-            let condition = enter_neighbors.next().expect("Looking for condition node");
+            let condition = branch_split_neighbors.next().expect("Looking for condition node");
             let condition_node = cfg.graph.node_weight(condition).unwrap();
             {
                 if let Node::Condition(_) = *condition_node {
@@ -820,7 +834,7 @@ if (test) {
                         } else if let Edge::False = *edge.weight() {
                             let target = edge.target();
 
-                            if let Node::BranchMerge = *cfg.graph.node_weight(target).unwrap() {
+                            if let Node::BranchMerge(_) = *cfg.graph.node_weight(target).unwrap() {
                                 merge = Some(target);
                             }
 
@@ -884,7 +898,7 @@ if (test) {
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
         {
-            // start -> enter_scope -> condition(B)
+            // start -> enter_scope -> branch_split -> condition(B)
             //      -[true]> {
             //          enter_scope ->
             //          local_var_decl ->
@@ -899,7 +913,7 @@ if (test) {
             // branch_merge(A) -> implicit_return -> exit_scope -> end
             //
 
-            assert_eq!(cfg.graph.node_count(), 11);
+            assert_eq!(cfg.graph.node_count(), 12);
 
             let mut start_neighbors = neighbors!(cfg, cfg.start);
             assert_eq!(start_neighbors.clone().count(), 1);
@@ -911,7 +925,15 @@ if (test) {
                 ref n @ _ => panic!("Expected to find Node::Enter. Found {:?}", n),
             }
 
-            let condition_b = enter_neighbors.next().unwrap();
+            let branch_split = enter_neighbors.next().unwrap();
+            let mut branch_split_neighbors = neighbors!(cfg, branch_split);
+            match *node_w!(cfg, branch_split) {
+                Node::BranchSplit(_) => (), // Success
+
+                ref n @ _ => panic!("Expected a condition node. Found {:?}", n),
+            }
+
+            let condition_b = branch_split_neighbors.next().unwrap();
             match *node_w!(cfg, condition_b) {
                 Node::Condition(_) => (), // Success
 
@@ -960,7 +982,7 @@ if (test) {
 
             let merge = exit_neighbors.next().unwrap();
             match *node_w!(cfg, merge) {
-                Node::BranchMerge => (),
+                Node::BranchMerge(_) => (),
 
                 ref n @ _ => panic!("Expected Node::BranchMerge. Found {:?}", n),
             }
@@ -985,8 +1007,15 @@ if (test) {
             let false_target = false_target.unwrap();
 
             assert_eq!(truth_target, false_target);
-            assert_eq!(*node_w!(cfg, truth_target), Node::BranchMerge);
-            assert_eq!(*node_w!(cfg, false_target), Node::BranchMerge);
+            match *node_w!(cfg, truth_target) {
+                Node::BranchMerge(_) => (),
+                ref n @ _ => panic!("Expected BranchMerge. Found {:?}", n),
+            }
+
+            match *node_w!(cfg, false_target) {
+                Node::BranchMerge(_) => (),
+                ref n @ _ => panic!("Expected BranchMerge. Found {:?}", n),
+            }
 
             let branch_merge = truth_target;
             let mut branch_merge_neighbors = neighbors!(cfg, branch_merge);

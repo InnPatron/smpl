@@ -8,7 +8,6 @@ use super::typed_ast::*;
 pub trait Passenger<E> {
     fn start(&mut self, id: NodeIndex) -> Result<(), E>;
     fn end(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn branch_merge(&mut self, id: NodeIndex) -> Result<(), E>;
     fn loop_head(&mut self, id: NodeIndex) -> Result<(), E>;
     fn loop_foot(&mut self, id: NodeIndex) -> Result<(), E>;
     fn cont(&mut self, id: NodeIndex) -> Result<(), E>;
@@ -24,6 +23,8 @@ pub trait Passenger<E> {
     fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
 
+    fn branch_split(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn branch_merge(&mut self, id: NodeIndex) -> Result<(), E>;
     fn branch_condition(&mut self, id: NodeIndex, e: &Expr) -> Result<(), E>;
     fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), E>;
@@ -80,7 +81,13 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 Ok(Some(self.graph.next(current)))
             }
 
-            Node::BranchMerge => {
+            Node::BranchSplit(id) => {
+                self.passenger.branch_split(current)?;
+                self.previous_is_loop_head = false;
+                Ok(Some(self.graph.next(current)))
+            }
+
+            Node::BranchMerge(id) => {
                 self.passenger.branch_merge(current)?;
                 self.previous_is_loop_head = false;
                 Ok(Some(self.graph.next(current)))
@@ -198,7 +205,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     let mut current_node = true_path;
                     for _ in 0..self.node_count {
                         match *self.graph.node_weight(current_node) {
-                            Node::BranchMerge => {
+                            Node::BranchMerge(id) => {
                                 self.passenger.branch_end_true_path(current_node)?;
                                 merge = Some(current_node);
                                 break;
@@ -224,7 +231,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     let mut merge = None;
                     for _ in 0..self.node_count {
                         match *self.graph.node_weight(current_node) {
-                            Node::BranchMerge => {
+                            Node::BranchMerge(id) => {
                                 self.passenger.branch_end_false_path(current_node)?;
                                 merge = Some(current_node);
                                 break;

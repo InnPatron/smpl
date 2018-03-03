@@ -191,6 +191,10 @@ impl Universe {
         LoopId(self.inc_counter())
     }
 
+    pub fn new_branching_id(&self) -> BranchingId {
+        BranchingId(self.inc_counter())
+    }
+
     pub fn new_module_id(&self) -> ModuleId {
         ModuleId(self.inc_counter())
     }
@@ -399,6 +403,15 @@ pub struct LoopId(u64);
 impl ::std::fmt::Display for LoopId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         write!(f, "LoopId[{}]", self.0)
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct BranchingId(u64);
+
+impl ::std::fmt::Display for BranchingId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "BranchingId[{}]", self.0)
     }
 }
 

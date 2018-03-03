@@ -125,7 +125,7 @@ fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, E
     match *cfg.node_weight(id) {
         Node::Return(_) => Ok(None),
 
-        Node::BranchMerge => Ok(Some(cfg.before_branch_merge(id))),
+        Node::BranchMerge(_) => Ok(Some(cfg.before_branch_merge(id))),
 
         Node::ExitScope => Ok(Some(vec![cfg.previous(id)])),
 
@@ -444,6 +444,10 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
     }
 
     fn end(&mut self, _id: NodeIndex) -> Result<(), Err> {
+        Ok(())
+    }
+
+    fn branch_split(&mut self, _id: NodeIndex) -> Result<(), Err> {
         Ok(())
     }
 
