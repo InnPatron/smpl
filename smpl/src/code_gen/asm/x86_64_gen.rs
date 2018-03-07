@@ -13,6 +13,7 @@ const BOOL_SIZE: usize = 1;
 
 pub const BYTE_ALIGNMENT: usize = 8;
 pub const POINTER_SIZE: usize = 8;
+pub const REGISTER_SIZE: usize = 8;
 
 pub struct X86_64Backend {
     data: String,

@@ -145,6 +145,17 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         self.local_map.insert(id, self.local_tracker);
     }
 
+    fn allocate_tmp(&mut self, id: VarId, size: usize) {
+
+        if size <= REGISTER_SIZE {
+            if let Some(r) = self.register_allocator.alloc() {
+                self.register_map.insert(id, r);
+            }
+        }
+
+        self.allocate_local(id, size);
+    }
+
     fn locate_data(&self, id: VarId) -> DataLocation {
         if self.param_map.contains_key(&id) && self.local_map.contains_key(&id) {
             panic!("{} was found in both the parameter and local stack mappings", id);
