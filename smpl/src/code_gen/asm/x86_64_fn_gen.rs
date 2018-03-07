@@ -156,6 +156,11 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         self.allocate_local(id, size);
     }
 
+    fn remap_register(&mut self, id: VarId, register: Register) {
+        self.register_map.remove(&id).unwrap();
+        self.register_map.insert(id, register);
+    }
+
     fn locate_data(&self, id: VarId) -> DataLocation {
         if self.param_map.contains_key(&id) && self.local_map.contains_key(&id) {
             panic!("{} was found in both the parameter and local stack mappings", id);
