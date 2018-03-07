@@ -119,7 +119,8 @@ enum Location {
     Register(Register),
 }
 
-enum Register {
+#[derive(Clone, Copy, PartialEq)]
+pub enum Register {
     // 64-bit   Lower 32 bites  Lower 16 bits   Lower 8 bites
     RAX,        EAX,            AX,             AL,
     RBX,        EBX,            BX,             BL,

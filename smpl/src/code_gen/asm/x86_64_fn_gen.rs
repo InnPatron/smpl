@@ -248,6 +248,39 @@ impl<'a, 'b> Passenger<()> for x86_64FnGenerator<'a, 'b> {
     }
 }
 
+struct RegisterAllocator {
+    registers: Vec<Register>,
+}
+
+impl RegisterAllocator {
+    fn new() -> RegisterAllocator {
+        RegisterAllocator {
+            registers: vec![
+                            Register::R8,
+                            Register::R9,
+                            Register::R10,
+                            Register::R11,
+                            Register::R12,
+                            Register::R13,
+                            Register::R14,
+                            Register::R15,
+            ]
+        }
+    }
+
+    fn alloc(&mut self) -> Option<Register> {
+        self.registers.pop()
+    }
+
+    fn dealloc(&mut self, r: Register) {
+        if self.registers.contains(&r) {
+            panic!("Attempting to deallocate register {} when it is already available", r);
+        }
+
+        self.registers.push(r);
+    }
+}
+
 enum StackData {
     Local(usize),   // Below RBP
     Param(usize),   // Above RBP
