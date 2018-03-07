@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use petgraph::graph::NodeIndex;
 
 use analysis::{Traverser, Passenger};
-use analysis::{CFG, Node, Expr, LocalVarDecl, Assignment, FnId, VarId, TypeId};
+use analysis::{CFG, Node, Expr, LocalVarDecl, Assignment, FnId, VarId, TypeId, DataId};
 use analysis::metadata::Metadata;
 
 use super::fn_id;
@@ -25,9 +25,9 @@ pub struct x86_64FnGenerator<'a, 'b> {
     cfg: &'a CFG,
     context: &'b Context,
 
-    param_map: HashMap<VarId, usize>,   // Above RBP
-    local_map: HashMap<VarId, usize>,   // Below RBP
-    register_map: HashMap<VarId, Register>,
+    param_map: HashMap<DataId, usize>,   // Above RBP
+    local_map: HashMap<DataId, usize>,   // Below RBP
+    register_map: HashMap<DataId, Register>,
 
     register_allocator: RegisterAllocator,
 
@@ -129,39 +129,40 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         self.epilogue.emit_line("ret");
     }
 
-    fn allocate_param(&mut self, id: VarId, size: usize) {
+    fn allocate_param<T: Into<DataId>>(&mut self, id: T, size: usize) {
         self.param_total += size;
-        self.param_map.insert(id, self.param_tracker);
+        self.param_map.insert(id.into(), self.param_tracker);
         self.param_tracker += size;
     }
 
-    fn allocate_local(&mut self, id: VarId, size: usize) {
+    fn allocate_local<T: Into<DataId>>(&mut self, id: T, size: usize) {
         // [RBP + 0] is the old RBP
         // Data read/written low -> high
         // First parameter is thus [RBP - Size] to exclusive [RBP + 0]
 
         self.local_total += size;
         self.local_tracker += size;
-        self.local_map.insert(id, self.local_tracker);
+        self.local_map.insert(id.into(), self.local_tracker);
     }
 
-    fn allocate_tmp(&mut self, id: VarId, size: usize) {
+    fn allocate_tmp<T: Into<DataId> + Copy>(&mut self, id: T, size: usize) {
 
         if size <= REGISTER_SIZE {
             if let Some(r) = self.register_allocator.alloc() {
-                self.register_map.insert(id, r);
+                self.register_map.insert(id.into(), r);
             }
         }
 
         self.allocate_local(id, size);
     }
 
-    fn remap_register(&mut self, id: VarId, register: Register) {
-        self.register_map.remove(&id).unwrap();
-        self.register_map.insert(id, register);
+    fn remap_register<T: Into<DataId> + Copy>(&mut self, id: T, register: Register) {
+        self.register_map.remove(&id.into()).unwrap();
+        self.register_map.insert(id.into(), register);
     }
 
-    fn locate_data(&self, id: VarId) -> DataLocation {
+    fn locate_data<T: Into<DataId>>(&self, id: T) -> DataLocation {
+        let id = id.into();
         if self.param_map.contains_key(&id) && self.local_map.contains_key(&id) {
             panic!("{} was found in both the parameter and local stack mappings", id);
         }
