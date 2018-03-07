@@ -129,13 +129,18 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         self.epilogue.emit_line("ret");
     }
 
-    fn allocate_param<T: Into<DataId>>(&mut self, id: T, size: usize) {
+    fn allocate_param<T: Into<DataId>>(&mut self, id: T, size: usize) -> DataLocation {
         self.param_total += size;
+
+        let loc = DataLocation::Local(self.local_tracker);
+
         self.param_map.insert(id.into(), self.param_tracker);
         self.param_tracker += size;
+
+        loc
     }
 
-    fn allocate_local<T: Into<DataId>>(&mut self, id: T, size: usize) {
+    fn allocate_local<T: Into<DataId>>(&mut self, id: T, size: usize) -> DataLocation {
         // [RBP + 0] is the old RBP
         // Data read/written low -> high
         // First parameter is thus [RBP - Size] to exclusive [RBP + 0]
@@ -143,17 +148,21 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         self.local_total += size;
         self.local_tracker += size;
         self.local_map.insert(id.into(), self.local_tracker);
+
+        DataLocation::Local(self.local_tracker)
     }
 
-    fn allocate_tmp<T: Into<DataId> + Copy>(&mut self, id: T, size: usize) {
+    fn allocate_tmp<T: Into<DataId> + Copy>(&mut self, id: T, size: usize) -> DataLocation {
 
         if size <= REGISTER_SIZE {
             if let Some(r) = self.register_allocator.alloc() {
                 self.register_map.insert(id.into(), r);
+
+                return DataLocation::Register(r);
             }
         }
 
-        self.allocate_local(id, size);
+        self.allocate_local(id, size)
     }
 
     fn remap_register<T: Into<DataId> + Copy>(&mut self, old: T, new: T) {
