@@ -156,9 +156,9 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         self.allocate_local(id, size);
     }
 
-    fn remap_register<T: Into<DataId> + Copy>(&mut self, id: T, register: Register) {
-        self.register_map.remove(&id.into()).unwrap();
-        self.register_map.insert(id.into(), register);
+    fn remap_register<T: Into<DataId> + Copy>(&mut self, old: T, new: T) {
+        let register = self.register_map.remove(&old.into()).unwrap();
+        self.register_map.insert(new.into(), register);
     }
 
     fn locate_data<T: Into<DataId>>(&self, id: T) -> DataLocation {
