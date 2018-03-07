@@ -353,6 +353,33 @@ impl TypeId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum DataId {
+    VarId(VarId),
+    TmpId(TmpId),
+}
+
+impl ::std::fmt::Display for DataId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        match *self {
+            DataId::VarId(ref id) => id.fmt(f),
+            DataId::TmpId(ref id) => id.fmt(f),
+        }
+    }
+}
+
+impl From<VarId> for DataId {
+    fn from(id: VarId) -> DataId {
+        DataId::VarId(id)
+    }
+}
+
+impl From<TmpId> for DataId {
+    fn from(id: TmpId) -> DataId {
+        DataId::TmpId(id)
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct VarId(u64);
 
 impl ::std::fmt::Display for VarId {
