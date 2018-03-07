@@ -7,9 +7,9 @@ use analysis::{Program, Universe, TypeId};
 use super::ASMBackend;
 use super::layout::*;
 
-const FLOAT_SIZE: usize = 4;
-const INT_SIZE: usize = 4;
-const BOOL_SIZE: usize = 1;
+pub const FLOAT_SIZE: usize = 4;
+pub const INT_SIZE: usize = 4;
+pub const BOOL_SIZE: usize = 1;
 
 pub const BYTE_ALIGNMENT: usize = 8;
 pub const POINTER_SIZE: usize = 8;
