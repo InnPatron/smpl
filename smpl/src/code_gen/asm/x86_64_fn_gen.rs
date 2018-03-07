@@ -27,6 +27,9 @@ pub struct x86_64FnGenerator<'a, 'b> {
 
     param_map: HashMap<VarId, usize>,   // Above RBP
     local_map: HashMap<VarId, usize>,   // Below RBP
+    register_map: HashMap<VarId, Register>,
+
+    register_allocator: RegisterAllocator,
 
     param_total: usize,
     local_total: usize,
@@ -47,6 +50,10 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
             context: context,
             param_map: HashMap::new(),
             local_map: HashMap::new(),
+            register_map: HashMap::new(),
+
+            
+            register_allocator: RegisterAllocator::new(),
 
             param_total: 0,
             local_total: 0,
@@ -138,17 +145,18 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         self.local_map.insert(id, self.local_tracker);
     }
 
-    fn locate_stack_data(&self, id: VarId) -> StackData {
+    fn locate_data(&self, id: VarId) -> DataLocation {
         if self.param_map.contains_key(&id) && self.local_map.contains_key(&id) {
             panic!("{} was found in both the parameter and local stack mappings", id);
         }
 
         if self.param_map.contains_key(&id) {
-            StackData::Param(*self.param_map.get(&id).unwrap())
+            DataLocation::Param(*self.param_map.get(&id).unwrap())
+        } else if self.param_map.contains_key(&id) {
+            DataLocation::Local(*self.local_map.get(&id).unwrap())
         } else {
-            StackData::Local(*self.local_map.get(&id).unwrap())
+            DataLocation::Register(*self.register_map.get(&id).unwrap())
         }
-            
     }
 }
 
@@ -281,7 +289,9 @@ impl RegisterAllocator {
     }
 }
 
-enum StackData {
+#[derive(Clone, Copy)]
+enum DataLocation {
     Local(usize),   // Below RBP
     Param(usize),   // Above RBP
+    Register(Register),
 }
