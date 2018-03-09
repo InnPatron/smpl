@@ -18,8 +18,8 @@ pub fn fn_id(id: FnId) -> String {
     format!("fn_{}", id.raw())
 }
 
-#[derive(Clone, Copy)]
-pub enum DataLocation<R> {
+#[derive(Clone, Copy, PartialEq)]
+pub enum DataLocation<R: PartialEq> {
     Local(usize), 
     Param(usize),
     Register(R),
