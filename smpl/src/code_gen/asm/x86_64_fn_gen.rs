@@ -208,6 +208,12 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
                     mov!(self, result_loc, value);
                 }
             }
+
+            Value::Variable(ref var) => {
+                let id = var.get_id().unwrap();
+                let stack_loc = stack_offset!(result_loc);
+                mov!(self, result_loc, stack_loc);
+            }
             _ => unimplemented!(),
         }
     }
