@@ -32,7 +32,7 @@ macro_rules! stack_offset {
 
 macro_rules! bin_op {
     ($op: expr) => {{
-        match op {
+        match $op {
             BinOp::Add => "add",
             BinOp::Sub => "sub",
             BinOp::Mul => "mul",
