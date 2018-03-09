@@ -18,3 +18,19 @@ macro_rules! mov {
         }
     }}
 }
+
+macro_rules! stack_offset {
+    ($location: expr) => {{
+        match $location {
+            DataLocation::Local(l) => {
+                format!("[rbp - {}]", l)
+            }
+
+            DataLocation::Param(p) => {
+                format!("[rbp + {}]", p)
+            }
+
+            DataLocation::Register(_) => unreachable!(),
+        }
+    }}
+}
