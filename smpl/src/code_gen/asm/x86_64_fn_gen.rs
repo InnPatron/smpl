@@ -6,7 +6,7 @@ use analysis::{Traverser, Passenger};
 use analysis::{CFG, Node, Expr, LocalVarDecl, Assignment, FnId, VarId, TypeId, DataId};
 use analysis::metadata::Metadata;
 
-use super::fn_id;
+use super::*;
 use super::x86_64_gen::*;
 use code_gen::StringEmitter;
 
@@ -129,7 +129,7 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         self.epilogue.emit_line("ret");
     }
 
-    fn allocate_param<T: Into<DataId>>(&mut self, id: T, size: usize) -> DataLocation {
+    fn allocate_param<T: Into<DataId>>(&mut self, id: T, size: usize) -> DataLocation<Register> {
         self.param_total += size;
 
         let loc = DataLocation::Local(self.local_tracker);
@@ -140,7 +140,7 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         loc
     }
 
-    fn allocate_local<T: Into<DataId>>(&mut self, id: T, size: usize) -> DataLocation {
+    fn allocate_local<T: Into<DataId>>(&mut self, id: T, size: usize) -> DataLocation<Register> {
         // [RBP + 0] is the old RBP
         // Data read/written low -> high
         // First parameter is thus [RBP - Size] to exclusive [RBP + 0]
@@ -152,7 +152,7 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         DataLocation::Local(self.local_tracker)
     }
 
-    fn allocate_tmp<T: Into<DataId> + Copy>(&mut self, id: T, size: usize) -> DataLocation {
+    fn allocate_tmp<T: Into<DataId> + Copy>(&mut self, id: T, size: usize) -> DataLocation<Register> {
 
         if size <= REGISTER_SIZE {
             if let Some(r) = self.register_allocator.alloc() {
@@ -170,7 +170,7 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         self.register_map.insert(new.into(), register);
     }
 
-    fn locate_data<T: Into<DataId>>(&self, id: T) -> DataLocation {
+    fn locate_data<T: Into<DataId>>(&self, id: T) -> DataLocation<Register> {
         let id = id.into();
         if self.param_map.contains_key(&id) && self.local_map.contains_key(&id) {
             panic!("{} was found in both the parameter and local stack mappings", id);

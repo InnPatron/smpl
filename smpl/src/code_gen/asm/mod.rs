@@ -1,5 +1,7 @@
 pub mod x86_64_gen;
 
+#[macro_use]
+mod nasm_macros;
 mod x86_64_fn_gen;
 mod layout;
 
@@ -16,8 +18,8 @@ pub fn fn_id(id: FnId) -> String {
 }
 
 #[derive(Clone, Copy)]
-pub enum DataLocation {
+pub enum DataLocation<R> {
     Local(usize), 
     Param(usize),
-    Register(Register),
+    Register(R),
 }
