@@ -1,18 +1,6 @@
 macro_rules! mov {
     ($destination: expr, $source: expr) => {{
-        match $destination {
-            DataLocation::Local(l) => {
-                format!("mov {}, {}", l, $source)
-            }
-
-            DataLocation::Param(p) => {
-                format!("mov {}, {}", p, $source)
-            }
-
-            DataLocation::Register(r) => {
-                format!("mov {}, {}", r, $source)
-            }
-        }
+        format!("mov {}, {}", $destination, $source)
     }}
 }
 
@@ -50,6 +38,7 @@ macro_rules! bin_op {
             BinOp::Mul => "mul",
             BinOp::Div => "div",
 
+            _ => unimplemented!(),
         }
     }}
 }

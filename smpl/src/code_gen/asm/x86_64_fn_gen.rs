@@ -197,10 +197,10 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
             Value::Literal(ref lit) => match *lit {
                 Literal::String(_) => unimplemented!("Strings not supported"),
                 Literal::Int(int) => {
-                    self.body.emit_line(&mov!(result_loc, int));
+                    self.body.emit_line(&mov!(location!(result_loc), int));
                 }
                 Literal::Float(float) => {
-                    self.body.emit_line(&mov!(result_loc, float));
+                    self.body.emit_line(&mov!(location!(result_loc), float));
                 }
                 Literal::Bool(boolean) => {
                     let value = if boolean {
@@ -208,14 +208,14 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
                     } else {
                         FALSE
                     };
-                    self.body.emit_line(&mov!(result_loc, value));
+                    self.body.emit_line(&mov!(location!(result_loc), value));
                 }
             }
 
             Value::Variable(ref var) => {
                 let id = var.get_id().unwrap();
                 let stack_loc = stack_offset!(result_loc);
-                self.body.emit_line(&mov!(result_loc, stack_loc));
+                self.body.emit_line(&mov!(location!(result_loc), stack_loc));
             }
             _ => unimplemented!(),
         }
