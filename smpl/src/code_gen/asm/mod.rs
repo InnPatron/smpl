@@ -14,3 +14,10 @@ pub trait ASMBackend {
 pub fn fn_id(id: FnId) -> String {
     format!("fn_{}", id.raw())
 }
+
+#[derive(Clone, Copy)]
+pub enum DataLocation {
+    Local(usize), 
+    Param(usize),
+    Register(Register),
+}

@@ -314,10 +314,3 @@ impl RegisterAllocator {
         self.registers.push(r);
     }
 }
-
-#[derive(Clone, Copy)]
-enum DataLocation {
-    Local(usize),   // Below RBP
-    Param(usize),   // Above RBP
-    Register(Register),
-}
