@@ -16,6 +16,16 @@ macro_rules! mov {
     }}
 }
 
+macro_rules! location {
+    ($location: expr) => {{
+        if let DataLocation::Register(r) = $location {
+            format!("{}", r)
+        } else {
+            stack_offset!($location)
+        }
+    }}
+}
+
 macro_rules! stack_offset {
     ($location: expr) => {{
         match $location {
@@ -28,6 +38,18 @@ macro_rules! stack_offset {
             }
 
             DataLocation::Register(_) => unreachable!(),
+        }
+    }}
+}
+
+macro_rules! bin_op {
+    ($op: expr) => {{
+        match op {
+            BinOp::Add => "add",
+            BinOp::Sub => "sub",
+            BinOp::Mul => "mul",
+            BinOp::Div => "div",
+
         }
     }}
 }
