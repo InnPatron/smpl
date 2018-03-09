@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use petgraph::graph::NodeIndex;
 
-use analysis::{Traverser, Passenger};
-use analysis::{CFG, Node, Expr, LocalVarDecl, Assignment, FnId, VarId, TypeId, DataId};
+use analysis::*;
 use analysis::metadata::Metadata;
 
 use super::*;
+use super::nasm_const::*;
 use super::x86_64_gen::*;
 use code_gen::StringEmitter;
 
@@ -182,6 +182,33 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
             DataLocation::Local(*self.local_map.get(&id).unwrap())
         } else {
             DataLocation::Register(*self.register_map.get(&id).unwrap())
+        }
+    }
+
+    fn emit_expr(&mut self, e: &Expr) -> TmpId {
+        unimplemented!()
+    }
+
+    fn emit_tmp(&mut self, tmp: &Tmp, result_loc: DataLocation<Register>) {
+        let tmp_to_assign = tmp.id();
+        let value = tmp.value();
+
+        match *value.data() {
+            Value::Literal(ref lit) => match *lit {
+                Literal::String(_) => unimplemented!("Strings not supported"),
+                Literal::Int(int) => mov!(self, result_loc, int),
+                Literal::Float(float) => mov!(self, result_loc, float),
+                Literal::Bool(boolean) => {
+                    let value = if boolean {
+                        TRUE
+                    } else {
+                        FALSE
+                    };
+
+                    mov!(self, result_loc, value);
+                }
+            }
+            _ => unimplemented!(),
         }
     }
 }
