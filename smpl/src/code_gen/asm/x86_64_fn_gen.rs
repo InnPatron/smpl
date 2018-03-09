@@ -5,6 +5,7 @@ use petgraph::graph::NodeIndex;
 use analysis::*;
 use analysis::metadata::Metadata;
 
+use ast::BinOp;
 use super::*;
 use super::nasm_const::*;
 use super::x86_64_gen::*;
@@ -189,7 +190,9 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         unimplemented!()
     }
 
-    fn emit_tmp(&mut self, tmp: &Tmp, result_loc: DataLocation<Register>) {
+    ///
+    /// result_loc: Where caller wants the result
+    fn emit_tmp(&mut self, expr: &Expr, tmp: &Tmp, result_loc: DataLocation<Register>) {
         let tmp_to_assign = tmp.id();
         let value = tmp.value();
 
@@ -217,8 +220,33 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
                 let stack_loc = stack_offset!(result_loc);
                 self.body.emit_line(&mov!(location!(result_loc), stack_loc));
             }
+
+            Value::BinExpr(ref op, ref lhs, ref rhs) => {
+                let rhs_type_id = rhs.type_id().unwrap();
+                let rhs_layout = self.context.get_layout(rhs_type_id);
+
+                let lhs = expr.get_tmp(*lhs.data());
+                let rhs = expr.get_tmp(*rhs.data());
+                
+                // result_loc should be of the correct size
+                let lhs_loc = result_loc;
+                let rhs_loc = self.allocate_tmp(rhs.id(), rhs_layout.total_size());
+
+                self.emit_tmp(expr, lhs, lhs_loc);
+                self.emit_tmp(expr, rhs, rhs_loc);
+
+                self.emit_bin_expr(op.clone(), lhs_loc, rhs_loc);
+            }
+
             _ => unimplemented!(),
         }
+    }
+
+    fn emit_bin_expr(&mut self, op: BinOp, lhs: DataLocation<Register>, rhs: DataLocation<Register>) {
+        let op = bin_op!(op);
+        self.body.emit_line(&mov!("rax", location!(lhs)));
+        self.body.emit_line(&format!("{} {}, {}", op, "rax", location!(rhs)));
+        self.body.emit_line(&mov!(location!(lhs), "rax"));
     }
 }
 
