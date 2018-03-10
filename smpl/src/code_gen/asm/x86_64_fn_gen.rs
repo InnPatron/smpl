@@ -213,9 +213,18 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
     fn emit_bin_expr(&mut self, op: BinOp, lhs: DataLocation<Register>, rhs: DataLocation<Register>) {
         let op = bin_op!(op);
-        self.body.emit_line(&mov!("rax", location!(lhs)));
-        self.body.emit_line(&format!("{} {}, {}", op, "rax", location!(rhs)));
-        self.body.emit_line(&mov!(location!(lhs), "rax"));
+
+        // Op instructions cannot have both operands as memory locations
+        if lhs.is_register() || rhs.is_register() {
+            // At least one op is NOT a memory location
+            self.body.emit_line("{} {}, {}", op, location!(lhs), location!(rhs));
+        } else {
+            // Move lhs to rax to make one operand a register and then
+            // Update lhs with rax value
+            self.body.emit_line(&mov!("rax", location!(lhs)));
+            self.body.emit_line(&format!("{} {}, {}", op, "rax", location!(rhs)));
+            self.body.emit_line(&mov!(location!(lhs), "rax"));
+        }
     }
 }
 
