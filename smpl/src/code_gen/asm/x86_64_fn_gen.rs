@@ -32,14 +32,19 @@ pub struct x86_64FnGenerator<'a, 'b> {
 
     register_allocator: RegisterAllocator,
     local_allocator: LocalAllocator,
-
-    param_total: usize,
-    param_tracker: usize,
+    param_allocator: ParamAllocator,
 }
 
 impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
     pub fn generate(id: FnId, meta: &Metadata, cfg: &CFG, context: &Context) -> x86_64Fn {
+
+        // Stack grows down (high -> low)
+        // [RBP + 0] is the old RBP
+        // [RBP + 8] is the return address
+        // Paramaters start at [RBP + 16]
+        let param_start = 2 * POINTER_SIZE;
+
         let mut fn_gen = x86_64FnGenerator {
             id: id,
             prologue: StringEmitter::new(),
@@ -55,25 +60,16 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
             
             register_allocator: RegisterAllocator::new(),
             local_allocator: LocalAllocator::new(LOCAL_BLOCK_SIZE, MAX_BLOCKS),
-
-            param_total: 0,
-            param_tracker: 0,
+            param_allocator: ParamAllocator::new(param_start),
         };
 
         let layout = meta.fn_layout(id);
 
-        // Stack grows down (high -> low)
         
-        // [RBP + 0] is the old RBP
-        // [RBP + 8] is the return address
-        // Paramaters start at [RBP + 16]
-        // Data read/written low -> high (so old RBP is [RBP + 0] to execlusive [RBP + 8])
-        let mut param_tracker = 2 * POINTER_SIZE;
         for &(var_id, type_id) in layout.params().into_iter().rev() {
             let layout = fn_gen.context.get_layout(type_id);
-            fn_gen.allocate_param(var_id, layout.total_size());
+            fn_gen.param_allocator.alloc(layout.total_size());
         }
-
         
         for &(var_id, type_id) in layout.locals() {
             let layout = fn_gen.context.get_layout(type_id);
@@ -98,7 +94,7 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
         x86_64Fn {
             output: output,
-            param_total: fn_gen.param_total,
+            param_total: fn_gen.param_allocator.param_total,
         }
     }
 
@@ -127,17 +123,6 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         self.epilogue.emit_line("pop rbp");
 
         self.epilogue.emit_line("ret");
-    }
-
-    fn allocate_param<T: Into<DataId>>(&mut self, id: T, size: usize) -> DataLocation<Register> {
-        self.param_total += size;
-
-        let loc = DataLocation::Local(self.param_tracker);
-
-        self.param_map.insert(id.into(), self.param_tracker);
-        self.param_tracker += size;
-
-        loc
     }
 
     fn allocate_tmp<T: Into<DataId> + Copy>(&mut self, id: T, size: usize) -> DataLocation<Register> {
@@ -481,5 +466,28 @@ impl RegisterAllocator {
         }
 
         self.registers.push(r);
+    }
+}
+
+struct ParamAllocator {
+    param_total: usize,
+    param_tracker: usize,
+}
+
+impl ParamAllocator {
+
+    fn new(start_offset: usize) -> ParamAllocator {
+        ParamAllocator {
+            param_total: 0,
+            param_tracker: start_offset,
+        }
+    }
+
+    fn alloc(&mut self, size: usize) -> DataLocation<Register> {
+        self.param_total += size;
+        let loc = DataLocation::Local(self.param_tracker);
+        self.param_tracker += size;
+
+        loc
     }
 }
