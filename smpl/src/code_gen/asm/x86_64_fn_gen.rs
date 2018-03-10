@@ -190,8 +190,8 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
             Value::Variable(ref var) => {
                 let id = var.get_id().unwrap();
-                let stack_loc = stack_offset!(result_loc);
-                self.body.emit_line(&mov!(location!(result_loc), stack_loc));
+                let var_loc = self.locate_data(id);
+                self.body.emit_line(&mov!(location!(result_loc), location!(var_loc)));
             }
 
             Value::BinExpr(ref op, ref lhs, ref rhs) => {
