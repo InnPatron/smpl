@@ -138,21 +138,6 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         self.local_allocator.alloc(id, size)
     }
 
-    fn remap_register<T: Into<DataId> + Copy>(&mut self, old: T, new: T) {
-        // Check if the old DataId is actually mapped to a Register
-        {
-            let loc = self.data_map.get(&old.into()).unwrap();
-            match *loc {
-                DataLocation::Register(_) => (),
-                DataLocation::Local(_) => panic!("Attempting to register remap local data."),
-                DataLocation::Param(_) => panic!("Attempting to register remap param data."),
-            }
-        }
-
-        let register = self.data_map.remove(&old.into()).unwrap();
-        self.data_map.insert(new.into(), register);
-    }
-
     fn locate_data<T: Into<DataId>>(&self, id: T) -> DataLocation<Register> {
         let id = id.into();
         
