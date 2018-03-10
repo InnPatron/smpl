@@ -183,8 +183,28 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         self.data_map.get(&id).unwrap().clone()
     }
 
-    fn emit_expr(&mut self, e: &Expr) -> TmpId {
-        unimplemented!()
+    fn emit_expr(&mut self, expr: &Expr) {
+        // TMPS form a tree
+        let root_id = expr.execution_order().rev().next();
+        let root = expr.get_tmp(*root_id.unwrap());
+        let root_layout = self.context.get_layout(root.value().type_id().unwrap());
+
+        // Should never collide b/c TmpId's are made VERY late.
+        // HOPEFULLY
+        let throw_away_loc = self.allocate_tmp(DataId::dummy(), root_layout.total_size());
+        self.emit_tmp(expr, root, DataLocation::Register(Register::RAX));
+
+        self.deallocate_tmp(DataId::dummy());
+    }
+
+    fn emit_assignment(&mut self, var: VarId, expr: &Expr) {
+        // TMPS form a tree
+        let root_id = expr.execution_order().rev().next();
+        let root = expr.get_tmp(*root_id.unwrap());
+        let root_layout = self.context.get_layout(root.value().type_id().unwrap());
+
+        let var_dl = self.locate_data(var);
+        self.emit_tmp(expr, root, var_dl);
     }
 
     ///
