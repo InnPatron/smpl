@@ -26,9 +26,7 @@ pub struct x86_64FnGenerator<'a, 'b> {
     cfg: &'a CFG,
     context: &'b Context,
 
-    param_map: HashMap<DataId, usize>,   // Above RBP
-    local_map: HashMap<DataId, usize>,   // Below RBP
-    register_map: HashMap<DataId, Register>,
+    data_map: HashMap<DataId, DataLocation<Register>>,
 
     register_allocator: RegisterAllocator,
     local_allocator: LocalAllocator,
@@ -53,10 +51,8 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
             cfg: cfg,
             context: context,
-            param_map: HashMap::new(),
-            local_map: HashMap::new(),
-            register_map: HashMap::new(),
 
+            data_map: HashMap::new(),
             
             register_allocator: RegisterAllocator::new(),
             local_allocator: LocalAllocator::new(LOCAL_BLOCK_SIZE, MAX_BLOCKS),
@@ -129,9 +125,9 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
         if size <= REGISTER_SIZE {
             if let Some(r) = self.register_allocator.alloc() {
-                self.register_map.insert(id.into(), r);
+                self.data_map.insert(id.into(), r);
 
-                return DataLocation::Register(r);
+                return r;
             }
         }
 
@@ -139,23 +135,24 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
     }
 
     fn remap_register<T: Into<DataId> + Copy>(&mut self, old: T, new: T) {
-        let register = self.register_map.remove(&old.into()).unwrap();
-        self.register_map.insert(new.into(), register);
+        // Check if the old DataId is actually mapped to a Register
+        {
+            let loc = self.data_map.get(&old.into()).unwrap();
+            match *loc {
+                DataLocation::Register(_) => (),
+                DataLocation::Local(_) => panic!("Attempting to register remap local data."),
+                DataLocation::Param(_) => panic!("Attempting to register remap param data."),
+            }
+        }
+
+        let register = self.data_map.remove(&old.into()).unwrap();
+        self.data_map.insert(new.into(), register);
     }
 
     fn locate_data<T: Into<DataId>>(&self, id: T) -> DataLocation<Register> {
         let id = id.into();
-        if self.param_map.contains_key(&id) && self.local_map.contains_key(&id) {
-            panic!("{} was found in both the parameter and local stack mappings", id);
-        }
-
-        if self.param_map.contains_key(&id) {
-            DataLocation::Param(*self.param_map.get(&id).unwrap())
-        } else if self.param_map.contains_key(&id) {
-            DataLocation::Local(*self.local_map.get(&id).unwrap())
-        } else {
-            DataLocation::Register(*self.register_map.get(&id).unwrap())
-        }
+        
+        self.data_map.get(&id).unwrap().clone()
     }
 
     fn emit_expr(&mut self, e: &Expr) -> TmpId {
@@ -456,8 +453,8 @@ impl RegisterAllocator {
         }
     }
 
-    fn alloc(&mut self) -> Option<Register> {
-        self.registers.pop()
+    fn alloc(&mut self) -> Option<DataLocation<Register>> {
+        self.registers.pop().map(|r| DataLocation::Register(r))
     }
 
     fn dealloc(&mut self, r: Register) {
