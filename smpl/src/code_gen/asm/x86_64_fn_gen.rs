@@ -64,13 +64,17 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         
         for &(var_id, type_id) in layout.params().into_iter().rev() {
             let layout = fn_gen.context.get_layout(type_id);
-            fn_gen.param_allocator.alloc(layout.total_size());
+            let dl = fn_gen.param_allocator
+                .alloc(layout.total_size());
+            fn_gen.data_map.insert(var_id.into(), dl);
         }
         
         for &(var_id, type_id) in layout.locals() {
             let layout = fn_gen.context.get_layout(type_id);
             let dl = fn_gen.local_allocator
                 .alloc(var_id, layout.total_size());
+
+            fn_gen.data_map.insert(var_id.into(), dl);
         }
 
         {
