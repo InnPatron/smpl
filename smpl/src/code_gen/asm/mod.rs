@@ -24,3 +24,13 @@ pub enum DataLocation<R: PartialEq> {
     Param(usize),
     Register(R),
 }
+
+impl<R> DataLocation<R> {
+    fn is_register(&self) -> bool {
+        if let DataLocation::Register(_) = *self {
+            true
+        } else {
+            false
+        }
+    }
+}
