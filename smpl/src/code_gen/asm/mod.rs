@@ -25,7 +25,7 @@ pub enum DataLocation<R: PartialEq> {
     Register(R),
 }
 
-impl<R> DataLocation<R> {
+impl<R: PartialEq> DataLocation<R> {
     fn is_register(&self) -> bool {
         if let DataLocation::Register(_) = *self {
             true
