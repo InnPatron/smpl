@@ -372,6 +372,20 @@ impl LocalAllocator {
         }
     }
 
+    fn dealloc<T: Into<DataId>>(&mut self, id: T) {
+        let memory = self.map.remove(&id.into())
+            .expect("Attempting to deallocate nonexistant local.");
+
+        // Insert memory blocks to the head in reverse order.
+        // Memory block closest to RBP should be closer to head.
+        // Storage should probably be a different data type (like a BST),
+        // but a Queue is fine b/c most memory will allocated and deallocated
+        // from the front.
+        for b in memory.into_iter().rev() {
+            self.storage.push_front(b);
+        }
+    }
+
     fn alloc<T: Into<DataId>>(&mut self, id: T, size: usize) -> DataLocation<Register> {
         let block_min = size / self.block_size;
         let excess = size % self.block_size;
