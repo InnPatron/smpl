@@ -31,11 +31,10 @@ pub struct x86_64FnGenerator<'a, 'b> {
     register_map: HashMap<DataId, Register>,
 
     register_allocator: RegisterAllocator,
+    local_allocator: LocalAllocator,
 
     param_total: usize,
-    local_total: usize,
     param_tracker: usize,
-    local_tracker: usize,
 }
 
 impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
@@ -55,11 +54,10 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
             
             register_allocator: RegisterAllocator::new(),
+            local_allocator: LocalAllocator::new(LOCAL_BLOCK_SIZE, MAX_BLOCKS),
 
             param_total: 0,
-            local_total: 0,
             param_tracker: 0,
-            local_tracker: 0,
         };
 
         let layout = meta.fn_layout(id);
@@ -79,7 +77,8 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         
         for &(var_id, type_id) in layout.locals() {
             let layout = fn_gen.context.get_layout(type_id);
-            fn_gen.allocate_local(var_id, layout.total_size());
+            let dl = fn_gen.local_allocator
+                .alloc(var_id, layout.total_size());
         }
 
         {
@@ -105,7 +104,7 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
 
     fn emit_prologue(&mut self) {
 
-        let local_total = self.local_total;
+        let local_total = self.local_allocator.deepest_offset * LOCAL_BLOCK_SIZE;
         let id = self.id;
 
         self.prologue.emit_line(&format!("{}:", fn_id(id)));
@@ -133,24 +132,12 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
     fn allocate_param<T: Into<DataId>>(&mut self, id: T, size: usize) -> DataLocation<Register> {
         self.param_total += size;
 
-        let loc = DataLocation::Local(self.local_tracker);
+        let loc = DataLocation::Local(self.param_tracker);
 
         self.param_map.insert(id.into(), self.param_tracker);
         self.param_tracker += size;
 
         loc
-    }
-
-    fn allocate_local<T: Into<DataId>>(&mut self, id: T, size: usize) -> DataLocation<Register> {
-        // [RBP + 0] is the old RBP
-        // Data read/written low -> high
-        // First parameter is thus [RBP - Size] to exclusive [RBP + 0]
-
-        self.local_total += size;
-        self.local_tracker += size;
-        self.local_map.insert(id.into(), self.local_tracker);
-
-        DataLocation::Local(self.local_tracker)
     }
 
     fn allocate_tmp<T: Into<DataId> + Copy>(&mut self, id: T, size: usize) -> DataLocation<Register> {
@@ -163,7 +150,7 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
             }
         }
 
-        self.allocate_local(id, size)
+        self.local_allocator.alloc(id, size)
     }
 
     fn remap_register<T: Into<DataId> + Copy>(&mut self, old: T, new: T) {

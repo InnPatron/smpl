@@ -29,3 +29,5 @@ pub const FALSE: i8 = 0;
 pub const BYTE_ALIGNMENT: usize = 8;
 pub const POINTER_SIZE: usize = 8;
 pub const REGISTER_SIZE: usize = 8;
+pub const LOCAL_BLOCK_SIZE: usize = 8;
+pub const MAX_BLOCKS: usize = 500;
