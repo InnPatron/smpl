@@ -217,7 +217,7 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         // Op instructions cannot have both operands as memory locations
         if lhs.is_register() || rhs.is_register() {
             // At least one op is NOT a memory location
-            self.body.emit_line("{} {}, {}", op, location!(lhs), location!(rhs));
+            self.body.emit_line(&format!("{} {}, {}", op, location!(lhs), location!(rhs)));
         } else {
             // Move lhs to rax to make one operand a register and then
             // Update lhs with rax value
