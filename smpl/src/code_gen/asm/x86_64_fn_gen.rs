@@ -1,3 +1,30 @@
+/*
+ * Sources:
+ *
+ *  1) System V Application Binary Interface
+ *  AMD64 Architecture Processor Supplement
+ *  Draft Version 0.99.6a
+ *
+ *  Alias: AMD64_ABI
+ *
+ *  2) Intel® 64 and IA-32 Architectures
+ *  Software Developer’s Manual
+ *  Combined Volumes:
+ *  1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D and 4
+ *
+ *  Alias: INTEL_INSTR
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ */
+
+
 use std::collections::{VecDeque, HashMap};
 
 use petgraph::graph::NodeIndex;
@@ -173,6 +200,8 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
                     self.body.emit_line(&mov!(location!(result_loc), int));
                 }
                 Literal::Float(float) => {
+                    // TODO: Floating points use different instructions and registers
+                    // INTEL_INSTR 887 (vol. 2a)
                     self.body.emit_line(&mov!(location!(result_loc), float));
                 }
                 Literal::Bool(boolean) => {
@@ -189,6 +218,9 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
                 let id = var.get_id().unwrap();
                 let var_loc = self.locate_data(id);
                 self.body.emit_line(&mov!(location!(result_loc), location!(var_loc)));
+
+                // TODO: Floating points use different instructions and registers
+                // INTEL_INSTR 887 (vol. 2a)
             }
 
             Value::BinExpr(ref op, ref lhs, ref rhs) => {
@@ -208,6 +240,9 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
                 self.emit_bin_expr(op.clone(), lhs_loc, rhs_loc);
 
                 self.deallocate_tmp(rhs.id());
+
+                // TODO: Floating points use different instructions and registers
+                // INTEL_INSTR 887 (vol. 2a)
             }
 
             _ => unimplemented!(),
@@ -215,6 +250,9 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
     }
 
     fn emit_bin_expr(&mut self, op: BinOp, lhs: DataLocation<Register>, rhs: DataLocation<Register>) {
+
+        // TODO: Floating points use different instructions and registers
+        // INTEL_INSTR 887 (vol. 2a)
         let op = bin_op!(op);
 
         // Op instructions cannot have both operands as memory locations
