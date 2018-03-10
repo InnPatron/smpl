@@ -206,6 +206,8 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
                 self.emit_tmp(expr, rhs, rhs_loc);
 
                 self.emit_bin_expr(op.clone(), lhs_loc, rhs_loc);
+
+                self.deallocate_tmp(rhs.id());
             }
 
             _ => unimplemented!(),
