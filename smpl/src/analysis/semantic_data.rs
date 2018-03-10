@@ -574,6 +574,13 @@ impl ::std::fmt::Display for DataId {
     }
 }
 
+impl DataId {
+    pub fn dummy() -> DataId {
+        // Should never collide b/c TmpId's are made VERY late.
+        DataId::TmpId(TmpId(0))
+    }
+}
+
 impl From<VarId> for DataId {
     fn from(id: VarId) -> DataId {
         DataId::VarId(id)
