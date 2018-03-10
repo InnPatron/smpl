@@ -138,6 +138,18 @@ impl<'a, 'b> x86_64FnGenerator<'a, 'b> {
         self.local_allocator.alloc(id, size)
     }
 
+    fn deallocate_tmp<T: Into<DataId> + Copy>(&mut self, id: T) {
+        let id = id.into();
+        let dl = self.data_map.remove(&id).unwrap().clone();
+
+        match dl {
+            DataLocation::Param(_) => unreachable!("Attempting to deallocate a temp value."),
+            DataLocation::Local(_) => self.local_allocator.dealloc(id),
+            DataLocation::Register(r) => self.register_allocator.dealloc(r),
+        }
+    }
+
+
     fn locate_data<T: Into<DataId>>(&self, id: T) -> DataLocation<Register> {
         let id = id.into();
         
