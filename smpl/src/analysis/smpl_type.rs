@@ -27,8 +27,8 @@ impl StructType {
         self.field_map.get(name).map(|id| id.clone()).unwrap()
     }
 
-    pub fn field_type(&self, id: FieldId) -> TypeId {
-        self.fields.get(&id).map(|id| id.clone()).unwrap()
+    pub fn field_type(&self, id: FieldId) -> Option<TypeId> {
+        self.fields.get(&id).map(|id| id.clone())
     }
 }
 
