@@ -248,7 +248,7 @@ fn generate_struct_type(universe: &Universe, scope: &ScopedData, struct_def: &St
             let f_type_path = &field.field_type;
             let field_type = scope.type_id(f_type_path)?;
             fields.insert(f_id, field_type);
-            field_map.insert(f_name, f_id);
+            field_map.insert(f_name.clone(), f_id);
             order.push(f_name);
         }
     } 
