@@ -1,7 +1,7 @@
 /target/
 /*/target/
+/smpl-tests/smplc
 **/*.rs.bk
 Cargo.lock
 *.swp
 lalr_parser.rs
-/*/tmp_project

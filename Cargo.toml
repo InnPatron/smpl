@@ -4,5 +4,5 @@ members = [
 	"smplc",
 ]
 exclude = [
-	"smpl-tests/tmp_project"
+	"smpl-tests/target/sample_program"
 ]
