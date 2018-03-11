@@ -216,8 +216,8 @@ impl RustModGen {
         self.emit_line("#[derive(Debug, PartialEq)]");
         self.emit_line(&format!("pub struct {} {{", name));
         self.shift_right();
-        for &(ref name, ref string_type) in fields.iter() {
-            let name = name;
+        for &(ref id, ref string_type) in fields.iter() {
+            let name = RustFnGen::field_id(*id);
             let field_type = RustModGen::rustify_type(string_type.to_string());
             self.emit_line(&format!("pub {}: {},", name, field_type));
         }
@@ -235,6 +235,7 @@ impl RustModGen {
         self.emit_line(&format!("{} {{", name));
         self.shift_right();
         for &(ref name, _) in fields.iter() {
+            let name = RustFnGen::field_id(*name);
             let value = RustFnGen::new_value("Default::default()".to_string());
             self.emit_line(&format!("{}: {},", name, value));
         }
@@ -255,6 +256,7 @@ impl RustModGen {
         self.emit_line(&format!("{} {{", name));
         self.shift_right();
         for &(ref name, _) in fields.iter() {
+            let name = RustFnGen::field_id(*name);
             let value = RustFnGen::new_value("Default::default()".to_string());
             self.emit_line(&format!("{}: {},", name, value));
         }
