@@ -117,7 +117,9 @@ fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: Mo
 
         unresolved = Vec::new();
         for struct_decl in struct_iter {
-            let (struct_t, order) = match generate_struct_type(&module.module_scope, &struct_decl) {
+            let (struct_t, order) = match generate_struct_type(&universe, 
+                                                               &module.module_scope,
+                                                               &struct_decl) {
                 Ok(s) => s,
                 Err(e) => {
                     match e {
@@ -235,15 +237,18 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunctio
     })
 }
 
-fn generate_struct_type(scope: &ScopedData, struct_def: &Struct) -> Result<(StructType, Vec<Ident>), Err> {
+fn generate_struct_type(universe: &Universe, scope: &ScopedData, struct_def: &Struct) -> Result<(StructType, Vec<Ident>), Err> {
     let mut fields = HashMap::new();
+    let mut field_map = HashMap::new();
     let mut order = Vec::new();
     if let Some(ref body) = struct_def.body.0 {
         for field in body.iter() {
+            let f_id = universe.new_field_id();
             let f_name = field.name.clone();
             let f_type_path = &field.field_type;
             let field_type = scope.type_id(f_type_path)?;
-            fields.insert(f_name.clone(), field_type);
+            fields.insert(f_id, field_type);
+            field_map.insert(f_name, f_id);
             order.push(f_name);
         }
     } 
@@ -251,6 +256,7 @@ fn generate_struct_type(scope: &ScopedData, struct_def: &Struct) -> Result<(Stru
     let struct_t = StructType {
         name: struct_def.name.clone(),
         fields: fields,
+        field_map: field_map,
     };
 
     Ok((struct_t, order))

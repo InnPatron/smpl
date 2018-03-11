@@ -175,6 +175,10 @@ impl Universe {
         TypeId(self.inc_counter())
     }
 
+    pub fn new_field_id(&self) -> FieldId {
+        FieldId(self.inc_counter())
+    }
+
     pub fn new_var_id(&self) -> VarId {
         VarId(self.inc_counter())
     }
@@ -352,6 +356,20 @@ impl TypeId {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct FieldId(u64);
+
+impl ::std::fmt::Display for FieldId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "FieldId[{}]", self.0)
+    }
+}
+
+impl FieldId {
+    pub fn raw(&self) -> u64 {
+        self.0
+    }
+}
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum DataId {
     VarId(VarId),

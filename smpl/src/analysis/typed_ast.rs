@@ -7,6 +7,8 @@ pub use ast::UniOp;
 pub use ast::Literal;
 use ast;
 
+
+use super::smpl_type::*;
 use super::semantic_data::*;
 use super::expr_flow;
 
@@ -237,10 +239,6 @@ impl StructInit {
         }
     }
 
-    pub fn field_init(&self) -> Option<&Vec<(ast::Ident, Typed<TmpId>)>> {
-        self.field_init.as_ref()
-    }
-
     pub fn type_name(&self) -> &ast::Path {
         &self.struct_type_name
     }
@@ -251,6 +249,19 @@ impl StructInit {
         } else {
             self.struct_type.set(Some(id));
         }
+    }
+
+    pub fn field_init(&self, universe: &Universe) -> Option<Vec<(FieldId, Typed<TmpId>)>> {
+        let t = universe.get_type(self.struct_type.get().unwrap());
+        let t = match *t {
+            SmplType::Struct(ref t) => t,
+            _ => unreachable!(),
+        };
+
+        self.field_init.map(|vec| vec.iter().map(|&(k, v)| {
+            (t.field_id(&k), v.clone())
+        }).collect::<Vec<_>>())
+
     }
 
     pub fn struct_type(&self) -> Option<TypeId> {

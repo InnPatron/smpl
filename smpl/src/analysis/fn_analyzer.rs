@@ -172,7 +172,7 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                 init.set_struct_type(struct_type_id);
 
                 // Check struct field initialization expressions.
-                match init.field_init() {
+                match init.field_init(universe) {
                     // Found field initializations
                     Some(init_list) => {
                         if init_list.len() != struct_type.fields.len() {
@@ -187,7 +187,7 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                                         .collect::<Vec<_>>();
 
                                     struct_type
-                                        .fields
+                                        .field_map
                                         .keys()
                                         .cloned()
                                         .filter(|ident| !inits.contains(ident))
@@ -197,8 +197,8 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                         }
 
                         // Go threw initialization list and check expressions
-                        for &(ref ident, ref typed_tmp_id) in init_list {
-                            match struct_type.fields.get(ident) {
+                        for &(ref id, ref typed_tmp_id) in init_list {
+                            match struct_type.field_type(*id) {
                                 // Field being checked exists in the struct type
                                 Some(field_type_id) => {
                                     let tmp = expr.get_tmp(*typed_tmp_id.data());
@@ -235,7 +235,7 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                                 type_name: type_name.clone(),
                                 struct_type: struct_type_id,
                                 missing_fields: struct_type
-                                    .fields
+                                    .field_map
                                     .keys()
                                     .cloned()
                                     .collect::<Vec<_>>(),
@@ -622,7 +622,8 @@ fn walk_field_access(
     for (index, field) in path_iter.enumerate() {
         match *current_type {
             SmplType::Struct(ref struct_type) => {
-                current_type_id = *struct_type.fields.get(field).ok_or(TypeErr::UnknownField {
+                let field_id = struct_type.field_id(field);
+                current_type_id = *struct_type.field_type(field_id).ok_or(TypeErr::UnknownField {
                     name: field.clone(),
                     struct_type: current_type_id,
                 })?;
