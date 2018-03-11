@@ -240,19 +240,19 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                     }
 
                     Err(unknown_fields) => {
-
-                            /*let ident = struct_type.get_ident(id);
-                                    return Err(TypeErr::UnknownField {
-                                        name: ident.clone(),
-                                        struct_type: struct_type_id,
-                                    }.into());
-                                    */
-                            // No field initializations but the struct type has fields
-                            return Err(TypeErr::StructNotFullyInitialized {
-                                type_name: type_name.clone(),
-                                struct_type: struct_type_id,
-                                missing_fields: unknown_fields
-                            }.into());
+                        // TODO: Allow for multiple errors
+                        /*let ident = struct_type.get_ident(id);
+                                return Err(TypeErr::UnknownField {
+                                    name: ident.clone(),
+                                    struct_type: struct_type_id,
+                                }.into());
+                                */
+                        // No field initializations but the struct type has fields
+                        return Err(TypeErr::StructNotFullyInitialized {
+                            type_name: type_name.clone(),
+                            struct_type: struct_type_id,
+                            missing_fields: unknown_fields
+                        }.into());
                         
                     }
                 }
