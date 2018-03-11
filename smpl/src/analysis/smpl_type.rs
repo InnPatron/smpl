@@ -23,8 +23,8 @@ pub struct StructType {
 }
 
 impl StructType {
-    pub fn field_id(&self, name: &Ident) -> FieldId {
-        self.field_map.get(name).map(|id| id.clone()).unwrap()
+    pub fn field_id(&self, name: &Ident) -> Option<FieldId> {
+        self.field_map.get(name).map(|id| id.clone())
     }
 
     pub fn field_type(&self, id: FieldId) -> Option<TypeId> {

@@ -7,7 +7,6 @@ pub use ast::UniOp;
 pub use ast::Literal;
 use ast;
 
-
 use super::smpl_type::*;
 use super::semantic_data::*;
 use super::expr_flow;
@@ -251,17 +250,40 @@ impl StructInit {
         }
     }
 
-    pub fn field_init(&self, universe: &Universe) -> Option<Vec<(FieldId, Typed<TmpId>)>> {
+    pub fn field_init(&self, universe: &Universe) 
+        -> Result<Option<Vec<(FieldId, Typed<TmpId>)>>, Vec<ast::Ident>> {
+        
         let t = universe.get_type(self.struct_type.get().unwrap());
         let t = match *t {
             SmplType::Struct(ref t) => t,
             _ => unreachable!(),
         };
 
-        self.field_init.map(|vec| vec.iter().map(|&(k, v)| {
-            (t.field_id(&k), v.clone())
-        }).collect::<Vec<_>>())
+        match self.field_init {
+            Some(ref map) => {
+                let mut result = Vec::new();
+                let mut unknown_fields = Vec::new();
+                for &(ref ident, tmp) in map.iter() {
+                    match t.field_id(ident) {
+                        Some(id) => {
+                            result.push((id, tmp.clone()));
+                        }
 
+                        None => {
+                            unknown_fields.push(ident.clone());
+                        }
+                    }
+                }
+
+                if unknown_fields.len() > 0 {
+                    Err(unknown_fields)
+                } else {
+                    Ok(Some(result))
+                }
+            }
+
+            None => Ok(None),
+        }
     }
 
     pub fn struct_type(&self) -> Option<TypeId> {
