@@ -1,4 +1,4 @@
-use std::cell::Cell;
+use std::cell::{RefCell, Cell};
 use std::collections::HashMap;
 use std::slice::Iter;
 
@@ -227,6 +227,7 @@ pub struct StructInit {
     struct_type_name: ast::Path,
     field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>,
     struct_type: Cell<Option<TypeId>>,
+    mapped_field_init: RefCell<Option<Vec<(FieldId, Typed<TmpId>)>>>,
 }
 
 impl StructInit {
@@ -235,6 +236,7 @@ impl StructInit {
             struct_type_name: struct_type_name,
             struct_type: Cell::new(None),
             field_init: field_init,
+            mapped_field_init: RefCell::new(None),
         }
     }
 
@@ -250,8 +252,13 @@ impl StructInit {
         }
     }
 
-    pub fn field_init(&self, universe: &Universe) 
-        -> Result<Option<Vec<(FieldId, Typed<TmpId>)>>, Vec<ast::Ident>> {
+    pub fn field_init(&self) -> Option<Vec<(FieldId, Typed<TmpId>)>> {
+        let b = self.mapped_field_init.borrow();
+        b.map(|ref v| v.clone())
+    }
+
+    pub fn set_field_init(&self, universe: &Universe) 
+        -> Result<(), Vec<ast::Ident>> {
         
         let t = universe.get_type(self.struct_type.get().unwrap());
         let t = match *t {
@@ -278,11 +285,12 @@ impl StructInit {
                 if unknown_fields.len() > 0 {
                     Err(unknown_fields)
                 } else {
-                    Ok(Some(result))
+                    *self.mapped_field_init.borrow_mut() = Some(result);
+                    Ok(())
                 }
             }
 
-            None => Ok(None),
+            None => Ok(()),
         }
     }
 
