@@ -237,7 +237,7 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunctio
     })
 }
 
-fn generate_struct_type(universe: &Universe, scope: &ScopedData, struct_def: &Struct) -> Result<(StructType, Vec<Ident>), Err> {
+fn generate_struct_type(universe: &Universe, scope: &ScopedData, struct_def: &Struct) -> Result<(StructType, Vec<FieldId>), Err> {
     let mut fields = HashMap::new();
     let mut field_map = HashMap::new();
     let mut order = Vec::new();
@@ -248,8 +248,8 @@ fn generate_struct_type(universe: &Universe, scope: &ScopedData, struct_def: &St
             let f_type_path = &field.field_type;
             let field_type = scope.type_id(f_type_path)?;
             fields.insert(f_id, field_type);
-            field_map.insert(f_name.clone(), f_id);
-            order.push(f_name);
+            field_map.insert(f_name, f_id);
+            order.push(f_id);
         }
     } 
 
