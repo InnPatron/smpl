@@ -253,8 +253,8 @@ impl StructInit {
     }
 
     pub fn field_init(&self) -> Option<Vec<(FieldId, Typed<TmpId>)>> {
-        let b = self.mapped_field_init.borrow();
-        b.map(|ref v| v.clone())
+        self.mapped_field_init.borrow()
+            .clone()
     }
 
     pub fn set_field_init(&self, universe: &Universe) 
@@ -270,7 +270,7 @@ impl StructInit {
             Some(ref map) => {
                 let mut result = Vec::new();
                 let mut unknown_fields = Vec::new();
-                for &(ref ident, tmp) in map.iter() {
+                for &(ref ident, ref tmp) in map.iter() {
                     match t.field_id(ident) {
                         Some(id) => {
                             result.push((id, tmp.clone()));
