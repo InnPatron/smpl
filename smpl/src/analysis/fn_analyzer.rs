@@ -268,7 +268,7 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                     walk_field_access(universe, root_var_type_id, field_access.path().clone())?;
 
                 field_access.set_field_type_id(accessed_field_type_id);
-                field_access.set_root_var_id(root_var_id);
+                field_access.set_root_var(root_var_id, root_var_type_id);
 
                 tmp_type = accessed_field_type_id;
             }

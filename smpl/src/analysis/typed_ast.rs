@@ -303,7 +303,8 @@ impl StructInit {
 pub struct FieldAccess {
     path: ast::Path,
     root_var: Cell<Option<VarId>>,
-    field_type_id: Cell<Option<TypeId>>
+    root_var_type: Cell<Option<TypeId>>,
+    field_type_id: Cell<Option<TypeId>>,
 }
 
 impl FieldAccess {
@@ -311,6 +312,7 @@ impl FieldAccess {
         FieldAccess {
             path: path,
             root_var: Cell::new(None),
+            root_var_type: Cell::new(None),
             field_type_id: Cell::new(None),
         }
     }
@@ -319,12 +321,22 @@ impl FieldAccess {
         &self.path
     }
 
-    pub fn set_root_var_id(&self, id: VarId) {
+    pub fn set_root_var(&self, var_id: VarId, type_id: TypeId) {
         if self.root_var.get().is_some() {
-            panic!("Attempting to overwrite root variable {} of the FieldAccess {:?} with {}", self.root_var.get().unwrap(), self.path, id);
+            panic!("Attempting to overwrite root VarId{} of the FieldAccess {:?} with {}", self.root_var.get().unwrap(), self.path, var_id);
         } else {
-            self.root_var.set(Some(id));
+            self.root_var.set(Some(var_id));
         }
+
+        if self.root_var_type.get().is_some() {
+            panic!("Attempting to overwrite root TypeId{} of the FieldAccess {:?} with {}", self.root_var_type.get().unwrap(), self.path, type_id);
+        } else {
+            self.root_var_type.set(Some(type_id));
+        }
+    }
+
+    pub fn get_root_var_type_id(&self) -> Option<TypeId> {
+        self.root_var_type.get()
     }
 
     pub fn get_root_var_id(&self) -> Option<VarId> {
