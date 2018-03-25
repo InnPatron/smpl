@@ -54,52 +54,24 @@ impl<T> Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Assignment {
-    name: ast::Path,
+    field_access: FieldAccess,
     value: self::Expr,
-    type_id: Cell<Option<TypeId>>,
-    var_id: Cell<Option<VarId>>,
 }
 
 impl Assignment {
     pub fn new(universe: &Universe, assignment: ast::Assignment) -> Assignment {
         Assignment {
-            name: assignment.name,
+            field_access: FieldAccess::new(assignment.name),
             value: expr_flow::flatten(universe, assignment.value),
-            type_id: Cell::new(None),
-            var_id: Cell::new(None),
         }
     }
 
-    pub fn name(&self) -> &ast::Path {
-        &self.name
+    pub fn assignee(&self) -> &FieldAccess {
+        &self.field_access
     }
 
     pub fn value(&self) -> &self::Expr {
         &self.value
-    }
-
-    pub fn set_type_id(&self, id: TypeId) {
-        if self.type_id.get().is_some() {
-            panic!("Attempting to override {} for local variable declarration {:?}", id, self);
-        } else {
-            self.type_id.set(Some(id));
-        }
-    }
-
-    pub fn type_id(&self) -> Option<TypeId> {
-        self.type_id.get()
-    }
-
-    pub fn set_var_id(&self, id: VarId) {
-        if self.var_id.get().is_some() {
-            panic!("Attempting to override {} for local variable declarration {:?}", id, self);
-        } else {
-            self.var_id.set(Some(id));
-        }
-    }
-
-    pub fn var_id(&self) -> Option<VarId> {
-        self.var_id.get()
     }
 }
 
@@ -303,7 +275,8 @@ impl StructInit {
 pub struct FieldAccess {
     path: ast::Path,
     root_var: Cell<Option<VarId>>,
-    field_type_id: Cell<Option<TypeId>>
+    root_var_type: Cell<Option<TypeId>>,
+    field_type_id: Cell<Option<TypeId>>,
 }
 
 impl FieldAccess {
@@ -311,6 +284,7 @@ impl FieldAccess {
         FieldAccess {
             path: path,
             root_var: Cell::new(None),
+            root_var_type: Cell::new(None),
             field_type_id: Cell::new(None),
         }
     }
@@ -319,12 +293,22 @@ impl FieldAccess {
         &self.path
     }
 
-    pub fn set_root_var_id(&self, id: VarId) {
+    pub fn set_root_var(&self, var_id: VarId, type_id: TypeId) {
         if self.root_var.get().is_some() {
-            panic!("Attempting to overwrite root variable {} of the FieldAccess {:?} with {}", self.root_var.get().unwrap(), self.path, id);
+            panic!("Attempting to overwrite root VarId{} of the FieldAccess {:?} with {}", self.root_var.get().unwrap(), self.path, var_id);
         } else {
-            self.root_var.set(Some(id));
+            self.root_var.set(Some(var_id));
         }
+
+        if self.root_var_type.get().is_some() {
+            panic!("Attempting to overwrite root TypeId{} of the FieldAccess {:?} with {}", self.root_var_type.get().unwrap(), self.path, type_id);
+        } else {
+            self.root_var_type.set(Some(type_id));
+        }
+    }
+
+    pub fn get_root_var_type_id(&self) -> Option<TypeId> {
+        self.root_var_type.get()
     }
 
     pub fn get_root_var_id(&self) -> Option<VarId> {

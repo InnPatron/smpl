@@ -348,16 +348,31 @@ impl<'a> RustFnGen<'a> {
                 let var_id = RustFnGen::var_id(access.get_root_var_id().unwrap());
                 let mut borrow_chain = format!("let _borrow_{} = {};\n", var_id,
                                                RustFnGen::borrow_ref(var_id.clone()));
-                
+
+                let mut previous_type = access.get_root_var_type_id().unwrap();
                 let mut previous = var_id;
                 let mut path = access.path().iter();
                 path.next(); // Remove root ident
 
                 for field in path {
-                    let borrow = RustFnGen::borrow_ref(format!("_borrow_{}.{}", previous, field));
+                    let to_access = self.universe.get_type(previous_type);
+                    let struct_t = match *to_access {
+                        SmplType::Struct(ref s) => s,
+                        _ => unreachable!(),
+                    };
+
+                    let field_id = struct_t.field_id(field).unwrap();
+                    let field_t = struct_t.field_type(field_id).unwrap();
+
+                    let stringified_field_id = RustFnGen::field_id(field_id);
+
+                    let borrow = RustFnGen::borrow_ref(format!("_borrow_{}.{}", 
+                                                               previous, 
+                                                               stringified_field_id));
                     borrow_chain.push_str(&format!(
-                            "let _borrow_{} = {};", field, borrow));
-                    previous = field.to_string();
+                            "let _borrow_{} = {};", stringified_field_id, borrow));
+                    previous = stringified_field_id;
+                    previous_type = field_t;
                 }
 
                 let value = RustFnGen::clone_value(format!("_borrow_{}", previous));
@@ -537,8 +552,8 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn assignment(&mut self, _id: NodeIndex, assignment: &Assignment) -> Result<(), ()> {
-        
-        let var_id = RustFnGen::var_id(assignment.var_id().unwrap());
+        let assignee = assignment.assignee();
+        let var_id = RustFnGen::var_id(assignee.get_root_var_id().unwrap());
         self.emit_line("{");
         self.shift_right();
 
@@ -546,14 +561,31 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         self.emit_line(&format!("let mut _borrow_{} = {};", var_id,
                                RustFnGen::borrow_ref_mut(var_id.clone())));
         
+        let mut previous_type = assignee.get_root_var_type_id().unwrap();
         let mut previous = var_id;
-        let mut path = assignment.name().iter();
+        let mut path = assignee.path().iter();
         path.next(); // Remove root ident
 
         for field in path {
-            let borrow = RustFnGen::borrow_ref_mut(format!("_borrow_{}.{}", previous, field));
-            self.emit_line(&format!("let mut _borrow_{} = {};", field, borrow));
-            previous = field.to_string();
+            let to_access = self.universe.get_type(previous_type);
+            let struct_t = match *to_access {
+                SmplType::Struct(ref s) => s,
+                _ => unreachable!(),
+            };
+
+            let field_id = struct_t.field_id(field).unwrap();
+            let field_t = struct_t.field_type(field_id).unwrap();
+
+            let stringified_field_id = RustFnGen::field_id(field_id);
+
+            let borrow = RustFnGen::borrow_ref_mut(format!("_borrow_{}.{}", 
+                                                           previous, 
+                                                           stringified_field_id));
+            self.emit_line(&format!("let mut _borrow_{} = {};", 
+                                    stringified_field_id, 
+                                    borrow));
+            previous = stringified_field_id;
+            previous_type = field_t;
         }
         let assignee = format!("*_borrow_{}", previous);
         let rhs = {
