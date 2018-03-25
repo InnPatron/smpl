@@ -151,7 +151,7 @@ impl RustModGen {
 
             // Emit CFG
             let mut cfg = func.cfg();
-            let mut fn_gen = RustFnGen::new(&cfg);
+            let mut fn_gen = RustFnGen::new(universe, &cfg);
 
             {
                 let traverser = Traverser::new(cfg, &mut fn_gen);
@@ -274,15 +274,17 @@ pub struct RustFnGen<'a> {
     output: String,
     shift: u32,
     cfg: &'a CFG,
+    universe: &'a Universe,
 }
 
 // Misc
 impl<'a> RustFnGen<'a> {
-    pub fn new(cfg: &'a CFG) -> RustFnGen<'a> {
+    pub fn new(universe: &'a Universe, cfg: &'a CFG) -> RustFnGen<'a> {
         RustFnGen {
             output: String::new(),
             shift: 0,
             cfg: cfg,
+            universe: universe
         }
     }
 
