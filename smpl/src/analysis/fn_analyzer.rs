@@ -261,14 +261,8 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
             }
 
             Value::FieldAccess(ref field_access) => {
-                let root_var_name = field_access.path().iter().next().unwrap();
-                let (root_var_id, root_var_type_id) = scope.var_info(root_var_name)?;
-
                 let accessed_field_type_id =
-                    walk_field_access(universe, root_var_type_id, field_access.path().clone())?;
-
-                field_access.set_field_type_id(accessed_field_type_id);
-                field_access.set_root_var(root_var_id, root_var_type_id);
+                    resolve_field_access(universe, scope, field_access)?;
 
                 tmp_type = accessed_field_type_id;
             }
@@ -514,15 +508,10 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
     }
 
     fn assignment(&mut self, _id: NodeIndex, assignment: &Assignment) -> Result<(), Err> {
-        let mut assignee = assignment.name().iter();
-        let root_var_name = assignee.next().unwrap();
-
-        let (root_var_id, root_var_type_id) = self.current_scope.var_info(root_var_name)?;
+        let assignee = assignment.assignee();
 
         let assignee_type_id =
-            walk_field_access(self.universe, root_var_type_id, assignment.name().clone())?;
-        assignment.set_var_id(root_var_id);
-        assignment.set_type_id(assignee_type_id);
+            resolve_field_access(self.universe, &self.current_scope, assignee)?;
 
         let expr_type_id = resolve_expr(self.universe, &self.current_scope, assignment.value())?;
 
@@ -614,16 +603,19 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
     }
 }
 
-fn walk_field_access(
+fn resolve_field_access(
     universe: &Universe,
-    root_type_id: TypeId,
-    full_path: ast::Path,
+    scope: &ScopedData,
+    field_access: &FieldAccess,
 ) -> Result<TypeId, Err> {
-    let mut current_type_id = root_type_id;
-    let mut current_type = universe.get_type(root_type_id);
 
-    let mut path_iter = full_path.iter();
-    path_iter.next();
+    let mut path_iter = field_access.path().iter();
+
+    let root_var_name = path_iter.next().unwrap();
+    let (root_var_id, root_var_type_id) = scope.var_info(root_var_name)?;
+
+    let mut current_type_id = root_var_type_id;
+    let mut current_type = universe.get_type(root_var_type_id);
 
     for (index, field) in path_iter.enumerate() {
         match *current_type {
@@ -637,10 +629,10 @@ fn walk_field_access(
 
             _ => {
                 return Err(TypeErr::FieldAccessOnNonStruct {
-                    path: full_path.clone(),
+                    path: field_access.path().clone(),
                     index: index,
                     invalid_type: current_type_id,
-                    root_type: root_type_id,
+                    root_type: root_var_type_id,
                 }.into());
             }
         }
@@ -648,7 +640,11 @@ fn walk_field_access(
         current_type = universe.get_type(current_type_id);
     }
 
-    Ok(current_type_id)
+    let accessed_field_type_id = current_type_id;
+    field_access.set_field_type_id(accessed_field_type_id);
+    field_access.set_root_var(root_var_id, root_var_type_id);
+
+    Ok(accessed_field_type_id)
 }
 
 #[cfg(test)]

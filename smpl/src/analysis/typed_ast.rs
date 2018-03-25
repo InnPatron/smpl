@@ -54,52 +54,24 @@ impl<T> Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Assignment {
-    name: ast::Path,
+    field_access: FieldAccess,
     value: self::Expr,
-    type_id: Cell<Option<TypeId>>,
-    var_id: Cell<Option<VarId>>,
 }
 
 impl Assignment {
     pub fn new(universe: &Universe, assignment: ast::Assignment) -> Assignment {
         Assignment {
-            name: assignment.name,
+            field_access: FieldAccess::new(assignment.name),
             value: expr_flow::flatten(universe, assignment.value),
-            type_id: Cell::new(None),
-            var_id: Cell::new(None),
         }
     }
 
-    pub fn name(&self) -> &ast::Path {
-        &self.name
+    pub fn assignee(&self) -> &FieldAccess {
+        &self.field_access
     }
 
     pub fn value(&self) -> &self::Expr {
         &self.value
-    }
-
-    pub fn set_type_id(&self, id: TypeId) {
-        if self.type_id.get().is_some() {
-            panic!("Attempting to override {} for local variable declarration {:?}", id, self);
-        } else {
-            self.type_id.set(Some(id));
-        }
-    }
-
-    pub fn type_id(&self) -> Option<TypeId> {
-        self.type_id.get()
-    }
-
-    pub fn set_var_id(&self, id: VarId) {
-        if self.var_id.get().is_some() {
-            panic!("Attempting to override {} for local variable declarration {:?}", id, self);
-        } else {
-            self.var_id.set(Some(id));
-        }
-    }
-
-    pub fn var_id(&self) -> Option<VarId> {
-        self.var_id.get()
     }
 }
 
