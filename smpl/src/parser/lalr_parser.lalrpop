@@ -29,19 +29,18 @@
 /// assignment -> path "=" expr ";"
 ///
 ///
-/// expr -> cmp_expr
+/// expr -> truth_expr
 ///
-///
-/// cmp_expr -> cmp_expr ["&&" | "||"] relative_cmp | relative_cmp
-/// relative_cmp -> relative_cmp [">" | ">=" | "<" | "<="] equality_cmp | equality_cmp
-/// equality_cmp -> equality_cmp ["==" | "!="] math_expr | math_expr
-///
+/// truth_expr -> truth_expr ["&&" | "||"] strict_eq_expr | strict_eq_expr
+/// strict_eq_expr -> strict_eq_expr ["==" | "!="] relative_cmp_expr | relative_cmp_expr
+/// relative_cmp_expr -> math_expr [">" | ">=" | "<" | "<="] math_expr | math_expr
 ///
 /// math_expr -> math_expr ["+" | "-"] factor | factor
-/// factor -> factor ["*" | "/" | "%"] term | term
-/// term -> "(" expr ")" | expr_leaf
-/// expr_leaf -> "(" uni_expr ")" | literal | fn_call | path | struct_init
+/// factor -> factor ["*" | "/" | "%"] uni_expr | uni_expr
 ///
+/// uni_expr -> ["-" | "!" | "&" | "*"] uni_expr | expr_leaf
+///
+/// expr_leaf -> "(" expr ")"| literal | fn_call | path | struct_init
 ///
 /// struct_init -> "init" path "{" struct_field_init_list "}"
 /// struct_field_init_list -> struct_field_init "," struct_field_init_list
@@ -53,10 +52,6 @@
 ///
 /// fn_call -> ident "(" fn_call_args ")"
 /// fn_call_args -> expr ["," expr]*
-///
-///
-/// uni_expr -> ["-" | "!" | "&" | "*"] expr
-///
 ///
 /// ident -> [a-zA-Z_] [a-zA-Z0-9_]*
 /// path -> ident ["." ident]*
@@ -233,14 +228,14 @@ WhileStmt: While = {
 	},
 };
 
-/// expr -> cmp_expr
+/// expr -> truth_expr
 pub Expr: Expr = {	
-	<c: CmpExpr> => c,
+	<c: TruthExpr> => c,
 };
 
-/// cmp_expr -> cmp_expr ["&&" | "||"] relative_cmp | relative_cmp
-pub CmpExpr: Expr = {
-	<lhs: CmpExpr> <op: CmpOpLowestPrecedence> <rhs: RelativeCmpBranch> => {
+/// truth_expr -> truth_expr ["&&" | "||"] strict_eq_expr | strict_eq_expr
+pub TruthExpr: Expr = {
+	<lhs: TruthExpr> <op: TruthOp> <rhs: StrictEqExpr> => {
 		Expr::Bin(BinExpr {
 			op: op,
 			lhs: Box::new(lhs),
@@ -248,25 +243,25 @@ pub CmpExpr: Expr = {
 		})
 	},
 
-	RelativeCmpBranch,
+	<StrictEqExpr>,
 };
 
-/// relative_cmp -> relative_cmp [">" | ">=" | "<" | "<="] equality_cmp | equality_cmp
+/// strict_eq_expr -> strict_eq_expr ["==" | "!="] relative_cmp_expr | relative_cmp_expr
+StrictEqExpr: Expr = {
+	<lhs: StrictEqExpr> <op: StrictEqOp> <rhs: RelativeCmpBranch> => {
+		Expr::Bin(BinExpr {
+			op: op,
+			lhs: Box::new(lhs),
+			rhs: Box::new(rhs),
+		})
+	},
+
+	<RelativeCmpBranch>,
+};
+
+/// relative_cmp_expr -> math_expr [">" | ">=" | "<" | "<="] math_expr | math_expr
 RelativeCmpBranch: Expr = {
-	<lhs: RelativeCmpBranch> <op: CmpOpLowPrecedence> <rhs: EqualityCmpBranch> => {
-		Expr::Bin(BinExpr {
-			op: op,
-			lhs: Box::new(lhs),
-			rhs: Box::new(rhs),
-		})
-	},
-
-	EqualityCmpBranch,
-};
-
-/// equality_cmp -> equality_cmp ["==" | "!="] math_expr | math_expr
-EqualityCmpBranch: Expr = {
-	<lhs: EqualityCmpBranch> <op: CmpOpGreaterPrecedence> <rhs: MathExpr> => {
+	<lhs: MathExpr> <op: RelativeEqOp> <rhs: MathExpr> => {
 		Expr::Bin(BinExpr {
 			op: op,
 			lhs: Box::new(lhs),
@@ -277,36 +272,28 @@ EqualityCmpBranch: Expr = {
 	<MathExpr>,
 };
 
-CmpOpLowestPrecedence: BinOp = {
+TruthOp: BinOp = {
 	"&&" => BinOp::LogicalAnd,
 	"||" => BinOp::LogicalOr,
 };
 
-CmpOpGreaterPrecedence: BinOp = {
+RelativeEqOp: BinOp = {
 	">" => BinOp::Greater,
 	"<" => BinOp::Lesser,
 	">=" => BinOp::GreaterEq,
 	"<=" => BinOp::LesserEq,
 };
 
-CmpOpLowPrecedence: BinOp = {
+StrictEqOp: BinOp = {
 	"==" => BinOp::Eq,
 	"!=" => BinOp::InEq,
 };
 
 /// math_expr -> math_expr ["+" | "-"] factor | factor
 pub MathExpr: Expr = {
-	<lhs: MathExpr> "+" <rhs: Factor> => {
+	<lhs: MathExpr> <op: AddOp> <rhs: Factor> => {
 		Expr::Bin(BinExpr {
-			op: BinOp::Add,
-			lhs: Box::new(lhs),
-			rhs: Box::new(rhs),
-		})
-	},
-
-	<lhs: MathExpr> "-" <rhs: Factor> => {
-		Expr::Bin(BinExpr {
-			op: BinOp::Sub,
+			op: op,
 			lhs: Box::new(lhs),
 			rhs: Box::new(rhs),
 		})
@@ -315,43 +302,47 @@ pub MathExpr: Expr = {
 	Factor,
 };
 
-/// factor -> factor ["*" | "/" | "%"] term | term
+AddOp: BinOp = {
+	"+" => BinOp::Add,
+	"-" => BinOp::Sub,
+};
+
+/// factor -> factor ["*" | "/" | "%"] uni_expr | uni_expr
 Factor: Expr = {
-	<lhs: Factor> "*" <rhs: Term> => {
+	<lhs: Factor> <op: FactorOp> <rhs: UniExpr> => {
 		Expr::Bin(BinExpr {
-			op: BinOp::Mul,
+			op: op,
 			lhs: Box::new(lhs),
 			rhs: Box::new(rhs),
 		})
 	},
 
-	<lhs: Factor> "/" <rhs: Term> => {
-		Expr::Bin(BinExpr {
-			op: BinOp::Div,
-			lhs: Box::new(lhs),
-			rhs: Box::new(rhs),
-		})
-	},
-
-	<lhs: Factor> "%" <rhs: Term> => {
-		Expr::Bin(BinExpr {
-			op: BinOp::Mod,
-			lhs: Box::new(lhs),
-			rhs: Box::new(rhs),
-		})
-	},
-	<Term>
+	<UniExpr>
 };
 
-/// term -> "(" expr ")" | expr_leaf
-Term: Expr = {
-	"(" <e: Expr> ")" => e.into(),
-	<e: ExprLeaf> => e,
+FactorOp: BinOp = {
+	"*" => BinOp::Mul,
+	"/" => BinOp::Div,
+	"%" => BinOp::Mod,
 };
 
-/// expr_leaf -> "(" uni_expr ")" | literal | fn_call | path | struct_init
+
+/// uni_expr -> ["-" | "!" | "&" | "*"] uni_expr | expr_leaf
+UniExpr: Expr = {
+	<op: UniOp> <u: UniExpr> => Expr::Uni(UniExpr { op: op, expr: Box::new(u) }),
+	<ExprLeaf>
+};
+
+UniOp: UniOp = {
+	"-" => UniOp::Negate,
+	"!" => UniOp::LogicalInvert,
+	"&" => UniOp::Ref,
+	"*" => UniOp::Deref,
+};
+
+/// expr_leaf -> "(" expr ")"| literal | fn_call | path | struct_init
 ExprLeaf: Expr = {
-	"(" <u: UniExpr> ")" => Expr::Uni(u),
+	"(" <e: Expr> ")" => e,
 	<path: Path> => {
 		let mut path = path;
 		if path.0.len() == 1 {
@@ -413,18 +404,6 @@ FnCallArgs: Vec<Expr> = {
 		v.extend(tail.into_iter());
 		v
 	}
-};
-
-/// uni_expr -> ["-" | "!" | "&" | "*"] expr
-UniExpr: UniExpr = {
-	<op: UniOp> <e: Expr> => UniExpr { op: op, expr: Box::new(e) },
-};
-
-UniOp: UniOp = {
-	"-" => UniOp::Negate,
-	"!" => UniOp::LogicalInvert,
-	"&" => UniOp::Ref,
-	"*" => UniOp::Deref,
 };
 
 /// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "[[:ASCII:]]"

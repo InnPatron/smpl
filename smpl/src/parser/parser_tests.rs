@@ -363,10 +363,10 @@ struct TestStruct {
     }
 
     #[test]
-    fn test_parse_CmpExpr() {
+    fn test_parse_TruthExpr() {
         {
             let input = "true && true || false";
-            let e = parse_CmpExpr(input).unwrap();
+            let e = parse_TruthExpr(input).unwrap();
             
             let root = {
                 let _true = boolean!(true => BoxExpr);
@@ -382,7 +382,7 @@ struct TestStruct {
 
         {
             let input = "1 + 5 == 2 && 3 != 4";
-            let e = parse_CmpExpr(input).unwrap();
+            let e = parse_TruthExpr(input).unwrap();
 
             let root = {
                 let _1 = int!(1 => BoxExpr);
@@ -404,7 +404,7 @@ struct TestStruct {
 
         {
             let input = "(1 + 5) * 6 == 2 && 3 != 4";
-            let e = parse_CmpExpr(input).unwrap();
+            let e = parse_TruthExpr(input).unwrap();
 
             let root = {
                 let _1 = int!(1 => BoxExpr);
