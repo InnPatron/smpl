@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use ast::Ident;
 use err::Err;
-use analysis::semantic_data::{VarId, TypeId, ModuleId, FnId, Universe};
+use analysis::semantic_data::{VarId, TypeId, ModuleId, FnId, FieldId, Universe};
 
 #[derive(Clone, Debug)]
 pub struct Metadata {
@@ -92,11 +92,11 @@ impl FnLayout {
 #[derive(Clone, Debug, PartialEq)]
 pub struct FieldOrdering {
     id: TypeId,
-    order: Vec<Ident>,
+    order: Vec<FieldId>,
 }
 
 impl FieldOrdering {
-    pub fn new(id: TypeId, order: Vec<Ident>) -> FieldOrdering {
+    pub fn new(id: TypeId, order: Vec<FieldId>) -> FieldOrdering {
         FieldOrdering {
             id: id,
             order: order,
@@ -107,7 +107,7 @@ impl FieldOrdering {
         self.id
     }
 
-    pub fn order(&self) -> &[Ident] {
+    pub fn order(&self) -> &[FieldId] {
         &self.order
     }
 }

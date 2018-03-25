@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::cell::Cell;
 
-use analysis::{TypeId, VarId};
+use analysis::{TypeId, VarId, FieldId};
 use ast::Ident;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -18,7 +18,18 @@ pub enum SmplType {
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructType {
     pub name: Ident,
-    pub fields: HashMap<Ident, TypeId>,
+    pub fields: HashMap<FieldId, TypeId>,
+    pub field_map: HashMap<Ident, FieldId>,
+}
+
+impl StructType {
+    pub fn field_id(&self, name: &Ident) -> Option<FieldId> {
+        self.field_map.get(name).map(|id| id.clone())
+    }
+
+    pub fn field_type(&self, id: FieldId) -> Option<TypeId> {
+        self.fields.get(&id).map(|id| id.clone())
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

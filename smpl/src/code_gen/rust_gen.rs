@@ -151,7 +151,7 @@ impl RustModGen {
 
             // Emit CFG
             let mut cfg = func.cfg();
-            let mut fn_gen = RustFnGen::new(&cfg);
+            let mut fn_gen = RustFnGen::new(universe, &cfg);
 
             {
                 let traverser = Traverser::new(cfg, &mut fn_gen);
@@ -216,8 +216,8 @@ impl RustModGen {
         self.emit_line("#[derive(Debug, PartialEq)]");
         self.emit_line(&format!("pub struct {} {{", name));
         self.shift_right();
-        for &(ref name, ref string_type) in fields.iter() {
-            let name = name;
+        for &(ref id, ref string_type) in fields.iter() {
+            let name = RustFnGen::field_id(*id);
             let field_type = RustModGen::rustify_type(string_type.to_string());
             self.emit_line(&format!("pub {}: {},", name, field_type));
         }
@@ -235,6 +235,7 @@ impl RustModGen {
         self.emit_line(&format!("{} {{", name));
         self.shift_right();
         for &(ref name, _) in fields.iter() {
+            let name = RustFnGen::field_id(*name);
             let value = RustFnGen::new_value("Default::default()".to_string());
             self.emit_line(&format!("{}: {},", name, value));
         }
@@ -255,6 +256,7 @@ impl RustModGen {
         self.emit_line(&format!("{} {{", name));
         self.shift_right();
         for &(ref name, _) in fields.iter() {
+            let name = RustFnGen::field_id(*name);
             let value = RustFnGen::new_value("Default::default()".to_string());
             self.emit_line(&format!("{}: {},", name, value));
         }
@@ -272,15 +274,17 @@ pub struct RustFnGen<'a> {
     output: String,
     shift: u32,
     cfg: &'a CFG,
+    universe: &'a Universe,
 }
 
 // Misc
 impl<'a> RustFnGen<'a> {
-    pub fn new(cfg: &'a CFG) -> RustFnGen<'a> {
+    pub fn new(universe: &'a Universe, cfg: &'a CFG) -> RustFnGen<'a> {
         RustFnGen {
             output: String::new(),
             shift: 0,
             cfg: cfg,
+            universe: universe
         }
     }
 
@@ -397,13 +401,15 @@ impl<'a> RustFnGen<'a> {
 
                 let mut field_init = String::new();
                 match struct_init.field_init() {
-                    Some(init_list) => for &(ref field, ref typed_tmp) in init_list {
-                        field_init.push_str(&format!(
-                            "{}: {},",
-                            field.to_string(),
-                            RustFnGen::new_value(RustFnGen::tmp_id(*typed_tmp.data())),
-                        ));
-                    },
+                    Some(init_list) => {
+                        for (ref field, ref typed_tmp) in init_list {
+                            field_init.push_str(&format!(
+                                "{}: {},",
+                                RustFnGen::field_id(*field),
+                                RustFnGen::new_value(RustFnGen::tmp_id(*typed_tmp.data())),
+                            ));
+                        }
+                    }
 
                     None => (),
                 }
@@ -705,6 +711,10 @@ trait RustGenFmt {
             let shift = self.shift() - 1;
             self.set_shift(shift);
         }
+    }
+
+    fn field_id(id: FieldId) -> String {
+        format!("_field{}", id.raw())
     }
 
     fn tmp_id(id: TmpId) -> String {

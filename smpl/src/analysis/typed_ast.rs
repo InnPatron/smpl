@@ -1,4 +1,4 @@
-use std::cell::Cell;
+use std::cell::{RefCell, Cell};
 use std::collections::HashMap;
 use std::slice::Iter;
 
@@ -7,6 +7,7 @@ pub use ast::UniOp;
 pub use ast::Literal;
 use ast;
 
+use super::smpl_type::*;
 use super::semantic_data::*;
 use super::expr_flow;
 
@@ -226,6 +227,7 @@ pub struct StructInit {
     struct_type_name: ast::Path,
     field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>,
     struct_type: Cell<Option<TypeId>>,
+    mapped_field_init: RefCell<Option<Vec<(FieldId, Typed<TmpId>)>>>,
 }
 
 impl StructInit {
@@ -234,11 +236,8 @@ impl StructInit {
             struct_type_name: struct_type_name,
             struct_type: Cell::new(None),
             field_init: field_init,
+            mapped_field_init: RefCell::new(None),
         }
-    }
-
-    pub fn field_init(&self) -> Option<&Vec<(ast::Ident, Typed<TmpId>)>> {
-        self.field_init.as_ref()
     }
 
     pub fn type_name(&self) -> &ast::Path {
@@ -250,6 +249,48 @@ impl StructInit {
             panic!("Attempting to overwrite {} of the struct init with {}", self.struct_type.get().unwrap(), id);
         } else {
             self.struct_type.set(Some(id));
+        }
+    }
+
+    pub fn field_init(&self) -> Option<Vec<(FieldId, Typed<TmpId>)>> {
+        self.mapped_field_init.borrow()
+            .clone()
+    }
+
+    pub fn set_field_init(&self, universe: &Universe) 
+        -> Result<(), Vec<ast::Ident>> {
+        
+        let t = universe.get_type(self.struct_type.get().unwrap());
+        let t = match *t {
+            SmplType::Struct(ref t) => t,
+            _ => unreachable!(),
+        };
+
+        match self.field_init {
+            Some(ref map) => {
+                let mut result = Vec::new();
+                let mut unknown_fields = Vec::new();
+                for &(ref ident, ref tmp) in map.iter() {
+                    match t.field_id(ident) {
+                        Some(id) => {
+                            result.push((id, tmp.clone()));
+                        }
+
+                        None => {
+                            unknown_fields.push(ident.clone());
+                        }
+                    }
+                }
+
+                if unknown_fields.len() > 0 {
+                    Err(unknown_fields)
+                } else {
+                    *self.mapped_field_init.borrow_mut() = Some(result);
+                    Ok(())
+                }
+            }
+
+            None => Ok(()),
         }
     }
 
