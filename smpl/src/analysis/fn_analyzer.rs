@@ -666,25 +666,41 @@ mod tests {
     fn test_walk_field_access() {
         let mut universe = Universe::std();
 
+        let field1_id = universe.new_field_id();
+        let field2_id = universe.new_field_id();
+
+        let field_map_1 = vec![
+            (ident!("field1"), field1_id),
+            (ident!("field2"), field2_id),
+        ].into_iter()
+            .collect::<HashMap<_, _>>();
+
         let fields_1 = vec![
-            (ident!("field1"), universe.int()),
-            (ident!("field2"), universe.boolean()),
+            (field1_id, universe.int()),
+            (field2_id, universe.boolean()),
         ].into_iter()
             .collect::<HashMap<_, _>>();
         let struct_type_1 = StructType {
             name: ident!("foo"),
             fields: fields_1,
+            field_map: field_map_1
         };
         let struct_type_1_id = universe.new_type_id();
         universe.insert_type(struct_type_1_id, SmplType::Struct(struct_type_1));
 
-        let fields_2 = vec![(ident!("foo_field"), struct_type_1_id)]
+
+        let foo_field_id = universe.new_field_id();
+        let fields_2 = vec![(foo_field_id, struct_type_1_id)]
+            .into_iter()
+            .collect::<HashMap<_, _>>();
+        let field_map_2 = vec![(ident!("foo_field"), foo_field_id)]
             .into_iter()
             .collect::<HashMap<_, _>>();
 
         let struct_type_2 = StructType {
             name: ident!("bar"),
             fields: fields_2,
+            field_map: field_map_2,
         };
         let struct_type_2_id = universe.new_type_id();
         universe.insert_type(struct_type_2_id, SmplType::Struct(struct_type_2));
