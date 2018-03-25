@@ -3,6 +3,7 @@ pub mod x86_64_gen;
 #[macro_use]
 mod nasm_macros;
 mod nasm_const;
+mod x86_64_copy_cons;
 mod x86_64_alloc;
 mod x86_64_fn_gen;
 mod layout;
