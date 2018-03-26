@@ -9,7 +9,7 @@ pub enum Err {
     MultipleMainFns,
     UnknownType(TypeAnnotation),
     UnknownVar(Ident),
-    UnknownFn(Path),
+    UnknownFn(TypePath),
     UnresolvedUses(Vec<Ident>),
     UnresolvedStructs(Vec<Ident>),
     UnresolvedFns(Vec<Ident>),

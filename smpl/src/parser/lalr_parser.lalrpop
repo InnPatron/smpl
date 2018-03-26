@@ -50,7 +50,7 @@
 /// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "[[:ASCII:]]"
 ///
 ///
-/// fn_call -> ident "(" fn_call_args ")"
+/// fn_call -> TypePath "(" fn_call_args ")"
 /// fn_call_args -> expr ["," expr]*
 ///
 /// ident -> [a-zA-Z_] [a-zA-Z0-9_]*
@@ -387,9 +387,9 @@ StructFieldInit: (Ident, Box<Expr>) = {
 	<name: Ident> ":" <init: Expr> => (name, Box::new(init)),
 };
 
-/// fn_call -> ident "(" fn_call_args ")"
+/// fn_call -> TypePath "(" fn_call_args ")"
 FnCall: FnCall = {
-	<path: Path> "(" <args: FnCallArgs?> ")" => {
+	<path: TypePath> "(" <args: FnCallArgs?> ")" => {
 		let mut path = path;
 		FnCall::new(
 			path,

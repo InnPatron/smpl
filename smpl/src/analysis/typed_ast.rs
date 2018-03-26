@@ -361,13 +361,13 @@ impl Variable {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnCall {
-    path: ast::Path,
+    path: ast::TypePath,
     args: Option<Vec<Typed<TmpId>>>,
     fn_id: Cell<Option<FnId>>,
 }
 
 impl FnCall {
-    pub fn new(path: ast::Path, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
+    pub fn new(path: ast::TypePath, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
         FnCall {
             path: path,
             args: args,
@@ -375,7 +375,7 @@ impl FnCall {
         }
     }
 
-    pub fn path(&self) -> &ast::Path {
+    pub fn path(&self) -> &ast::TypePath {
         &self.path
     }
 

@@ -3,7 +3,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use err::Err;
-use ast::{Ident, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
+use ast::{Ident, TypePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
 
 use super::metadata::*;
 use super::smpl_type::*;
@@ -160,7 +160,7 @@ fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: Mo
 
         unresolved = Vec::new();
         for fn_decl in module_fn_iter {
-            let name: Path = fn_decl.name.clone().into();
+            let name: TypePath = fn_decl.name.clone().into();
 
             let type_id = universe.new_type_id();
 

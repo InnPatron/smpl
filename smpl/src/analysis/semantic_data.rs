@@ -264,12 +264,12 @@ pub struct ScopedData {
     type_map: HashMap<TypePath, TypeId>,
     var_map: HashMap<Ident, VarId>,
     var_type_map: HashMap<VarId, TypeId>,
-    fn_map: HashMap<Path, FnId>,
+    fn_map: HashMap<TypePath, FnId>,
 }
 
 impl ScopedData {
 
-    pub fn insert_fn(&mut self, name: Path, fn_id: FnId) {
+    pub fn insert_fn(&mut self, name: TypePath, fn_id: FnId) {
         // TODO: Fn name override behaviour?
         self.fn_map.insert(name, fn_id);
     }
@@ -321,7 +321,7 @@ impl ScopedData {
         }
     }
 
-    pub fn get_fn(&self, path: &Path) -> Result<FnId, Err> {
+    pub fn get_fn(&self, path: &TypePath) -> Result<FnId, Err> {
         self.fn_map.get(path)
                    .map(|id| id.clone())
                    .ok_or(Err::UnknownFn(path.clone()))
@@ -331,7 +331,7 @@ impl ScopedData {
         self.type_map.iter().collect()
     }
 
-    pub fn all_fns(&self) -> Vec<(&Path, &FnId)> {
+    pub fn all_fns(&self) -> Vec<(&TypePath, &FnId)> {
         self.fn_map.iter().collect()
     }
 }

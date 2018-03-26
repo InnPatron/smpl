@@ -34,11 +34,11 @@ impl Metadata {
     }
 
     pub fn find_main(&mut self, universe: &Universe) -> Result<(), Err> {
-        use ast::Path;
+        use ast::TypePath;
 
         for (_, mod_id) in universe.all_modules().into_iter() {
             let module = universe.get_module(*mod_id);
-            if let Ok(id) = module.module_scope().get_fn(&path!("main")) {
+            if let Ok(id) = module.module_scope().get_fn(&type_path!("main")) {
                 if self.main.is_none() {
                     self.main = Some((id, *mod_id))
                 } else {
