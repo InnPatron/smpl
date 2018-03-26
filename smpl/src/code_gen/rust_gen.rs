@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use code_gen::StringEmitter;
+
 use petgraph::graph::NodeIndex;
 
 use ast::{Ident, BinOp, UniOp};
@@ -36,10 +38,10 @@ impl RustBackend {
         self.main = program.metadata().main().map(|(fn_id, mod_id)| {
             if self.mod_wrap {
                 format!("fn main() {{ {}::{}(); }}\n\n", 
-                        RustFnGen::mod_id(mod_id),
-                        RustFnGen::fn_id(fn_id))
+                        RustGenFmt::mod_id(mod_id),
+                        RustGenFmt::fn_id(fn_id))
             } else {
-                format!("fn main() {{ {}(); }}\n\n", RustFnGen::fn_id(fn_id))
+                format!("fn main() {{ {}(); }}\n\n", RustGenFmt::fn_id(fn_id))
             }
         });
 
@@ -47,15 +49,15 @@ impl RustBackend {
             let mut gen = RustModGen::new();
 
             if self.mod_wrap {
-                gen.emit_line(&format!("mod {} {{", RustModGen::mod_id(*id)));
-                gen.shift_right();
+                gen.output.emit_line(&format!("mod {} {{", RustGenFmt::mod_id(*id)));
+                gen.output.shift_right();
             }
 
             gen.emit_mod(program.universe(), program.universe().get_module(*id));
 
             if self.mod_wrap {
-                gen.shift_left();
-                gen.emit_line("}");
+                gen.output.shift_left();
+                gen.output.emit_line("}");
             }
 
             self.mods.push((ident.clone(), id.clone(), gen.module().to_string()));
@@ -70,26 +72,24 @@ impl RustBackend {
 }
 
 struct RustModGen {
-    output: String,
-    shift: u32,
+    output: StringEmitter,
 }
 
 impl RustModGen {
     fn new() -> RustModGen {
         RustModGen {
-            output: String::new(),
-            shift: 0,
+            output: StringEmitter::new()
         }
     }
 
     fn module(&self) -> &str {
-        &self.output
+        self.output.output()
     }
 
     fn emit_mod(&mut self, universe: &Universe, module: &Module) {
         self.prelude(universe, module);
 
-        self.emit_line("//#### START STRUCT DEFINITIONS ####");
+        self.output.emit_line("//#### START STRUCT DEFINITIONS ####");
 
         // Emit struct definitions
         for id in module.owned_types() {
@@ -97,20 +97,20 @@ impl RustModGen {
             let t = universe.get_type(id);
             if let SmplType::Struct(ref struct_t) = *t {
                 self.emit_struct_type(id, struct_t);
-                self.line_pad();
+                self.output.line_pad();
             }
         }
 
-        self.emit_line("//#### END  STRUCT DEFINITIONS ####");
-        self.line_pad();
-        self.emit_line("//#### START FUNCTION DEFINITIONS ####");
+        self.output.emit_line("//#### END  STRUCT DEFINITIONS ####");
+        self.output.line_pad();
+        self.output.emit_line("//#### START FUNCTION DEFINITIONS ####");
 
         // Emit function definitions
         for fn_id in module.owned_fns() {
             let fn_id = *fn_id;
             let func = universe.get_fn(fn_id);
             let func_type = universe.get_type(func.type_id());
-            let name = RustFnGen::fn_id(fn_id);
+            let name = RustGenFmt::fn_id(fn_id);
 
             let return_type_id;
             let mut args = String::new();
@@ -121,31 +121,31 @@ impl RustModGen {
                 // Gather parameters
                 for param in fn_type.params.iter() {
                     let param_type = param.param_type;
-                    let param_type = RustFnGen::type_id(param_type);
-                    let param_type = RustFnGen::rustify_type(param_type);
+                    let param_type = RustGenFmt::type_id(param_type);
+                    let param_type = RustGenFmt::rustify_type(param_type);
 
                     args.push_str(&format!(
                         "{}: {}, ",
-                        RustFnGen::var_id(param.var_id().unwrap()),
+                        RustGenFmt::var_id(param.var_id().unwrap()),
                         param_type
                     ));
                 }
             } else {
                 panic!("{} did not map to a function type", func.type_id());
             }
-            let return_type = RustFnGen::type_id(return_type_id);
-            let return_type = RustFnGen::rustify_type(return_type);
+            let return_type = RustGenFmt::type_id(return_type_id);
+            let return_type = RustGenFmt::rustify_type(return_type);
 
             // Emit fn signature
             match *universe.get_type(return_type_id) {
                 SmplType::Unit => {
-                    self.emit(&format!("pub fn {} ({})", name, args));
+                    self.output.emit(&format!("pub fn {} ({})", name, args));
                 }
 
                 _ => {
-                    self.emit(&format!("pub fn {} (", name));
-                    self.emit(&args);
-                    self.emit(&format!(") -> {} ", return_type));
+                    self.output.emit(&format!("pub fn {} (", name));
+                    self.output.emit(&args);
+                    self.output.emit(&format!(") -> {} ", return_type));
                 }
             }
 
@@ -159,120 +159,119 @@ impl RustModGen {
             }
 
             let fn_string = fn_gen.function();
-            self.emit(&fn_string);
+            self.output.emit(&fn_string);
 
-            self.line_pad();
+            self.output.line_pad();
         }
-        self.emit_line("//#### END FUNCTION DEFINITIONS ####");
+        self.output.emit_line("//#### END FUNCTION DEFINITIONS ####");
     }
 
     fn prelude(&mut self, universe: &Universe, module: &Module) {
-        self.emit_line("use std::cell::RefCell;");
-        self.emit_line("use std::rc::Rc;");
-        self.line_pad();
+        self.output.emit_line("use std::cell::RefCell;");
+        self.output.emit_line("use std::rc::Rc;");
+        self.output.line_pad();
 
         // Import other SMPL modules
         for d in module.dependencies() {
-            self.emit_line(&format!("use {}::*;", RustModGen::mod_id(*d)));
+            self.output.emit_line(&format!("use {}::*;", RustGenFmt::mod_id(*d)));
         }
-        self.line_pad();
+        self.output.line_pad();
 
         // Create TypeId aliases for primitives
-        self.emit_line(&format!(
+        self.output.emit_line(&format!(
             "type {} = ();",
-            RustFnGen::type_id(universe.unit())
+            RustGenFmt::type_id(universe.unit())
         ));
-        self.emit_line(&format!(
+        self.output.emit_line(&format!(
             "type {} = i64;",
-            RustFnGen::type_id(universe.int())
+            RustGenFmt::type_id(universe.int())
         ));
 
-        self.emit_line(&format!(
+        self.output.emit_line(&format!(
             "type {} = f64;",
-            RustFnGen::type_id(universe.float())
+            RustGenFmt::type_id(universe.float())
         ));
 
-        self.emit_line(&format!(
+        self.output.emit_line(&format!(
             "type {} = bool;",
-            RustFnGen::type_id(universe.boolean())
+            RustGenFmt::type_id(universe.boolean())
         ));
 
-        self.emit_line(&format!(
+        self.output.emit_line(&format!(
             "type {} = String;",
-            RustFnGen::type_id(universe.string())
+            RustGenFmt::type_id(universe.string())
         ));
 
-        self.line_pad();
+        self.output.line_pad();
     }
 
     fn emit_struct_type(&mut self, id: TypeId, struct_type: &StructType) {
-        let name = RustFnGen::type_id(id);
+        let name = RustGenFmt::type_id(id);
         let fields = struct_type
             .fields
             .iter()
-            .map(|(name, id)| (name.clone(), RustFnGen::type_id(*id)))
+            .map(|(name, id)| (name.clone(), RustGenFmt::type_id(*id)))
             .collect::<Vec<_>>();
 
-        self.emit_line("#[derive(Debug, PartialEq)]");
-        self.emit_line(&format!("pub struct {} {{", name));
-        self.shift_right();
+        self.output.emit_line("#[derive(Debug, PartialEq)]");
+        self.output.emit_line(&format!("pub struct {} {{", name));
+        self.output.shift_right();
         for &(ref id, ref string_type) in fields.iter() {
-            let name = RustFnGen::field_id(*id);
-            let field_type = RustModGen::rustify_type(string_type.to_string());
-            self.emit_line(&format!("pub {}: {},", name, field_type));
+            let name = RustGenFmt::field_id(*id);
+            let field_type = RustGenFmt::rustify_type(string_type.to_string());
+            self.output.emit_line(&format!("pub {}: {},", name, field_type));
         }
-        self.shift_left();
-        self.emit_line("}");
+        self.output.shift_left();
+        self.output.emit_line("}");
 
-        self.line_pad();
+        self.output.line_pad();
 
         // Emit Clone impl
-        self.emit_line(&format!("impl Clone for {} {{", name));
-        self.shift_right();
-        self.emit_line(&format!("fn clone(&self) -> Self {{"));
+        self.output.emit_line(&format!("impl Clone for {} {{", name));
+        self.output.shift_right();
+        self.output.emit_line(&format!("fn clone(&self) -> Self {{"));
 
-        self.shift_right();
-        self.emit_line(&format!("{} {{", name));
-        self.shift_right();
+        self.output.shift_right();
+        self.output.emit_line(&format!("{} {{", name));
+        self.output.shift_right();
         for &(ref name, _) in fields.iter() {
-            let name = RustFnGen::field_id(*name);
-            let value = RustFnGen::new_value("Default::default()".to_string());
-            self.emit_line(&format!("{}: {},", name, value));
+            let name = RustGenFmt::field_id(*name);
+            let value = RustGenFmt::new_value("Default::default()".to_string());
+            self.output.emit_line(&format!("{}: {},", name, value));
         }
-        self.emit_line("}");
-        self.shift_left();
-        self.shift_left();
+        self.output.emit_line("}");
+        self.output.shift_left();
+        self.output.shift_left();
 
-        self.emit_line("}");
-        self.shift_left();
-        self.emit_line("}");
+        self.output.emit_line("}");
+        self.output.shift_left();
+        self.output.emit_line("}");
 
         // Emit Default impl
-        self.emit_line(&format!("impl Default for {} {{", name));
-        self.shift_right();
-        self.emit_line(&format!("fn default() -> Self {{"));
+        self.output.emit_line(&format!("impl Default for {} {{", name));
+        self.output.shift_right();
+        self.output.emit_line(&format!("fn default() -> Self {{"));
 
-        self.shift_right();
-        self.emit_line(&format!("{} {{", name));
-        self.shift_right();
+        self.output.shift_right();
+        self.output.emit_line(&format!("{} {{", name));
+        self.output.shift_right();
         for &(ref name, _) in fields.iter() {
-            let name = RustFnGen::field_id(*name);
-            let value = RustFnGen::new_value("Default::default()".to_string());
-            self.emit_line(&format!("{}: {},", name, value));
+            let name = RustGenFmt::field_id(*name);
+            let value = RustGenFmt::new_value("Default::default()".to_string());
+            self.output.emit_line(&format!("{}: {},", name, value));
         }
-        self.emit_line("}");
-        self.shift_left();
-        self.shift_left();
+        self.output.emit_line("}");
+        self.output.shift_left();
+        self.output.shift_left();
 
-        self.emit_line("}");
-        self.shift_left();
-        self.emit_line("}");
+        self.output.emit_line("}");
+        self.output.shift_left();
+        self.output.emit_line("}");
     }
 }
 
 pub struct RustFnGen<'a> {
-    output: String,
-    shift: u32,
+    output: StringEmitter,
     cfg: &'a CFG,
     universe: &'a Universe,
 }
@@ -281,15 +280,14 @@ pub struct RustFnGen<'a> {
 impl<'a> RustFnGen<'a> {
     pub fn new(universe: &'a Universe, cfg: &'a CFG) -> RustFnGen<'a> {
         RustFnGen {
-            output: String::new(),
-            shift: 0,
+            output: StringEmitter::new(),
             cfg: cfg,
             universe: universe
         }
     }
 
     pub fn function(&self) -> &str {
-        &self.output
+        self.output.output()
     }
 }
 
@@ -297,11 +295,11 @@ impl<'a> RustFnGen<'a> {
 impl<'a> RustFnGen<'a> {
 
     fn emit_condition(&mut self, e: &Expr) {
-        self.emit_line("if {");
-        self.shift_right();
+        self.output.emit_line("if {");
+        self.output.shift_right();
         let expr = self.emit_expr(e);
-        self.emit_line(&format!("{} }}", RustFnGen::tmp_id(expr)));
-        self.shift_left();
+        self.output.emit_line(&format!("{} }}", RustGenFmt::tmp_id(expr)));
+        self.output.shift_left();
     }
 
     fn emit_expr(&mut self, expr: &Expr) -> TmpId {
@@ -320,7 +318,7 @@ impl<'a> RustFnGen<'a> {
         let id = tmp.id();
         let value = tmp.value();
 
-        let lhs = RustFnGen::tmp_id(id);
+        let lhs = RustGenFmt::tmp_id(id);
         let rhs = match *value.data() {
             Value::Literal(ref lit) => match *lit {
                 Literal::String(ref string) => {
@@ -336,18 +334,18 @@ impl<'a> RustFnGen<'a> {
             },
 
             Value::Variable(ref var) => {
-                let var_id = RustFnGen::var_id(var.get_id().expect(
+                let var_id = RustGenFmt::var_id(var.get_id().expect(
                     "If the program passed semantic analysis, all IDs should be filled in.",
                 ));
 
-                let inner = RustFnGen::borrow(var_id);
-                RustFnGen::clone_value(inner)
+                let inner = RustGenFmt::borrow(var_id);
+                RustGenFmt::clone_value(inner)
             }
 
             Value::FieldAccess(ref access) => {
-                let var_id = RustFnGen::var_id(access.get_root_var_id().unwrap());
+                let var_id = RustGenFmt::var_id(access.get_root_var_id().unwrap());
                 let mut borrow_chain = format!("let _borrow_{} = {};\n", var_id,
-                                               RustFnGen::borrow_ref(var_id.clone()));
+                                               RustGenFmt::borrow_ref(var_id.clone()));
 
                 let mut previous_type = access.get_root_var_type_id().unwrap();
                 let mut previous = var_id;
@@ -364,9 +362,9 @@ impl<'a> RustFnGen<'a> {
                     let field_id = struct_t.field_id(field).unwrap();
                     let field_t = struct_t.field_type(field_id).unwrap();
 
-                    let stringified_field_id = RustFnGen::field_id(field_id);
+                    let stringified_field_id = RustGenFmt::field_id(field_id);
 
-                    let borrow = RustFnGen::borrow_ref(format!("_borrow_{}.{}", 
+                    let borrow = RustGenFmt::borrow_ref(format!("_borrow_{}.{}", 
                                                                previous, 
                                                                stringified_field_id));
                     borrow_chain.push_str(&format!(
@@ -375,7 +373,7 @@ impl<'a> RustFnGen<'a> {
                     previous_type = field_t;
                 }
 
-                let value = RustFnGen::clone_value(format!("_borrow_{}", previous));
+                let value = RustGenFmt::clone_value(format!("_borrow_{}", previous));
                 let result = format!("{{ {} {} }}", borrow_chain, value);
 
                 result
@@ -383,15 +381,15 @@ impl<'a> RustFnGen<'a> {
 
             Value::BinExpr(ref op, ref lhs, ref rhs) => format!(
                 "{} {} {}",
-                RustFnGen::tmp_id(*lhs.data()),
-                RustFnGen::bin_op(op),
-                RustFnGen::tmp_id(*rhs.data()),
+                RustGenFmt::tmp_id(*lhs.data()),
+                RustGenFmt::bin_op(op),
+                RustGenFmt::tmp_id(*rhs.data()),
             ),
 
             Value::UniExpr(ref op, ref tmp) => format!(
                 "{}{}",
-                RustFnGen::uni_op(op),
-                RustFnGen::tmp_id(*tmp.data())
+                RustGenFmt::uni_op(op),
+                RustGenFmt::tmp_id(*tmp.data())
             ),
 
             Value::FnCall(ref fn_call) => {
@@ -401,14 +399,14 @@ impl<'a> RustFnGen<'a> {
                 let mut arg_string = String::new();
                 match fn_call.args() {
                     Some(ref args) => for a in args.iter() {
-                        let arg = RustFnGen::tmp_id(*a.data());
-                        arg_string.push_str(&format!("{}, ", RustFnGen::new_value(arg)));
+                        let arg = RustGenFmt::tmp_id(*a.data());
+                        arg_string.push_str(&format!("{}, ", RustGenFmt::new_value(arg)));
                     },
 
                     None => (),
                 }
 
-                format!("{}({})", RustFnGen::fn_id(fn_id), arg_string)
+                format!("{}({})", RustGenFmt::fn_id(fn_id), arg_string)
             }
 
             Value::StructInit(ref struct_init) => {
@@ -420,8 +418,8 @@ impl<'a> RustFnGen<'a> {
                         for (ref field, ref typed_tmp) in init_list {
                             field_init.push_str(&format!(
                                 "{}: {},",
-                                RustFnGen::field_id(*field),
-                                RustFnGen::new_value(RustFnGen::tmp_id(*typed_tmp.data())),
+                                RustGenFmt::field_id(*field),
+                                RustGenFmt::new_value(RustGenFmt::tmp_id(*typed_tmp.data())),
                             ));
                         }
                     }
@@ -429,42 +427,11 @@ impl<'a> RustFnGen<'a> {
                     None => (),
                 }
 
-                format!("{} {{ {} }}", RustFnGen::type_id(struct_id), field_init)
+                format!("{} {{ {} }}", RustGenFmt::type_id(struct_id), field_init)
             }
         };
 
-        self.emit_line(&format!("let {} = {};", lhs, rhs));
-    }
-
-    fn uni_op(op: &UniOp) -> String {
-        use self::UniOp::*;
-
-        match *op {
-            Ref => unimplemented!(),
-            Deref => unimplemented!(),
-            Negate => "-".to_string(),
-            LogicalInvert => "!".to_string(),
-        }
-    }
-
-    fn bin_op(op: &BinOp) -> String {
-        use self::BinOp::*;
-        match *op {
-            Add => "+".to_string(),
-            Sub => "-".to_string(),
-            Mul => "*".to_string(),
-            Div => "/".to_string(),
-            Mod => "%".to_string(),
-
-            LogicalAnd => "&&".to_string(),
-            LogicalOr => "||".to_string(),
-            GreaterEq => ">=".to_string(),
-            LesserEq => "<=".to_string(),
-            Greater => ">".to_string(),
-            Lesser => "<".to_string(),
-            Eq => "==".to_string(),
-            InEq => "!=".to_string(),
-        }
+        self.output.emit_line(&format!("let {} = {};", lhs, rhs));
     }
 }
 
@@ -490,47 +457,47 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn loop_head(&mut self, _id: NodeIndex) -> Result<(), ()> {
-        self.emit_line("loop {");
-        self.shift_right();
+        self.output.emit_line("loop {");
+        self.output.shift_right();
         Ok(())
     }
 
     fn loop_foot(&mut self, _id: NodeIndex) -> Result<(), ()> {
         /*
         if self.previous_is_loop_head {
-            self.emit_line("{ break; }");
+            self.output.emit_line("{ break; }");
             self.previous_is_loop_head = false;
         }
         // Can't be used; is it necessary?
         */
 
-        self.shift_left();
-        self.emit_line("}");
-        self.line_pad();
+        self.output.shift_left();
+        self.output.emit_line("}");
+        self.output.line_pad();
         Ok(())
     }
 
     fn cont(&mut self, _id: NodeIndex) -> Result<(), ()> {
-        self.emit_line("continue;");
-        self.line_pad();
+        self.output.emit_line("continue;");
+        self.output.line_pad();
         Ok(())
     }
 
     fn br(&mut self, _id: NodeIndex) -> Result<(), ()> {
-        self.emit_line("break;");
-        self.line_pad();
+        self.output.emit_line("break;");
+        self.output.line_pad();
         Ok(())
     }
 
     fn enter_scope(&mut self, _id: NodeIndex) -> Result<(), ()> {
-        self.emit_line("{");
-        self.shift_right();
+        self.output.emit_line("{");
+        self.output.shift_right();
         Ok(())
     }
 
     fn exit_scope(&mut self, _id: NodeIndex) -> Result<(), ()> {
-        self.shift_left();
-        self.emit_line("}");
+        self.output.shift_left();
+        self.output.emit_line("}");
         Ok(())
     }
 
@@ -539,27 +506,27 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         let type_id = var_decl.type_id().unwrap();
         let expr = self.emit_expr(var_decl.init_expr());
 
-        let name = RustFnGen::var_id(var_id);
-        let var_type = RustFnGen::type_id(type_id);
-        let expr = RustFnGen::new_value(RustFnGen::tmp_id(expr));
+        let name = RustGenFmt::var_id(var_id);
+        let var_type = RustGenFmt::type_id(type_id);
+        let expr = RustGenFmt::new_value(RustGenFmt::tmp_id(expr));
 
-        let var_type = RustFnGen::rustify_type(var_type);
+        let var_type = RustGenFmt::rustify_type(var_type);
 
-        self.emit_line(&format!("let mut {}: {} = {};", name, var_type, expr));
-        self.line_pad();
+        self.output.emit_line(&format!("let mut {}: {} = {};", name, var_type, expr));
+        self.output.line_pad();
 
         Ok(())
     }
 
     fn assignment(&mut self, _id: NodeIndex, assignment: &Assignment) -> Result<(), ()> {
         let assignee = assignment.assignee();
-        let var_id = RustFnGen::var_id(assignee.get_root_var_id().unwrap());
-        self.emit_line("{");
-        self.shift_right();
+        let var_id = RustGenFmt::var_id(assignee.get_root_var_id().unwrap());
+        self.output.emit_line("{");
+        self.output.shift_right();
 
         let expr = self.emit_expr(assignment.value());
-        self.emit_line(&format!("let mut _borrow_{} = {};", var_id,
-                               RustFnGen::borrow_ref_mut(var_id.clone())));
+        self.output.emit_line(&format!("let mut _borrow_{} = {};", var_id,
+                               RustGenFmt::borrow_ref_mut(var_id.clone())));
         
         let mut previous_type = assignee.get_root_var_type_id().unwrap();
         let mut previous = var_id;
@@ -576,12 +543,12 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
             let field_id = struct_t.field_id(field).unwrap();
             let field_t = struct_t.field_type(field_id).unwrap();
 
-            let stringified_field_id = RustFnGen::field_id(field_id);
+            let stringified_field_id = RustGenFmt::field_id(field_id);
 
-            let borrow = RustFnGen::borrow_ref_mut(format!("_borrow_{}.{}", 
+            let borrow = RustGenFmt::borrow_ref_mut(format!("_borrow_{}.{}", 
                                                            previous, 
                                                            stringified_field_id));
-            self.emit_line(&format!("let mut _borrow_{} = {};", 
+            self.output.emit_line(&format!("let mut _borrow_{} = {};", 
                                     stringified_field_id, 
                                     borrow));
             previous = stringified_field_id;
@@ -589,20 +556,20 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         }
         let assignee = format!("*_borrow_{}", previous);
         let rhs = {
-            let tmp = RustFnGen::tmp_id(expr);
+            let tmp = RustGenFmt::tmp_id(expr);
             tmp
         };
         let result = format!("{} = {};", assignee, rhs);
-        self.emit_line(&result);
-        self.shift_left();
-        self.emit_line("}");
-        self.line_pad();
+        self.output.emit_line(&result);
+        self.output.shift_left();
+        self.output.emit_line("}");
+        self.output.line_pad();
         Ok(())
     }
 
     fn expr(&mut self, _id: NodeIndex, expr: &Expr) -> Result<(), ()> {
         self.emit_expr(expr);
-        self.line_pad();
+        self.output.line_pad();
         Ok(())
     }
 
@@ -610,13 +577,13 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         match expr {
             Some(ref expr) => {
                 let expr = self.emit_expr(expr);
-                self.emit_line(&format!("return {};", RustFnGen::tmp_id(expr)));
+                self.output.emit_line(&format!("return {};", RustGenFmt::tmp_id(expr)));
             }
 
-            None => self.emit_line("return;"),
+            None => self.output.emit_line("return;"),
         }
 
-        self.line_pad();
+        self.output.line_pad();
         Ok(())
     }
 
@@ -631,9 +598,9 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn loop_end_true_path(&mut self, _id: NodeIndex) -> Result<(), ()> {
-        self.emit_line("else { break; }");
-        self.shift_left();
-        self.emit_line("}");
+        self.output.emit_line("else { break; }");
+        self.output.shift_left();
+        self.output.emit_line("}");
         Ok(())
     }
 
@@ -645,7 +612,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
     fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), ()> {
         if let Node::BranchMerge(_) = *self.cfg.node_weight(id) {
-            self.emit_line("{ /* EMPTY */}");
+            self.output.emit_line("{ /* EMPTY */}");
         }
 
         Ok(())
@@ -658,10 +625,10 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
     fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), ()> {
         if let Node::BranchMerge(_) = *self.cfg.node_weight(id) {
-            self.emit_line("else { /* EMPTY */}");
-            self.line_pad();
+            self.output.emit_line("else { /* EMPTY */}");
+            self.output.line_pad();
         } else {
-            self.emit_fmt(" else ");
+            self.output.emit_fmt(" else ");
         }
 
         Ok(())
@@ -673,127 +640,90 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 }
 
-impl<'a> RustGenFmt for RustFnGen<'a> {
-    fn output(&mut self) -> &mut String {
-        &mut self.output
-    }
+mod RustGenFmt {
+    use ast::{BinOp, UniOp};
+    use analysis::*;
 
-    fn shift(&self) -> u32 {
-        self.shift
-    }
-
-    fn set_shift(&mut self, shift: u32) {
-        self.shift = shift;
-    }
-}
-
-impl RustGenFmt for RustModGen {
-    fn output(&mut self) -> &mut String {
-        &mut self.output
-    }
-
-    fn shift(&self) -> u32 {
-        self.shift
-    }
-
-    fn set_shift(&mut self, shift: u32) {
-        self.shift = shift;
-    }
-}
-
-trait RustGenFmt {
-    fn output(&mut self) -> &mut String;
-
-    fn shift(&self) -> u32;
-
-    fn set_shift(&mut self, shift: u32);
-
-    fn line_pad(&mut self) {
-        self.output().push('\n');
-    }
-
-    fn emit(&mut self, str: &str) {
-        self.output().push_str(str);
-    }
-
-    fn emit_fmt(&mut self, str: &str) {
-        self.emit_shift();
-        self.output().push_str(str);
-    }
-
-    fn emit_line(&mut self, line: &str) {
-        self.emit_shift();
-        self.output().push_str(line);
-        self.output().push('\n');
-    }
-
-    fn emit_shift(&mut self) {
-        for _ in 0..self.shift() {
-            self.output().push('\t');
-        }
-    }
-
-    fn shift_right(&mut self) {
-        let shift = self.shift() + 1;
-        self.set_shift(shift);
-    }
-
-    fn shift_left(&mut self) {
-        if self.shift() > 0 {
-            let shift = self.shift() - 1;
-            self.set_shift(shift);
-        }
-    }
-
-    fn field_id(id: FieldId) -> String {
+    pub fn field_id(id: FieldId) -> String {
         format!("_field{}", id.raw())
     }
 
-    fn tmp_id(id: TmpId) -> String {
+    pub fn tmp_id(id: TmpId) -> String {
         format!("_tmp{}", id.raw())
     }
 
-    fn var_id(id: VarId) -> String {
+    pub fn var_id(id: VarId) -> String {
         format!("_var{}", id.raw())
     }
 
-    fn fn_id(id: FnId) -> String {
+    pub fn fn_id(id: FnId) -> String {
         format!("_fn{}", id.raw())
     }
 
-    fn type_id(id: TypeId) -> String {
+    pub fn type_id(id: TypeId) -> String {
         format!("_type{}", id.raw())
     }
 
-    fn mod_id(id: ModuleId) -> String {
+    pub fn mod_id(id: ModuleId) -> String {
         format!("_mod{}", id.raw())
     }
 
-    fn new_value(str: String) -> String {
+    pub fn new_value(str: String) -> String {
         format!("Rc::new(RefCell::new({}))", str)
     }
 
-    fn clone_value(str: String) -> String {
+    pub fn clone_value(str: String) -> String {
         format!("({}).clone()", str)
     }
 
-    fn borrow_ref_mut(str: String) -> String {
+    pub fn borrow_ref_mut(str: String) -> String {
         format!("({}).borrow_mut()", str)
     }
 
-    fn borrow_ref(str: String) -> String {
+    pub fn borrow_ref(str: String) -> String {
         format!("({}).borrow()", str)
     }
 
-    fn borrow_mut(str: String) -> String {
+    pub fn borrow_mut(str: String) -> String {
         format!("(*(({}).borrow_mut()))", str)
     }
 
-    fn rustify_type(str: String) -> String {
+    pub fn rustify_type(str: String) -> String {
         format!("Rc<RefCell<{}>>", str)
     }
 
-    fn borrow(str: String) -> String {
+    pub fn borrow(str: String) -> String {
         format!("(*(({}).borrow()))", str)
+    }
+
+    pub fn uni_op(op: &UniOp) -> String {
+        use ast::UniOp::*;
+
+        match *op {
+            Ref => unimplemented!(),
+            Deref => unimplemented!(),
+            Negate => "-".to_string(),
+            LogicalInvert => "!".to_string(),
+        }
+    }
+
+    pub fn bin_op(op: &BinOp) -> String {
+        use ast::BinOp::*;
+        match *op {
+            Add => "+".to_string(),
+            Sub => "-".to_string(),
+            Mul => "*".to_string(),
+            Div => "/".to_string(),
+            Mod => "%".to_string(),
+
+            LogicalAnd => "&&".to_string(),
+            LogicalOr => "||".to_string(),
+            GreaterEq => ">=".to_string(),
+            LesserEq => "<=".to_string(),
+            Greater => ">".to_string(),
+            Lesser => "<".to_string(),
+            Eq => "==".to_string(),
+            InEq => "!=".to_string(),
+        }
     }
 }
