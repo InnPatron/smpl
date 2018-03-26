@@ -126,7 +126,7 @@ impl RustModGen {
 
                     args.push_str(&format!(
                         "{}: {}, ",
-                        RustGenFmt::var_id(param.var_id().unwrap()),
+                        RustGenFmt::var_id(param.var_id),
                         param_type
                     ));
                 }

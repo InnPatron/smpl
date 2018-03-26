@@ -50,27 +50,15 @@ pub struct FunctionType {
 pub struct FnParameter {
     pub name: Ident,
     pub param_type: TypeId,
-    var_id: Cell<Option<VarId>>,
+    pub var_id: VarId,
 }
 
 impl FnParameter {
-    pub fn new(name: Ident, param_type: TypeId) -> FnParameter {
+    pub fn new(name: Ident, param_type: TypeId, param_var_id: VarId) -> FnParameter {
         FnParameter {
             name: name,
             param_type: param_type,
-            var_id: Cell::new(None),
+            var_id: param_var_id,
         }
-    }
-
-    pub fn set_var_id(&self, id: VarId) {
-        match self.var_id.get() {
-            Some(previous) => panic!("Attempting to overwrite {} of parameter {} with {}", 
-                                     previous, self.name, id),
-            None => self.var_id.set(Some(id)),
-        }
-    }
-
-    pub fn var_id(&self) -> Option<VarId> {
-        self.var_id.get()
     }
 }

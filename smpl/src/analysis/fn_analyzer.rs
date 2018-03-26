@@ -61,13 +61,13 @@ pub fn analyze_fn(
 
     // Add parameters to the current scope.
     for param in func_type.params.iter() {
-        let var_id = universe.new_var_id();
+        let v_id = param.var_id;
+        let t_id = param.param_type;
         analyzer
             .current_scope
-            .insert_var(param.name.clone(), var_id, param.param_type);
-        param.set_var_id(var_id);
+            .insert_var(param.name.clone(), v_id, t_id);
 
-        param_types.push((var_id, param.param_type));
+        param_types.push((v_id, t_id));
     }
 
     // Restrain lifetime of traverser to move analyzer.locals
