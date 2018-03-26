@@ -258,7 +258,7 @@ impl fmt::Display for Ident {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TypeAnnotation {
     Path(Path),
-    Array(Path, u64),
+    Array(Box<TypeAnnotation>, u64),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
