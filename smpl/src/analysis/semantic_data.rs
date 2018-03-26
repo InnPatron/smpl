@@ -287,17 +287,6 @@ impl ScopedData {
         }
     }
 
-    pub fn get_type(&self, universe: &Universe, type_annotation: &TypeAnnotation) -> Result<Rc<SmplType>, Err> {
-        let id = self.type_id(type_annotation)?;
-        let t = universe.types
-            .get(&id)
-            .expect(&format!(
-                    "Missing TypeId: {}. All TypeId's should be valid if retrieven from ScopedData.type_map", 
-                    id.0));
-
-        Ok(t.clone())
-    }
-
     pub fn insert_type(&mut self, path: TypePath, id: TypeId) -> Option<TypeId> {
         self.type_map.insert(path, id)
     }
