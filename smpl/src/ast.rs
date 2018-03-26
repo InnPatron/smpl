@@ -41,7 +41,7 @@ pub struct UseDecl(pub Ident);
 pub struct Function {
     pub name: Ident,
     pub params: Option<Vec<FnParameter>>,
-    pub return_type: Option<Path>,
+    pub return_type: Option<TypeAnnotation>,
     pub body: Block,
 }
 
@@ -49,7 +49,7 @@ impl Function {
     pub fn new(
         name: Ident,
         params: Option<Vec<FnParameter>>,
-        return_type: Option<Path>,
+        return_type: Option<TypeAnnotation>,
         body: Block,
     ) -> Function {
         Function {
@@ -64,11 +64,11 @@ impl Function {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnParameter {
     pub name: Ident,
-    pub param_type: Path,
+    pub param_type: TypeAnnotation,
 }
 
 impl FnParameter {
-    pub fn new(name: Ident, param_type: Path) -> FnParameter {
+    pub fn new(name: Ident, param_type: TypeAnnotation) -> FnParameter {
         FnParameter {
             name: name,
             param_type: param_type,
@@ -88,7 +88,7 @@ pub struct StructBody(pub Option<Vec<StructField>>);
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructField {
     pub name: Ident,
-    pub field_type: Path,
+    pub field_type: TypeAnnotation,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -131,13 +131,13 @@ impl Assignment {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct LocalVarDecl {
-    pub var_type: Path,
+    pub var_type: TypeAnnotation,
     pub var_name: Ident,
     pub var_init: Expr,
 }
 
 impl LocalVarDecl {
-    pub fn new(var_type: Path, var_name: Ident, var_init: Expr) -> LocalVarDecl {
+    pub fn new(var_type: TypeAnnotation, var_name: Ident, var_init: Expr) -> LocalVarDecl {
         LocalVarDecl {
             var_type: var_type,
             var_name: var_name,
@@ -253,6 +253,12 @@ impl fmt::Display for Ident {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum TypeAnnotation {
+    Path(Path),
+    Array(Path, u64),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

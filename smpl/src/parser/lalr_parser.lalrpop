@@ -7,15 +7,15 @@
 ///
 ///	use_decl -> "use" ident ";"
 ///
-/// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" path]? block
+/// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" type_annotation]? block
 /// param_list -> param ["," param]*
-/// param -> ident ":" path
+/// param -> ident ":" type_annotation
 ///
 ///
 /// struct_decl -> "struct" ident "{" struct_field_list "}"
 /// struct_field_list -> struct_field "," struct_field_list
 ///		      -> struct_field ","?
-/// struct_field -> ident ":" path
+/// struct_field -> ident ":" type_annotation
 ///
 ///
 /// block -> "{" [stmt]*  "}"
@@ -25,7 +25,7 @@
 /// expr_stmt -> if_stmt | while_stmt | local_var_decl | assignment
 /// if_stmt -> "if" expr block
 /// while_stmt -> "while" expr block
-/// local_var_decl -> "let" ident ":" path  "=" expr ";"
+/// local_var_decl -> "let" ident ":" type_annotation "=" expr ";"
 /// assignment -> path "=" expr ";"
 ///
 ///
@@ -81,9 +81,9 @@ UseDecl: UseDecl = {
 	"use" <i: Ident> ";" => UseDecl(i),
 };
 
-/// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" path]? block
+/// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" type_annotation]? block
 pub FnDecl: Function = {
-	"fn" <name: Ident> "(" <params: FnParameterList?> ")" <return_type: ("->" Path)?> <b: Block> => {
+	"fn" <name: Ident> "(" <params: FnParameterList?> ")" <return_type: ("->" TypeAnnotation)?> <b: Block> => {
 		Function::new(
 			name,
 			params,
@@ -102,9 +102,9 @@ FnParameterList: Vec<FnParameter> = {
 	}
 };
 
-/// param -> ident ":" path
+/// param -> ident ":" type_annotation
 FnParameter: FnParameter = {
-	<name: Ident> ":"  <param_type: Path> => {
+	<name: Ident> ":"  <param_type: TypeAnnotation> => {
 		FnParameter::new(name, param_type)
 	}
 };
@@ -135,9 +135,9 @@ StructFieldList: Vec<StructField> = {
 	}
 };
 
-/// struct_field -> ident ":" path
+/// struct_field -> ident ":" type_annotation
 StructField: StructField = {
-	<name: Ident> ":" <field_type: Path> => {
+	<name: Ident> ":" <field_type: TypeAnnotation> => {
 		StructField {
 			name: name,
 			field_type: field_type,
@@ -172,9 +172,9 @@ ReturnStmt: Option<Expr> = {
 	"return" <e: Expr?> ";" => e,
 };
 
-/// local_var_decl -> "let" ident ":" path  "=" expr ";"
+/// local_var_decl -> "let" ident ":" type_annotation  "=" expr ";"
 LocalVarDecl: LocalVarDecl = {
-	"let" <name: Ident> ":" <var_type: Path> "=" <e: Expr> ";" => {
+	"let" <name: Ident> ":" <var_type: TypeAnnotation> "=" <e: Expr> ";" => {
 		LocalVarDecl::new(
 			var_type,
 			name,
@@ -439,4 +439,8 @@ Path: Path = {
 		p.extend_from_slice(&v);
 		Path(p)
 	}
+};
+
+TypeAnnotation: TypeAnnotation = {
+	<p: Path> => TypeAnnotation::Path(p),
 };
