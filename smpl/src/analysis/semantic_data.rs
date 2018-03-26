@@ -53,11 +53,11 @@ impl Universe {
 
     pub fn std() -> Universe {
 
-        let unit = (TypeId(0), path!("Unit"), SmplType::Unit);
-        let int = (TypeId(1), path!("i32"), SmplType::Int);
-        let float = (TypeId(2), path!("f32"), SmplType::Float);
-        let string = (TypeId(3), path!("String"), SmplType::String);
-        let boolean = (TypeId(4), path!("bool"), SmplType::Bool);
+        let unit = (TypeId(0), type_path!("Unit"), SmplType::Unit);
+        let int = (TypeId(1), type_path!("i32"), SmplType::Int);
+        let float = (TypeId(2), type_path!("f32"), SmplType::Float);
+        let string = (TypeId(3), type_path!("String"), SmplType::String);
+        let boolean = (TypeId(4), type_path!("bool"), SmplType::Bool);
 
         let type_map = vec![
             unit.clone(),
@@ -261,7 +261,7 @@ impl Module {
 
 #[derive(Clone, Debug)]
 pub struct ScopedData {
-    type_map: HashMap<Path, TypeId>,
+    type_map: HashMap<TypePath, TypeId>,
     var_map: HashMap<Ident, VarId>,
     var_type_map: HashMap<VarId, TypeId>,
     fn_map: HashMap<Path, FnId>,
@@ -274,19 +274,30 @@ impl ScopedData {
         self.fn_map.insert(name, fn_id);
     }
 
-    pub fn type_id(&self, path: &Path) -> Result<TypeId, Err> {
-        self.type_map.get(path)
-            .map(|id| id.clone())
-            .ok_or(Err::UnknownType(path.clone()))
+    pub fn type_id(&self, type_annotation: &TypeAnnotation) -> Result<TypeId, Err> {
+        match *type_annotation {
+            TypeAnnotation::Path(ref path) => {
+                self.type_map.get(path)
+                    .map(|id| id.clone())
+                    .ok_or(Err::UnknownType(type_annotation.clone()))
+            }
+
+            TypeAnnotation::Array(..) => unimplemented!(),
+        }
     }
 
-    pub fn get_type(&self, universe: &Universe, path: &Path) -> Result<Rc<SmplType>, Err> {
-        let id = self.type_map.get(path).ok_or(Err::UnknownType(path.clone()))?;
-        let t = universe.types.get(id).expect(&format!("Missing TypeId: {}. All TypeId's should be valid if retrieven from ScopedData.type_map", id.0));
+    pub fn get_type(&self, universe: &Universe, type_annotation: &TypeAnnotation) -> Result<Rc<SmplType>, Err> {
+        let id = self.type_id(type_annotation)?;
+        let t = universe.types
+            .get(&id)
+            .expect(&format!(
+                    "Missing TypeId: {}. All TypeId's should be valid if retrieven from ScopedData.type_map", 
+                    id.0));
+
         Ok(t.clone())
     }
 
-    pub fn insert_type(&mut self, path: Path, id: TypeId) -> Option<TypeId> {
+    pub fn insert_type(&mut self, path: TypePath, id: TypeId) -> Option<TypeId> {
         self.type_map.insert(path, id)
     }
 
@@ -316,7 +327,7 @@ impl ScopedData {
                    .ok_or(Err::UnknownFn(path.clone()))
     }
 
-    pub fn all_types(&self) -> Vec<(&Path, &TypeId)> {
+    pub fn all_types(&self) -> Vec<(&TypePath, &TypeId)> {
         self.type_map.iter().collect()
     }
 

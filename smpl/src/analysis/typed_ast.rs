@@ -196,14 +196,14 @@ pub enum Value {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructInit {
-    struct_type_name: ast::Path,
+    struct_type_name: ast::TypePath,
     field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>,
     struct_type: Cell<Option<TypeId>>,
     mapped_field_init: RefCell<Option<Vec<(FieldId, Typed<TmpId>)>>>,
 }
 
 impl StructInit {
-    pub fn new(struct_type_name: ast::Path, field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>) -> StructInit {
+    pub fn new(struct_type_name: ast::TypePath, field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>) -> StructInit {
         StructInit {
             struct_type_name: struct_type_name,
             struct_type: Cell::new(None),
@@ -212,7 +212,7 @@ impl StructInit {
         }
     }
 
-    pub fn type_name(&self) -> &ast::Path {
+    pub fn type_name(&self) -> &ast::TypePath {
         &self.struct_type_name
     }
 

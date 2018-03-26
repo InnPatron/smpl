@@ -110,7 +110,7 @@ pub enum ExprStmt {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructInit {
-    pub struct_name: Path,
+    pub struct_name: TypePath,
     pub field_init: Option<Vec<(Ident, Box<Expr>)>>,
 }
 
@@ -257,8 +257,35 @@ impl fmt::Display for Ident {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TypeAnnotation {
-    Path(Path),
+    Path(TypePath),
     Array(Box<TypeAnnotation>, u64),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TypePath(pub Vec<Ident>);
+
+impl TypePath {
+    pub fn iter(&self) -> Iter<Ident> {
+        self.0.iter()
+    }
+}
+
+impl From<Ident> for TypePath {
+    fn from(ident: Ident) -> TypePath {
+        TypePath(vec![ident])
+    }
+}
+
+impl fmt::Display for TypePath {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let buffer = self.0
+            .iter()
+            .fold(AsciiString::new(), |mut buffer, ref item| {
+                buffer.push_str(&item.0);
+                buffer
+            });
+        write!(f, "{}", buffer)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
