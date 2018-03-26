@@ -152,7 +152,7 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
             Value::StructInit(ref init) => {
                 // Get type info
                 let type_name = init.type_name();
-                let unknown_type_id = scope.type_id(&type_name)?;
+                let unknown_type_id = scope.type_id(type_name)?;
                 let unknown_type = universe.get_type(unknown_type_id);
 
                 // Check if type is a struct.

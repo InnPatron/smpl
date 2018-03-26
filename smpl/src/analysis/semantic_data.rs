@@ -274,15 +274,16 @@ impl ScopedData {
         self.fn_map.insert(name, fn_id);
     }
 
-    pub fn type_id(&self, type_annotation: &TypeAnnotation) -> Result<TypeId, Err> {
-        match *type_annotation {
-            TypeAnnotation::Path(ref path) => {
+    pub fn type_id<'a, 'b, T>(&'a self, type_annotation: &'b T) -> Result<TypeId, Err> where TypeAnnotationRef<'b>: From<&'b T>{
+        let type_annotation: TypeAnnotationRef = type_annotation.into();
+        match type_annotation {
+            TypeAnnotationRef::Path(path) => {
                 self.type_map.get(path)
                     .map(|id| id.clone())
-                    .ok_or(Err::UnknownType(type_annotation.clone()))
+                    .ok_or(Err::UnknownType(type_annotation.into()))
             }
 
-            TypeAnnotation::Array(..) => unimplemented!(),
+            TypeAnnotationRef::Array(..) => unimplemented!(),
         }
     }
 

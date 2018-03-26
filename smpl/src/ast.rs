@@ -261,6 +261,30 @@ pub enum TypeAnnotation {
     Array(Box<TypeAnnotation>, u64),
 }
 
+impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
+    fn from(t: &TypeAnnotation) -> TypeAnnotationRef {
+        match t {
+            &TypeAnnotation::Path(ref p) => TypeAnnotationRef::Path(p),
+            &TypeAnnotation::Array(ref t, ref s) => TypeAnnotationRef::Array(t, s),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum TypeAnnotationRef<'a> {
+    Path(&'a TypePath),
+    Array(&'a Box<TypeAnnotation>, &'a u64),
+}
+
+impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
+    fn from(tr: TypeAnnotationRef) -> TypeAnnotation {
+        match tr {
+            TypeAnnotationRef::Path(p) => TypeAnnotation::Path(p.clone()),
+            TypeAnnotationRef::Array(t, s) => TypeAnnotation::Array(t.clone(), s.clone()),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypePath(pub Vec<Ident>);
 
@@ -273,6 +297,12 @@ impl TypePath {
 impl From<Ident> for TypePath {
     fn from(ident: Ident) -> TypePath {
         TypePath(vec![ident])
+    }
+}
+
+impl<'a> From<&'a TypePath> for TypeAnnotationRef<'a> {
+    fn from(p: &TypePath) -> TypeAnnotationRef {
+        TypeAnnotationRef::Path(p)
     }
 }
 
