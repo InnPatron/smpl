@@ -1,6 +1,5 @@
 use std::rc::Rc;
 use std::collections::HashSet;
-
 use petgraph::graph::NodeIndex;
 
 use ast;
@@ -657,6 +656,7 @@ mod tests {
 
     use super::*;
     use super::super::semantic_data::*;
+    use super::super::typed_ast::FieldAccess;
 
     #[test]
     fn test_walk_field_access() {
@@ -705,8 +705,9 @@ mod tests {
         let root_var_id = universe.new_var_id();
         scope.insert_var(ident!("baz"), root_var_id, struct_type_2_id);
 
-        let path = path!("root (ignored", "foo_field", "field1");
-        let field_type_id = walk_field_access(&universe, struct_type_2_id, path).unwrap();
+        let path = path!("baz", "foo_field", "field1");
+        let access = FieldAccess::new(path);
+        let field_type_id = resolve_field_access(&universe, &scope, &access).unwrap();
 
         assert_eq!(field_type_id, universe.int());
     }
