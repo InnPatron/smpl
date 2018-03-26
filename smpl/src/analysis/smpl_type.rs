@@ -8,11 +8,19 @@ use ast::Ident;
 pub enum SmplType {
     Function(FunctionType),
     Struct(StructType),
+    Array(ArrayType),
     Int,
     Float,
     String,
     Bool,
     Unit,
+}
+
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ArrayType {
+    pub base_type: TypeId,
+    pub size: u64,
 }
 
 #[derive(Clone, Debug, PartialEq)]
