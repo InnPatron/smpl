@@ -36,6 +36,7 @@ impl Program {
 
 #[derive(Clone, Debug)]
 pub struct Universe {
+    type_constructor: TypeConstructor,
     types: HashMap<TypeId, Rc<SmplType>>,
     fn_map: HashMap<FnId, Function>,
     module_map: HashMap<ModuleId, Module>,
@@ -68,6 +69,7 @@ impl Universe {
         ];
 
         Universe {
+            type_constructor: TypeConstructor::new(),
             types: type_map.clone().into_iter().map(|(id, _, t)| (id, Rc::new(t))).collect(),
             fn_map: HashMap::new(),
             module_map: HashMap::new(),
@@ -219,14 +221,34 @@ impl Universe {
 #[derive(Debug, Clone)]
 struct TypeConstructor {
     map: RefCell<HashMap<ConstructedType, TypeId>>,
+    constructed: RefCell<HashMap<TypeId, Rc<SmplType>>>,
 }
 
 impl TypeConstructor {
-    fn insert(&self, t: ConstructedType, id: TypeId) {
+
+    fn new() -> TypeConstructor {
+        TypeConstructor {
+            map: RefCell::new(HashMap::new()),
+            constructed: RefCell::new(HashMap::new()),
+        }
+    }
+
+    fn get_type(&self, id: TypeId) -> Option<Rc<SmplType>> {
+        self.constructed.borrow().get(&id).map(|rc| rc.clone())
+    }
+
+    fn map(&self, t: ConstructedType, id: TypeId) {
         let mut b = self.map.borrow_mut();
 
         if b.contains_key(&t) == false {
-            b.insert(t, id);
+            b.insert(t.clone(), id);
+        }
+
+        match t {
+            ConstructedType::Array(at) => {
+                let mut b = self.constructed.borrow_mut();
+                b.insert(id, Rc::new(SmplType::Array(at)));
+            }
         }
     }
 
@@ -236,19 +258,19 @@ impl TypeConstructor {
         b.get(t).map(|id| id.clone())
     }
 
-    pub fn construct_array_type(&self, universe: &Universe, base_type: TypeId, size: u64) -> TypeId {
+    pub fn construct_array_type(universe: &Universe, base_type: TypeId, size: u64) -> TypeId {
         let at = ArrayType {
             base_type: base_type,
             size: size,
         };
 
-        let at = ConstructedType::Array(at);
+        let at = ConstructedType::Array(at.clone());
 
-        match self.contains(&at) {
+        match universe.type_constructor.contains(&at) {
             Some(id) => id,
             None => {
                 let id = universe.new_type_id();
-                self.insert(at, id);
+                universe.type_constructor.map(at, id);
                 id
             }
         }
@@ -321,7 +343,13 @@ impl ScopedData {
                     .ok_or(Err::UnknownType(type_annotation.into()))
             }
 
-            TypeAnnotationRef::Array(..) => unimplemented!(),
+            TypeAnnotationRef::Array(base_type, size) => {
+                let base_type = ScopedData::type_id(self, universe, base_type.into())?;
+                let type_id = TypeConstructor::construct_array_type(universe, 
+                                                                   base_type, 
+                                                                   size.clone());
+                Ok(type_id)
+            },
         }
     }
 
