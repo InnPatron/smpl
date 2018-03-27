@@ -216,7 +216,7 @@ fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: Mo
 
 fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunction) -> Result<FunctionType, Err> {
     let ret_type = match fn_def.return_type {
-        Some(ref path) => scope.type_id(universe, path)?,
+        Some(ref path) => scope.type_id(universe, path.into())?,
         None => universe.unit(),
     };
 
@@ -224,7 +224,7 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunctio
         Some(ref params) => params.iter()
                               .map(|ref fn_param| {
                                   let var_id = universe.new_var_id();
-                                  scope.type_id(universe, &fn_param.param_type)
+                                  scope.type_id(universe, (&fn_param.param_type).into())
                                        .map(|id| FnParameter::new(fn_param.name.clone(), id, var_id))
                               })
                               .collect::<Result<Vec<_>, Err>>()?,
@@ -247,7 +247,7 @@ fn generate_struct_type(universe: &Universe, scope: &ScopedData, struct_def: &St
             let f_id = universe.new_field_id();
             let f_name = field.name.clone();
             let f_type_path = &field.field_type;
-            let field_type = scope.type_id(universe, f_type_path)?;
+            let field_type = scope.type_id(universe, f_type_path.into())?;
             fields.insert(f_id, field_type);
             field_map.insert(f_name, f_id);
             order.push(f_id);

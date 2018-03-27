@@ -152,7 +152,7 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
             Value::StructInit(ref init) => {
                 // Get type info
                 let type_name = init.type_name();
-                let unknown_type_id = scope.type_id(universe, type_name)?;
+                let unknown_type_id = scope.type_id(universe, type_name.into())?;
                 let unknown_type = universe.get_type(unknown_type_id);
 
                 // Check if type is a struct.
@@ -486,7 +486,7 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         let name = var_decl.var_name().clone();
         let var_id = var_decl.var_id();
         let var_type_annotation = var_decl.type_annotation();
-        let var_type_id = self.current_scope.type_id(self.universe, var_type_annotation)?;
+        let var_type_id = self.current_scope.type_id(self.universe, var_type_annotation.into())?;
         let var_type = self.universe.get_type(var_type_id);
 
         let expr_type_id = resolve_expr(self.universe, &self.current_scope, var_decl.init_expr())?;

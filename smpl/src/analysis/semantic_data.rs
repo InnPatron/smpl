@@ -313,8 +313,7 @@ impl ScopedData {
         self.fn_map.insert(name, fn_id);
     }
 
-    pub fn type_id<'a, 'b, 'c, T>(&'a self, universe: &'c Universe, type_annotation: &'b T) -> Result<TypeId, Err> where TypeAnnotationRef<'b>: From<&'b T>{
-        let type_annotation: TypeAnnotationRef = type_annotation.into();
+    pub fn type_id<'a, 'b, 'c>(&'a self, universe: &'c Universe, type_annotation: TypeAnnotationRef<'b>) -> Result<TypeId, Err> {
         match type_annotation {
             TypeAnnotationRef::Path(path) => {
                 self.type_map.get(path)
