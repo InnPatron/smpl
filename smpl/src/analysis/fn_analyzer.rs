@@ -406,6 +406,53 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
                     },
                 }
             }
+
+
+            Value::Indexing(ref indexing) => {
+                let element_type;
+                {
+                    // Check type of array
+                    let tmp = expr.get_tmp(*indexing.array.data());
+                    let tmp_value = tmp.value();
+                    let tmp_type_id = tmp_value.type_id().unwrap();
+                    indexing.array.set_type_id(tmp_type_id);
+
+                    let tmp_type = universe.get_type(tmp_type_id);
+
+                    match *tmp_type {
+                        SmplType::Array(ref at) => {
+                            element_type = at.base_type;
+                        },
+
+                        _ => {
+                            return Err(TypeErr::NotAnArray { 
+                                found: tmp_type_id
+                            }.into());
+                        }
+                    }
+                }
+
+                {
+                    // Check type of array
+                    let tmp = expr.get_tmp(*indexing.indexer.data());
+                    let tmp_value = tmp.value();
+                    let tmp_type_id = tmp_value.type_id().unwrap();
+                    indexing.indexer.set_type_id(tmp_type_id);
+
+                    let tmp_type = universe.get_type(tmp_type_id);
+
+                    match *tmp_type {
+                        SmplType::Int => (),
+                        _ => {
+                            return Err(TypeErr::InvalidIndex { 
+                                found: tmp_type_id
+                            }.into());
+                        }
+                    }
+                }
+
+                tmp_type = element_type;
+            }
         }
 
         tmp.value().set_type_id(tmp_type);

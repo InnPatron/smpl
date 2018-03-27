@@ -89,6 +89,21 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
                 }
             }
         }
+
+        AstExpr::Indexing(indexing) => {
+            let array_expr = indexing.array;
+            let indexing_expr = indexing.indexer;
+
+            let array = Typed::untyped(flatten_expr(universe, scope, *array_expr));
+            let indexer = Typed::untyped(flatten_expr(universe, scope, *indexing_expr));
+
+            let indexing = Indexing {
+                array: array,
+                indexer: indexer,
+            };
+
+            scope.map_tmp(universe, Value::Indexing(indexing))
+        }
     }
 }
 

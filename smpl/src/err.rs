@@ -96,6 +96,14 @@ pub enum TypeErr {
         found: TypeId,
         index: usize,
     },
+
+    NotAnArray {
+        found: TypeId,
+    },
+
+    InvalidIndex {
+        found: TypeId,
+    },
 }
 
 impl From<TypeErr> for Err {

@@ -193,6 +193,13 @@ pub enum Value {
     UniExpr(ast::UniOp, Typed<TmpId>),
     StructInit(StructInit),
     ArrayInit(self::ArrayInit),
+    Indexing(Indexing),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Indexing {
+    pub array: Typed<TmpId>,
+    pub indexer: Typed<TmpId>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
