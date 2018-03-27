@@ -355,7 +355,33 @@ ExprLeaf: Expr = {
 	<l: Literal> => Expr::Literal(l),
 	<f: FnCall> => Expr::FnCall(f),
 
+	<a: ArrayInit> => Expr::ArrayInit(a),
+
 	<struct_init: StructInit> => Expr::StructInit(struct_init),
+};
+
+ArrayInit: ArrayInit = {
+	"[" <a: ArrayInitList> "]" => ArrayInit::InitList(a),
+	
+	"[" "default" ":" <n: Number> "]" => {
+		let array_size = n.parse::<u64>().unwrap();
+		ArrayInit::DefaultValue(array_size)
+	},
+
+	"[" <e: Expr> ":" <n: Number> "]" => {
+		let array_size = n.parse::<u64>().unwrap();
+		ArrayInit::Value(Box::new(e), array_size)
+	}
+};
+
+ArrayInitList: Vec<Expr> = {
+	<e: Expr> "," <tail: ArrayInitList> => {
+		let mut v = vec![e];
+		v.extend(tail);
+		v 
+	},
+
+	<e: Expr> ","? => vec![e],
 };
 
 /// struct_init -> "init" type_path "{" struct_field_init_list "}"

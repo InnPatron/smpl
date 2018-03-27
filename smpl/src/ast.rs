@@ -173,6 +173,14 @@ pub enum Expr {
     FieldAccess(Path),
     FnCall(FnCall),
     StructInit(StructInit),
+    ArrayInit(ArrayInit),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ArrayInit {
+    InitList(Vec<Expr>),
+    DefaultValue(u64),
+    Value(Box<Expr>, u64),
 }
 
 #[derive(Clone, Debug, PartialEq)]
