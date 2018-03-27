@@ -429,6 +429,10 @@ impl<'a> RustFnGen<'a> {
 
                 format!("{} {{ {} }}", RustGenFmt::type_id(struct_id), field_init)
             }
+
+            Value::ArrayInit(..) => unimplemented!(),
+
+            Value::Indexing(..) => unimplemented!(),
         };
 
         self.output.emit_line(&format!("let {} = {};", lhs, rhs));
