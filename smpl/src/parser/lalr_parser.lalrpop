@@ -409,7 +409,7 @@ FnCallArgs: Vec<Expr> = {
 
 /// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "[[:ASCII:]]"
 pub Literal: Literal = {
-	<number: r"[-]?[0-9]+[.[0-9]*]?"> => {
+	<number: Number> => {
 		if number.contains(".") {
 			Literal::Float(number.parse::<f64>().unwrap())
 		} else {
@@ -425,6 +425,10 @@ pub Literal: Literal = {
 	"true" => Literal::Bool(true),
 	"false" => Literal::Bool(false), 
 
+};
+
+Number: String = {
+	<number: r"[-]?[0-9]+[.[0-9]*]?"> => number.to_string(),
 };
 
 /// ident -> [a-zA-Z_] [a-zA-Z0-9_]*
@@ -454,4 +458,12 @@ TypePath: TypePath = {
 
 TypeAnnotation: TypeAnnotation = {
 	<p: TypePath> => TypeAnnotation::Path(p),
+	<ArrayType>
+};
+
+ArrayType: TypeAnnotation = {
+	"[" <t: TypeAnnotation> <number: Number> "]" => {
+		let number = number.parse::<u64>().unwrap();
+		TypeAnnotation::Array(Box::new(t), number)
+	}
 };
