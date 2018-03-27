@@ -192,6 +192,13 @@ pub enum Value {
     BinExpr(ast::BinOp, Typed<TmpId>, Typed<TmpId>),
     UniExpr(ast::UniOp, Typed<TmpId>),
     StructInit(StructInit),
+    ArrayInit(self::ArrayInit),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ArrayInit {
+    List(Vec<Typed<TmpId>>),
+    Value(Typed<TmpId>, u64),
 }
 
 #[derive(Debug, Clone, PartialEq)]

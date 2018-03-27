@@ -12,7 +12,7 @@ use super::smpl_type::*;
 use super::linear_cfg_traversal::*;
 use super::control_flow::CFG;
 use super::typed_ast::*;
-use super::semantic_data::{VarId, FnId, ScopedData, TypeId, Universe};
+use super::semantic_data::{VarId, FnId, ScopedData, TypeId, Universe, TypeConstructor};
 
 
 struct FnAnalyzer<'a> {
@@ -344,10 +344,66 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
 
                     tmp_type = fn_type.return_type;
                 } else {
-                    panic!(
-                        "{} was mapped to {}, which is not SmplType::Function but {:?}",
+                    panic!( "{} was mapped to {}, which is not SmplType::Function but {:?}",
                         fn_id, fn_type_id, fn_type
                     );
+                }
+            }
+
+            Value::ArrayInit(ref init) => {
+                match *init {
+                    ArrayInit::List(ref vec) => {
+                        let size = vec.len() as u64;
+                        let element_type_ids = vec.iter()
+                            .map(|ref tmp_id| {
+                                let tmp = expr.get_tmp(*tmp_id.data());
+                                let tmp_value = tmp.value();
+                                let tmp_value_type_id = tmp_value.type_id().unwrap();
+                                tmp_id.set_type_id(tmp_value_type_id);
+                                tmp_value_type_id
+                            });
+
+                        let mut expected_element_type_id = None;
+
+                        for (i, element_type_id) in element_type_ids.enumerate() {
+                            let current_element_type = universe.get_type(element_type_id);
+
+                            if expected_element_type_id.is_none() {
+                                expected_element_type_id = Some(element_type_id);
+                                continue;
+                            }
+
+                            let expected_element_type = universe.get_type(
+                                expected_element_type_id.unwrap());
+
+                            if expected_element_type != current_element_type {
+                                return Err(TypeErr::HeterogenousArray {
+                                    expected: expected_element_type_id.unwrap(),
+                                    found: element_type_id,
+                                    index: i
+                                }.into());
+                            }
+                        }
+
+                        let array_type = TypeConstructor::construct_array_type(universe,
+                                                                               expected_element_type_id.unwrap(),
+                                                                               size);
+                        tmp_type = array_type;
+                    },
+
+                    ArrayInit::Value(ref val, size) => {
+                        let tmp_val = expr.get_tmp(*val.data());
+                        let tmp_concrete_value = tmp_val.value();
+                        let tmp_type_id = tmp_concrete_value.type_id().unwrap();
+                        val.set_type_id(tmp_type_id);
+
+                        let element_type_id = tmp_type_id;
+
+                        let array_type = TypeConstructor::construct_array_type(universe,
+                                                                               element_type_id,
+                                                                               size);
+                        tmp_type = array_type;
+                    },
                 }
             }
         }

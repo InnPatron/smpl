@@ -225,7 +225,7 @@ impl Universe {
 }
 
 #[derive(Debug, Clone)]
-struct TypeConstructor {
+pub struct TypeConstructor {
     map: RefCell<HashMap<ConstructedType, TypeId>>,
     constructed: RefCell<HashMap<TypeId, Rc<SmplType>>>,
 }

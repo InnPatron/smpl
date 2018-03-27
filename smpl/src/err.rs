@@ -90,6 +90,12 @@ pub enum TypeErr {
         name: Ident,
         struct_type: TypeId,
     },
+
+    HeterogenousArray {
+        expected: TypeId,
+        found: TypeId,
+        index: usize,
+    },
 }
 
 impl From<TypeErr> for Err {
