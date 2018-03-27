@@ -179,7 +179,6 @@ pub enum Expr {
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArrayInit {
     InitList(Vec<Expr>),
-    DefaultValue(u64),
     Value(Box<Expr>, u64),
 }
 

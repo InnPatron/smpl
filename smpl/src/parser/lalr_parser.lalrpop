@@ -362,11 +362,6 @@ ExprLeaf: Expr = {
 
 ArrayInit: ArrayInit = {
 	"[" <a: ArrayInitList> "]" => ArrayInit::InitList(a),
-	
-	"[" "default" ":" <n: Number> "]" => {
-		let array_size = n.parse::<u64>().unwrap();
-		ArrayInit::DefaultValue(array_size)
-	},
 
 	"[" <e: Expr> ":" <n: Number> "]" => {
 		let array_size = n.parse::<u64>().unwrap();
