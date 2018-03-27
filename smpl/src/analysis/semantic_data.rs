@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::cell::Cell;
+use std::cell::{RefCell, Cell};
 use std::rc::Rc;
 
 use err::Err;
@@ -213,6 +213,45 @@ impl Universe {
 
     pub fn all_modules(&self) -> Vec<(&Ident, &ModuleId)> {
         self.module_name.iter().collect()
+    }
+}
+
+#[derive(Debug, Clone)]
+struct TypeConstructor {
+    map: RefCell<HashMap<ConstructedType, TypeId>>,
+}
+
+impl TypeConstructor {
+    fn insert(&self, t: ConstructedType, id: TypeId) {
+        let mut b = self.map.borrow_mut();
+
+        if b.contains_key(&t) == false {
+            b.insert(t, id);
+        }
+    }
+
+    fn contains(&self, t: &ConstructedType) -> Option<TypeId> {
+        let b = self.map.borrow();
+
+        b.get(t).map(|id| id.clone())
+    }
+
+    pub fn construct_array_type(&self, universe: &Universe, base_type: TypeId, size: u64) -> TypeId {
+        let at = ArrayType {
+            base_type: base_type,
+            size: size,
+        };
+
+        let at = ConstructedType::Array(at);
+
+        match self.contains(&at) {
+            Some(id) => id,
+            None => {
+                let id = universe.new_type_id();
+                self.insert(at, id);
+                id
+            }
+        }
     }
 }
 

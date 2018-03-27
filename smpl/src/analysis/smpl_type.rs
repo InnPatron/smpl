@@ -16,8 +16,13 @@ pub enum SmplType {
     Unit,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ConstructedType {
+    Array(ArrayType),
+}
 
-#[derive(Clone, Debug, PartialEq)]
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ArrayType {
     pub base_type: TypeId,
     pub size: u64,
