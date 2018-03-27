@@ -273,14 +273,14 @@ impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TypeAnnotationRef<'a> {
     Path(&'a TypePath),
-    Array(&'a Box<TypeAnnotation>, &'a u64),
+    Array(&'a TypeAnnotation, &'a u64),
 }
 
 impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
     fn from(tr: TypeAnnotationRef) -> TypeAnnotation {
         match tr {
             TypeAnnotationRef::Path(p) => TypeAnnotation::Path(p.clone()),
-            TypeAnnotationRef::Array(t, s) => TypeAnnotation::Array(t.clone(), s.clone()),
+            TypeAnnotationRef::Array(t, s) => TypeAnnotation::Array(Box::new(t.clone()), s.clone()),
         }
     }
 }
