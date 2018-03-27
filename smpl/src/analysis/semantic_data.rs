@@ -155,7 +155,10 @@ impl Universe {
     }
 
     pub fn get_type(&self, id: TypeId) -> Rc<SmplType> {
-        match self.types.get(&id).map(|t| t.clone()) {
+        match self.types
+            .get(&id)
+            .map(|t| t.clone())
+            .or(self.type_constructor.get_type(id)) {
             Some(t) => t,
             None => panic!("Type with TypeId {} does not exist.", id.0),
         }
@@ -206,7 +209,10 @@ impl Universe {
     }
 
     pub fn all_types(&self) -> Vec<(TypeId, Rc<SmplType>)> {
-        self.types.iter().map(|(id, t)| (id.clone(), t.clone())).collect()
+        self.types.iter()
+            .map(|(id, t)| (id.clone(), t.clone()))
+            .chain(self.type_constructor.all_types())
+            .collect()
     }
 
     pub fn all_fns(&self) -> Vec<(FnId, &Function)> {
@@ -231,6 +237,11 @@ impl TypeConstructor {
             map: RefCell::new(HashMap::new()),
             constructed: RefCell::new(HashMap::new()),
         }
+    }
+
+    fn all_types(&self) -> Vec<(TypeId, Rc<SmplType>)> {
+        let b = self.constructed.borrow();
+        b.iter().map(|(id, t)| (id.clone(), t.clone())).collect()
     }
 
     fn get_type(&self, id: TypeId) -> Option<Rc<SmplType>> {
