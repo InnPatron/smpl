@@ -232,6 +232,13 @@ WhileStmt: While = {
 /// expr -> truth_expr
 pub Expr: Expr = {	
 	<c: TruthExpr> => c,
+	
+	<e: Expr> "[" <i: Expr> "]" => {
+		Expr::Indexing(Indexing { 
+			array: Box::new(e), 
+			indexer: Box::new(i)
+		})
+	},
 };
 
 /// truth_expr -> truth_expr ["&&" | "||"] strict_eq_expr | strict_eq_expr

@@ -174,6 +174,13 @@ pub enum Expr {
     FnCall(FnCall),
     StructInit(StructInit),
     ArrayInit(ArrayInit),
+    Indexing(Indexing),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Indexing {
+    pub array: Box<Expr>,
+    pub indexer: Box<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
