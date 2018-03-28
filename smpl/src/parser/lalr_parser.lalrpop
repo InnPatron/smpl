@@ -370,7 +370,7 @@ ExprLeaf: Expr = {
 ArrayInit: ArrayInit = {
 	"[" <a: ArrayInitList> "]" => ArrayInit::InitList(a),
 
-	"[" <e: Expr> ":" <n: Number> "]" => {
+	"[" <e: Expr> ";" <n: Number> "]" => {
 		let array_size = n.parse::<u64>().unwrap();
 		ArrayInit::Value(Box::new(e), array_size)
 	}
@@ -490,7 +490,7 @@ TypeAnnotation: TypeAnnotation = {
 };
 
 ArrayType: TypeAnnotation = {
-	"[" <t: TypeAnnotation> <number: Number> "]" => {
+	"[" <t: TypeAnnotation> ";" <number: Number> "]" => {
 		let number = number.parse::<u64>().unwrap();
 		TypeAnnotation::Array(Box::new(t), number)
 	}
