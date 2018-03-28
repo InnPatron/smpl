@@ -648,4 +648,21 @@ fn test() {
         let mod2 = parse_module(mod2).unwrap();
         check_program(vec![mod1, mod2]).unwrap();
     }
+
+    #[test]
+    fn correct_array_initialization() {
+        let mod1 =
+"mod mod1;
+
+
+fn test() {
+    let a: [i32; 100] = [ 10; 100 ];
+    let b: [i32; 3] = [ 1, 2, 3 ];
+}
+
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
 }
