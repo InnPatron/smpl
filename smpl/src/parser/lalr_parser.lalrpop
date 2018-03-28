@@ -186,11 +186,8 @@ LocalVarDecl: LocalVarDecl = {
 
 /// assignment -> path "=" expr ";"
 Assignment: Assignment = {
-	<name: Path> "=" <e: Expr> ";" => {
-		Assignment::new(
-			name,
-			e,
-		)
+	<name: ExprLeafPath> "=" <e: Expr> ";" => {
+		unimplemented!()
 	}
 };
 
@@ -350,19 +347,23 @@ UniOp: UniOp = {
 
 /// expr_leaf -> "(" expr ")"| literal | fn_call | path | struct_init
 ExprLeaf: Expr = {
+	<ExprLeafPath>
+};
+
+ExprLeafPath: Expr = {
+	<first: Primary> "." <tail: ExprLeafPath> => unimplemented!(),
+
+	<p: Primary> => unimplemented!(),
+};
+
+Primary: Expr = {
 	"(" <e: Expr> ")" => e,
-	<path: Path> => {
-		let mut path = path;
-		if path.0.len() == 1 {
-			Expr::Variable(path.0.pop().unwrap())
-		} else {
-			Expr::FieldAccess(path)
-		}
-	},
 	<l: Literal> => Expr::Literal(l),
 	<f: FnCall> => Expr::FnCall(f),
 
 	<a: ArrayInit> => Expr::ArrayInit(a),
+
+	<i: Ident> => unimplemented!(),
 
 	<struct_init: StructInit> => Expr::StructInit(struct_init),
 };
@@ -464,19 +465,9 @@ Ident: Ident = {
 	<ident: r"[A-Za-z_][_A-Za-z0-9]*"> => { Ident(AsciiString::from_str(ident).unwrap()) }
 };
 
-/// path -> ident ["." ident]*
-Path: Path = {
-	<first: Ident> <v:("." <Ident>)*> => {
-		let mut p = Vec::new();
-		p.push(first);
-		p.extend_from_slice(&v);
-		Path(p)
-	}
-};
-
 /// type_path -> ident ["." ident]*
 TypePath: TypePath = {
-	<first: Ident> <v:("." <Ident>)*> => {
+	<first: Ident> <v:("::" <Ident>)*> => {
 		let mut p = Vec::new();
 		p.push(first);
 		p.extend_from_slice(&v);
