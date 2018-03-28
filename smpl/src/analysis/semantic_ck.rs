@@ -665,4 +665,32 @@ fn test() {
         let mod1 = parse_module(mod1).unwrap();
         check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn heterogenous_array_initialization() {
+        let mod1 =
+"mod mod1;
+
+fn test() {
+    let a: [i32; 2] = [100, false];
+}
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Expected TypeErr::HeterogenousArray. Passed checks."),
+            Err(e) => {
+                match e {
+                    Err::TypeErr(e) => {
+                        match e {
+                            TypeErr::HeterogenousArray{..} => (),
+                            e @ _ => panic!("Expected TypeErr::HeterogenousArray. Found {:?}", e),
+                        }
+                    }
+
+                    e @ _ => panic!("Expected TypeErr::HeterogenousArray. Found {:?}", e),
+                }
+            }
+        }
+    }
 }
