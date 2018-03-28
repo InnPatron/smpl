@@ -721,4 +721,24 @@ fn test() {
             }
         }
     }
+
+    #[test]
+    fn array_indexing() {
+        let mod1 =
+"
+mod mod1;
+
+fn test() {
+    let a: [i32; 4] = [0, 1, 2, 3];
+
+    let i1: i32 = a[0];
+    let i2: i32 = a[1];
+    let i3: i32 = a[2];
+    let i4: i32 = a[3];
+}
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
 }
