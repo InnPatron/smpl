@@ -693,4 +693,32 @@ fn test() {
             }
         }
     }
+
+    #[test]
+    fn mismatch_array_assignment() {
+        let mod1 =
+"mod mod1;
+
+fn test() {
+    let a: [i32; 3] = [100, 100];
+}
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Expected TypeErr::LhsRhsInEq. Passed checks."),
+            Err(e) => {
+                match e {
+                    Err::TypeErr(e) => {
+                        match e {
+                            TypeErr::LhsRhsInEq(..) => (),
+                            e @ _ => panic!("Expected TypeErr::LhsRhsInEq. Found {:?}", e),
+                        }
+                    }
+
+                    e @ _ => panic!("Expected TypeErr::LhsRhsInEq. Found {:?}", e),
+                }
+            }
+        }
+    }
 }
