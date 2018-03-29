@@ -359,7 +359,7 @@ ExprLeaf: Expr = {
 
 	<struct_init: StructInit> => Expr::StructInit(struct_init),
 
-	<i: Indexing> => Expr::Indexing(i),
+	//<i: Indexing> => Expr::Indexing(i),
 };
 
 Indexing: Indexing = {
@@ -470,12 +470,28 @@ Ident: Ident = {
 
 /// path -> ident ["." ident]*
 Path: Path = {
-	<first: Ident> <v:("." <Ident>)*> => {
-		let mut p = Vec::new();
+	<p: PathSegmentList> => {
+		/*let mut p = Vec::new();
 		p.push(first);
 		p.extend_from_slice(&v);
-		Path(p)
+		Path(p)*/
+		unimplemented!()
 	}
+};
+
+PathSegmentList: Vec<PathSegment> = {
+	<first: PathSegment> "." <tail: PathSegmentList> => {
+		let mut p = tail;
+		p.insert(0, first);
+		p
+	},
+
+	<segment: PathSegment> => vec![segment],
+};
+
+PathSegment: PathSegment = {
+	<i: Ident> => PathSegment::Ident(i),
+	<i: Indexing> => PathSegment::Indexing(i),
 };
 
 /// type_path -> ident ["." ident]*
