@@ -186,11 +186,8 @@ LocalVarDecl: LocalVarDecl = {
 
 /// assignment -> path "=" expr ";"
 Assignment: Assignment = {
-	<location: Path> "=" <e: Expr> ";" => {
-		Assignment {
-			location: location,
-			value: e,
-		}
+	<name: ExprLeafPath> "=" <e: Expr> ";" => {
+		unimplemented!()
 	}
 };
 
@@ -343,22 +340,13 @@ UniOp: UniOp = {
 
 /// expr_leaf -> "(" expr ")"| literal | fn_call | path | struct_init
 ExprLeaf: Expr = {
-	<p: Path> => Expr::FieldAccess(p),
+	<ExprLeafPath>
 };
 
-Path: Path = {
-	<e: ExprLeafPath> => Path(e),
-};
+ExprLeafPath: Expr = {
+	<first: Primary> "." <tail: ExprLeafPath> => unimplemented!(),
 
-ExprLeafPath: Vec<Expr> = {
-	<first: Primary> "." <tail: ExprLeafPath> => {
-		let mut tail = tail;
-		tail.insert(0, first);
-
-		tail
-	},
-
-	<p: Primary> => vec![p],
+	<p: Primary> => unimplemented!(),
 };
 
 Primary: Expr = {
