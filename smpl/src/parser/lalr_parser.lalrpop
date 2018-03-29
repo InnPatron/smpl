@@ -359,12 +359,16 @@ ExprLeaf: Expr = {
 
 	<struct_init: StructInit> => Expr::StructInit(struct_init),
 
-	<e: Primary> "[" <i: Expr> "]" => {
-		Expr::Indexing(Indexing { 
+	<i: Indexing> => Expr::Indexing(i),
+};
+
+Indexing: Indexing = {
+	<e: ExprLeaf> "[" <i: Expr> "]" => {
+		Indexing { 
 			array: Box::new(e), 
 			indexer: Box::new(i)
-		})
-	},
+		}
+	}
 };
 
 ArrayInit: ArrayInit = {
