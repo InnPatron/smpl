@@ -116,17 +116,8 @@ pub struct StructInit {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Assignment {
-    pub name: Path,
+    pub location: Path,
     pub value: Expr,
-}
-
-impl Assignment {
-    pub fn new(name: Path, value: Expr) -> Assignment {
-        Assignment {
-            name: name,
-            value: value,
-        }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -332,29 +323,17 @@ impl fmt::Display for TypePath {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Path(pub Vec<Ident>);
+#[derive(Clone, Debug, PartialEq)]
+pub struct Path(pub Vec<Expr>);
 
 impl Path {
-    pub fn iter(&self) -> Iter<Ident> {
+    pub fn iter(&self) -> Iter<Expr> {
         self.0.iter()
     }
 }
 
 impl From<Ident> for Path {
     fn from(ident: Ident) -> Path {
-        Path(vec![ident])
-    }
-}
-
-impl fmt::Display for Path {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let buffer = self.0
-            .iter()
-            .fold(AsciiString::new(), |mut buffer, ref item| {
-                buffer.push_str(&item.0);
-                buffer
-            });
-        write!(f, "{}", buffer)
+        Path(vec![Expr::Variable(ident)])
     }
 }
