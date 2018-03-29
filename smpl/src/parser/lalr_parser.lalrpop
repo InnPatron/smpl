@@ -346,7 +346,11 @@ ExprLeaf: Expr = {
 	<path: Path> => {
 		let mut path = path;
 		if path.0.len() == 1 {
-			Expr::Variable(path.0.pop().unwrap())
+			let segment = path.0.pop().unwrap();
+			match segment {
+				PathSegment::Ident(i) => Expr::Variable(i),
+				PathSegment::Indexing(i) => Expr::Indexing(i),
+			}
 		} else {
 			Expr::FieldAccess(path)
 		}
@@ -473,13 +477,7 @@ Ident: Ident = {
 
 /// path -> ident ["." ident]*
 Path: Path = {
-	<p: PathSegmentList> => {
-		/*let mut p = Vec::new();
-		p.push(first);
-		p.extend_from_slice(&v);
-		Path(p)*/
-		unimplemented!()
-	}
+	<p: PathSegmentList> => Path(p),
 };
 
 PathSegmentList: Vec<PathSegment> = {
