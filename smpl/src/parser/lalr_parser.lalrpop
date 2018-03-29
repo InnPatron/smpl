@@ -480,7 +480,7 @@ Path: Path = {
 
 /// type_path -> ident ["." ident]*
 TypePath: TypePath = {
-	<first: Ident> <v:("." <Ident>)*> => {
+	<first: Ident> <v:("::" <Ident>)*> => {
 		let mut p = Vec::new();
 		p.push(first);
 		p.extend_from_slice(&v);
