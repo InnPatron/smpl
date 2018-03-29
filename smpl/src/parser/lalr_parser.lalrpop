@@ -343,7 +343,6 @@ UniOp: UniOp = {
 
 /// expr_leaf -> "(" expr ")"| literal | fn_call | path | struct_init
 ExprLeaf: Expr = {
-	"(" <e: Expr> ")" => e,
 	<path: Path> => {
 		let mut path = path;
 		if path.0.len() == 1 {
@@ -352,18 +351,22 @@ ExprLeaf: Expr = {
 			Expr::FieldAccess(path)
 		}
 	},
+
+	<Primary>,
+};
+
+Primary: Expr = {
+	"(" <e: Expr> ")" => e,
 	<l: Literal> => Expr::Literal(l),
 	<f: FnCall> => Expr::FnCall(f),
 
 	<a: ArrayInit> => Expr::ArrayInit(a),
 
 	<struct_init: StructInit> => Expr::StructInit(struct_init),
-
-	//<i: Indexing> => Expr::Indexing(i),
 };
 
 Indexing: Indexing = {
-	<e: ExprLeaf> "[" <i: Expr> "]" => {
+	<e: Primary> "[" <i: Expr> "]" => {
 		Indexing { 
 			array: Box::new(e), 
 			indexer: Box::new(i)
