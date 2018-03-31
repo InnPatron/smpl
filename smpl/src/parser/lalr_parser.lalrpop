@@ -349,12 +349,20 @@ ExprLeaf: Expr = {
 			let segment = path.0.pop().unwrap();
 			match segment {
 				PathSegment::Ident(i) => Expr::Variable(i),
-				PathSegment::Indexing(i) => Expr::Indexing(i),
+				PathSegment::Indexing(i, e) => {
+					let i = Indexing {
+						array: Box::new(Expr::Variable(i)),
+						indexer: e
+					};
+					Expr::Indexing(i)
+				}
 			}
 		} else {
 			Expr::FieldAccess(path)
 		}
 	},
+
+	<i: Indexing> => Expr::Indexing(i),
 
 	<Primary>,
 };
@@ -492,7 +500,7 @@ PathSegmentList: Vec<PathSegment> = {
 
 PathSegment: PathSegment = {
 	<i: Ident> => PathSegment::Ident(i),
-	<i: Indexing> => PathSegment::Indexing(i),
+	<i: Ident> "[" <e: Expr> "]" => PathSegment::Indexing(i, Box::new(e)),
 };
 
 /// type_path -> ident ["." ident]*

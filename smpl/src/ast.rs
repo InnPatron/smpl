@@ -350,5 +350,5 @@ impl From<Ident> for Path {
 #[derive(Clone, Debug, PartialEq)]
 pub enum PathSegment {
     Ident(Ident),
-    Indexing(Indexing),
+    Indexing(Ident, Box<Expr>),
 }
