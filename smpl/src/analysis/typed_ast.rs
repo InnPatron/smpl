@@ -61,7 +61,7 @@ pub struct Assignment {
 impl Assignment {
     pub fn new(universe: &Universe, assignment: ast::Assignment) -> Assignment {
         Assignment {
-            field_access: FieldAccess::new(assignment.name),
+            field_access: FieldAccess::new(universe, assignment.name),
             value: expr_flow::flatten(universe, assignment.value),
         }
     }
@@ -287,23 +287,29 @@ impl StructInit {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldAccess {
-    path: ast::Path,
+    raw_path: ast::Path,
+    path: self::Path,
     root_var: Cell<Option<VarId>>,
     root_var_type: Cell<Option<TypeId>>,
     field_type_id: Cell<Option<TypeId>>,
 }
 
 impl FieldAccess {
-    pub fn new(path: ast::Path) -> FieldAccess {
+    pub fn new(universe: &Universe, path: ast::Path) -> FieldAccess {
         FieldAccess {
-            path: path,
+            raw_path: path.clone(),
+            path: self::Path::new(universe, path),
             root_var: Cell::new(None),
             root_var_type: Cell::new(None),
             field_type_id: Cell::new(None),
         }
     }
 
-    pub fn path(&self) -> &ast::Path {
+    pub fn raw_path(&self) -> &ast::Path {
+        &self.raw_path
+    }
+
+    pub fn path(&self) -> &self::Path {
         &self.path
     }
 
@@ -408,4 +414,32 @@ impl FnCall {
     pub fn get_id(&self) -> Option<FnId> {
         self.fn_id.get()
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Path(Vec<self::PathSegment>);
+
+impl self::Path {
+    fn new(universe: &Universe, path: ast::Path) -> self::Path {
+        let p = path.0.into_iter().map(|ps| {
+            match ps {
+                ast::PathSegment::Ident(i) => self::PathSegment::Ident(i),
+                ast::PathSegment::Indexing(i, e) => {
+                    self::PathSegment::Indexing(i, expr_flow::flatten(universe, *e))
+                }
+            }
+        }).collect();
+
+        self::Path(p)
+    }
+
+    pub fn path(&self) -> &[self::PathSegment] {
+        &self.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PathSegment {
+    Ident(ast::Ident),
+    Indexing(ast::Ident, self::Expr),
 }
