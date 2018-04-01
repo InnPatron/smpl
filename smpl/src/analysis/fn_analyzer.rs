@@ -737,7 +737,11 @@ fn resolve_field_access(
 
             match *indexing_type {
                 SmplType::Int => (),
-                _ => unimplemented!(),
+                _ => {
+                    return Err(TypeErr::InvalidIndex { 
+                        found: indexing_type_id
+                    }.into());
+                }
             }
 
             let var_type = universe.get_type(var_type_id);
@@ -747,7 +751,11 @@ fn resolve_field_access(
                     current_type_id = a.base_type;
                     current_type = universe.get_type(current_type_id);
                 }
-                _ => unimplemented!(),
+                _ => {
+                    return Err(TypeErr::NotAnArray { 
+                        found: var_type_id 
+                    }.into());
+                }
             }
 
             root_var_id = var_id;
@@ -781,7 +789,12 @@ fn resolve_field_access(
 
                         match *indexing_type {
                             SmplType::Int => (),
-                            _ => unimplemented!(),
+
+                            _ => {
+                                return Err(TypeErr::InvalidIndex { 
+                                    found: indexing_type_id
+                                }.into());
+                            },
                         }
                         
                         match *field_type {
@@ -789,7 +802,11 @@ fn resolve_field_access(
                                 current_type_id = a.base_type;
                             }
 
-                            _ => unimplemented!(),
+                            _ => {
+                                return Err(TypeErr::NotAnArray { 
+                                    found: field_type_id
+                                }.into());
+                            },
                         }
                     }
                 }
