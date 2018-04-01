@@ -741,4 +741,27 @@ fn test() {
         let mod1 = parse_module(mod1).unwrap();
         check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn assign_array_index() {
+        let mod1= 
+"
+mod mod1;
+
+struct T {
+    t: [i32; 4]
+}
+
+
+fn test() {
+    let a: T = init T {
+        t: [1, 2, 3, 4]
+    };
+
+    a.t[3] = 10;
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
 }
