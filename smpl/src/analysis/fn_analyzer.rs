@@ -711,27 +711,93 @@ fn resolve_field_access(
     field_access: &FieldAccess,
 ) -> Result<TypeId, Err> {
 
-    let mut path_iter = field_access.path().iter();
+    let mut path_iter = field_access.path().path().iter();
 
-    let root_var_name = path_iter.next().unwrap();
-    let (root_var_id, root_var_type_id) = scope.var_info(root_var_name)?;
+    let root_var = path_iter.next().unwrap();
+    let root_var_id;
+    let root_var_type_id;
 
-    let mut current_type_id = root_var_type_id;
-    let mut current_type = universe.get_type(root_var_type_id);
+    let mut current_type_id;
+    let mut current_type;
+
+    match *root_var {
+        PathSegment::Ident(ref i) => {
+            let (var_id, type_id) = scope.var_info(i)?;
+            current_type_id = type_id;
+            current_type = universe.get_type(type_id);
+            root_var_type_id = type_id;
+            root_var_id = var_id;
+        }
+
+        PathSegment::Indexing(ref i, ref e) => {
+            let (var_id, var_type_id) = scope.var_info(i)?;
+
+            let indexing_type_id = resolve_expr(universe, scope, e)?;
+            let indexing_type = universe.get_type(indexing_type_id);
+
+            match *indexing_type {
+                SmplType::Int => (),
+                _ => unimplemented!(),
+            }
+
+            let var_type = universe.get_type(var_type_id);
+
+            match *var_type {
+                SmplType::Array(ref a) => {
+                    current_type_id = a.base_type;
+                    current_type = universe.get_type(current_type_id);
+                }
+                _ => unimplemented!(),
+            }
+
+            root_var_id = var_id;
+            root_var_type_id = var_type_id;
+        }
+    }
 
     for (index, field) in path_iter.enumerate() {
         match *current_type {
             SmplType::Struct(ref struct_type) => {
-                let field_id = struct_type.field_id(field).ok_or(TypeErr::UnknownField {
-                    name: field.clone(),
-                    struct_type: current_type_id,
-                })?;
-                current_type_id = struct_type.field_type(field_id).unwrap();
+                match *field {
+                    PathSegment::Ident(ref field) => {
+                        let field_id = struct_type.field_id(field).ok_or(TypeErr::UnknownField {
+                            name: field.clone(),
+                            struct_type: current_type_id,
+                        })?;
+                        current_type_id = struct_type.field_type(field_id).unwrap();
+                    }
+
+                    PathSegment::Indexing(ref field, ref indexing) => {
+                        let field_id = struct_type.field_id(&field).ok_or(TypeErr::UnknownField {
+                            name: field.clone(),
+                            struct_type: current_type_id,
+                        })?;
+
+                        let field_type_id = struct_type.field_type(field_id).unwrap();
+                        let field_type = universe.get_type(field_type_id);
+
+                        let indexing_type_id = resolve_expr(universe, scope, indexing)?;
+                        let indexing_type = universe.get_type(indexing_type_id);
+
+                        match *indexing_type {
+                            SmplType::Int => (),
+                            _ => unimplemented!(),
+                        }
+                        
+                        match *field_type {
+                            SmplType::Array(ref a) => {
+                                current_type_id = a.base_type;
+                            }
+
+                            _ => unimplemented!(),
+                        }
+                    }
+                }
             }
 
             _ => {
                 return Err(TypeErr::FieldAccessOnNonStruct {
-                    path: field_access.path().clone(),
+                    path: field_access.raw_path().clone(),
                     index: index,
                     invalid_type: current_type_id,
                     root_type: root_var_type_id,
