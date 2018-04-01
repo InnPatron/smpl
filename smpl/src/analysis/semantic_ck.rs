@@ -625,11 +625,11 @@ struct B{
 use mod2;
 
 struct A {
-    field: mod2.B,
+    field: mod2::B,
 }
 
 fn test() {
-    mod2.test();
+    mod2::test();
 }";
 
         let mod2 =
