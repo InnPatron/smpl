@@ -433,7 +433,35 @@ impl<'a> RustFnGen<'a> {
                 format!("{} {{ {} }}", RustGenFmt::type_id(struct_id), field_init)
             }
 
-            Value::ArrayInit(..) => unimplemented!(),
+            Value::ArrayInit(ref a) => {
+                match *a {
+                    ArrayInit::List(ref vec) => {
+                        let mut string_buffer = "[".to_string();
+                        for tmp in vec.iter() {
+                            let value = RustGenFmt::new_value(RustGenFmt::tmp_id(*tmp.data()));
+                            string_buffer.push_str(&value);
+                            string_buffer.push(',');
+                        }
+
+                        string_buffer.push(']');
+
+                        string_buffer
+                    }
+
+                    ArrayInit::Value(ref value, size) => {
+                        let mut string_buffer = "[".to_string();
+                        let value = RustGenFmt::new_value(RustGenFmt::tmp_id(*value.data()));
+                        for _ in 0..size {
+                            string_buffer.push_str(&value);
+                            string_buffer.push(',');
+                        }
+
+                        string_buffer.push(']');
+
+                        string_buffer
+                    }
+                }
+            },
 
             Value::Indexing(..) => unimplemented!(),
         };
