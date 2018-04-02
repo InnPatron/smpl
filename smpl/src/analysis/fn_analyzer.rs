@@ -711,27 +711,110 @@ fn resolve_field_access(
     field_access: &FieldAccess,
 ) -> Result<TypeId, Err> {
 
-    let mut path_iter = field_access.path().iter();
+    let mut path_iter = field_access.path().path().iter();
 
-    let root_var_name = path_iter.next().unwrap();
-    let (root_var_id, root_var_type_id) = scope.var_info(root_var_name)?;
+    let root_var = path_iter.next().unwrap();
+    let root_var_id;
+    let root_var_type_id;
 
-    let mut current_type_id = root_var_type_id;
-    let mut current_type = universe.get_type(root_var_type_id);
+    let mut current_type_id;
+    let mut current_type;
+
+    match *root_var {
+        PathSegment::Ident(ref i) => {
+            let (var_id, type_id) = scope.var_info(i)?;
+            current_type_id = type_id;
+            current_type = universe.get_type(type_id);
+            root_var_type_id = type_id;
+            root_var_id = var_id;
+        }
+
+        PathSegment::Indexing(ref i, ref e) => {
+            let (var_id, var_type_id) = scope.var_info(i)?;
+
+            let indexing_type_id = resolve_expr(universe, scope, e)?;
+            let indexing_type = universe.get_type(indexing_type_id);
+
+            match *indexing_type {
+                SmplType::Int => (),
+                _ => {
+                    return Err(TypeErr::InvalidIndex { 
+                        found: indexing_type_id
+                    }.into());
+                }
+            }
+
+            let var_type = universe.get_type(var_type_id);
+
+            match *var_type {
+                SmplType::Array(ref a) => {
+                    current_type_id = a.base_type;
+                    current_type = universe.get_type(current_type_id);
+                }
+                _ => {
+                    return Err(TypeErr::NotAnArray { 
+                        found: var_type_id 
+                    }.into());
+                }
+            }
+
+            root_var_id = var_id;
+            root_var_type_id = var_type_id;
+        }
+    }
 
     for (index, field) in path_iter.enumerate() {
         match *current_type {
             SmplType::Struct(ref struct_type) => {
-                let field_id = struct_type.field_id(field).ok_or(TypeErr::UnknownField {
-                    name: field.clone(),
-                    struct_type: current_type_id,
-                })?;
-                current_type_id = struct_type.field_type(field_id).unwrap();
+                match *field {
+                    PathSegment::Ident(ref field) => {
+                        let field_id = struct_type.field_id(field).ok_or(TypeErr::UnknownField {
+                            name: field.clone(),
+                            struct_type: current_type_id,
+                        })?;
+                        current_type_id = struct_type.field_type(field_id).unwrap();
+                    }
+
+                    PathSegment::Indexing(ref field, ref indexing) => {
+                        let field_id = struct_type.field_id(&field).ok_or(TypeErr::UnknownField {
+                            name: field.clone(),
+                            struct_type: current_type_id,
+                        })?;
+
+                        let field_type_id = struct_type.field_type(field_id).unwrap();
+                        let field_type = universe.get_type(field_type_id);
+
+                        let indexing_type_id = resolve_expr(universe, scope, indexing)?;
+                        let indexing_type = universe.get_type(indexing_type_id);
+
+                        match *indexing_type {
+                            SmplType::Int => (),
+
+                            _ => {
+                                return Err(TypeErr::InvalidIndex { 
+                                    found: indexing_type_id
+                                }.into());
+                            },
+                        }
+                        
+                        match *field_type {
+                            SmplType::Array(ref a) => {
+                                current_type_id = a.base_type;
+                            }
+
+                            _ => {
+                                return Err(TypeErr::NotAnArray { 
+                                    found: field_type_id
+                                }.into());
+                            },
+                        }
+                    }
+                }
             }
 
             _ => {
                 return Err(TypeErr::FieldAccessOnNonStruct {
-                    path: field_access.path().clone(),
+                    path: field_access.raw_path().clone(),
                     index: index,
                     invalid_type: current_type_id,
                     root_type: root_var_type_id,
@@ -747,71 +830,4 @@ fn resolve_field_access(
     field_access.set_root_var(root_var_id, root_var_type_id);
 
     Ok(accessed_field_type_id)
-}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
-    use std::str::FromStr;
-
-    use ascii::*;
-    use ast::*;
-
-    use super::*;
-    use super::super::semantic_data::*;
-    use super::super::typed_ast::FieldAccess;
-
-    #[test]
-    fn test_walk_field_access() {
-        let mut universe = Universe::std();
-
-        let field1_id = universe.new_field_id();
-        let field2_id = universe.new_field_id();
-
-        let field_map_1 = vec![
-            (ident!("field1"), field1_id),
-            (ident!("field2"), field2_id),
-        ].into_iter()
-            .collect::<HashMap<_, _>>();
-
-        let fields_1 = vec![
-            (field1_id, universe.int()),
-            (field2_id, universe.boolean()),
-        ].into_iter()
-            .collect::<HashMap<_, _>>();
-        let struct_type_1 = StructType {
-            name: ident!("foo"),
-            fields: fields_1,
-            field_map: field_map_1
-        };
-        let struct_type_1_id = universe.new_type_id();
-        universe.insert_type(struct_type_1_id, SmplType::Struct(struct_type_1));
-
-
-        let foo_field_id = universe.new_field_id();
-        let fields_2 = vec![(foo_field_id, struct_type_1_id)]
-            .into_iter()
-            .collect::<HashMap<_, _>>();
-        let field_map_2 = vec![(ident!("foo_field"), foo_field_id)]
-            .into_iter()
-            .collect::<HashMap<_, _>>();
-
-        let struct_type_2 = StructType {
-            name: ident!("bar"),
-            fields: fields_2,
-            field_map: field_map_2,
-        };
-        let struct_type_2_id = universe.new_type_id();
-        universe.insert_type(struct_type_2_id, SmplType::Struct(struct_type_2));
-
-        let mut scope = universe.std_scope();
-        let root_var_id = universe.new_var_id();
-        scope.insert_var(ident!("baz"), root_var_id, struct_type_2_id);
-
-        let path = path!("baz", "foo_field", "field1");
-        let access = FieldAccess::new(path);
-        let field_type_id = resolve_field_access(&universe, &scope, &access).unwrap();
-
-        assert_eq!(field_type_id, universe.int());
-    }
 }

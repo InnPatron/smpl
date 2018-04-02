@@ -625,11 +625,11 @@ struct B{
 use mod2;
 
 struct A {
-    field: mod2.B,
+    field: mod2::B,
 }
 
 fn test() {
-    mod2.test();
+    mod2::test();
 }";
 
         let mod2 =
@@ -737,6 +737,29 @@ fn test() {
     let i4: i32 = a[3];
 }
 ";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn assign_array_index() {
+        let mod1= 
+"
+mod mod1;
+
+struct T {
+    t: [i32; 4]
+}
+
+
+fn test() {
+    let a: T = init T {
+        t: [1, 2, 3, 4]
+    };
+
+    a.t[3] = 10;
+}";
 
         let mod1 = parse_module(mod1).unwrap();
         check_program(vec![mod1]).unwrap();

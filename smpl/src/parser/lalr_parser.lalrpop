@@ -232,13 +232,6 @@ WhileStmt: While = {
 /// expr -> truth_expr
 pub Expr: Expr = {	
 	<c: TruthExpr> => c,
-	
-	<e: Expr> "[" <i: Expr> "]" => {
-		Expr::Indexing(Indexing { 
-			array: Box::new(e), 
-			indexer: Box::new(i)
-		})
-	},
 };
 
 /// truth_expr -> truth_expr ["&&" | "||"] strict_eq_expr | strict_eq_expr
@@ -350,21 +343,47 @@ UniOp: UniOp = {
 
 /// expr_leaf -> "(" expr ")"| literal | fn_call | path | struct_init
 ExprLeaf: Expr = {
-	"(" <e: Expr> ")" => e,
 	<path: Path> => {
 		let mut path = path;
 		if path.0.len() == 1 {
-			Expr::Variable(path.0.pop().unwrap())
+			let segment = path.0.pop().unwrap();
+			match segment {
+				PathSegment::Ident(i) => Expr::Variable(i),
+				PathSegment::Indexing(i, e) => {
+					let i = Indexing {
+						array: Box::new(Expr::Variable(i)),
+						indexer: e
+					};
+					Expr::Indexing(i)
+				}
+			}
 		} else {
 			Expr::FieldAccess(path)
 		}
 	},
+
+	<i: Indexing> => Expr::Indexing(i),
+
+	<Primary>,
+};
+
+Primary: Expr = {
+	"(" <e: Expr> ")" => e,
 	<l: Literal> => Expr::Literal(l),
 	<f: FnCall> => Expr::FnCall(f),
 
 	<a: ArrayInit> => Expr::ArrayInit(a),
 
 	<struct_init: StructInit> => Expr::StructInit(struct_init),
+};
+
+Indexing: Indexing = {
+	<e: Primary> "[" <i: Expr> "]" => {
+		Indexing { 
+			array: Box::new(e), 
+			indexer: Box::new(i)
+		}
+	}
 };
 
 ArrayInit: ArrayInit = {
@@ -466,17 +485,27 @@ Ident: Ident = {
 
 /// path -> ident ["." ident]*
 Path: Path = {
-	<first: Ident> <v:("." <Ident>)*> => {
-		let mut p = Vec::new();
-		p.push(first);
-		p.extend_from_slice(&v);
-		Path(p)
-	}
+	<p: PathSegmentList> => Path(p),
+};
+
+PathSegmentList: Vec<PathSegment> = {
+	<first: PathSegment> "." <tail: PathSegmentList> => {
+		let mut p = tail;
+		p.insert(0, first);
+		p
+	},
+
+	<segment: PathSegment> => vec![segment],
+};
+
+PathSegment: PathSegment = {
+	<i: Ident> => PathSegment::Ident(i),
+	<i: Ident> "[" <e: Expr> "]" => PathSegment::Indexing(i, Box::new(e)),
 };
 
 /// type_path -> ident ["." ident]*
 TypePath: TypePath = {
-	<first: Ident> <v:("." <Ident>)*> => {
+	<first: Ident> <v:("::" <Ident>)*> => {
 		let mut p = Vec::new();
 		p.push(first);
 		p.extend_from_slice(&v);

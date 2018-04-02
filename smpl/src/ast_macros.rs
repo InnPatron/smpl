@@ -54,8 +54,9 @@ macro_rules! ident {
 #[allow(unused_macros)]
 macro_rules! path {
     ($($segment: expr),*) => {{
+        use ast::PathSegment as ASTPathSegment;
         let mut v = Vec::new();
-        $(v.push(ident!($segment));)*;
+        $(v.push(ASTPathSegment::Ident(ident!($segment)));)*;
         Path(v)
     }};
 }
