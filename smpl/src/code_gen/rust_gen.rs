@@ -343,6 +343,7 @@ impl<'a> RustFnGen<'a> {
             }
 
             Value::FieldAccess(ref access) => {
+                /*
                 let var_id = RustGenFmt::var_id(access.get_root_var_id().unwrap());
                 let mut borrow_chain = format!("let _borrow_{} = {};\n", var_id,
                                                RustGenFmt::borrow_ref(var_id.clone()));
@@ -376,7 +377,9 @@ impl<'a> RustFnGen<'a> {
                 let value = RustGenFmt::clone_value(format!("_borrow_{}", previous));
                 let result = format!("{{ {} {} }}", borrow_chain, value);
 
-                result
+                result 
+                */
+                unimplemented!()
             }
 
             Value::BinExpr(ref op, ref lhs, ref rhs) => format!(
@@ -523,6 +526,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn assignment(&mut self, _id: NodeIndex, assignment: &Assignment) -> Result<(), ()> {
+        /*
         let assignee = assignment.assignee();
         let var_id = RustGenFmt::var_id(assignee.get_root_var_id().unwrap());
         self.output.emit_line("{");
@@ -569,6 +573,8 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         self.output.emit_line("}");
         self.output.line_pad();
         Ok(())
+        */
+        unimplemented!()
     }
 
     fn expr(&mut self, _id: NodeIndex, expr: &Expr) -> Result<(), ()> {
