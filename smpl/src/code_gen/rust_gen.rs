@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Write;
 
 use code_gen::StringEmitter;
 
@@ -463,7 +464,33 @@ impl<'a> RustFnGen<'a> {
                 }
             },
 
-            Value::Indexing(..) => unimplemented!(),
+            Value::Indexing(ref indexing) => {
+                let array_tmp_id = *indexing.array.data();
+                let indexer_tmp_id = *indexing.indexer.data();
+
+                let mut string_buffer = String::new();
+                write!(&mut string_buffer, "_borrow_{} = {};",
+                       RustGenFmt::tmp_id(array_tmp_id),
+                       RustGenFmt::borrow_ref(
+                           RustGenFmt::tmp_id(array_tmp_id)))
+                    .unwrap();
+
+                write!(&mut string_buffer, "_borrow_{} = _borrow_{}[{}].borrow()",
+                       RustGenFmt::tmp_id(indexer_tmp_id),
+                       RustGenFmt::tmp_id(array_tmp_id),
+                       RustGenFmt::tmp_id(indexer_tmp_id))
+                    .unwrap();
+
+                string_buffer.push_str(&format!(
+                        "{}",
+                        RustGenFmt::clone_value(
+                            format!("_borrow_{}",
+                                    RustGenFmt::tmp_id(indexer_tmp_id)))
+                        )
+                    );
+                
+                string_buffer
+            }
         };
 
         self.output.emit_line(&format!("let {} = {};", lhs, rhs));
