@@ -711,78 +711,79 @@ fn resolve_field_access(
     field_access: &FieldAccess,
 ) -> Result<TypeId, Err> {
 
-    let mut path_iter = field_access.path().path().iter();
+    let path = field_access.path();
+    let mut path_iter = path.path().iter();
 
-    let root_var = path_iter.next().unwrap();
     let root_var_id;
     let root_var_type_id;
 
     let mut current_type_id;
     let mut current_type;
 
-    match *root_var {
-        PathSegment::Ident(ref i) => {
-            let (var_id, type_id) = scope.var_info(i)?;
-            current_type_id = type_id;
-            current_type = universe.get_type(type_id);
-            root_var_type_id = type_id;
-            root_var_id = var_id;
+    let (var_id, var_type_id) = scope.var_info(path.root_name())?;
+    root_var_type_id = var_type_id;
+    root_var_id = var_id;
+
+    current_type_id = root_var_type_id;
+
+    if let Some(e) = path.root_indexing_expr() {
+        let indexing_type_id = resolve_expr(universe, scope, e)?;
+        let indexing_type = universe.get_type(indexing_type_id);
+
+        match *indexing_type {
+            SmplType::Int => (),
+            _ => {
+                return Err(TypeErr::InvalidIndex { 
+                    found: indexing_type_id
+                }.into());
+            }
         }
-
-        PathSegment::Indexing(ref i, ref e) => {
-            let (var_id, var_type_id) = scope.var_info(i)?;
-
-            let indexing_type_id = resolve_expr(universe, scope, e)?;
-            let indexing_type = universe.get_type(indexing_type_id);
-
-            match *indexing_type {
-                SmplType::Int => (),
-                _ => {
-                    return Err(TypeErr::InvalidIndex { 
-                        found: indexing_type_id
-                    }.into());
-                }
+        let var_type = universe.get_type(var_type_id);
+        match *var_type {
+            SmplType::Array(ref a) => {
+                current_type_id = a.base_type;
             }
-
-            let var_type = universe.get_type(var_type_id);
-
-            match *var_type {
-                SmplType::Array(ref a) => {
-                    current_type_id = a.base_type;
-                    current_type = universe.get_type(current_type_id);
-                }
-                _ => {
-                    return Err(TypeErr::NotAnArray { 
-                        found: var_type_id 
-                    }.into());
-                }
+            _ => {
+                return Err(TypeErr::NotAnArray { 
+                    found: var_type_id 
+                }.into());
             }
-
-            root_var_id = var_id;
-            root_var_type_id = var_type_id;
         }
     }
+
+    path.set_root_var(root_var_id);
+    path.set_root_var_type(root_var_type_id);
+
+    current_type = universe.get_type(current_type_id);
 
     for (index, field) in path_iter.enumerate() {
         match *current_type {
             SmplType::Struct(ref struct_type) => {
                 match *field {
                     PathSegment::Ident(ref field) => {
-                        let field_id = struct_type.field_id(field).ok_or(TypeErr::UnknownField {
-                            name: field.clone(),
+                        let name = field.name();
+                        let field_id = struct_type.field_id(name).ok_or(TypeErr::UnknownField {
+                            name: name.clone(),
                             struct_type: current_type_id,
                         })?;
                         current_type_id = struct_type.field_type(field_id).unwrap();
+
+                        field.set_field_id(field_id);
+                        field.set_field_type(current_type_id);
                     }
 
                     PathSegment::Indexing(ref field, ref indexing) => {
-                        let field_id = struct_type.field_id(&field).ok_or(TypeErr::UnknownField {
-                            name: field.clone(),
+                        let name = field.name();
+                        let field_id = struct_type.field_id(name).ok_or(TypeErr::UnknownField {
+                            name: name.clone(),
                             struct_type: current_type_id,
                         })?;
 
                         let field_type_id = struct_type.field_type(field_id).unwrap();
                         let field_type = universe.get_type(field_type_id);
+
+                        field.set_field_id(field_id);
+                        field.set_field_type(field_type_id);
 
                         let indexing_type_id = resolve_expr(universe, scope, indexing)?;
                         let indexing_type = universe.get_type(indexing_type_id);
@@ -827,7 +828,6 @@ fn resolve_field_access(
 
     let accessed_field_type_id = current_type_id;
     field_access.set_field_type_id(accessed_field_type_id);
-    field_access.set_root_var(root_var_id, root_var_type_id);
 
     Ok(accessed_field_type_id)
 }

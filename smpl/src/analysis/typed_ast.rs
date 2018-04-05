@@ -289,8 +289,6 @@ impl StructInit {
 pub struct FieldAccess {
     raw_path: ast::Path,
     path: self::Path,
-    root_var: Cell<Option<VarId>>,
-    root_var_type: Cell<Option<TypeId>>,
     field_type_id: Cell<Option<TypeId>>,
 }
 
@@ -299,8 +297,6 @@ impl FieldAccess {
         FieldAccess {
             raw_path: path.clone(),
             path: self::Path::new(universe, path),
-            root_var: Cell::new(None),
-            root_var_type: Cell::new(None),
             field_type_id: Cell::new(None),
         }
     }
@@ -311,28 +307,6 @@ impl FieldAccess {
 
     pub fn path(&self) -> &self::Path {
         &self.path
-    }
-
-    pub fn set_root_var(&self, var_id: VarId, type_id: TypeId) {
-        if self.root_var.get().is_some() {
-            panic!("Attempting to overwrite root VarId{} of the FieldAccess {:?} with {}", self.root_var.get().unwrap(), self.path, var_id);
-        } else {
-            self.root_var.set(Some(var_id));
-        }
-
-        if self.root_var_type.get().is_some() {
-            panic!("Attempting to overwrite root TypeId{} of the FieldAccess {:?} with {}", self.root_var_type.get().unwrap(), self.path, type_id);
-        } else {
-            self.root_var_type.set(Some(type_id));
-        }
-    }
-
-    pub fn get_root_var_type_id(&self) -> Option<TypeId> {
-        self.root_var_type.get()
-    }
-
-    pub fn get_root_var_id(&self) -> Option<VarId> {
-        self.root_var.get()
     }
 
     pub fn set_field_type_id(&self, id: TypeId) {
@@ -417,29 +391,150 @@ impl FnCall {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Path(Vec<self::PathSegment>);
+pub struct Path {
+    root_name: ast::Ident,
+    root_indexing: Option<self::Expr>,
+    root_var: RefCell<Option<Typed<VarId>>>,
+    path: Vec<self::PathSegment>,
+}
 
 impl self::Path {
     fn new(universe: &Universe, path: ast::Path) -> self::Path {
-        let p = path.0.into_iter().map(|ps| {
+        let mut path_iter = path.0.into_iter();
+        let root = path_iter.next().unwrap();
+
+        let (name, indexing) = match root {
+            ast::PathSegment::Ident(i) => (i, None),
+            ast::PathSegment::Indexing(i, e) => (i, Some(expr_flow::flatten(universe, *e))),
+        };
+
+        let path = path_iter.map(|ps| {
             match ps {
-                ast::PathSegment::Ident(i) => self::PathSegment::Ident(i),
+                ast::PathSegment::Ident(i) => self::PathSegment::Ident(Field::new(i)),
                 ast::PathSegment::Indexing(i, e) => {
-                    self::PathSegment::Indexing(i, expr_flow::flatten(universe, *e))
+                    self::PathSegment::Indexing(Field::new(i), expr_flow::flatten(universe, *e))
                 }
             }
         }).collect();
 
-        self::Path(p)
+        self::Path {
+            root_name: name,
+            root_indexing: indexing,
+            root_var: RefCell::new(None),
+            path: path
+        }
+    }
+
+    pub fn root_name(&self) -> &ast::Ident {
+        &self.root_name
+    }
+
+    pub fn root_indexing_expr(&self) -> Option<&self::Expr> {
+        self.root_indexing.as_ref()
+    }
+
+    pub fn root_var_id(&self) -> VarId {
+        let r = self.root_var.borrow();
+
+        match *r {
+            Some(ref typed_var_id) => *typed_var_id.data(),
+            None => panic!("No root var")
+        }
+    }
+
+    pub fn root_var_type(&self) -> TypeId {
+        let r = self.root_var.borrow();
+
+        match *r {
+            Some(ref typed_var_id) => typed_var_id.type_id().unwrap(),
+            None => panic!("No root var")
+        }
+    }
+
+    pub fn set_root_var(&self, id: VarId) {
+        let mut r = self.root_var.borrow_mut();
+
+        if r.is_some() {
+            panic!("Attempting to overwrite root VarId");
+        }
+
+        *r = Some(Typed::untyped(id));
+    }
+
+    pub fn set_root_var_type(&self, id: TypeId) {
+        let mut r = self.root_var.borrow_mut();
+
+        match *r {
+            Some(ref t) => t.set_type_id(id),
+            None => panic!("No root var"),
+        }
     }
 
     pub fn path(&self) -> &[self::PathSegment] {
-        &self.0
+        &self.path
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PathSegment {
-    Ident(ast::Ident),
-    Indexing(ast::Ident, self::Expr),
+    Ident(Field),
+    Indexing(Field, self::Expr),
+}
+
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Field {
+    name: ast::Ident,
+    field_id: RefCell<Option<Typed<FieldId>>>
+}
+
+impl Field {
+
+    pub fn new(name: ast::Ident) -> Field {
+        Field {
+            name: name,
+            field_id: RefCell::new(None),
+        }
+    }
+
+    pub fn name(&self) -> &ast::Ident {
+        &self.name
+    }
+
+    pub fn field_id(&self) -> FieldId {
+        let f = self.field_id.borrow();
+
+        match *f {
+            Some(ref typed_field_id) => *typed_field_id.data(),
+            None => panic!("No field")
+        }
+    }
+
+    pub fn field_type(&self) -> TypeId {
+        let f = self.field_id.borrow();
+
+        match *f {
+            Some(ref typed_field_id) => typed_field_id.type_id().unwrap(),
+            None => panic!("No field")
+        }
+    }
+
+    pub fn set_field_id(&self, id: FieldId) {
+        let mut f = self.field_id.borrow_mut();
+
+        if f.is_some() {
+            panic!("Attempting to override field id.");
+        }
+
+        *f = Some(Typed::untyped(id));
+    }
+
+    pub fn set_field_type(&self, id: TypeId) {
+        let mut f = self.field_id.borrow_mut();
+
+        match *f {
+            Some(ref t) => t.set_type_id(id),
+            None => panic!("No field"),
+        }
+    }
 }
