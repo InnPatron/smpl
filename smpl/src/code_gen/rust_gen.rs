@@ -344,43 +344,94 @@ impl<'a> RustFnGen<'a> {
             }
 
             Value::FieldAccess(ref access) => {
-                /*
-                let var_id = RustGenFmt::var_id(access.get_root_var_id().unwrap());
-                let mut borrow_chain = format!("let _borrow_{} = {};\n", var_id,
-                                               RustGenFmt::borrow_ref(var_id.clone()));
+                let path = access.path();
+                let root_var_id = path.root_var_id();
+                let root_var = RustGenFmt::var_id(root_var_id);
 
-                let mut previous_type = access.get_root_var_type_id().unwrap();
-                let mut previous = var_id;
-                let mut path = access.path().iter();
-                path.next(); // Remove root ident
+                let mut string_buffer = String::new();
 
-                for field in path {
-                    let to_access = self.universe.get_type(previous_type);
-                    let struct_t = match *to_access {
-                        SmplType::Struct(ref s) => s,
-                        _ => unreachable!(),
-                    };
+                writeln!(&mut string_buffer,
+                       "let _borrow_{} = {};",
+                       root_var,
+                       root_var).unwrap();
 
-                    let field_id = struct_t.field_id(field).unwrap();
-                    let field_t = struct_t.field_type(field_id).unwrap();
+                let mut previous_borrow = root_var;
 
-                    let stringified_field_id = RustGenFmt::field_id(field_id);
+                if let Some(e) = path.root_indexing_expr() {
+                    let mut emitter = StringEmitter::new();
+                    let tmp = RustFnGen::emit_expr(&mut emitter, e);
+                    writeln!(&mut string_buffer,
+                           "{}",
+                           emitter.consume()).unwrap();
 
-                    let borrow = RustGenFmt::borrow_ref(format!("_borrow_{}.{}", 
-                                                               previous, 
-                                                               stringified_field_id));
-                    borrow_chain.push_str(&format!(
-                            "let _borrow_{} = {};", stringified_field_id, borrow));
-                    previous = stringified_field_id;
-                    previous_type = field_t;
+                    let tmp = RustGenFmt::tmp_id(tmp);
+
+                    writeln!(&mut string_buffer,
+                             "_borrow_{} = _borrow_{}[{}].borrow();",
+                             tmp,
+                             previous_borrow,
+                             tmp).unwrap();
+
+                    previous_borrow = tmp;
                 }
 
-                let value = RustGenFmt::clone_value(format!("_borrow_{}", previous));
-                let result = format!("{{ {} {} }}", borrow_chain, value);
+                for ps in path.path() {
+                    match *ps {
+                        PathSegment::Ident(ref f) => {
+                            // Borrow field
+                            let stringified_field = RustGenFmt::field_id(f.field_id());
+                            let borrow = RustGenFmt::borrow_ref(format!("_borrow_{}.{}", 
+								   previous_borrow, 
+								   stringified_field));
 
-                result 
-                */
-                unimplemented!()
+                            writeln!(&mut string_buffer,
+                                     "let _borrow_{} = {};",
+                                     stringified_field,
+                                     borrow).unwrap();
+
+                            previous_borrow = stringified_field;
+                        }
+
+                        PathSegment::Indexing(ref f, ref e) => {
+                            // Borrow field
+                            let stringified_field = RustGenFmt::field_id(f.field_id());
+                            let borrow = RustGenFmt::borrow_ref(format!("_borrow_{}.{}", 
+								   previous_borrow, 
+								   stringified_field));
+
+                            writeln!(&mut string_buffer,
+                                     "let _borrow_{} = {};",
+                                     stringified_field,
+                                     borrow).unwrap();
+
+                            let mut emitter = StringEmitter::new();
+                            let tmp = RustFnGen::emit_expr(&mut emitter, e);
+                            let tmp = RustGenFmt::tmp_id(tmp);
+
+                            writeln!(&mut string_buffer,
+                                   "{}",
+                                   emitter.consume()).unwrap();
+
+                            writeln!(&mut string_buffer,
+                                     "_borrow_{} = _borrow_{}[{}].borrow();",
+                                     tmp,
+                                     previous_borrow,
+                                     tmp).unwrap();
+
+                            previous_borrow = tmp;
+                        }
+                    }
+                }
+
+                // Clone Ref inner value. TMPs are ALWAYS raw values.
+                let value = RustGenFmt::clone_value(format!("_borrow_{}", previous_borrow));
+                let mut result = String::new();
+
+                writeln!(&mut result,
+                     "{{ {} {} }}", string_buffer, 
+                     value).unwrap();
+                         
+                result
             }
 
             Value::BinExpr(ref op, ref lhs, ref rhs) => format!(
