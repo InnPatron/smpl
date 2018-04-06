@@ -12,7 +12,7 @@ use super::smpl_type::*;
 use super::linear_cfg_traversal::*;
 use super::control_flow::CFG;
 use super::typed_ast::*;
-use super::semantic_data::{VarId, FnId, ScopedData, TypeId, Universe, TypeConstructor};
+use super::semantic_data::{VarId, FnId, ScopedData, TypeId, Universe, TypeConstructor, ModuleId};
 
 
 struct FnAnalyzer<'a, 'b> {
@@ -22,6 +22,8 @@ struct FnAnalyzer<'a, 'b> {
     fn_return_type_id: TypeId,
     current_scope: ScopedData,
     scope_stack: Vec<ScopedData>,
+
+    module_id: ModuleId,
 
     // metadata
     locals: Vec<(VarId, TypeId)>,
@@ -33,6 +35,7 @@ pub fn analyze_fn(
     global_scope: &ScopedData,
     cfg: &CFG,
     fn_id: FnId,
+    module_id: ModuleId,
 ) -> Result<(), Err> {
     let fn_return_type;
     let fn_return_type_id;
@@ -57,6 +60,7 @@ pub fn analyze_fn(
         current_scope: global_scope.clone(),
         scope_stack: Vec::new(),
         locals: Vec::new(),
+        module_id: module_id,
     };
 
     let mut param_types = Vec::new();

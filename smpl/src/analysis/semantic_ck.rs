@@ -59,6 +59,8 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
 fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: ModuleCkData) -> Result<ModuleCkSignal, Err> {
     let module_name = module.name.clone();
 
+    let module_id = universe.new_module_id();
+
     let mut missing_modules = Vec::new();
     for use_decl in module.unresolved_module_uses.into_iter() {
         match universe.module_id(&use_decl.0) {
@@ -174,7 +176,7 @@ fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: Mo
             module.owned_fns.push(fn_id);
 
             match analyze_fn(&universe, metadata, &module.module_scope, 
-                             universe.get_fn(fn_id).cfg(), fn_id)  {
+                             universe.get_fn(fn_id).cfg(), fn_id, module_id)  {
                 Ok(f) => f,
                 Err(e) => {
                     match e {
@@ -201,8 +203,6 @@ fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: Mo
             unreachable!();
         }
     }
-
-    let module_id = universe.new_module_id();
 
     let module = Module::new(module.module_scope, 
                              module.owned_types, 
