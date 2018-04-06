@@ -676,7 +676,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
             let tmp = RustGenFmt::tmp_id(tmp);
 
             self.output.emit_line(&format!(
-                     "_borrow_{} = _borrow_{}[{}].borrow();",
+                     "let mut _borrow_{} = _borrow_{}[{}].borrow_mut();",
                      tmp,
                      previous_borrow,
                      tmp));
@@ -717,7 +717,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
                     let tmp = RustGenFmt::tmp_id(tmp);
 
                     self.output.emit_line(&format!(
-                             "_borrow_{} = _borrow_{}[{}].borrow();",
+                             "let mut _borrow_{} = _borrow_{}[{}].borrow_mut();",
                              tmp,
                              previous_borrow,
                              tmp));
