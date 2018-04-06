@@ -11,6 +11,7 @@ basic: s_if s_while s_fn s_array
 	cp $(OUTPUT)/while_tests.rs $(OUTPUT)/$(BASIC_PROJECT)/src/
 	cp $(OUTPUT)/fn_tests.rs $(OUTPUT)/$(BASIC_PROJECT)/src/
 	cp $(OUTPUT)/arrays.rs $(OUTPUT)/$(BASIC_PROJECT)/src/
+	cd $(OUTPUT)/$(BASIC_PROJECT);cargo build
 
 s_if: compiler if_tests.smpl
 	./smplc --input if_tests.smpl --backend 0 --output $(OUTPUT)/if_tests.rs
