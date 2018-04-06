@@ -526,7 +526,7 @@ impl<'a> RustFnGen<'a> {
                            RustGenFmt::tmp_id(array_tmp_id)))
                     .unwrap();
 
-                write!(&mut string_buffer, "_borrow_{} = _borrow_{}[{}].borrow()",
+                write!(&mut string_buffer, "_borrow_{} = _borrow_{}[{}].borrow();",
                        RustGenFmt::tmp_id(indexer_tmp_id),
                        RustGenFmt::tmp_id(array_tmp_id),
                        RustGenFmt::tmp_id(indexer_tmp_id))
