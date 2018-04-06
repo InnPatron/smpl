@@ -295,27 +295,27 @@ impl<'a> RustFnGen<'a> {
 // Code generation
 impl<'a> RustFnGen<'a> {
 
-    fn emit_condition(&mut self, e: &Expr) {
-        self.output.emit_line("if {");
-        self.output.shift_right();
-        let expr = self.emit_expr(e);
-        self.output.emit_line(&format!("{} }}", RustGenFmt::tmp_id(expr)));
-        self.output.shift_left();
+    fn emit_condition(output: &mut StringEmitter, e: &Expr) {
+        output.emit_line("if {");
+        output.shift_right();
+        let expr = RustFnGen::emit_expr(output, e);
+        output.emit_line(&format!("{} }}", RustGenFmt::tmp_id(expr)));
+        output.shift_left();
     }
 
-    fn emit_expr(&mut self, expr: &Expr) -> TmpId {
+    fn emit_expr(output: &mut StringEmitter, expr: &Expr) -> TmpId {
         let execution_order = expr.execution_order();
 
         let mut last_tmp = None;
         for tmp in execution_order {
-            self.emit_tmp(expr.get_tmp(*tmp));
+            RustFnGen::emit_tmp(output, expr.get_tmp(*tmp));
             last_tmp = Some(tmp);
         }
 
         *last_tmp.unwrap()
     }
 
-    fn emit_tmp(&mut self, tmp: &Tmp) {
+    fn emit_tmp(output: &mut StringEmitter, tmp: &Tmp) {
         let id = tmp.id();
         let value = tmp.value();
 
@@ -493,7 +493,7 @@ impl<'a> RustFnGen<'a> {
             }
         };
 
-        self.output.emit_line(&format!("let {} = {};", lhs, rhs));
+        output.emit_line(&format!("let {} = {};", lhs, rhs));
     }
 }
 
@@ -566,7 +566,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     fn local_var_decl(&mut self, _id: NodeIndex, var_decl: &LocalVarDecl) -> Result<(), ()> {
         let var_id = var_decl.var_id();
         let type_id = var_decl.type_id().unwrap();
-        let expr = self.emit_expr(var_decl.init_expr());
+        let expr = RustFnGen::emit_expr(&mut self.output, var_decl.init_expr());
 
         let name = RustGenFmt::var_id(var_id);
         let var_type = RustGenFmt::type_id(type_id);
@@ -633,7 +633,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn expr(&mut self, _id: NodeIndex, expr: &Expr) -> Result<(), ()> {
-        self.emit_expr(expr);
+        RustFnGen::emit_expr(&mut self.output, expr);
         self.output.line_pad();
         Ok(())
     }
@@ -641,7 +641,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     fn ret(&mut self, _id: NodeIndex, expr: Option<&Expr>) -> Result<(), ()> {
         match expr {
             Some(ref expr) => {
-                let expr = self.emit_expr(expr);
+                let expr = RustFnGen::emit_expr(&mut self.output, expr);
                 self.output.emit_line(&format!("return {};", RustGenFmt::tmp_id(expr)));
             }
 
@@ -653,7 +653,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn loop_condition(&mut self, _id: NodeIndex, condition_expr: &Expr) -> Result<(), ()> {
-        self.emit_condition(condition_expr);
+        RustFnGen::emit_condition(&mut self.output, condition_expr);
 
         Ok(())
     }
@@ -670,7 +670,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 
     fn branch_condition(&mut self, _id: NodeIndex, condition_expr: &Expr) -> Result<(), ()> {
-        self.emit_condition(condition_expr);
+        RustFnGen::emit_condition(&mut self.output, condition_expr);
 
         Ok(())
     }
