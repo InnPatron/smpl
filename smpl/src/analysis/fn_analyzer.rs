@@ -15,8 +15,9 @@ use super::typed_ast::*;
 use super::semantic_data::{VarId, FnId, ScopedData, TypeId, Universe, TypeConstructor};
 
 
-struct FnAnalyzer<'a> {
+struct FnAnalyzer<'a, 'b> {
     universe: &'a Universe,
+    metadata: &'b mut Metadata,
     fn_return_type: Rc<SmplType>,
     fn_return_type_id: TypeId,
     current_scope: ScopedData,
@@ -50,6 +51,7 @@ pub fn analyze_fn(
 
     let mut analyzer = FnAnalyzer {
         universe: universe,
+        metadata: metadata,
         fn_return_type: fn_return_type,
         fn_return_type_id: fn_return_type_id,
         current_scope: global_scope.clone(),
@@ -77,7 +79,7 @@ pub fn analyze_fn(
         traverser.traverse()?;
     }
 
-    metadata.insert_fn_layout(fn_id, FnLayout::new(
+    analyzer.metadata.insert_fn_layout(fn_id, FnLayout::new(
             analyzer.locals, 
             param_types,
             fn_return_type_id));
@@ -132,7 +134,7 @@ fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, E
     }
 }
 
-fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<TypeId, Err> {
+fn resolve_expr(metadata: &mut Metadata, universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<TypeId, Err> {
     let mut expr_type = None;
 
     for tmp_id in expr.execution_order() {
@@ -261,7 +263,7 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, expr: &Expr) -> Result<
 
             Value::FieldAccess(ref field_access) => {
                 let accessed_field_type_id =
-                    resolve_field_access(universe, scope, field_access)?;
+                    resolve_field_access(metadata, universe, scope, field_access)?;
 
                 tmp_type = accessed_field_type_id;
             }
@@ -540,7 +542,7 @@ fn resolve_uni_op(
     }
 }
 
-impl<'a> Passenger<Err> for FnAnalyzer<'a> {
+impl<'a, 'b> Passenger<Err> for FnAnalyzer<'a, 'b> {
     fn start(&mut self, _id: NodeIndex) -> Result<(), Err> {
         Ok(())
     }
@@ -592,7 +594,10 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         let var_type_id = self.current_scope.type_id(self.universe, var_type_annotation.into())?;
         let var_type = self.universe.get_type(var_type_id);
 
-        let expr_type_id = resolve_expr(self.universe, &self.current_scope, var_decl.init_expr())?;
+        let expr_type_id = resolve_expr(self.metadata,
+                                        self.universe, 
+                                        &self.current_scope, 
+                                        var_decl.init_expr())?;
         let expr_type = self.universe.get_type(expr_type_id);
 
         var_decl.set_type_id(var_type_id);
@@ -613,9 +618,15 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         let assignee = assignment.assignee();
 
         let assignee_type_id =
-            resolve_field_access(self.universe, &self.current_scope, assignee)?;
+            resolve_field_access(self.metadata,
+                                 self.universe, 
+                                 &self.current_scope, 
+                                 assignee)?;
 
-        let expr_type_id = resolve_expr(self.universe, &self.current_scope, assignment.value())?;
+        let expr_type_id = resolve_expr(self.metadata,
+                                        self.universe, 
+                                        &self.current_scope, 
+                                        assignment.value())?;
 
         let assignee_type = self.universe.get_type(assignee_type_id);
         let expr_type = self.universe.get_type(expr_type_id);
@@ -628,12 +639,15 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
     }
 
     fn expr(&mut self, _id: NodeIndex, expr: &Expr) -> Result<(), Err> {
-        resolve_expr(self.universe, &self.current_scope, expr).map(|_| ())
+        resolve_expr(self.metadata, self.universe, &self.current_scope, expr).map(|_| ())
     }
 
     fn ret(&mut self, _id: NodeIndex, expr: Option<&Expr>) -> Result<(), Err> {
         let expr_type_id = match expr {
-            Some(ref expr) => resolve_expr(self.universe, &self.current_scope, expr)?,
+            Some(ref expr) => resolve_expr(self.metadata,
+                                           self.universe, 
+                                           &self.current_scope, 
+                                           expr)?,
 
             None => self.universe.unit(),
         };
@@ -649,7 +663,10 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
     }
 
     fn loop_condition(&mut self, _id: NodeIndex, condition: &Expr) -> Result<(), Err> {
-        let expr_type_id = resolve_expr(self.universe, &self.current_scope, condition)?;
+        let expr_type_id = resolve_expr(self.metadata,
+                                        self.universe, 
+                                        &self.current_scope, 
+                                        condition)?;
 
         if *self.universe.get_type(expr_type_id) != SmplType::Bool {
             return Err(TypeErr::UnexpectedType {
@@ -672,7 +689,10 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
     }
 
     fn branch_condition(&mut self, _id: NodeIndex, condition: &Expr) -> Result<(), Err> {
-        let expr_type_id = resolve_expr(self.universe, &self.current_scope, condition)?;
+        let expr_type_id = resolve_expr(self.metadata,
+                                        self.universe, 
+                                        &self.current_scope, 
+                                        condition)?;
 
         if *self.universe.get_type(expr_type_id) != SmplType::Bool {
             return Err(TypeErr::UnexpectedType {
@@ -706,6 +726,7 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
 }
 
 fn resolve_field_access(
+    metadata: &mut Metadata,
     universe: &Universe,
     scope: &ScopedData,
     field_access: &FieldAccess,
@@ -727,7 +748,7 @@ fn resolve_field_access(
     current_type_id = root_var_type_id;
 
     if let Some(e) = path.root_indexing_expr() {
-        let indexing_type_id = resolve_expr(universe, scope, e)?;
+        let indexing_type_id = resolve_expr(metadata, universe, scope, e)?;
         let indexing_type = universe.get_type(indexing_type_id);
 
         match *indexing_type {
@@ -785,7 +806,7 @@ fn resolve_field_access(
                         field.set_field_id(field_id);
                         field.set_field_type(field_type_id);
 
-                        let indexing_type_id = resolve_expr(universe, scope, indexing)?;
+                        let indexing_type_id = resolve_expr(metadata, universe, scope, indexing)?;
                         let indexing_type = universe.get_type(indexing_type_id);
 
                         match *indexing_type {
