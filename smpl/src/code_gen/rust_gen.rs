@@ -544,8 +544,7 @@ impl<'a> RustFnGen<'a> {
                 let mut string_buffer = String::new();
                 writeln!(&mut string_buffer, "let _borrow_{} = {};",
                        RustGenFmt::tmp_id(array_tmp_id),
-                       RustGenFmt::borrow_ref(
-                           RustGenFmt::tmp_id(array_tmp_id)))
+                       RustGenFmt::tmp_id(array_tmp_id))
                     .unwrap();
 
                 writeln!(&mut string_buffer, "let _borrow_{} = _borrow_{}[{}].borrow();",
