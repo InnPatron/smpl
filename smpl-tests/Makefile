@@ -5,7 +5,7 @@ SAMPLE_PROJECT := sample_program
 
 all: basic bin
 
-basic: s_if s_while s_fn 
+basic: s_if s_while s_fn s_array
 
 s_if: compiler if_tests.smpl
 	./smplc --input if_tests.smpl --backend 0 --output $(OUTPUT)/if_tests.rs
