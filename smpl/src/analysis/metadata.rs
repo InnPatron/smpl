@@ -66,8 +66,8 @@ impl Metadata {
         self.main
     }
 
-    pub fn array_types(&self, id: ModuleId) -> &[TypeId] {
-        self.array_types.get(&id).unwrap()
+    pub fn array_types(&self, id: ModuleId) -> Option<&[TypeId]> {
+        self.array_types.get(&id).map(|v| v.as_slice())
     }
 
     pub fn field_ordering(&self, id: TypeId) -> &FieldOrdering {

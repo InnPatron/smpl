@@ -208,18 +208,20 @@ impl<'a> RustModGen<'a> {
             RustGenFmt::type_id(universe.string())
         ));
 
-        for t in self.metadata.array_types(self.id) {
-            match *universe.get_type(*t) {
-                SmplType::Array(ref a) => {
-                    self.output.emit_line(&format!(
-                            "type {} = [{}; {}];",
-                            RustGenFmt::type_id(*t),
-                            RustGenFmt::type_id(a.base_type),
-                            a.size
-                            ));
-                }
+        if let Some(v) = self.metadata.array_types(self.id) {
+            for t in v {
+                match *universe.get_type(*t) {
+                    SmplType::Array(ref a) => {
+                        self.output.emit_line(&format!(
+                                "type {} = [{}; {}];",
+                                RustGenFmt::type_id(*t),
+                                RustGenFmt::type_id(a.base_type),
+                                a.size
+                                ));
+                    }
 
-                _ => unreachable!()
+                    _ => unreachable!()
+                }
             }
         }
 
