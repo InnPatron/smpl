@@ -1,4 +1,4 @@
-fn main() {
+fn if_test() {
 	let hello: String = "Hello!";
 }
 
