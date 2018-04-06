@@ -7,3 +7,17 @@ fn arrays_test() {
 
 	let e: i32 = array1[0];
 }
+
+struct Nested {
+	field: [i32; 10]
+}
+
+fn nested_array() {
+	let n: Nested = init Nested {
+		field: [0; 10]
+	};
+
+	n.field[0] = 3;
+
+	let e: i32 = n.field[1];
+}
