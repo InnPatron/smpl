@@ -4,4 +4,6 @@ fn arrays_test() {
 
 	array1[0] = 1337;
 	array2[9] = true;
+
+	let e: i32 = array1[0];
 }
