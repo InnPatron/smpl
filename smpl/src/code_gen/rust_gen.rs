@@ -671,6 +671,19 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
         let mut previous_borrow = root_var;
 
+        if let Some(e) = path.root_indexing_expr() {
+            let tmp = RustFnGen::emit_expr(&mut self.output, e);
+            let tmp = RustGenFmt::tmp_id(tmp);
+
+            self.output.emit_line(&format!(
+                     "_borrow_{} = _borrow_{}[{}].borrow();",
+                     tmp,
+                     previous_borrow,
+                     tmp));
+
+            previous_borrow = tmp;
+        }
+
         for ps in path.path() {
             match *ps {
                 PathSegment::Ident(ref f) => {
