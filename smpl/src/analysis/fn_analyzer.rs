@@ -390,6 +390,7 @@ fn resolve_expr(metadata: &mut Metadata, universe: &Universe, scope: &ScopedData
                         let array_type = TypeConstructor::construct_array_type(universe,
                                                                                expected_element_type_id.unwrap(),
                                                                                size);
+                        metadata.insert_array_type(array_type);
                         tmp_type = array_type;
                     },
 

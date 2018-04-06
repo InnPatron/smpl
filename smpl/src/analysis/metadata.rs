@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::collections::hash_set::Iter;
 
 use ast::Ident;
 use err::Err;
@@ -8,7 +9,8 @@ use analysis::semantic_data::{VarId, TypeId, ModuleId, FnId, FieldId, Universe};
 pub struct Metadata {
     fn_layout: HashMap<FnId, FnLayout>,
     field_ordering: HashMap<TypeId, FieldOrdering>,
-    main: Option<(FnId, ModuleId)>
+    array_types: HashSet<TypeId>,
+    main: Option<(FnId, ModuleId)>,
 }
 
 impl Metadata {
@@ -17,6 +19,7 @@ impl Metadata {
         Metadata {
             fn_layout: HashMap::new(),
             field_ordering: HashMap::new(),
+            array_types: HashSet::new(),
             main: None,
         }
     }
@@ -31,6 +34,10 @@ impl Metadata {
         if self.fn_layout.insert(id, data).is_some() {
             panic!("Overwriting for fn {}", id);
         }
+    }
+
+    pub fn insert_array_type(&mut self, id: TypeId) {
+        self.array_types.insert(id);
     }
 
     pub fn find_main(&mut self, universe: &Universe) -> Result<(), Err> {
@@ -52,6 +59,10 @@ impl Metadata {
 
     pub fn main(&self) -> Option<(FnId, ModuleId)> {
         self.main
+    }
+
+    pub fn array_types(&self) -> Iter<TypeId> {
+        self.array_types.iter()
     }
 
     pub fn field_ordering(&self, id: TypeId) -> &FieldOrdering {
