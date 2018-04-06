@@ -1,11 +1,16 @@
 OUTPUT := ./target
 SAMPLE_PROJECT := sample_program
+BASIC_PROJECT := basic_tests
 
 .PHONY: clean setup
 
 all: basic bin
 
 basic: s_if s_while s_fn s_array
+	cp $(OUTPUT)/if_tests.rs $(OUTPUT)/$(BASIC_PROJECT)/src/
+	cp $(OUTPUT)/while_tests.rs $(OUTPUT)/$(BASIC_PROJECT)/src/
+	cp $(OUTPUT)/fn_tests.rs $(OUTPUT)/$(BASIC_PROJECT)/src/
+	cp $(OUTPUT)/arrays.rs $(OUTPUT)/$(BASIC_PROJECT)/src/
 
 s_if: compiler if_tests.smpl
 	./smplc --input if_tests.smpl --backend 0 --output $(OUTPUT)/if_tests.rs
@@ -31,6 +36,8 @@ compiler:
 setup:
 	mkdir -p $(OUTPUT)
 	cd $(OUTPUT);cargo new --bin $(SAMPLE_PROJECT)
+	cd $(OUTPUT);cargo new $(BASIC_PROJECT)
+	cp basic.rs $(OUTPUT)/$(BASIC_PROJECT)/src/main.rs
 
 clean:
 	rm -f smplc
