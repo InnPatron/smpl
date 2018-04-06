@@ -1,4 +1,4 @@
-fn main() {
+fn arrays_test() {
 	let array1: [i32; 5] = [0, 1, 2, 3, 4];
 	let array2: [bool; 10] = [false; 10];
 
