@@ -639,8 +639,13 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         self.output.emit_line("{");
         self.output.shift_right();
 
-
         let expr = RustFnGen::emit_expr(&mut self.output, assignment.value());
+
+        self.output.emit_line(&format!(
+                "let _borrow_{} = {};",
+                root_var,
+                RustGenFmt::borrow_ref_mut(root_var.clone())
+                ));
 
         let mut previous_borrow = root_var;
 
