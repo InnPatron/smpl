@@ -631,56 +631,75 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn assignment(&mut self, _id: NodeIndex, assignment: &Assignment) -> Result<(), ()> {
-        /*
-        let assignee = assignment.assignee();
-        let var_id = RustGenFmt::var_id(assignee.get_root_var_id().unwrap());
+    fn assignment(&mut self, _id: NodeIndex, assignment: &Assignment) -> Result<(), ()> { 
+        let path = assignment.assignee().path();
+        let root_var_id = path.root_var_id();
+        let root_var = RustGenFmt::var_id(root_var_id);
+
         self.output.emit_line("{");
         self.output.shift_right();
 
-        let expr = self.emit_expr(assignment.value());
-        self.output.emit_line(&format!("let mut _borrow_{} = {};", var_id,
-                               RustGenFmt::borrow_ref_mut(var_id.clone())));
-        
-        let mut previous_type = assignee.get_root_var_type_id().unwrap();
-        let mut previous = var_id;
-        let mut path = assignee.path().iter();
-        path.next(); // Remove root ident
 
-        for field in path {
-            let to_access = self.universe.get_type(previous_type);
-            let struct_t = match *to_access {
-                SmplType::Struct(ref s) => s,
-                _ => unreachable!(),
-            };
+        let expr = RustFnGen::emit_expr(&mut self.output, assignment.value());
 
-            let field_id = struct_t.field_id(field).unwrap();
-            let field_t = struct_t.field_type(field_id).unwrap();
+        let mut previous_borrow = root_var;
 
-            let stringified_field_id = RustGenFmt::field_id(field_id);
+        for ps in path.path() {
+            match *ps {
+                PathSegment::Ident(ref f) => {
+                    // Borrow field
+                    let stringified_field = RustGenFmt::field_id(f.field_id());
+                    let borrow = RustGenFmt::borrow_ref_mut(format!("_borrow_{}.{}", 
+                           previous_borrow, 
+                           stringified_field));
 
-            let borrow = RustGenFmt::borrow_ref_mut(format!("_borrow_{}.{}", 
-                                                           previous, 
-                                                           stringified_field_id));
-            self.output.emit_line(&format!("let mut _borrow_{} = {};", 
-                                    stringified_field_id, 
-                                    borrow));
-            previous = stringified_field_id;
-            previous_type = field_t;
+                    self.output.emit_line(&format!(
+                             "let mut _borrow_{} = {};",
+                             stringified_field,
+                             borrow));
+
+                    previous_borrow = stringified_field;
+                }
+
+                PathSegment::Indexing(ref f, ref e) => {
+                    // Borrow field
+                    let stringified_field = RustGenFmt::field_id(f.field_id());
+                    let borrow = RustGenFmt::borrow_ref(format!("_borrow_{}.{}", 
+                           previous_borrow, 
+                           stringified_field));
+
+                    self.output.emit_line(&format!(
+                             "let mut _borrow_{} = {};",
+                             stringified_field,
+                             borrow));
+
+                    let tmp = RustFnGen::emit_expr(&mut self.output, e);
+                    let tmp = RustGenFmt::tmp_id(tmp);
+
+                    self.output.emit_line(&format!(
+                             "_borrow_{} = _borrow_{}[{}].borrow();",
+                             tmp,
+                             previous_borrow,
+                             tmp));
+
+                    previous_borrow = tmp;
+                }
+            }
         }
-        let assignee = format!("*_borrow_{}", previous);
+
+        let assignee = format!("*_borrow_{}", previous_borrow);
         let rhs = {
             let tmp = RustGenFmt::tmp_id(expr);
             tmp
         };
+
         let result = format!("{} = {};", assignee, rhs);
         self.output.emit_line(&result);
         self.output.shift_left();
         self.output.emit_line("}");
         self.output.line_pad();
+
         Ok(())
-        */
-        unimplemented!()
     }
 
     fn expr(&mut self, _id: NodeIndex, expr: &Expr) -> Result<(), ()> {
