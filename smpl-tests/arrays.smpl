@@ -1,0 +1,7 @@
+fn main() {
+	let array1: [i32; 5] = [0, 1, 2, 3, 4];
+	let array2: [bool; 10] = [false; 10];
+
+	array1[0] = 1337;
+	array2[9] = true;
+}

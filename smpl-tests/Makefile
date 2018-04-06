@@ -16,6 +16,9 @@ s_while: compiler while_tests.smpl
 s_fn: compiler fn_tests.smpl
 	./smplc --input fn_tests.smpl --backend 0 --output $(OUTPUT)/fn_tests.rs
 
+s_array: compiler arrays.smpl
+	./smplc --input arrays.smpl --backend 0 --output $(OUTPUT)/arrays.rs
+
 bin: compiler sample_program.smpl
 	./smplc --input sample_program.smpl sample_dependency.smpl --backend 0 --output $(OUTPUT)/sample_program.rs
 	cp $(OUTPUT)/sample_program.rs $(OUTPUT)/$(SAMPLE_PROJECT)/src/main.rs
