@@ -83,7 +83,7 @@ cargo run
 
 ## Feature Backlog
 
-1. Arrays
+1. ~~Arrays~~
 2. Resizable arrays
 3. Pointers
 4. First-class functions
@@ -92,7 +92,7 @@ cargo run
 7. Implement optimizations (constant folding, dead code elimination, etc.)
 8. Integrate [Cycle-collecting reference counters](https://gitlab.com/Random_Civvy/cc) for garbage collection.
 9. Compiler commands
-10. Modules
+10. ~~Modules~~
 11. Error messages
 12. Number casting between ints and floats
 
