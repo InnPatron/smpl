@@ -215,7 +215,7 @@ impl<'a> RustModGen<'a> {
                         self.output.emit_line(&format!(
                                 "type {} = [{}; {}];",
                                 RustGenFmt::type_id(*t),
-                                RustGenFmt::type_id(a.base_type),
+                                RustGenFmt::rustify_type(RustGenFmt::type_id(a.base_type)),
                                 a.size
                                 ));
                     }
