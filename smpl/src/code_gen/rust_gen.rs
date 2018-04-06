@@ -48,7 +48,7 @@ impl RustBackend {
         });
 
         for &(ident, id) in program.universe().all_modules().iter() {
-            let mut gen = RustModGen::new(program.metadata());
+            let mut gen = RustModGen::new(program.metadata(), *id);
 
             if self.mod_wrap {
                 gen.output.emit_line(&format!("mod {} {{", RustGenFmt::mod_id(*id)));
@@ -76,13 +76,15 @@ impl RustBackend {
 struct RustModGen<'a> {
     output: StringEmitter,
     metadata: &'a Metadata,
+    id: ModuleId,
 }
 
 impl<'a> RustModGen<'a> {
-    fn new(metadata: &Metadata) -> RustModGen {
+    fn new(metadata: &Metadata, id: ModuleId) -> RustModGen {
         RustModGen {
             output: StringEmitter::new(),
             metadata: metadata,
+            id: id,
         }
     }
 
@@ -205,6 +207,21 @@ impl<'a> RustModGen<'a> {
             "type {} = String;",
             RustGenFmt::type_id(universe.string())
         ));
+
+        for t in self.metadata.array_types(self.id) {
+            match *universe.get_type(*t) {
+                SmplType::Array(ref a) => {
+                    self.output.emit_line(&format!(
+                            "type {} = [{}; {}];",
+                            RustGenFmt::type_id(*t),
+                            RustGenFmt::type_id(a.base_type),
+                            a.size
+                            ));
+                }
+
+                _ => unreachable!()
+            }
+        }
 
         self.output.line_pad();
     }
