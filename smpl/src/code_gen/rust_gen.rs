@@ -389,7 +389,7 @@ impl<'a> RustFnGen<'a> {
                     let tmp = RustGenFmt::tmp_id(tmp);
 
                     writeln!(&mut string_buffer,
-                             "_borrow_{} = _borrow_{}[{}].borrow();",
+                             "let _borrow_{} = _borrow_{}[{}].borrow();",
                              tmp,
                              previous_borrow,
                              tmp).unwrap();
@@ -435,9 +435,9 @@ impl<'a> RustFnGen<'a> {
                                    emitter.consume()).unwrap();
 
                             writeln!(&mut string_buffer,
-                                     "_borrow_{} = _borrow_{}[{}].borrow();",
+                                     "let _borrow_{} = _borrow_{}[{}].borrow();",
                                      tmp,
-                                     previous_borrow,
+                                     stringified_field,
                                      tmp).unwrap();
 
                             previous_borrow = tmp;
@@ -718,7 +718,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
                     self.output.emit_line(&format!(
                              "let mut _borrow_{} = _borrow_{}[{}].borrow_mut();",
                              tmp,
-                             previous_borrow,
+                             stringified_field,
                              tmp));
 
                     previous_borrow = tmp;
