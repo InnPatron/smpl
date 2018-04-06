@@ -600,7 +600,7 @@ impl<'a, 'b> FnAnalyzer<'a, 'b> {
                             let array_type = TypeConstructor::construct_array_type(self.universe,
                                                                                    expected_element_type_id.unwrap(),
                                                                                    size);
-                            self.metadata.insert_array_type(array_type);
+                            self.metadata.insert_array_type(self.module_id, array_type);
                             tmp_type = array_type;
                         },
 
@@ -615,6 +615,7 @@ impl<'a, 'b> FnAnalyzer<'a, 'b> {
                             let array_type = TypeConstructor::construct_array_type(self.universe,
                                                                                    element_type_id,
                                                                                    size);
+                            self.metadata.insert_array_type(self.module_id, array_type);
                             tmp_type = array_type;
                         },
                     }
