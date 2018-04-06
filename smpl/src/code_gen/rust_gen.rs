@@ -9,6 +9,7 @@ use ast::{Ident, BinOp, UniOp};
 
 use analysis::*;
 use analysis::smpl_type::*;
+use analysis::metadata::*;
 
 pub struct RustBackend {
     mods: Vec<(Ident, ModuleId, String)>,
@@ -47,7 +48,7 @@ impl RustBackend {
         });
 
         for &(ident, id) in program.universe().all_modules().iter() {
-            let mut gen = RustModGen::new();
+            let mut gen = RustModGen::new(program.metadata());
 
             if self.mod_wrap {
                 gen.output.emit_line(&format!("mod {} {{", RustGenFmt::mod_id(*id)));
@@ -72,14 +73,16 @@ impl RustBackend {
     }
 }
 
-struct RustModGen {
+struct RustModGen<'a> {
     output: StringEmitter,
+    metadata: &'a Metadata,
 }
 
-impl RustModGen {
-    fn new() -> RustModGen {
+impl<'a> RustModGen<'a> {
+    fn new(metadata: &Metadata) -> RustModGen {
         RustModGen {
-            output: StringEmitter::new()
+            output: StringEmitter::new(),
+            metadata: metadata,
         }
     }
 
