@@ -542,13 +542,13 @@ impl<'a> RustFnGen<'a> {
                 let indexer_tmp_id = *indexing.indexer.data();
 
                 let mut string_buffer = String::new();
-                write!(&mut string_buffer, "_borrow_{} = {};",
+                writeln!(&mut string_buffer, "let _borrow_{} = {};",
                        RustGenFmt::tmp_id(array_tmp_id),
                        RustGenFmt::borrow_ref(
                            RustGenFmt::tmp_id(array_tmp_id)))
                     .unwrap();
 
-                write!(&mut string_buffer, "_borrow_{} = _borrow_{}[{}].borrow();",
+                writeln!(&mut string_buffer, "let _borrow_{} = _borrow_{}[{}].borrow();",
                        RustGenFmt::tmp_id(indexer_tmp_id),
                        RustGenFmt::tmp_id(array_tmp_id),
                        RustGenFmt::tmp_id(indexer_tmp_id))
