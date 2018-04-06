@@ -7,15 +7,15 @@
 ///
 ///	use_decl -> "use" ident ";"
 ///
-/// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" path]? block
+/// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" type_annotation]? block
 /// param_list -> param ["," param]*
-/// param -> ident ":" path
+/// param -> ident ":" type_annotation
 ///
 ///
 /// struct_decl -> "struct" ident "{" struct_field_list "}"
 /// struct_field_list -> struct_field "," struct_field_list
 ///		      -> struct_field ","?
-/// struct_field -> ident ":" path
+/// struct_field -> ident ":" type_annotation
 ///
 ///
 /// block -> "{" [stmt]*  "}"
@@ -25,7 +25,7 @@
 /// expr_stmt -> if_stmt | while_stmt | local_var_decl | assignment
 /// if_stmt -> "if" expr block
 /// while_stmt -> "while" expr block
-/// local_var_decl -> "let" ident ":" path  "=" expr ";"
+/// local_var_decl -> "let" ident ":" type_annotation "=" expr ";"
 /// assignment -> path "=" expr ";"
 ///
 ///
@@ -42,7 +42,7 @@
 ///
 /// expr_leaf -> "(" expr ")"| literal | fn_call | path | struct_init
 ///
-/// struct_init -> "init" path "{" struct_field_init_list "}"
+/// struct_init -> "init" type_path "{" struct_field_init_list "}"
 /// struct_field_init_list -> struct_field_init "," struct_field_init_list
 ///		      -> struct_field_init ","?
 /// struct_field_init -> ident ":" expr 
@@ -50,11 +50,12 @@
 /// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "[[:ASCII:]]"
 ///
 ///
-/// fn_call -> ident "(" fn_call_args ")"
+/// fn_call -> TypePath "(" fn_call_args ")"
 /// fn_call_args -> expr ["," expr]*
 ///
 /// ident -> [a-zA-Z_] [a-zA-Z0-9_]*
 /// path -> ident ["." ident]*
+/// type_path -> ident ["." ident]*
 
 use std::str::FromStr;
 use ast::*;
@@ -81,9 +82,9 @@ UseDecl: UseDecl = {
 	"use" <i: Ident> ";" => UseDecl(i),
 };
 
-/// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" path]? block
+/// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" type_annotation]? block
 pub FnDecl: Function = {
-	"fn" <name: Ident> "(" <params: FnParameterList?> ")" <return_type: ("->" Path)?> <b: Block> => {
+	"fn" <name: Ident> "(" <params: FnParameterList?> ")" <return_type: ("->" TypeAnnotation)?> <b: Block> => {
 		Function::new(
 			name,
 			params,
@@ -102,9 +103,9 @@ FnParameterList: Vec<FnParameter> = {
 	}
 };
 
-/// param -> ident ":" path
+/// param -> ident ":" type_annotation
 FnParameter: FnParameter = {
-	<name: Ident> ":"  <param_type: Path> => {
+	<name: Ident> ":"  <param_type: TypeAnnotation> => {
 		FnParameter::new(name, param_type)
 	}
 };
@@ -135,9 +136,9 @@ StructFieldList: Vec<StructField> = {
 	}
 };
 
-/// struct_field -> ident ":" path
+/// struct_field -> ident ":" type_annotation
 StructField: StructField = {
-	<name: Ident> ":" <field_type: Path> => {
+	<name: Ident> ":" <field_type: TypeAnnotation> => {
 		StructField {
 			name: name,
 			field_type: field_type,
@@ -172,9 +173,9 @@ ReturnStmt: Option<Expr> = {
 	"return" <e: Expr?> ";" => e,
 };
 
-/// local_var_decl -> "let" ident ":" path  "=" expr ";"
+/// local_var_decl -> "let" ident ":" type_annotation  "=" expr ";"
 LocalVarDecl: LocalVarDecl = {
-	"let" <name: Ident> ":" <var_type: Path> "=" <e: Expr> ";" => {
+	"let" <name: Ident> ":" <var_type: TypeAnnotation> "=" <e: Expr> ";" => {
 		LocalVarDecl::new(
 			var_type,
 			name,
@@ -342,24 +343,71 @@ UniOp: UniOp = {
 
 /// expr_leaf -> "(" expr ")"| literal | fn_call | path | struct_init
 ExprLeaf: Expr = {
-	"(" <e: Expr> ")" => e,
 	<path: Path> => {
 		let mut path = path;
 		if path.0.len() == 1 {
-			Expr::Variable(path.0.pop().unwrap())
+			let segment = path.0.pop().unwrap();
+			match segment {
+				PathSegment::Ident(i) => Expr::Variable(i),
+				PathSegment::Indexing(i, e) => {
+					let i = Indexing {
+						array: Box::new(Expr::Variable(i)),
+						indexer: e
+					};
+					Expr::Indexing(i)
+				}
+			}
 		} else {
 			Expr::FieldAccess(path)
 		}
 	},
+
+	<i: Indexing> => Expr::Indexing(i),
+
+	<Primary>,
+};
+
+Primary: Expr = {
+	"(" <e: Expr> ")" => e,
 	<l: Literal> => Expr::Literal(l),
 	<f: FnCall> => Expr::FnCall(f),
+
+	<a: ArrayInit> => Expr::ArrayInit(a),
 
 	<struct_init: StructInit> => Expr::StructInit(struct_init),
 };
 
-/// struct_init -> "init" path "{" struct_field_init_list "}"
+Indexing: Indexing = {
+	<e: Primary> "[" <i: Expr> "]" => {
+		Indexing { 
+			array: Box::new(e), 
+			indexer: Box::new(i)
+		}
+	}
+};
+
+ArrayInit: ArrayInit = {
+	"[" <a: ArrayInitList> "]" => ArrayInit::InitList(a),
+
+	"[" <e: Expr> ";" <n: Number> "]" => {
+		let array_size = n.parse::<u64>().unwrap();
+		ArrayInit::Value(Box::new(e), array_size)
+	}
+};
+
+ArrayInitList: Vec<Expr> = {
+	<e: Expr> "," <tail: ArrayInitList> => {
+		let mut v = vec![e];
+		v.extend(tail);
+		v 
+	},
+
+	<e: Expr> ","? => vec![e],
+};
+
+/// struct_init -> "init" type_path "{" struct_field_init_list "}"
 StructInit: StructInit = {
-	"init" <struct_name: Path> "{" <init: StructFieldInitList?> "}" => {
+	"init" <struct_name: TypePath> "{" <init: StructFieldInitList?> "}" => {
 		StructInit {
 			struct_name: struct_name,
 			field_init: init,
@@ -386,9 +434,9 @@ StructFieldInit: (Ident, Box<Expr>) = {
 	<name: Ident> ":" <init: Expr> => (name, Box::new(init)),
 };
 
-/// fn_call -> ident "(" fn_call_args ")"
+/// fn_call -> TypePath "(" fn_call_args ")"
 FnCall: FnCall = {
-	<path: Path> "(" <args: FnCallArgs?> ")" => {
+	<path: TypePath> "(" <args: FnCallArgs?> ")" => {
 		let mut path = path;
 		FnCall::new(
 			path,
@@ -408,7 +456,7 @@ FnCallArgs: Vec<Expr> = {
 
 /// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "[[:ASCII:]]"
 pub Literal: Literal = {
-	<number: r"[-]?[0-9]+[.[0-9]*]?"> => {
+	<number: Number> => {
 		if number.contains(".") {
 			Literal::Float(number.parse::<f64>().unwrap())
 		} else {
@@ -426,6 +474,10 @@ pub Literal: Literal = {
 
 };
 
+Number: String = {
+	<number: r"[-]?[0-9]+[.[0-9]*]?"> => number.to_string(),
+};
+
 /// ident -> [a-zA-Z_] [a-zA-Z0-9_]*
 Ident: Ident = {
 	<ident: r"[A-Za-z_][_A-Za-z0-9]*"> => { Ident(AsciiString::from_str(ident).unwrap()) }
@@ -433,10 +485,42 @@ Ident: Ident = {
 
 /// path -> ident ["." ident]*
 Path: Path = {
-	<first: Ident> <v:("." <Ident>)*> => {
+	<p: PathSegmentList> => Path(p),
+};
+
+PathSegmentList: Vec<PathSegment> = {
+	<first: PathSegment> "." <tail: PathSegmentList> => {
+		let mut p = tail;
+		p.insert(0, first);
+		p
+	},
+
+	<segment: PathSegment> => vec![segment],
+};
+
+PathSegment: PathSegment = {
+	<i: Ident> => PathSegment::Ident(i),
+	<i: Ident> "[" <e: Expr> "]" => PathSegment::Indexing(i, Box::new(e)),
+};
+
+/// type_path -> ident ["." ident]*
+TypePath: TypePath = {
+	<first: Ident> <v:("::" <Ident>)*> => {
 		let mut p = Vec::new();
 		p.push(first);
 		p.extend_from_slice(&v);
-		Path(p)
+		TypePath(p)
+	}
+};
+
+TypeAnnotation: TypeAnnotation = {
+	<p: TypePath> => TypeAnnotation::Path(p),
+	<ArrayType>
+};
+
+ArrayType: TypeAnnotation = {
+	"[" <t: TypeAnnotation> ";" <number: Number> "]" => {
+		let number = number.parse::<u64>().unwrap();
+		TypeAnnotation::Array(Box::new(t), number)
 	}
 };

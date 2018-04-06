@@ -84,7 +84,7 @@ init NAME {
         // Check init_1
         {
             let expected = Expr::StructInit(StructInit {
-                struct_name: path!("NAME"),
+                struct_name: type_path!("NAME"),
                 field_init: None,
             });
 
@@ -99,7 +99,7 @@ init NAME {
             let field2_init = boolean!(true => BoxExpr);
 
             let expected = Expr::StructInit(StructInit {
-                struct_name: path!("NAME"),
+                struct_name: type_path!("NAME"),
                 field_init: Some(vec![(ident!("field1"), field_init), 
                                       (ident!("field2"), field2_init)]),
             });
@@ -237,7 +237,7 @@ init NAME {
         let input = "let a: int = 10;";
         let stmt = parse_ExprStmt(input).unwrap();
         if let ExprStmt::LocalVarDecl(ref decl) = stmt {
-            assert_eq!(decl.var_type, path!("int"));
+            assert_eq!(decl.var_type, TypeAnnotation::Path(type_path!("int")));
             assert_eq!(decl.var_name, ident!("a"));
         }
     }
@@ -249,12 +249,12 @@ init NAME {
         assert_eq!(func.name, ident!("test_fn"));
         assert_eq!(func.body, Block(Vec::new()));
 
-        let expected = vec![(ident!("arg"), path!("i32")),
-                            (ident!("test"), path!("float")),
-                            (ident!("next"), path!("String"))];
+        let expected = vec![(ident!("arg"), type_path!("i32")),
+                            (ident!("test"), type_path!("float")),
+                            (ident!("next"), type_path!("String"))];
         for (param, expected) in func.params.unwrap().iter().zip(expected.iter()) {
             assert_eq!(param.name, expected.0);
-            assert_eq!(param.param_type, expected.1);
+            assert_eq!(param.param_type, TypeAnnotation::Path(expected.1.clone()));
         }
     }
 
@@ -279,12 +279,12 @@ struct TestStruct {
         assert_eq!(_struct.body, StructBody(Some(vec![
             StructField {
                 name: ident!("field1"),
-                field_type: path!("Type1"),
+                field_type: TypeAnnotation::Path(type_path!("Type1")),
             },
 
             StructField {
                 name: ident!("field2"),
-                field_type: path!("Type2"),
+                field_type: TypeAnnotation::Path(type_path!("Type2")),
             },
         ])));
 

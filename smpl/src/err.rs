@@ -1,5 +1,5 @@
 use analysis::{FnId, TypeId};
-use ast::{BinOp, Ident, Path, UniOp};
+use ast::{BinOp, Ident, TypeAnnotation, TypePath, Path, UniOp};
 
 #[derive(Clone, Debug)]
 pub enum Err {
@@ -7,9 +7,9 @@ pub enum Err {
     TypeErr(TypeErr),
     ParseErr(String),
     MultipleMainFns,
-    UnknownType(Path),
+    UnknownType(TypeAnnotation),
     UnknownVar(Ident),
-    UnknownFn(Path),
+    UnknownFn(TypePath),
     UnresolvedUses(Vec<Ident>),
     UnresolvedStructs(Vec<Ident>),
     UnresolvedFns(Vec<Ident>),
@@ -76,12 +76,12 @@ pub enum TypeErr {
     },
 
     NotAStruct {
-        type_name: Path,
+        type_name: TypePath,
         found: TypeId,
     },
 
     StructNotFullyInitialized {
-        type_name: Path,
+        type_name: TypePath,
         struct_type: TypeId,
         missing_fields: Vec<Ident>,
     },
@@ -89,6 +89,20 @@ pub enum TypeErr {
     UnknownField {
         name: Ident,
         struct_type: TypeId,
+    },
+
+    HeterogenousArray {
+        expected: TypeId,
+        found: TypeId,
+        index: usize,
+    },
+
+    NotAnArray {
+        found: TypeId,
+    },
+
+    InvalidIndex {
+        found: TypeId,
     },
 }
 

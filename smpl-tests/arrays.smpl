@@ -1,0 +1,23 @@
+fn arrays_test() {
+	let array1: [i32; 5] = [0, 1, 2, 3, 4];
+	let array2: [bool; 10] = [false; 10];
+
+	array1[0] = 1337;
+	array2[9] = true;
+
+	let e: i32 = array1[0];
+}
+
+struct Nested {
+	field: [i32; 10]
+}
+
+fn nested_array() {
+	let n: Nested = init Nested {
+		field: [0; 10]
+	};
+
+	n.field[0] = 3;
+
+	let e: i32 = n.field[1];
+}

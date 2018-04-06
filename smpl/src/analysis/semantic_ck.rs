@@ -3,7 +3,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use err::Err;
-use ast::{Ident, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
+use ast::{Ident, TypePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
 
 use super::metadata::*;
 use super::smpl_type::*;
@@ -58,6 +58,8 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
 
 fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: ModuleCkData) -> Result<ModuleCkSignal, Err> {
     let module_name = module.name.clone();
+
+    let module_id = universe.new_module_id();
 
     let mut missing_modules = Vec::new();
     for use_decl in module.unresolved_module_uses.into_iter() {
@@ -160,7 +162,7 @@ fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: Mo
 
         unresolved = Vec::new();
         for fn_decl in module_fn_iter {
-            let name: Path = fn_decl.name.clone().into();
+            let name: TypePath = fn_decl.name.clone().into();
 
             let type_id = universe.new_type_id();
 
@@ -174,7 +176,7 @@ fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: Mo
             module.owned_fns.push(fn_id);
 
             match analyze_fn(&universe, metadata, &module.module_scope, 
-                             universe.get_fn(fn_id).cfg(), fn_id)  {
+                             universe.get_fn(fn_id).cfg(), fn_id, module_id)  {
                 Ok(f) => f,
                 Err(e) => {
                     match e {
@@ -202,8 +204,6 @@ fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: Mo
         }
     }
 
-    let module_id = universe.new_module_id();
-
     let module = Module::new(module.module_scope, 
                              module.owned_types, 
                              module.owned_fns, 
@@ -216,15 +216,16 @@ fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: Mo
 
 fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunction) -> Result<FunctionType, Err> {
     let ret_type = match fn_def.return_type {
-        Some(ref path) => scope.type_id(path)?,
+        Some(ref path) => scope.type_id(universe, path.into())?,
         None => universe.unit(),
     };
 
     let params: Vec<_> = match fn_def.params {
         Some(ref params) => params.iter()
                               .map(|ref fn_param| {
-                                  scope.type_id(&fn_param.param_type)
-                                       .map(|id| FnParameter::new(fn_param.name.clone(), id))
+                                  let var_id = universe.new_var_id();
+                                  scope.type_id(universe, (&fn_param.param_type).into())
+                                       .map(|id| FnParameter::new(fn_param.name.clone(), id, var_id))
                               })
                               .collect::<Result<Vec<_>, Err>>()?,
 
@@ -246,7 +247,7 @@ fn generate_struct_type(universe: &Universe, scope: &ScopedData, struct_def: &St
             let f_id = universe.new_field_id();
             let f_name = field.name.clone();
             let f_type_path = &field.field_type;
-            let field_type = scope.type_id(f_type_path)?;
+            let field_type = scope.type_id(universe, f_type_path.into())?;
             fields.insert(f_id, field_type);
             field_map.insert(f_name, f_id);
             order.push(f_id);
@@ -624,11 +625,11 @@ struct B{
 use mod2;
 
 struct A {
-    field: mod2.B,
+    field: mod2::B,
 }
 
 fn test() {
-    mod2.test();
+    mod2::test();
 }";
 
         let mod2 =
@@ -646,5 +647,121 @@ fn test() {
         let mod1 = parse_module(mod1).unwrap();
         let mod2 = parse_module(mod2).unwrap();
         check_program(vec![mod1, mod2]).unwrap();
+    }
+
+    #[test]
+    fn correct_array_initialization() {
+        let mod1 =
+"mod mod1;
+
+
+fn test() {
+    let a: [i32; 100] = [ 10; 100 ];
+    let b: [i32; 3] = [ 1, 2, 3 ];
+}
+
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn heterogenous_array_initialization() {
+        let mod1 =
+"mod mod1;
+
+fn test() {
+    let a: [i32; 2] = [100, false];
+}
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Expected TypeErr::HeterogenousArray. Passed checks."),
+            Err(e) => {
+                match e {
+                    Err::TypeErr(e) => {
+                        match e {
+                            TypeErr::HeterogenousArray{..} => (),
+                            e @ _ => panic!("Expected TypeErr::HeterogenousArray. Found {:?}", e),
+                        }
+                    }
+
+                    e @ _ => panic!("Expected TypeErr::HeterogenousArray. Found {:?}", e),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn mismatch_array_assignment() {
+        let mod1 =
+"mod mod1;
+
+fn test() {
+    let a: [i32; 3] = [100, 100];
+}
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Expected TypeErr::LhsRhsInEq. Passed checks."),
+            Err(e) => {
+                match e {
+                    Err::TypeErr(e) => {
+                        match e {
+                            TypeErr::LhsRhsInEq(..) => (),
+                            e @ _ => panic!("Expected TypeErr::LhsRhsInEq. Found {:?}", e),
+                        }
+                    }
+
+                    e @ _ => panic!("Expected TypeErr::LhsRhsInEq. Found {:?}", e),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn array_indexing() {
+        let mod1 =
+"
+mod mod1;
+
+fn test() {
+    let a: [i32; 4] = [0, 1, 2, 3];
+
+    let i1: i32 = a[0];
+    let i2: i32 = a[1];
+    let i3: i32 = a[2];
+    let i4: i32 = a[3];
+}
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn assign_array_index() {
+        let mod1= 
+"
+mod mod1;
+
+struct T {
+    t: [i32; 4]
+}
+
+
+fn test() {
+    let a: T = init T {
+        t: [1, 2, 3, 4]
+    };
+
+    a.t[3] = 10;
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
     }
 }

@@ -41,7 +41,7 @@ pub struct UseDecl(pub Ident);
 pub struct Function {
     pub name: Ident,
     pub params: Option<Vec<FnParameter>>,
-    pub return_type: Option<Path>,
+    pub return_type: Option<TypeAnnotation>,
     pub body: Block,
 }
 
@@ -49,7 +49,7 @@ impl Function {
     pub fn new(
         name: Ident,
         params: Option<Vec<FnParameter>>,
-        return_type: Option<Path>,
+        return_type: Option<TypeAnnotation>,
         body: Block,
     ) -> Function {
         Function {
@@ -64,11 +64,11 @@ impl Function {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnParameter {
     pub name: Ident,
-    pub param_type: Path,
+    pub param_type: TypeAnnotation,
 }
 
 impl FnParameter {
-    pub fn new(name: Ident, param_type: Path) -> FnParameter {
+    pub fn new(name: Ident, param_type: TypeAnnotation) -> FnParameter {
         FnParameter {
             name: name,
             param_type: param_type,
@@ -88,7 +88,7 @@ pub struct StructBody(pub Option<Vec<StructField>>);
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructField {
     pub name: Ident,
-    pub field_type: Path,
+    pub field_type: TypeAnnotation,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -110,7 +110,7 @@ pub enum ExprStmt {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructInit {
-    pub struct_name: Path,
+    pub struct_name: TypePath,
     pub field_init: Option<Vec<(Ident, Box<Expr>)>>,
 }
 
@@ -131,13 +131,13 @@ impl Assignment {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct LocalVarDecl {
-    pub var_type: Path,
+    pub var_type: TypeAnnotation,
     pub var_name: Ident,
     pub var_init: Expr,
 }
 
 impl LocalVarDecl {
-    pub fn new(var_type: Path, var_name: Ident, var_init: Expr) -> LocalVarDecl {
+    pub fn new(var_type: TypeAnnotation, var_name: Ident, var_init: Expr) -> LocalVarDecl {
         LocalVarDecl {
             var_type: var_type,
             var_name: var_name,
@@ -173,16 +173,30 @@ pub enum Expr {
     FieldAccess(Path),
     FnCall(FnCall),
     StructInit(StructInit),
+    ArrayInit(ArrayInit),
+    Indexing(Indexing),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Indexing {
+    pub array: Box<Expr>,
+    pub indexer: Box<Expr>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ArrayInit {
+    InitList(Vec<Expr>),
+    Value(Box<Expr>, u64),
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
-    pub path: Path,
+    pub path: TypePath,
     pub args: Option<Vec<Expr>>,
 }
 
 impl FnCall {
-    pub fn new(path: Path, args: Option<Vec<Expr>>) -> FnCall {
+    pub fn new(path: TypePath, args: Option<Vec<Expr>>) -> FnCall {
         FnCall {
             path: path,
             args: args,
@@ -256,21 +270,57 @@ impl fmt::Display for Ident {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Path(pub Vec<Ident>);
+pub enum TypeAnnotation {
+    Path(TypePath),
+    Array(Box<TypeAnnotation>, u64),
+}
 
-impl Path {
+impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
+    fn from(t: &TypeAnnotation) -> TypeAnnotationRef {
+        match t {
+            &TypeAnnotation::Path(ref p) => TypeAnnotationRef::Path(p),
+            &TypeAnnotation::Array(ref t, ref s) => TypeAnnotationRef::Array(t, s),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum TypeAnnotationRef<'a> {
+    Path(&'a TypePath),
+    Array(&'a TypeAnnotation, &'a u64),
+}
+
+impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
+    fn from(tr: TypeAnnotationRef) -> TypeAnnotation {
+        match tr {
+            TypeAnnotationRef::Path(p) => TypeAnnotation::Path(p.clone()),
+            TypeAnnotationRef::Array(t, s) => TypeAnnotation::Array(Box::new(t.clone()), s.clone()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TypePath(pub Vec<Ident>);
+
+impl TypePath {
     pub fn iter(&self) -> Iter<Ident> {
         self.0.iter()
     }
 }
 
-impl From<Ident> for Path {
-    fn from(ident: Ident) -> Path {
-        Path(vec![ident])
+impl From<Ident> for TypePath {
+    fn from(ident: Ident) -> TypePath {
+        TypePath(vec![ident])
     }
 }
 
-impl fmt::Display for Path {
+impl<'a> From<&'a TypePath> for TypeAnnotationRef<'a> {
+    fn from(p: &TypePath) -> TypeAnnotationRef {
+        TypeAnnotationRef::Path(p)
+    }
+}
+
+impl fmt::Display for TypePath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let buffer = self.0
             .iter()
@@ -280,4 +330,25 @@ impl fmt::Display for Path {
             });
         write!(f, "{}", buffer)
     }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Path(pub Vec<PathSegment>);
+
+impl Path {
+    pub fn iter(&self) -> Iter<PathSegment> {
+        self.0.iter()
+    }
+}
+
+impl From<Ident> for Path {
+    fn from(ident: Ident) -> Path {
+        Path(vec![PathSegment::Ident(ident)])
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum PathSegment {
+    Ident(Ident),
+    Indexing(Ident, Box<Expr>),
 }

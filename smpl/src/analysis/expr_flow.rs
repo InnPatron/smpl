@@ -1,6 +1,6 @@
 use super::semantic_data::{TmpId, Universe};
 use super::typed_ast::*;
-use ast::{Expr as AstExpr, Literal};
+use ast::{Expr as AstExpr, Literal, ArrayInit as AstArrayInit};
 
 pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
@@ -52,7 +52,7 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
         }
 
         AstExpr::FieldAccess(path) => {
-            scope.map_tmp(universe, Value::FieldAccess(FieldAccess::new(path)))
+            scope.map_tmp(universe, Value::FieldAccess(FieldAccess::new(universe, path)))
         }
 
         AstExpr::FnCall(fn_call) => {
@@ -66,6 +66,43 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
             let fn_call = FnCall::new(path, args);
 
             scope.map_tmp(universe, Value::FnCall(fn_call))
+        }
+
+        AstExpr::ArrayInit(init) => {
+            match init {
+                AstArrayInit::InitList(vec) => {
+                    let list = vec.into_iter()
+                        .map(|element| {
+                            Typed::untyped(flatten_expr(universe, scope, element))
+                        })
+                    .collect();
+
+                    let init = ArrayInit::List(list);
+
+                    scope.map_tmp(universe, Value::ArrayInit(init))
+                }
+                AstArrayInit::Value(expr, size) => {
+                    let value = Typed::untyped(flatten_expr(universe, scope, *expr));
+                    let init = ArrayInit::Value(value, size);
+
+                    scope.map_tmp(universe, Value::ArrayInit(init))
+                }
+            }
+        }
+
+        AstExpr::Indexing(indexing) => {
+            let array_expr = indexing.array;
+            let indexing_expr = indexing.indexer;
+
+            let array = Typed::untyped(flatten_expr(universe, scope, *array_expr));
+            let indexer = Typed::untyped(flatten_expr(universe, scope, *indexing_expr));
+
+            let indexing = Indexing {
+                array: array,
+                indexer: indexer,
+            };
+
+            scope.map_tmp(universe, Value::Indexing(indexing))
         }
     }
 }

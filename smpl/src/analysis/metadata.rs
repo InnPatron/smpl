@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::hash_map::Iter;
 
 use ast::Ident;
 use err::Err;
@@ -8,7 +9,8 @@ use analysis::semantic_data::{VarId, TypeId, ModuleId, FnId, FieldId, Universe};
 pub struct Metadata {
     fn_layout: HashMap<FnId, FnLayout>,
     field_ordering: HashMap<TypeId, FieldOrdering>,
-    main: Option<(FnId, ModuleId)>
+    array_types: HashMap<ModuleId, Vec<TypeId>>,
+    main: Option<(FnId, ModuleId)>,
 }
 
 impl Metadata {
@@ -17,6 +19,7 @@ impl Metadata {
         Metadata {
             fn_layout: HashMap::new(),
             field_ordering: HashMap::new(),
+            array_types: HashMap::new(),
             main: None,
         }
     }
@@ -33,12 +36,21 @@ impl Metadata {
         }
     }
 
+    pub fn insert_array_type(&mut self, mod_id: ModuleId, type_id: TypeId) {
+        if self.array_types.contains_key(&mod_id) {
+            let mut v = self.array_types.get_mut(&mod_id).unwrap();
+            v.push(type_id);
+        } else {
+            self.array_types.insert(mod_id, vec![type_id]);
+        }
+    }
+
     pub fn find_main(&mut self, universe: &Universe) -> Result<(), Err> {
-        use ast::Path;
+        use ast::TypePath;
 
         for (_, mod_id) in universe.all_modules().into_iter() {
             let module = universe.get_module(*mod_id);
-            if let Ok(id) = module.module_scope().get_fn(&path!("main")) {
+            if let Ok(id) = module.module_scope().get_fn(&type_path!("main")) {
                 if self.main.is_none() {
                     self.main = Some((id, *mod_id))
                 } else {
@@ -52,6 +64,10 @@ impl Metadata {
 
     pub fn main(&self) -> Option<(FnId, ModuleId)> {
         self.main
+    }
+
+    pub fn array_types(&self, id: ModuleId) -> Option<&[TypeId]> {
+        self.array_types.get(&id).map(|v| v.as_slice())
     }
 
     pub fn field_ordering(&self, id: TypeId) -> &FieldOrdering {
