@@ -562,7 +562,7 @@ impl<'a> RustFnGen<'a> {
                         )
                     );
                 
-                string_buffer
+                format!("{{ {} }}", string_buffer)
             }
         };
 
