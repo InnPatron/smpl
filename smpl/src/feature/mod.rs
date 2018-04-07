@@ -91,17 +91,17 @@ pub struct FeatureReasoning {
 }
 
 impl FeatureReasoning {
-    pub fn with_feature(f: String) -> FeatureReasoning {
+    pub fn with_feature(f: &str) -> FeatureReasoning {
         FeatureReasoning {
-            feature: f,
+            feature: f.to_string(),
             reason: None
         }
     }
 
-    pub fn feature_with_reason(f: String, r: String) -> FeatureReasoning {
+    pub fn feature_with_reason(f: &str, r: &str) -> FeatureReasoning {
         FeatureReasoning {
-            feature: f,
-            reason: Some(r)
+            feature: f.to_string(),
+            reason: Some(r.to_string())
         }
     }
 
