@@ -3,6 +3,7 @@ extern crate itertools;
 extern crate petgraph;
 extern crate lalrpop_util;
 
+mod feature;
 mod err;
 #[macro_use]
 mod ast_macros;
