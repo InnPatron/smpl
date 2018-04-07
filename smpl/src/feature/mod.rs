@@ -23,8 +23,8 @@ impl PresentFeatures {
         }
     }
 
-    pub fn add_feature(&mut self, f: String) {
-        self.features.insert(f);
+    pub fn add_feature(&mut self, f: &str) {
+        self.features.insert(f.to_string());
     }
 
     pub fn has_feature(&self, f: &str) -> bool {
