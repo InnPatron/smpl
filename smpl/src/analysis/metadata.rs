@@ -3,7 +3,7 @@ use std::collections::hash_map::Iter;
 
 use ast::Ident;
 use err::Err;
-use analysis::semantic_data::{VarId, TypeId, ModuleId, FnId, FieldId, Universe};
+use analysis::semantic_data::{VarId, TypeId, ModuleId, FnId, FieldId, Universe, Program};
 
 #[derive(Clone, Debug)]
 pub struct Metadata {
@@ -45,14 +45,17 @@ impl Metadata {
         }
     }
 
-    pub fn find_main(&mut self, universe: &Universe) -> Result<(), Err> {
+    pub fn find_main(program: &mut Program) -> Result<(), Err> {
         use ast::TypePath;
+
+        let (u, m, f) = program.analysis_context();
+        let universe = u;
 
         for (_, mod_id) in universe.all_modules().into_iter() {
             let module = universe.get_module(*mod_id);
             if let Ok(id) = module.module_scope().get_fn(&type_path!("main")) {
-                if self.main.is_none() {
-                    self.main = Some((id, *mod_id))
+                if m.main.is_none() {
+                    m.main = Some((id, *mod_id))
                 } else {
                     return Err(Err::MultipleMainFns);
                 }

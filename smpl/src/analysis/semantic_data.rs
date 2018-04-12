@@ -28,6 +28,10 @@ impl Program {
         }
     }
 
+    pub fn analysis_context<'a>(&'a mut self) -> (&'a Universe, &'a mut Metadata, &'a mut PresentFeatures) {
+        (&self.universe, &mut self.metadata, &mut self.features)
+    }
+
     pub fn universe(&self) -> &Universe {
         &self.universe
     }

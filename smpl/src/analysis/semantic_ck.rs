@@ -12,15 +12,20 @@ use super::semantic_data::Module;
 use super::control_flow::CFG;
 use super::fn_analyzer::analyze_fn;
 
-pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
+use feature::PresentFeatures;
+
+pub fn check_program(modules: Vec<AstModule>) -> Result<Program, Err> {
     let mut metadata = Metadata::new();
     let mut universe = Universe::std();
+    let mut features = PresentFeatures::new();
 
-    let program = program.into_iter()
-        .map(|ast_module| ModuleCkData::new(&universe, ast_module))
+    let mut program = Program::new(universe, metadata, features);
+
+    let modules = modules.into_iter()
+        .map(|ast_module| ModuleCkData::new(program.universe(), ast_module))
         .collect::<Result<Vec<_>, _>>()?;
 
-    let mut queue = program;
+    let mut queue = modules;
 
     loop {
         let start_count = queue.len();
@@ -28,7 +33,7 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
         queue = Vec::new();
 
         for mut module in queue_iter {
-            match check_module(&mut universe, &mut metadata, module)? {
+            match check_module(&mut program, module)? {
                 ModuleCkSignal::Success => (),
                 ModuleCkSignal::Defer(data) => queue.push(data),
             }       
@@ -51,22 +56,22 @@ pub fn check_program(program: Vec<AstModule>) -> Result<Program, Err> {
         }
     }
 
-    metadata.find_main(&universe)?;   
+    Metadata::find_main(&mut program)?;
 
-    Ok(Program::new(universe, metadata))
+    Ok(program)
 }
 
-fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: ModuleCkData) -> Result<ModuleCkSignal, Err> {
+fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<ModuleCkSignal, Err> {
     let module_name = module.name.clone();
 
-    let module_id = universe.new_module_id();
+    let module_id = program.universe().new_module_id();
 
     let mut missing_modules = Vec::new();
     for use_decl in module.unresolved_module_uses.into_iter() {
-        match universe.module_id(&use_decl.0) {
+        match program.universe().module_id(&use_decl.0) {
             Some(id) => {
                 let imported_name = use_decl.0.clone();
-                let imported_module = universe.get_module(id);
+                let imported_module = program.universe().get_module(id);
                 let imported_scope = imported_module.module_scope();
 
                 let all_types = imported_scope.all_types()
@@ -119,7 +124,7 @@ fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: Mo
 
         unresolved = Vec::new();
         for struct_decl in struct_iter {
-            let (struct_t, order) = match generate_struct_type(&universe, 
+            let (struct_t, order) = match generate_struct_type(program.universe(), 
                                                                &module.module_scope,
                                                                &struct_decl) {
                 Ok(s) => s,
@@ -134,13 +139,13 @@ fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: Mo
                 }
             };
 
-            let id = universe.new_type_id();
+            let id = program.universe().new_type_id();
             module.module_scope.insert_type(struct_t.name.clone().into(), id);
-            universe.insert_type(id, SmplType::Struct(struct_t));
+            program.universe_mut().insert_type(id, SmplType::Struct(struct_t));
             module.owned_types.push(id);
 
             let field_ordering = FieldOrdering::new(id, order);
-            metadata.insert_field_ordering(id, field_ordering);
+            program.metadata_mut().insert_field_ordering(id, field_ordering);
         }
 
         let end_count = unresolved.len();
@@ -164,25 +169,24 @@ fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: Mo
         for fn_decl in module_fn_iter {
             let name: TypePath = fn_decl.name.clone().into();
 
-            let type_id = universe.new_type_id();
+            let type_id = program.universe().new_type_id();
 
-            let fn_type = generate_fn_type(&module.module_scope, &universe, &fn_decl)?;
+            let fn_type = generate_fn_type(&module.module_scope, program.universe(), &fn_decl)?;
 
-            let cfg = CFG::generate(&universe, fn_decl.clone(), &fn_type)?;
+            let cfg = CFG::generate(program.universe(), fn_decl.clone(), &fn_type)?;
 
-            let fn_id = universe.new_fn_id();
-            universe.insert_fn(fn_id, type_id, fn_type, cfg);
+            let fn_id = program.universe().new_fn_id();
+            program.universe_mut().insert_fn(fn_id, type_id, fn_type, cfg);
             module.module_scope.insert_fn(name.clone(), fn_id);
             module.owned_fns.push(fn_id);
 
-            match analyze_fn(&universe, metadata, &module.module_scope, 
-                             universe.get_fn(fn_id).cfg(), fn_id, module_id)  {
+            match analyze_fn(program, &module.module_scope, fn_id, module_id)  {
                 Ok(f) => f,
                 Err(e) => {
                     match e {
                         Err::UnknownFn(_) => {
                             module.owned_fns.pop();
-                            universe.unmap_fn(fn_id);
+                            program.universe_mut().unmap_fn(fn_id);
                             unresolved.push(fn_decl);
                             continue;
                         }
@@ -209,7 +213,7 @@ fn check_module(universe: &mut Universe, metadata: &mut Metadata, mut module: Mo
                              module.owned_fns, 
                              module.dependencies,
                              module_id);
-    universe.map_module(module_id, module_name, module);
+    program.universe_mut().map_module(module_id, module_name, module);
     
     Ok(ModuleCkSignal::Success)
 }

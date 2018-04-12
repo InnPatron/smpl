@@ -2,6 +2,7 @@ use std::rc::Rc;
 use std::collections::HashSet;
 use petgraph::graph::NodeIndex;
 
+use feature::*;
 use ast;
 use err::*;
 
@@ -12,12 +13,13 @@ use super::smpl_type::*;
 use super::linear_cfg_traversal::*;
 use super::control_flow::CFG;
 use super::typed_ast::*;
-use super::semantic_data::{VarId, FnId, ScopedData, TypeId, Universe, TypeConstructor, ModuleId};
+use super::semantic_data::{VarId, FnId, ScopedData, TypeId, Universe, TypeConstructor, ModuleId, Program};
 
 
-struct FnAnalyzer<'a, 'b> {
+struct FnAnalyzer<'a, 'b, 'c> {
     universe: &'a Universe,
     metadata: &'b mut Metadata,
+    features: &'c mut PresentFeatures,
     fn_return_type: Rc<SmplType>,
     fn_return_type_id: TypeId,
     current_scope: ScopedData,
@@ -30,21 +32,24 @@ struct FnAnalyzer<'a, 'b> {
 }
 
 pub fn analyze_fn(
-    universe: &Universe,
-    metadata: &mut Metadata,
+    program: &mut Program,
     global_scope: &ScopedData,
-    cfg: &CFG,
     fn_id: FnId,
     module_id: ModuleId,
 ) -> Result<(), Err> {
     let fn_return_type;
     let fn_return_type_id;
-    let func = universe.get_fn(fn_id);
-    let unknown_type = universe.get_type(func.type_id());
+    let unknown_type = {
+        let func = program.universe().get_fn(fn_id);
+        program.universe().get_type(func.type_id())
+    };
+
     let func_type;
+
+
     match *unknown_type {
         SmplType::Function(ref fn_type) => {
-            fn_return_type = universe.get_type(fn_type.return_type.clone());
+            fn_return_type = program.universe().get_type(fn_type.return_type.clone());
             fn_return_type_id = fn_type.return_type;
             func_type = fn_type;
         }
@@ -52,9 +57,14 @@ pub fn analyze_fn(
         ref t @ _ => panic!("{} not mapped to a function but a {:?}", fn_id, t),
     }
 
+    let (u, m, f) = program.analysis_context();
+
+    let cfg = u.get_fn(fn_id).cfg();
+
     let mut analyzer = FnAnalyzer {
-        universe: universe,
-        metadata: metadata,
+        universe: u,
+        metadata: m,
+        features: f,
         fn_return_type: fn_return_type,
         fn_return_type_id: fn_return_type_id,
         current_scope: global_scope.clone(),
@@ -216,7 +226,7 @@ fn resolve_uni_op(
     }
 }
 
-impl<'a, 'b> FnAnalyzer<'a, 'b> {
+impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
 
     fn resolve_field_access(
         &mut self,
@@ -677,7 +687,7 @@ impl<'a, 'b> FnAnalyzer<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Passenger<Err> for FnAnalyzer<'a, 'b> {
+impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
     fn start(&mut self, _id: NodeIndex) -> Result<(), Err> {
         Ok(())
     }
