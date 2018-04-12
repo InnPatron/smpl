@@ -573,6 +573,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                 }
 
                 Value::ArrayInit(ref init) => {
+                    self.features.add_feature(STATIC_ARRAY);
                     match *init {
                         ArrayInit::List(ref vec) => {
                             let size = vec.len() as u64;
