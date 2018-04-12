@@ -5,6 +5,7 @@ use std::rc::Rc;
 use err::Err;
 use ast::*;
 use ast::{Module as AstModule, Function as AstFunction};
+use feature::PresentFeatures;
 
 use super::metadata::Metadata;
 use super::smpl_type::*;
@@ -14,15 +15,21 @@ use super::control_flow::CFG;
 pub struct Program {
     universe: Universe,
     metadata: Metadata,
+    features: PresentFeatures,
 }
 
 impl Program {
 
-    pub fn new(universe: Universe, metadata: Metadata) -> Program {
+    pub fn new(universe: Universe, metadata: Metadata, features: PresentFeatures) -> Program {
         Program {
             universe: universe,
             metadata: metadata,
+            features: features, 
         }
+    }
+
+    pub fn analysis_context<'a>(&'a mut self) -> (&'a Universe, &'a mut Metadata, &'a mut PresentFeatures) {
+        (&self.universe, &mut self.metadata, &mut self.features)
     }
 
     pub fn universe(&self) -> &Universe {
@@ -31,6 +38,22 @@ impl Program {
 
     pub fn metadata(&self) -> &Metadata {
         &self.metadata
+    }
+
+    pub fn features(&self) -> &PresentFeatures {
+        &self.features
+    }
+
+    pub fn universe_mut(&mut self) -> &mut Universe {
+        &mut self.universe
+    }
+
+    pub fn metadata_mut(&mut self) -> &mut Metadata {
+        &mut self.metadata
+    }
+
+    pub fn features_mut(&mut self) -> &mut PresentFeatures {
+        &mut self.features
     }
 }
 
