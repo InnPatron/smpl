@@ -23,6 +23,15 @@ impl PresentFeatures {
         }
     }
 
+    pub fn with(f: Vec<String>) -> PresentFeatures {
+        let mut p = PresentFeatures::new();
+        for f in f.into_iter() {
+            p.features.insert(f);
+        }
+
+        p
+    }
+
     pub fn add_feature(&mut self, f: &str) {
         self.features.insert(f.to_string());
     }
