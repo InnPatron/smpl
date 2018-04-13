@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use std::fmt;
 use std::slice::Iter;
+use std::borrow::Borrow;
 
 use ascii::AsciiString;
 
@@ -273,6 +274,7 @@ impl fmt::Display for Ident {
 pub enum TypeAnnotation {
     Path(TypePath),
     Array(Box<TypeAnnotation>, u64),
+    FnType(Option<Vec<TypeAnnotation>>, Option<Box<TypeAnnotation>>),
 }
 
 impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
@@ -280,6 +282,7 @@ impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
         match t {
             &TypeAnnotation::Path(ref p) => TypeAnnotationRef::Path(p),
             &TypeAnnotation::Array(ref t, ref s) => TypeAnnotationRef::Array(t, s),
+            &TypeAnnotation::FnType(ref p, ref r) => TypeAnnotationRef::FnType(p.as_ref().map(|v| v.as_slice()), r.as_ref().map(|r| r.borrow())),
         }
     }
 }
@@ -288,6 +291,7 @@ impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
 pub enum TypeAnnotationRef<'a> {
     Path(&'a TypePath),
     Array(&'a TypeAnnotation, &'a u64),
+    FnType(Option<&'a [TypeAnnotation]>, Option<&'a TypeAnnotation>),
 }
 
 impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
@@ -295,6 +299,8 @@ impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
         match tr {
             TypeAnnotationRef::Path(p) => TypeAnnotation::Path(p.clone()),
             TypeAnnotationRef::Array(t, s) => TypeAnnotation::Array(Box::new(t.clone()), s.clone()),
+            TypeAnnotationRef::FnType(p, r) => TypeAnnotation::FnType(
+                p.map(|params| params.iter().map(|param| param.clone()).collect()), r.map(|r| Box::new(r.clone())))
         }
     }
 }

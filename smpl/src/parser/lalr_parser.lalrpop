@@ -515,7 +515,26 @@ TypePath: TypePath = {
 
 TypeAnnotation: TypeAnnotation = {
 	<p: TypePath> => TypeAnnotation::Path(p),
-	<ArrayType>
+	<ArrayType>,
+	<FunctionTypeAnnotation>,
+};
+
+FunctionTypeAnnotation: TypeAnnotation = {
+	"Fn" "(" <p: FunctionTypeAnnotationParameterList?> ")" "->" <r: ("->" TypeAnnotation)?> => {
+		TypeAnnotation::FnType(p, r.map(|(_, t)| Box::new(t)))
+	}
+};
+
+FunctionTypeAnnotationParameterList: Vec<TypeAnnotation> = {
+	<first: TypeAnnotation> <tail: FunctionTypeAnnotationParameterList> => {
+		let mut v = vec![first];
+		v.extend(tail);
+		v
+	},
+
+	<t: TypeAnnotation> ","? => vec![t],
+
+	
 };
 
 ArrayType: TypeAnnotation = {

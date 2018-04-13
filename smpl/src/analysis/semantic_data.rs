@@ -383,6 +383,10 @@ impl ScopedData {
                                                                    size.clone());
                 Ok(type_id)
             },
+
+            TypeAnnotationRef::FnType(ref params, ref return_t) => {
+                unimplemented!()
+            }
         }
     }
 
