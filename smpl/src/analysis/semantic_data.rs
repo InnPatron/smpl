@@ -314,10 +314,10 @@ impl TypeConstructor {
         }
     }
 
-    pub fn construct_fn_type(universe: &Universe, params: &[TypeId], return_t: TypeId) -> TypeId {
+    pub fn construct_fn_type(universe: &Universe, params: Vec<TypeId>, return_t: TypeId) -> TypeId {
 
         let ft = FunctionType {
-            params: params.iter().map(|p| p.clone()).collect(),
+            params: params,
             return_type: return_t,
         };
 
@@ -428,7 +428,7 @@ impl ScopedData {
                     None => universe.unit(),
                 };
 
-                unimplemented!();
+                Ok(TypeConstructor::construct_fn_type(universe, param_types, return_t))
             }
         }
     }
