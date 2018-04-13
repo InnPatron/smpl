@@ -282,6 +282,11 @@ impl TypeConstructor {
                 let mut b = self.constructed.borrow_mut();
                 b.insert(id, Rc::new(SmplType::Array(at)));
             }
+
+            ConstructedType::Function(ft) => {
+                let mut b = self.constructed.borrow_mut();
+                b.insert(id, Rc::new(SmplType::Function(ft)));
+            }
         }
     }
 
@@ -304,6 +309,25 @@ impl TypeConstructor {
             None => {
                 let id = universe.new_type_id();
                 universe.type_constructor.map(at, id);
+                id
+            }
+        }
+    }
+
+    pub fn construct_fn_type(universe: &Universe, params: &[TypeId], return_t: TypeId) -> TypeId {
+
+        let ft = FunctionType {
+            params: params.iter().map(|p| p.clone()).collect(),
+            return_type: return_t,
+        };
+
+        let ft = ConstructedType::Function(ft);
+
+        match universe.type_constructor.contains(&ft) {
+            Some(id) => id,
+            None => {
+                let id = universe.new_type_id();
+                universe.type_constructor.map(ft, id);
                 id
             }
         }
@@ -384,8 +408,27 @@ impl ScopedData {
                 Ok(type_id)
             },
 
-            TypeAnnotationRef::FnType(ref params, ref return_t) => {
-                unimplemented!()
+            TypeAnnotationRef::FnType(params, return_t) => {
+                let param_types = match params {
+                    Some(ref v) => {
+                        let mut new_params = Vec::new();
+                        for p in v.iter() {
+                            let p_type = ScopedData::type_id(self, universe, p.into())?;
+                            new_params.push(p_type);
+                        }
+
+                        new_params
+                    }
+
+                    None => Vec::with_capacity(0),
+                };
+
+                let return_t = match return_t {
+                    Some(r) => ScopedData::type_id(self, universe, r.into())?,
+                    None => universe.unit(),
+                };
+
+                unimplemented!();
             }
         }
     }
