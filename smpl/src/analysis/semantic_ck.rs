@@ -240,7 +240,10 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, metadata: &mut Meta
 
             typed_params
         }
-        None => Vec::new(),
+        None => {
+            metadata.insert_function_param_ids(fn_id, Vec::with_capacity(0));
+            Vec::with_capacity(0)
+        }
     };
 
     Ok(FunctionType {
