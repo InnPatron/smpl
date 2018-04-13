@@ -7,6 +7,7 @@ use analysis::semantic_data::{VarId, TypeId, ModuleId, FnId, FieldId, Universe, 
 
 #[derive(Clone, Debug)]
 pub struct Metadata {
+    fn_param_ids: HashMap<FnId, Vec<FunctionParameter>>,
     fn_layout: HashMap<FnId, FnLayout>,
     field_ordering: HashMap<TypeId, FieldOrdering>,
     array_types: HashMap<ModuleId, Vec<TypeId>>,
@@ -17,6 +18,7 @@ impl Metadata {
 
     pub fn new() -> Metadata {
         Metadata {
+            fn_param_ids: HashMap::new(),
             fn_layout: HashMap::new(),
             field_ordering: HashMap::new(),
             array_types: HashMap::new(),
@@ -43,6 +45,16 @@ impl Metadata {
         } else {
             self.array_types.insert(mod_id, vec![type_id]);
         }
+    }
+
+    pub fn insert_function_param_ids(&mut self, fn_id: FnId, params: Vec<FunctionParameter>) {
+        if self.fn_param_ids.insert(fn_id, params).is_some() {
+            panic!();
+        } 
+    }
+
+    pub fn function_param_ids(&self, fn_id: FnId) -> &[FunctionParameter] {
+        self.fn_param_ids.get(&fn_id).unwrap().as_slice()
     }
 
     pub fn find_main(program: &mut Program) -> Result<(), Err> {
@@ -128,5 +140,28 @@ impl FieldOrdering {
 
     pub fn order(&self) -> &[FieldId] {
         &self.order
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct FunctionParameter {
+    id: VarId,
+    name: Ident,
+}
+
+impl FunctionParameter {
+    pub fn new(name: Ident, id: VarId) -> FunctionParameter {
+        FunctionParameter {
+            id: id,
+            name: name
+        }
+    }
+
+    pub fn var_id(&self) -> VarId {
+        self.id
+    }
+
+    pub fn name(&self) -> &Ident {
+        &self.name
     }
 }

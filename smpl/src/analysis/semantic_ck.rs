@@ -170,12 +170,15 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
             let name: TypePath = fn_decl.name.clone().into();
 
             let type_id = program.universe().new_type_id();
+            let fn_id = program.universe().new_fn_id();
 
-            let fn_type = generate_fn_type(&module.module_scope, program.universe(), &fn_decl)?;
+            let fn_type = {
+                let (u, m, _) = program.analysis_context();
+                generate_fn_type(&module.module_scope, u, m, fn_id, &fn_decl)?
+            };
 
             let cfg = CFG::generate(program.universe(), fn_decl.clone(), &fn_type)?;
 
-            let fn_id = program.universe().new_fn_id();
             program.universe_mut().insert_fn(fn_id, type_id, fn_type, cfg);
             module.module_scope.insert_fn(name.clone(), fn_id);
             module.owned_fns.push(fn_id);
@@ -218,21 +221,25 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
     Ok(ModuleCkSignal::Success)
 }
 
-fn generate_fn_type(scope: &ScopedData, universe: &Universe, fn_def: &AstFunction) -> Result<FunctionType, Err> {
+fn generate_fn_type(scope: &ScopedData, universe: &Universe, metadata: &mut Metadata, fn_id: FnId, fn_def: &AstFunction) -> Result<FunctionType, Err> {
     let ret_type = match fn_def.return_type {
         Some(ref path) => scope.type_id(universe, path.into())?,
         None => universe.unit(),
     };
 
-    let params: Vec<_> = match fn_def.params {
-        Some(ref params) => params.iter()
-                              .map(|ref fn_param| {
-                                  let var_id = universe.new_var_id();
-                                  scope.type_id(universe, (&fn_param.param_type).into())
-                                       .map(|id| FnParameter::new(fn_param.name.clone(), id, var_id))
-                              })
-                              .collect::<Result<Vec<_>, Err>>()?,
+    let params = match fn_def.params {
+        Some(ref params) => {
+            let mut typed_params = Vec::new();
+            let mut param_metadata = Vec::new();
+            for p in params.iter() {
+                typed_params.push(scope.type_id(universe, (&p.param_type).into())?);
+                param_metadata.push(FunctionParameter::new(p.name.clone(), universe.new_var_id()));
+            }
 
+            metadata.insert_function_param_ids(fn_id, param_metadata);
+
+            typed_params
+        }
         None => Vec::new(),
     };
 

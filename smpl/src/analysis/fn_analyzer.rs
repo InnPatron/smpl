@@ -76,14 +76,16 @@ pub fn analyze_fn(
     let mut param_types = Vec::new();
 
     // Add parameters to the current scope.
-    for param in func_type.params.iter() {
-        let v_id = param.var_id;
-        let t_id = param.param_type;
+    for (param_type_id, meta) in func_type.params.iter()
+        .zip(analyzer.metadata.function_param_ids(fn_id).iter()) {
+        let v_id = meta.var_id();
+        let p_name = meta.name();
+        let param_type_id = *param_type_id;
         analyzer
             .current_scope
-            .insert_var(param.name.clone(), v_id, t_id);
+            .insert_var(p_name.clone(), v_id, param_type_id);
 
-        param_types.push((v_id, t_id));
+        param_types.push((v_id, param_type_id));
     }
 
     // Restrain lifetime of traverser to move analyzer.locals
@@ -541,13 +543,13 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                     arg_type_ids.iter().zip(fn_param_type_ids).enumerate()
                                 {
                                     let arg_type = self.universe.get_type(*arg);
-                                    let param_type = self.universe.get_type(param.param_type);
+                                    let param_type = self.universe.get_type(*param);
                                     if arg_type != param_type {
                                         return Err(TypeErr::ArgMismatch {
                                             fn_id: fn_id,
                                             index: index,
                                             arg: *arg,
-                                            param: param.param_type,
+                                            param: param.clone(),
                                         }.into());
                                     }
                                 }

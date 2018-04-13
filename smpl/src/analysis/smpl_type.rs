@@ -47,23 +47,6 @@ impl StructType {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionType {
-    pub params: Vec<FnParameter>,
+    pub params: Vec<TypeId>,
     pub return_type: TypeId,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct FnParameter {
-    pub name: Ident,
-    pub param_type: TypeId,
-    pub var_id: VarId,
-}
-
-impl FnParameter {
-    pub fn new(name: Ident, param_type: TypeId, param_var_id: VarId) -> FnParameter {
-        FnParameter {
-            name: name,
-            param_type: param_type,
-            var_id: param_var_id,
-        }
-    }
 }
