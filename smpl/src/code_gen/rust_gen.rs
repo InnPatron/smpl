@@ -125,14 +125,14 @@ impl<'a> RustModGen<'a> {
                 return_type_id = fn_type.return_type;
 
                 // Gather parameters
-                for param in fn_type.params.iter() {
-                    let param_type = param.param_type;
-                    let param_type = RustGenFmt::type_id(param_type);
+                for (param_type_id, param_var_id) in fn_type.params.iter()
+                    .zip(self.metadata.function_param_ids(fn_id).iter()) {
+                    let param_type = RustGenFmt::type_id(*param_type_id);
                     let param_type = RustGenFmt::rustify_type(param_type);
 
                     args.push_str(&format!(
                         "{}: {}, ",
-                        RustGenFmt::var_id(param.var_id),
+                        RustGenFmt::var_id(param_var_id.var_id()),
                         param_type
                     ));
                 }

@@ -9,7 +9,6 @@ use feature::PresentFeatures;
 
 use super::metadata::Metadata;
 use super::smpl_type::*;
-use super::smpl_type::FnParameter;
 use super::control_flow::CFG;
 
 pub struct Program {
