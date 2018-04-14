@@ -789,4 +789,27 @@ fn test() {
         let mod1 = parse_module(mod1).unwrap();
         check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn function_value() {
+        let mod1 =
+"
+mod mod1;
+
+fn bar(a: i32) -> i32 {
+    return a + 5;
+}
+
+fn apply(f: Fn(i32) -> i32, in: i32) -> i32 {
+    return f(in);
+}
+
+fn foo() {
+    apply(bar, 10);
+}
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
 }
