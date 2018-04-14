@@ -5,6 +5,7 @@ use std::rc::Rc;
 use err::Err;
 use ast::{Ident, TypePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
 
+use super::feature_checkers::*;
 use super::metadata::*;
 use super::smpl_type::*;
 use super::semantic_data::*;
@@ -124,7 +125,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
 
         unresolved = Vec::new();
         for struct_decl in struct_iter {
-            let (struct_t, order) = match generate_struct_type(program.universe(), 
+            let (struct_t, order) = match generate_struct_type(program, 
                                                                &module.module_scope,
                                                                &struct_decl) {
                 Ok(s) => s,
@@ -172,10 +173,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
             let type_id = program.universe().new_type_id();
             let fn_id = program.universe().new_fn_id();
 
-            let fn_type = {
-                let (u, m, _) = program.analysis_context();
-                generate_fn_type(&module.module_scope, u, m, fn_id, &fn_decl)?
-            };
+            let fn_type = generate_fn_type(program, &module.module_scope, fn_id, &fn_decl)?;
 
             let cfg = CFG::generate(program.universe(), fn_decl.clone(), &fn_type)?;
 
@@ -221,9 +219,14 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
     Ok(ModuleCkSignal::Success)
 }
 
-fn generate_fn_type(scope: &ScopedData, universe: &Universe, metadata: &mut Metadata, fn_id: FnId, fn_def: &AstFunction) -> Result<FunctionType, Err> {
+fn generate_fn_type(program: &mut Program, scope: &ScopedData, fn_id: FnId, fn_def: &AstFunction) -> Result<FunctionType, Err> {
+    let (universe, metadata, features) = program.analysis_context();
     let ret_type = match fn_def.return_type {
-        Some(ref path) => scope.type_id(universe, path.into())?,
+        Some(ref path) => {
+            let type_id = scope.type_id(universe, path.into())?;
+            fn_sig_type_scanner(universe, features, type_id);
+            type_id
+        }
         None => universe.unit(),
     };
 
@@ -232,8 +235,11 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, metadata: &mut Meta
             let mut typed_params = Vec::new();
             let mut param_metadata = Vec::new();
             for p in params.iter() {
-                typed_params.push(scope.type_id(universe, (&p.param_type).into())?);
+                let type_id = scope.type_id(universe, (&p.param_type).into())?;
+                typed_params.push(type_id);
                 param_metadata.push(FunctionParameter::new(p.name.clone(), universe.new_var_id()));
+
+                fn_sig_type_scanner(universe, features, type_id);
             }
 
             metadata.insert_function_param_ids(fn_id, param_metadata);
@@ -252,7 +258,10 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, metadata: &mut Meta
     })
 }
 
-fn generate_struct_type(universe: &Universe, scope: &ScopedData, struct_def: &Struct) -> Result<(StructType, Vec<FieldId>), Err> {
+fn generate_struct_type(program: &mut Program, scope: &ScopedData, struct_def: &Struct) -> Result<(StructType, Vec<FieldId>), Err> {
+    let (universe, metadata, features) = program.analysis_context();
+
+
     let mut fields = HashMap::new();
     let mut field_map = HashMap::new();
     let mut order = Vec::new();
@@ -265,6 +274,8 @@ fn generate_struct_type(universe: &Universe, scope: &ScopedData, struct_def: &St
             fields.insert(f_id, field_type);
             field_map.insert(f_name, f_id);
             order.push(f_id);
+
+            field_type_scanner(universe, features, field_type);
         }
     } 
 
