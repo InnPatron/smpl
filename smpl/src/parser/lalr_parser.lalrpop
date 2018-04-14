@@ -520,7 +520,7 @@ TypeAnnotation: TypeAnnotation = {
 };
 
 FunctionTypeAnnotation: TypeAnnotation = {
-	"Fn" "(" <p: FunctionTypeAnnotationParameterList?> ")" "->" <r: ("->" TypeAnnotation)?> => {
+	"Fn" "(" <p: FunctionTypeAnnotationParameterList?> ")" <r: ("->" TypeAnnotation)?> => {
 		TypeAnnotation::FnType(p, r.map(|(_, t)| Box::new(t)))
 	}
 };
