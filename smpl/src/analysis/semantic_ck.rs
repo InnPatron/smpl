@@ -812,4 +812,28 @@ fn foo() {
         let mod1 = parse_module(mod1).unwrap();
         check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn mod_function_value() {
+        let mod2 =
+"
+mod mod2;
+
+fn foo() -> i32 {
+    return 5;
+}
+";
+        let mod1 =
+"
+mod mod1;
+
+fn main() {
+    let a: Fn(i32) -> i32 = mod2::foo;
+}
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        let mod2 = parse_module(mod2).unwrap();
+        check_program(vec![mod1, mod2]).unwrap();
+    }
 }
