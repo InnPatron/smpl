@@ -343,6 +343,13 @@ UniOp: UniOp = {
 
 /// expr_leaf -> "(" expr ")"| literal | fn_call | path | struct_init
 ExprLeaf: Expr = {
+	<ExprPath>,
+	<i: Indexing> => Expr::Indexing(i),
+
+	<Primary>,
+};
+
+ExprPath: Expr = {
 	<path: Path> => {
 		let mut path = path;
 		if path.0.len() == 1 {
@@ -362,9 +369,7 @@ ExprLeaf: Expr = {
 		}
 	},
 
-	<i: Indexing> => Expr::Indexing(i),
-
-	<Primary>,
+	<p: ModulePath> => unimplemented!(),
 };
 
 Primary: Expr = {
@@ -407,7 +412,7 @@ ArrayInitList: Vec<Expr> = {
 
 /// struct_init -> "init" type_path "{" struct_field_init_list "}"
 StructInit: StructInit = {
-	"init" <struct_name: ModulePath> "{" <init: StructFieldInitList?> "}" => {
+	"init" <struct_name: ModuleBinding> "{" <init: StructFieldInitList?> "}" => {
 		StructInit {
 			struct_name: struct_name,
 			field_init: init,
@@ -436,7 +441,7 @@ StructFieldInit: (Ident, Box<Expr>) = {
 
 /// fn_call -> ModulePath "(" fn_call_args ")"
 FnCall: FnCall = {
-	<path: ModulePath> "(" <args: FnCallArgs?> ")" => {
+	<path: ModuleBinding> "(" <args: FnCallArgs?> ")" => {
 		let mut path = path;
 		FnCall::new(
 			path,
@@ -503,9 +508,14 @@ PathSegment: PathSegment = {
 	<i: Ident> "[" <e: Expr> "]" => PathSegment::Indexing(i, Box::new(e)),
 };
 
+ModuleBinding: ModulePath = {
+	<i: Ident> => ModulePath(vec![i]),
+	<ModulePath>,
+};
+
 /// type_path -> ident ["." ident]*
 ModulePath: ModulePath = {
-	<first: Ident> <v:("::" <Ident>)*> => {
+	<first: Ident> <v:("::" <Ident>)+> => {
 		let mut p = Vec::new();
 		p.push(first);
 		p.extend_from_slice(&v);
@@ -514,7 +524,7 @@ ModulePath: ModulePath = {
 };
 
 TypeAnnotation: TypeAnnotation = {
-	<p: ModulePath> => TypeAnnotation::Path(p),
+	<p: ModuleBinding> => TypeAnnotation::Path(p),
 	<ArrayType>,
 	<FunctionTypeAnnotation>,
 };
