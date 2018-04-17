@@ -111,7 +111,7 @@ pub enum ExprStmt {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructInit {
-    pub struct_name: TypePath,
+    pub struct_name: ModulePath,
     pub field_init: Option<Vec<(Ident, Box<Expr>)>>,
 }
 
@@ -192,12 +192,12 @@ pub enum ArrayInit {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
-    pub path: TypePath,
+    pub path: ModulePath,
     pub args: Option<Vec<Expr>>,
 }
 
 impl FnCall {
-    pub fn new(path: TypePath, args: Option<Vec<Expr>>) -> FnCall {
+    pub fn new(path: ModulePath, args: Option<Vec<Expr>>) -> FnCall {
         FnCall {
             path: path,
             args: args,
@@ -272,7 +272,7 @@ impl fmt::Display for Ident {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TypeAnnotation {
-    Path(TypePath),
+    Path(ModulePath),
     Array(Box<TypeAnnotation>, u64),
     FnType(Option<Vec<TypeAnnotation>>, Option<Box<TypeAnnotation>>),
 }
@@ -289,7 +289,7 @@ impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TypeAnnotationRef<'a> {
-    Path(&'a TypePath),
+    Path(&'a ModulePath),
     Array(&'a TypeAnnotation, &'a u64),
     FnType(Option<&'a [TypeAnnotation]>, Option<&'a TypeAnnotation>),
 }
@@ -306,27 +306,27 @@ impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TypePath(pub Vec<Ident>);
+pub struct ModulePath(pub Vec<Ident>);
 
-impl TypePath {
+impl ModulePath {
     pub fn iter(&self) -> Iter<Ident> {
         self.0.iter()
     }
 }
 
-impl From<Ident> for TypePath {
-    fn from(ident: Ident) -> TypePath {
-        TypePath(vec![ident])
+impl From<Ident> for ModulePath {
+    fn from(ident: Ident) -> ModulePath {
+        ModulePath(vec![ident])
     }
 }
 
-impl<'a> From<&'a TypePath> for TypeAnnotationRef<'a> {
-    fn from(p: &TypePath) -> TypeAnnotationRef {
+impl<'a> From<&'a ModulePath> for TypeAnnotationRef<'a> {
+    fn from(p: &ModulePath) -> TypeAnnotationRef {
         TypeAnnotationRef::Path(p)
     }
 }
 
-impl fmt::Display for TypePath {
+impl fmt::Display for ModulePath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let buffer = self.0
             .iter()

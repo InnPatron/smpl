@@ -3,7 +3,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use err::Err;
-use ast::{Ident, TypePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
+use ast::{Ident, ModulePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
 
 use super::feature_checkers::*;
 use super::metadata::*;
@@ -168,7 +168,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
 
         unresolved = Vec::new();
         for fn_decl in module_fn_iter {
-            let name: TypePath = fn_decl.name.clone().into();
+            let name: ModulePath = fn_decl.name.clone().into();
 
             let type_id = program.universe().new_type_id();
             let fn_id = program.universe().new_fn_id();
