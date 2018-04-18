@@ -437,6 +437,17 @@ impl ScopedData {
         self.type_map.insert(path, id)
     }
 
+    pub fn binding_info(&self, name: &Ident) -> Result<BindingInfo, Err> {
+        self.var_map.get(name)
+            .map(|v| BindingInfo::Var(v.clone(), self.var_type_map.get(v).unwrap().clone()))
+            .or({
+                let p = ModulePath(vec![name.clone()]);
+                self.fn_map.get(&p).map(|f| BindingInfo::Fn(f.clone()))
+
+            })
+        .ok_or(Err::UnknownBinding(name.clone()))
+    }
+
     pub fn var_info(&self, name: &Ident) -> Result<(VarId, TypeId), Err> {
         let var_id = self.var_map.get(name)
                          .ok_or(Err::UnknownVar(name.clone()))?
@@ -472,6 +483,11 @@ impl ScopedData {
     }
 }
 
+pub enum BindingInfo {
+    Var(VarId, TypeId),
+    Fn(FnId),
+}
+
 #[derive(Clone, Debug)]
 pub struct Function {
     fn_type: TypeId,
@@ -485,6 +501,24 @@ impl Function {
 
     pub fn cfg(&self) -> &CFG {
         &self.cfg
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum BindingId {
+    Var(VarId),
+    Fn(FnId),
+}
+
+impl From<VarId> for BindingId {
+    fn from(id: VarId) -> BindingId {
+        BindingId::Var(id)
+    }
+}
+
+impl From<FnId> for BindingId {
+    fn from(id: FnId) -> BindingId {
+        BindingId::Fn(id)
     }
 }
 

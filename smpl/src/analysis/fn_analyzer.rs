@@ -13,7 +13,7 @@ use super::smpl_type::*;
 use super::linear_cfg_traversal::*;
 use super::control_flow::CFG;
 use super::typed_ast::*;
-use super::semantic_data::{VarId, FnId, ScopedData, TypeId, Universe, TypeConstructor, ModuleId, Program};
+use super::semantic_data::{VarId, FnId, ScopedData, TypeId, Universe, TypeConstructor, ModuleId, Program, BindingInfo};
 
 
 struct FnAnalyzer<'a, 'b, 'c> {
@@ -476,11 +476,21 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                     tmp_type = struct_type_id;
                 }
 
-                Value::Variable(ref var) => {
-                    let (var_id, type_id) = self.current_scope.var_info(var.ident())?;
-                    var.set_id(var_id);
+                Value::Binding(ref var) => {
+                    match self.current_scope.binding_info(var.ident())? {
+                        BindingInfo::Var(var_id, type_id) => {
+                            var.set_id(var_id);
+                            tmp_type = type_id;
+                        }
 
-                    tmp_type = type_id;
+                        BindingInfo::Fn(fn_id) => {
+                            let f = self.universe.get_fn(fn_id);
+                            let fn_type_id = f.type_id();
+
+                            var.set_id(fn_id);
+                            tmp_type = fn_type_id;
+                        }
+                    }
                 }
 
                 Value::FieldAccess(ref field_access) => {

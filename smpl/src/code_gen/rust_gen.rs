@@ -373,12 +373,13 @@ impl<'a> RustFnGen<'a> {
                 Literal::Bool(boolean) => self.output.emit_line(&boolean.to_string()),
             },
 
-            Value::Variable(ref var) => {
-                let var_id = RustGenFmt::var_id(var.get_id().expect(
-                    "If the program passed semantic analysis, all IDs should be filled in.",
-                ));
-
-                let inner = RustGenFmt::borrow(var_id);
+            Value::Binding(ref var) => {
+                let value = match var.get_id()
+                    .expect("If the program passed semantic analysis, all IDs should be filled in.") {
+                    BindingId::Fn(id) => RustGenFmt::fn_id(id),
+                    BindingId::Var(id) => RustGenFmt::var_id(id),
+                };
+                let inner = RustGenFmt::borrow(value);
                 self.output.emit_line(&RustGenFmt::clone_value(inner));
             }
 

@@ -8,6 +8,7 @@ pub enum Err {
     ParseErr(String),
     MultipleMainFns,
     UnknownType(TypeAnnotation),
+    UnknownBinding(Ident),
     UnknownVar(Ident),
     UnknownFn(ModulePath),
     UnresolvedUses(Vec<Ident>),

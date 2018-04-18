@@ -355,10 +355,10 @@ ExprPath: Expr = {
 		if path.0.len() == 1 {
 			let segment = path.0.pop().unwrap();
 			match segment {
-				PathSegment::Ident(i) => Expr::Variable(i),
+				PathSegment::Ident(i) => Expr::Binding(i),
 				PathSegment::Indexing(i, e) => {
 					let i = Indexing {
-						array: Box::new(Expr::Variable(i)),
+						array: Box::new(Expr::Binding(i)),
 						indexer: e
 					};
 					Expr::Indexing(i)

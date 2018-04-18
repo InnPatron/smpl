@@ -170,7 +170,7 @@ pub enum Expr {
     Bin(BinExpr),
     Uni(UniExpr),
     Literal(Literal),
-    Variable(Ident),
+    Binding(Ident),
     FieldAccess(Path),
     FnCall(FnCall),
     StructInit(StructInit),

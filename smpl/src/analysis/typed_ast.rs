@@ -186,7 +186,7 @@ impl Tmp {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Literal(ast::Literal),
-    Variable(self::Variable),
+    Binding(self::Binding),
     FieldAccess(self::FieldAccess),
     FnCall(self::FnCall),
     BinExpr(ast::BinOp, Typed<TmpId>, Typed<TmpId>),
@@ -323,16 +323,16 @@ impl FieldAccess {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Variable {
+pub struct Binding {
     ident: ast::Ident,
-    var_id: Cell<Option<VarId>>,
+    binding_id: Cell<Option<BindingId>>,
 }
 
-impl Variable {
-    pub fn new(ident: ast::Ident) -> Variable {
-        Variable {
+impl Binding {
+    pub fn new(ident: ast::Ident) -> Binding {
+        Binding {
             ident: ident,
-            var_id: Cell::new(None),
+            binding_id: Cell::new(None),
         }
     }
 
@@ -340,16 +340,18 @@ impl Variable {
         &self.ident
     }
 
-    pub fn set_id(&self, id: VarId) {
-        if self.var_id.get().is_some() {
-            panic!("Attempting to overwrite {} of the Ident {:?} with {}", self.var_id.get().unwrap(), self.ident, id);
+    pub fn set_id<T>(&self, id: T) where T: Into<BindingId> + ::std::fmt::Debug {
+        if self.binding_id.get().is_some() {
+            panic!("Attempting to overwrite {:?} of the Ident {:?} with {:?}", 
+                   self.binding_id.get().unwrap(), 
+                   self.ident, id);
         } else {
-            self.var_id.set(Some(id));
+            self.binding_id.set(Some(id.into()));
         }
     }
 
-    pub fn get_id(&self) -> Option<VarId> {
-        self.var_id.get()
+    pub fn get_id(&self) -> Option<BindingId> {
+        self.binding_id.get()
     }
 }
 
