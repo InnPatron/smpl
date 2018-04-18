@@ -442,14 +442,18 @@ impl ScopedData {
     }
 
     pub fn binding_info(&self, name: &Ident) -> Result<BindingInfo, Err> {
-        self.var_map.get(name)
-            .map(|v| BindingInfo::Var(v.clone(), self.var_type_map.get(v).unwrap().clone()))
-            .or({
+        match self.var_map.get(name) {
+            Some(v_id) => {
+                Ok(BindingInfo::Var(v_id.clone(), 
+                                    self.var_type_map.get(v_id).unwrap().clone()))
+            }
+            None => {
                 let p = ModulePath(vec![name.clone()]);
-                self.fn_map.get(&p).map(|f| BindingInfo::Fn(f.clone()))
-
-            })
-        .ok_or(Err::UnknownBinding(name.clone()))
+                self.fn_map.get(&p)
+                    .map(|f| BindingInfo::Fn(f.clone()))
+                    .ok_or(Err::UnknownBinding(name.clone()))
+            }
+        }
     }
 
     pub fn var_info(&self, name: &Ident) -> Result<(VarId, TypeId), Err> {
