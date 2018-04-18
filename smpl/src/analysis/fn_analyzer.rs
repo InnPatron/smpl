@@ -517,13 +517,45 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                 }
 
                 Value::FnCall(ref fn_call) => {
-                    let fn_id = self.current_scope.get_fn(&fn_call.path().clone())?;
-                    let func = self.universe.get_fn(fn_id);
-                    let fn_type_id = func.type_id();
+                    // Search for the function
+                    let fn_type_id = if fn_call.path().0.len() == 1 {
+                        let binding = self.current_scope.binding_info(fn_call.path()
+                                                                      .0.get(0).unwrap());
+                        if binding.is_ok() {
+                            match binding.unwrap() {
+                                BindingInfo::Fn(fn_id) => {
+                                    let func = self.universe.get_fn(fn_id);
+                                    Some(func.type_id())
+                                }
+                                BindingInfo::Var(v_id, v_type_id) => {
+                                    // Function call on a local variable / parameter
+                                    // Should be a functino type
+                                    let v_type = self.universe.get_type(v_type_id);
+                                    match *v_type {
+                                        SmplType::Function(_) => Some(v_type_id),
+                                        _ => unimplemented!(),
+                                    }
+                                },
+                            }
+                        } else {
+                            None 
+                        }
+                    } else {
+                        None
+                    };
+
+                    let fn_type_id = match fn_type_id {
+                        Some(fn_type_id) => fn_type_id,
+                        None => {
+                            let fn_id = self.current_scope.get_fn(fn_call.path())?;
+                            let func = self.universe.get_fn(fn_id);
+                            func.type_id()
+                        }
+                    };
+
                     let fn_type = self.universe.get_type(fn_type_id);
-
-                    fn_call.set_id(fn_id);
-
+                    
+                    // Check args and parameters align
                     if let SmplType::Function(ref fn_type) = *fn_type {
                         let arg_type_ids = fn_call.args().map(|ref vec| {
                             vec.iter()
@@ -556,7 +588,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                     let param_type = self.universe.get_type(*param);
                                     if arg_type != param_type {
                                         return Err(TypeErr::ArgMismatch {
-                                            fn_id: fn_id,
+                                            fn_type_id: fn_type_id,
                                             index: index,
                                             arg: *arg,
                                             param: param.clone(),
@@ -579,7 +611,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                         tmp_type = fn_type.return_type;
                     } else {
                         panic!( "{} was mapped to {}, which is not SmplType::Function but {:?}",
-                            fn_id, fn_type_id, fn_type
+                            fn_type_id, fn_type_id, fn_type
                         );
                     }
                 }

@@ -62,7 +62,7 @@ pub enum TypeErr {
     },
 
     ArgMismatch {
-        fn_id: FnId,
+        fn_type_id: TypeId,
         index: usize,
         arg: TypeId,
         param: TypeId,
