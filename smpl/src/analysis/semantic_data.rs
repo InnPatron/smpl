@@ -450,7 +450,7 @@ impl ScopedData {
 
     pub fn var_info(&self, name: &Ident) -> Result<(VarId, TypeId), Err> {
         let var_id = self.var_map.get(name)
-                         .ok_or(Err::UnknownVar(name.clone()))?
+                         .ok_or(Err::UnknownBinding(name.clone()))?
                          .clone();
         let type_id = self.var_type_map
                           .get(&var_id)

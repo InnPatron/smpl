@@ -404,14 +404,14 @@ fn test() {
 
         let program = parse_module(input).unwrap();
         match check_program(vec![program]) {
-            Ok(_) => panic!("Passed analysis. Expected Err::UnknownVar"),
+            Ok(_) => panic!("Passed analysis. Expected Err::UnknownBinding"),
             Err(e) => {
                 match e {
-                    Err::UnknownVar(ident) => {
+                    Err::UnknownBinding(ident) => {
                         assert_eq!(ident, ident!("a"));
                     }
 
-                    e @ _ => panic!("Expected Err::UnknownVar. Found {:?}", e),
+                    e @ _ => panic!("Expected Err::UnknownBinding. Found {:?}", e),
                 }
             }
         }
