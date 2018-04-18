@@ -186,6 +186,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
                 Err(e) => {
                     match e {
                         Err::UnknownFn(_) => {
+                            module.module_scope.unmap_fn(&name);
                             module.owned_fns.pop();
                             program.universe_mut().unmap_fn(fn_id);
                             unresolved.push(fn_decl);
@@ -813,6 +814,7 @@ fn foo() {
         check_program(vec![mod1]).unwrap();
     }
 
+    #[ignore]
     #[test]
     fn mod_function_value() {
         let mod2 =

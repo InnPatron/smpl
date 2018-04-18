@@ -392,6 +392,10 @@ impl ScopedData {
         self.fn_map.insert(name, fn_id);
     }
 
+    pub fn unmap_fn(&mut self, name: &ModulePath) {
+        self.fn_map.remove(&name).unwrap();
+    }
+
     pub fn type_id<'a, 'b, 'c>(&'a self, universe: &'c Universe, type_annotation: TypeAnnotationRef<'b>) -> Result<TypeId, Err> {
         match type_annotation {
             TypeAnnotationRef::Path(path) => {
