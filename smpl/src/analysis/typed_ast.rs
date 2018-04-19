@@ -391,7 +391,7 @@ impl Binding {
 pub struct FnCall {
     path: ast::ModulePath,
     args: Option<Vec<Typed<TmpId>>>,
-    fn_id: Cell<Option<FnId>>,
+    fn_nomer: Cell<Option<BindingId>>,
 }
 
 impl FnCall {
@@ -399,7 +399,7 @@ impl FnCall {
         FnCall {
             path: path,
             args: args,
-            fn_id: Cell::new(None),
+            fn_nomer: Cell::new(None),
         }
     }
 
@@ -411,16 +411,16 @@ impl FnCall {
         self.args.as_ref()
     }
 
-    pub fn set_id(&self, id: FnId) {
-        if self.fn_id.get().is_some() {
-            panic!("Attempting to overwrite {} of the FnCall {:?}", self.fn_id.get().unwrap(), self.path);
+    pub fn set_id<T>(&self, id: T) where T: ::std::fmt::Debug + Into<BindingId> {
+        if self.fn_nomer.get().is_some() {
+            panic!("Attempting to overwrite {:#?} of the FnCall {:?}", self.fn_nomer.get().unwrap(), self.path);
         } else {
-            self.fn_id.set(Some(id));
+            self.fn_nomer.set(Some(id.into()));
         }
     }
 
-    pub fn get_id(&self) -> Option<FnId> {
-        self.fn_id.get()
+    pub fn get_id(&self) -> Option<BindingId> {
+        self.fn_nomer.get()
     }
 }
 
