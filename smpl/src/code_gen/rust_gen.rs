@@ -5,6 +5,8 @@ use code_gen::StringEmitter;
 
 use petgraph::graph::NodeIndex;
 
+use feature::{FeatureInfo, FeatureErr};
+
 use ast::{Ident, BinOp, UniOp};
 
 use analysis::*;
@@ -14,15 +16,26 @@ use analysis::metadata::*;
 pub struct RustBackend {
     mods: Vec<(Ident, ModuleId, String)>,
     main: Option<String>,
-    mod_wrap: bool
+    mod_wrap: bool,
+    feature_info: FeatureInfo,
 }
 
 impl RustBackend {
+
+    fn features() -> FeatureInfo {
+        let mut required = Vec::new();
+        let mut denied = Vec::new();
+
+        FeatureInfo::new(required, denied)
+    }
+
     pub fn new() -> RustBackend {
         RustBackend {
             mods: Vec::new(),
             main: None,
             mod_wrap: false,
+
+            feature_info: RustBackend::features(),
         }
     }
 
@@ -35,7 +48,9 @@ impl RustBackend {
         self
     }
 
-    pub fn generate(mut self, program: &Program) -> RustBackend {
+    pub fn generate(mut self, program: &Program) -> Result<RustBackend, FeatureErr> {
+
+        self.feature_info.check(program.features())?;
 
         self.main = program.metadata().main().map(|(fn_id, mod_id)| {
             if self.mod_wrap {
@@ -65,7 +80,7 @@ impl RustBackend {
             self.mods.push((ident.clone(), id.clone(), gen.module().to_string()));
         }
 
-        self
+        Ok(self)
     }
 
     pub fn finalize(self) -> Vec<(Ident, ModuleId, String)> {
