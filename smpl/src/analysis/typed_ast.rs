@@ -194,6 +194,38 @@ pub enum Value {
     StructInit(StructInit),
     ArrayInit(self::ArrayInit),
     Indexing(Indexing),
+    ModAccess(self::ModAccess),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ModAccess {
+    path: ast::ModulePath,
+    id: Cell<Option<FnId>>,
+}
+
+impl ModAccess {
+    pub fn new(path: ast::ModulePath) -> ModAccess {
+        ModAccess {
+            path: path,
+            id: Cell::new(None)
+        }
+    }
+
+    pub fn path(&self) -> &ast::ModulePath {
+        &self.path
+    }
+
+    pub fn set_fn_id(&self, id: FnId) {
+        if self.id.get().is_some() {
+            panic!();
+        }
+
+        self.id.set(Some(id))
+    }
+
+    pub fn fn_id(&self) -> Option<FnId> {
+        self.id.get().map(|i| i.clone())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

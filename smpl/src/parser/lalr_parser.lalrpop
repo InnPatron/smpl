@@ -369,7 +369,7 @@ ExprPath: Expr = {
 		}
 	},
 
-	<p: ModulePath> => unimplemented!(),
+	<p: ModulePath> => Expr::ModAccess(p),
 };
 
 Primary: Expr = {

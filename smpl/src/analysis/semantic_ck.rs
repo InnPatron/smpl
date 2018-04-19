@@ -814,7 +814,6 @@ fn foo() {
         check_program(vec![mod1]).unwrap();
     }
 
-    #[ignore]
     #[test]
     fn mod_function_value() {
         let mod2 =

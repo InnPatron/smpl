@@ -571,6 +571,8 @@ impl<'a> RustFnGen<'a> {
 
                 self.output.emit_line("}");
             }
+
+            Value::ModAccess(_) => panic!(),
         }
 
         self.output.emit_line("};");

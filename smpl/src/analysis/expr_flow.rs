@@ -105,6 +105,10 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
 
             scope.map_tmp(universe, Value::Indexing(indexing))
         }
+
+        AstExpr::ModAccess(path) => {
+            scope.map_tmp(universe, Value::ModAccess(ModAccess::new(path)))
+        }
     }
 }
 

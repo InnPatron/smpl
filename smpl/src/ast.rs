@@ -176,6 +176,7 @@ pub enum Expr {
     StructInit(StructInit),
     ArrayInit(ArrayInit),
     Indexing(Indexing),
+    ModAccess(ModulePath),
 }
 
 #[derive(Clone, Debug, PartialEq)]
