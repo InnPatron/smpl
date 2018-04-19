@@ -157,6 +157,12 @@ fn rust_gen(input: Vec<(&str, &str)>) -> Result<Vec<u8>, String> {
         .wrap_mod()
         .generate(&program);
 
+    let program = match program {
+        Ok(p) => p,
+
+        Err(e) => panic!("{:?}", e),
+    };
+
     let mut result = Vec::new();
     if let Some(m) = program.main() {
         result.extend(m.as_bytes());
