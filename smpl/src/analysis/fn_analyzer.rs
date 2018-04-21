@@ -730,6 +730,8 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                     let fn_type_id = func.type_id();
 
                     tmp_type = fn_type_id;
+
+                    self.features.add_feature(MOD_ACCESS);
                 }
             }
 
