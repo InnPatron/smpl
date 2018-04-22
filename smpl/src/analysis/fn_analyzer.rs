@@ -525,12 +525,14 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                         if binding.is_ok() {
                             match binding.unwrap() {
                                 BindingInfo::Fn(fn_id) => {
+                                    fn_call.set_id(fn_id);
                                     let func = self.universe.get_fn(fn_id);
                                     Some(func.type_id())
                                 }
                                 BindingInfo::Var(v_id, v_type_id) => {
                                     // Function call on a local variable / parameter
                                     // Should be a functino type
+                                    fn_call.set_id(v_id);
                                     self.features.add_feature(FUNCTION_VALUE);
                                     let v_type = self.universe.get_type(v_type_id);
                                     match *v_type {
