@@ -484,6 +484,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                         }
 
                         BindingInfo::Fn(fn_id) => {
+                            self.features.add_feature(FUNCTION_VALUE);
                             let f = self.universe.get_fn(fn_id);
                             let fn_type_id = f.type_id();
 
@@ -530,6 +531,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                 BindingInfo::Var(v_id, v_type_id) => {
                                     // Function call on a local variable / parameter
                                     // Should be a functino type
+                                    self.features.add_feature(FUNCTION_VALUE);
                                     let v_type = self.universe.get_type(v_type_id);
                                     match *v_type {
                                         SmplType::Function(_) => Some(v_type_id),
