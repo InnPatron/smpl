@@ -5,7 +5,7 @@ use code_gen::StringEmitter;
 
 use petgraph::graph::NodeIndex;
 
-use feature::{FeatureInfo, FeatureErr};
+use feature::*;
 
 use ast::{Ident, BinOp, UniOp};
 
@@ -25,6 +25,9 @@ impl RustBackend {
     fn features() -> FeatureInfo {
         let mut required = Vec::new();
         let mut denied = Vec::new();
+
+        denied.push(FeatureReasoning::with_feature(MOD_ACCESS));
+        denied.push(FeatureReasoning::with_feature(FUNCTION_VALUE));
 
         FeatureInfo::new(required, denied)
     }
@@ -475,7 +478,7 @@ impl<'a> RustFnGen<'a> {
             }
 
             Value::FnCall(ref fn_call) => {
-                let fn_id = fn_call.get_id().unwrap();
+                let binding_id = fn_call.get_id().unwrap();
 
                 // Gather argument expressions
                 let mut arg_string = String::new();
@@ -488,9 +491,14 @@ impl<'a> RustFnGen<'a> {
                     None => (),
                 }
 
-                self.output.emit_line(&format!("{}({})", 
+                match binding_id {
+                    BindingId::Var(..) => unreachable!(),
+                    BindingId::Fn(fn_id) =>  {
+                        self.output.emit_line(&format!("{}({})", 
                                                RustGenFmt::fn_id(fn_id), 
                                                arg_string));
+                    }
+                }
             }
 
             Value::StructInit(ref struct_init) => {
