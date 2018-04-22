@@ -336,6 +336,7 @@ fn main() {
     fn call_fn_success() {
         use super::super::control_flow::*;
         use super::super::typed_ast::*;
+        use analysis::*;
 
         let input = 
 "mod call_fn_success;
@@ -375,7 +376,7 @@ fn main() {
                 let tmp = e.get_tmp(*iter.last().unwrap());
                 match *tmp.value().data() {
                     Value::FnCall(ref call) => {
-                        assert_eq!(call.get_id().unwrap(), called_fn);
+                        assert_eq!(call.get_id().unwrap(), BindingId::Fn(called_fn));
                     },
 
                     ref v => panic!("Expected Value::FnCall. Found {:?}", v),
