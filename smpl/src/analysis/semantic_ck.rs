@@ -829,8 +829,14 @@ fn foo() -> i32 {
 "
 mod mod1;
 
+use mod2;
+
+fn b() {
+    let i: i32 = mod2::foo();
+}
+
 fn main() {
-    let a: Fn(i32) -> i32 = mod2::foo;
+    let a: Fn() -> i32 = mod2::foo;
 }
 ";
 
