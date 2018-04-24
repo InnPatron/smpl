@@ -844,4 +844,29 @@ fn main() {
         let mod2 = parse_module(mod2).unwrap();
         check_program(vec![mod1, mod2]).unwrap();
     }
+
+    #[test]
+    fn function_field() {
+        let mod1 =
+"
+mod mod1;
+
+struct T {
+    f: Fn(i32),
+}
+
+fn b(a: i32) {
+
+}
+
+fn main() {
+    let t: T = init T {f: b};
+    let f: Fn(i32) = t.f;
+    f(5);
+}
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
 }
