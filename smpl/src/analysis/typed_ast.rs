@@ -186,7 +186,7 @@ impl Tmp {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Literal(ast::Literal),
-    Variable(self::Variable),
+    Binding(self::Binding),
     FieldAccess(self::FieldAccess),
     FnCall(self::FnCall),
     BinExpr(ast::BinOp, Typed<TmpId>, Typed<TmpId>),
@@ -194,6 +194,38 @@ pub enum Value {
     StructInit(StructInit),
     ArrayInit(self::ArrayInit),
     Indexing(Indexing),
+    ModAccess(self::ModAccess),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ModAccess {
+    path: ast::ModulePath,
+    id: Cell<Option<FnId>>,
+}
+
+impl ModAccess {
+    pub fn new(path: ast::ModulePath) -> ModAccess {
+        ModAccess {
+            path: path,
+            id: Cell::new(None)
+        }
+    }
+
+    pub fn path(&self) -> &ast::ModulePath {
+        &self.path
+    }
+
+    pub fn set_fn_id(&self, id: FnId) {
+        if self.id.get().is_some() {
+            panic!();
+        }
+
+        self.id.set(Some(id))
+    }
+
+    pub fn fn_id(&self) -> Option<FnId> {
+        self.id.get().map(|i| i.clone())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -210,14 +242,14 @@ pub enum ArrayInit {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructInit {
-    struct_type_name: ast::TypePath,
+    struct_type_name: ast::ModulePath,
     field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>,
     struct_type: Cell<Option<TypeId>>,
     mapped_field_init: RefCell<Option<Vec<(FieldId, Typed<TmpId>)>>>,
 }
 
 impl StructInit {
-    pub fn new(struct_type_name: ast::TypePath, field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>) -> StructInit {
+    pub fn new(struct_type_name: ast::ModulePath, field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>) -> StructInit {
         StructInit {
             struct_type_name: struct_type_name,
             struct_type: Cell::new(None),
@@ -226,7 +258,7 @@ impl StructInit {
         }
     }
 
-    pub fn type_name(&self) -> &ast::TypePath {
+    pub fn type_name(&self) -> &ast::ModulePath {
         &self.struct_type_name
     }
 
@@ -323,16 +355,16 @@ impl FieldAccess {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Variable {
+pub struct Binding {
     ident: ast::Ident,
-    var_id: Cell<Option<VarId>>,
+    binding_id: Cell<Option<BindingId>>,
 }
 
-impl Variable {
-    pub fn new(ident: ast::Ident) -> Variable {
-        Variable {
+impl Binding {
+    pub fn new(ident: ast::Ident) -> Binding {
+        Binding {
             ident: ident,
-            var_id: Cell::new(None),
+            binding_id: Cell::new(None),
         }
     }
 
@@ -340,36 +372,38 @@ impl Variable {
         &self.ident
     }
 
-    pub fn set_id(&self, id: VarId) {
-        if self.var_id.get().is_some() {
-            panic!("Attempting to overwrite {} of the Ident {:?} with {}", self.var_id.get().unwrap(), self.ident, id);
+    pub fn set_id<T>(&self, id: T) where T: Into<BindingId> + ::std::fmt::Debug {
+        if self.binding_id.get().is_some() {
+            panic!("Attempting to overwrite {:?} of the Ident {:?} with {:?}", 
+                   self.binding_id.get().unwrap(), 
+                   self.ident, id);
         } else {
-            self.var_id.set(Some(id));
+            self.binding_id.set(Some(id.into()));
         }
     }
 
-    pub fn get_id(&self) -> Option<VarId> {
-        self.var_id.get()
+    pub fn get_id(&self) -> Option<BindingId> {
+        self.binding_id.get()
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnCall {
-    path: ast::TypePath,
+    path: ast::ModulePath,
     args: Option<Vec<Typed<TmpId>>>,
-    fn_id: Cell<Option<FnId>>,
+    fn_nomer: Cell<Option<BindingId>>,
 }
 
 impl FnCall {
-    pub fn new(path: ast::TypePath, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
+    pub fn new(path: ast::ModulePath, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
         FnCall {
             path: path,
             args: args,
-            fn_id: Cell::new(None),
+            fn_nomer: Cell::new(None),
         }
     }
 
-    pub fn path(&self) -> &ast::TypePath {
+    pub fn path(&self) -> &ast::ModulePath {
         &self.path
     }
 
@@ -377,16 +411,16 @@ impl FnCall {
         self.args.as_ref()
     }
 
-    pub fn set_id(&self, id: FnId) {
-        if self.fn_id.get().is_some() {
-            panic!("Attempting to overwrite {} of the FnCall {:?}", self.fn_id.get().unwrap(), self.path);
+    pub fn set_id<T>(&self, id: T) where T: ::std::fmt::Debug + Into<BindingId> {
+        if self.fn_nomer.get().is_some() {
+            panic!("Attempting to overwrite {:#?} of the FnCall {:?}", self.fn_nomer.get().unwrap(), self.path);
         } else {
-            self.fn_id.set(Some(id));
+            self.fn_nomer.set(Some(id.into()));
         }
     }
 
-    pub fn get_id(&self) -> Option<FnId> {
-        self.fn_id.get()
+    pub fn get_id(&self) -> Option<BindingId> {
+        self.fn_nomer.get()
     }
 }
 

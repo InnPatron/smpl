@@ -13,7 +13,7 @@ use super::smpl_type::*;
 use super::linear_cfg_traversal::*;
 use super::control_flow::CFG;
 use super::typed_ast::*;
-use super::semantic_data::{VarId, FnId, ScopedData, TypeId, Universe, TypeConstructor, ModuleId, Program};
+use super::semantic_data::{VarId, FnId, ScopedData, TypeId, Universe, TypeConstructor, ModuleId, Program, BindingInfo};
 
 
 struct FnAnalyzer<'a, 'b, 'c> {
@@ -476,11 +476,22 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                     tmp_type = struct_type_id;
                 }
 
-                Value::Variable(ref var) => {
-                    let (var_id, type_id) = self.current_scope.var_info(var.ident())?;
-                    var.set_id(var_id);
+                Value::Binding(ref var) => {
+                    match self.current_scope.binding_info(var.ident())? {
+                        BindingInfo::Var(var_id, type_id) => {
+                            var.set_id(var_id);
+                            tmp_type = type_id;
+                        }
 
-                    tmp_type = type_id;
+                        BindingInfo::Fn(fn_id) => {
+                            self.features.add_feature(FUNCTION_VALUE);
+                            let f = self.universe.get_fn(fn_id);
+                            let fn_type_id = f.type_id();
+
+                            var.set_id(fn_id);
+                            tmp_type = fn_type_id;
+                        }
+                    }
                 }
 
                 Value::FieldAccess(ref field_access) => {
@@ -507,13 +518,48 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                 }
 
                 Value::FnCall(ref fn_call) => {
-                    let fn_id = self.current_scope.get_fn(&fn_call.path().clone())?;
-                    let func = self.universe.get_fn(fn_id);
-                    let fn_type_id = func.type_id();
+                    // Search for the function
+                    let fn_type_id = if fn_call.path().0.len() == 1 {
+                        let binding = self.current_scope.binding_info(fn_call.path()
+                                                                      .0.get(0).unwrap());
+                        if binding.is_ok() {
+                            match binding.unwrap() {
+                                BindingInfo::Fn(fn_id) => {
+                                    fn_call.set_id(fn_id);
+                                    let func = self.universe.get_fn(fn_id);
+                                    Some(func.type_id())
+                                }
+                                BindingInfo::Var(v_id, v_type_id) => {
+                                    // Function call on a local variable / parameter
+                                    // Should be a functino type
+                                    fn_call.set_id(v_id);
+                                    self.features.add_feature(FUNCTION_VALUE);
+                                    let v_type = self.universe.get_type(v_type_id);
+                                    match *v_type {
+                                        SmplType::Function(_) => Some(v_type_id),
+                                        _ => unimplemented!(),
+                                    }
+                                },
+                            }
+                        } else {
+                            None 
+                        }
+                    } else {
+                        None
+                    };
+
+                    let fn_type_id = match fn_type_id {
+                        Some(fn_type_id) => fn_type_id,
+                        None => {
+                            let fn_id = self.current_scope.get_fn(fn_call.path())?;
+                            let func = self.universe.get_fn(fn_id);
+                            func.type_id()
+                        }
+                    };
+
                     let fn_type = self.universe.get_type(fn_type_id);
-
-                    fn_call.set_id(fn_id);
-
+                    
+                    // Check args and parameters align
                     if let SmplType::Function(ref fn_type) = *fn_type {
                         let arg_type_ids = fn_call.args().map(|ref vec| {
                             vec.iter()
@@ -546,7 +592,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                     let param_type = self.universe.get_type(*param);
                                     if arg_type != param_type {
                                         return Err(TypeErr::ArgMismatch {
-                                            fn_id: fn_id,
+                                            fn_type_id: fn_type_id,
                                             index: index,
                                             arg: *arg,
                                             param: param.clone(),
@@ -569,7 +615,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                         tmp_type = fn_type.return_type;
                     } else {
                         panic!( "{} was mapped to {}, which is not SmplType::Function but {:?}",
-                            fn_id, fn_type_id, fn_type
+                            fn_type_id, fn_type_id, fn_type
                         );
                     }
                 }
@@ -679,6 +725,17 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                     }
 
                     tmp_type = element_type;
+                }
+
+                Value::ModAccess(ref access) => {
+                    let fn_id = self.current_scope.get_fn(access.path())?;
+                    let func = self.universe.get_fn(fn_id);
+
+                    let fn_type_id = func.type_id();
+
+                    tmp_type = fn_type_id;
+
+                    self.features.add_feature(MOD_ACCESS);
                 }
             }
 

@@ -50,7 +50,7 @@
 /// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "[[:ASCII:]]"
 ///
 ///
-/// fn_call -> TypePath "(" fn_call_args ")"
+/// fn_call -> ModulePath "(" fn_call_args ")"
 /// fn_call_args -> expr ["," expr]*
 ///
 /// ident -> [a-zA-Z_] [a-zA-Z0-9_]*
@@ -343,15 +343,22 @@ UniOp: UniOp = {
 
 /// expr_leaf -> "(" expr ")"| literal | fn_call | path | struct_init
 ExprLeaf: Expr = {
+	<ExprPath>,
+	<i: Indexing> => Expr::Indexing(i),
+
+	<Primary>,
+};
+
+ExprPath: Expr = {
 	<path: Path> => {
 		let mut path = path;
 		if path.0.len() == 1 {
 			let segment = path.0.pop().unwrap();
 			match segment {
-				PathSegment::Ident(i) => Expr::Variable(i),
+				PathSegment::Ident(i) => Expr::Binding(i),
 				PathSegment::Indexing(i, e) => {
 					let i = Indexing {
-						array: Box::new(Expr::Variable(i)),
+						array: Box::new(Expr::Binding(i)),
 						indexer: e
 					};
 					Expr::Indexing(i)
@@ -362,9 +369,7 @@ ExprLeaf: Expr = {
 		}
 	},
 
-	<i: Indexing> => Expr::Indexing(i),
-
-	<Primary>,
+	<p: ModulePath> => Expr::ModAccess(p),
 };
 
 Primary: Expr = {
@@ -407,7 +412,7 @@ ArrayInitList: Vec<Expr> = {
 
 /// struct_init -> "init" type_path "{" struct_field_init_list "}"
 StructInit: StructInit = {
-	"init" <struct_name: TypePath> "{" <init: StructFieldInitList?> "}" => {
+	"init" <struct_name: ModuleBinding> "{" <init: StructFieldInitList?> "}" => {
 		StructInit {
 			struct_name: struct_name,
 			field_init: init,
@@ -434,9 +439,9 @@ StructFieldInit: (Ident, Box<Expr>) = {
 	<name: Ident> ":" <init: Expr> => (name, Box::new(init)),
 };
 
-/// fn_call -> TypePath "(" fn_call_args ")"
+/// fn_call -> ModulePath "(" fn_call_args ")"
 FnCall: FnCall = {
-	<path: TypePath> "(" <args: FnCallArgs?> ")" => {
+	<path: ModuleBinding> "(" <args: FnCallArgs?> ")" => {
 		let mut path = path;
 		FnCall::new(
 			path,
@@ -503,19 +508,43 @@ PathSegment: PathSegment = {
 	<i: Ident> "[" <e: Expr> "]" => PathSegment::Indexing(i, Box::new(e)),
 };
 
+ModuleBinding: ModulePath = {
+	<i: Ident> => ModulePath(vec![i]),
+	<ModulePath>,
+};
+
 /// type_path -> ident ["." ident]*
-TypePath: TypePath = {
-	<first: Ident> <v:("::" <Ident>)*> => {
+ModulePath: ModulePath = {
+	<first: Ident> <v:("::" <Ident>)+> => {
 		let mut p = Vec::new();
 		p.push(first);
 		p.extend_from_slice(&v);
-		TypePath(p)
+		ModulePath(p)
 	}
 };
 
 TypeAnnotation: TypeAnnotation = {
-	<p: TypePath> => TypeAnnotation::Path(p),
-	<ArrayType>
+	<p: ModuleBinding> => TypeAnnotation::Path(p),
+	<ArrayType>,
+	<FunctionTypeAnnotation>,
+};
+
+FunctionTypeAnnotation: TypeAnnotation = {
+	"Fn" "(" <p: FunctionTypeAnnotationParameterList?> ")" <r: ("->" TypeAnnotation)?> => {
+		TypeAnnotation::FnType(p, r.map(|(_, t)| Box::new(t)))
+	}
+};
+
+FunctionTypeAnnotationParameterList: Vec<TypeAnnotation> = {
+	<first: TypeAnnotation> <tail: FunctionTypeAnnotationParameterList> => {
+		let mut v = vec![first];
+		v.extend(tail);
+		v
+	},
+
+	<t: TypeAnnotation> ","? => vec![t],
+
+	
 };
 
 ArrayType: TypeAnnotation = {

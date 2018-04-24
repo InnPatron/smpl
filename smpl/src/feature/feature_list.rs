@@ -7,3 +7,7 @@ macro_rules! feature {
 }
 
 feature!(STATIC_ARRAY);
+
+feature!(FUNCTION_VALUE);
+
+feature!(MOD_ACCESS);

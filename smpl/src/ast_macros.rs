@@ -66,7 +66,7 @@ macro_rules! type_path {
     ($($segment: expr),*) => {{
         let mut v = Vec::new();
         $(v.push(ident!($segment));)*;
-        TypePath(v)
+        ModulePath(v)
     }};
 }
 

@@ -58,7 +58,7 @@ impl Metadata {
     }
 
     pub fn find_main(program: &mut Program) -> Result<(), Err> {
-        use ast::TypePath;
+        use ast::ModulePath;
 
         let (u, m, f) = program.analysis_context();
         let universe = u;

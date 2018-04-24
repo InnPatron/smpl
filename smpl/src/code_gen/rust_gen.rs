@@ -5,7 +5,7 @@ use code_gen::StringEmitter;
 
 use petgraph::graph::NodeIndex;
 
-use feature::{FeatureInfo, FeatureErr};
+use feature::*;
 
 use ast::{Ident, BinOp, UniOp};
 
@@ -25,6 +25,9 @@ impl RustBackend {
     fn features() -> FeatureInfo {
         let mut required = Vec::new();
         let mut denied = Vec::new();
+
+        denied.push(FeatureReasoning::with_feature(MOD_ACCESS));
+        denied.push(FeatureReasoning::with_feature(FUNCTION_VALUE));
 
         FeatureInfo::new(required, denied)
     }
@@ -373,12 +376,13 @@ impl<'a> RustFnGen<'a> {
                 Literal::Bool(boolean) => self.output.emit_line(&boolean.to_string()),
             },
 
-            Value::Variable(ref var) => {
-                let var_id = RustGenFmt::var_id(var.get_id().expect(
-                    "If the program passed semantic analysis, all IDs should be filled in.",
-                ));
-
-                let inner = RustGenFmt::borrow(var_id);
+            Value::Binding(ref var) => {
+                let value = match var.get_id()
+                    .expect("If the program passed semantic analysis, all IDs should be filled in.") {
+                    BindingId::Fn(id) => RustGenFmt::fn_id(id),
+                    BindingId::Var(id) => RustGenFmt::var_id(id),
+                };
+                let inner = RustGenFmt::borrow(value);
                 self.output.emit_line(&RustGenFmt::clone_value(inner));
             }
 
@@ -474,7 +478,7 @@ impl<'a> RustFnGen<'a> {
             }
 
             Value::FnCall(ref fn_call) => {
-                let fn_id = fn_call.get_id().unwrap();
+                let binding_id = fn_call.get_id().unwrap();
 
                 // Gather argument expressions
                 let mut arg_string = String::new();
@@ -487,9 +491,14 @@ impl<'a> RustFnGen<'a> {
                     None => (),
                 }
 
-                self.output.emit_line(&format!("{}({})", 
+                match binding_id {
+                    BindingId::Var(..) => unreachable!(),
+                    BindingId::Fn(fn_id) =>  {
+                        self.output.emit_line(&format!("{}({})", 
                                                RustGenFmt::fn_id(fn_id), 
                                                arg_string));
+                    }
+                }
             }
 
             Value::StructInit(ref struct_init) => {
@@ -570,6 +579,8 @@ impl<'a> RustFnGen<'a> {
 
                 self.output.emit_line("}");
             }
+
+            Value::ModAccess(_) => panic!(),
         }
 
         self.output.emit_line("};");

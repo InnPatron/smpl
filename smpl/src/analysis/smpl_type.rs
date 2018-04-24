@@ -19,6 +19,7 @@ pub enum SmplType {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ConstructedType {
     Array(ArrayType),
+    Function(FunctionType),
 }
 
 
@@ -45,7 +46,7 @@ impl StructType {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FunctionType {
     pub params: Vec<TypeId>,
     pub return_type: TypeId,

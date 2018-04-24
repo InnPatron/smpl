@@ -282,6 +282,11 @@ impl TypeConstructor {
                 let mut b = self.constructed.borrow_mut();
                 b.insert(id, Rc::new(SmplType::Array(at)));
             }
+
+            ConstructedType::Function(ft) => {
+                let mut b = self.constructed.borrow_mut();
+                b.insert(id, Rc::new(SmplType::Function(ft)));
+            }
         }
     }
 
@@ -304,6 +309,25 @@ impl TypeConstructor {
             None => {
                 let id = universe.new_type_id();
                 universe.type_constructor.map(at, id);
+                id
+            }
+        }
+    }
+
+    pub fn construct_fn_type(universe: &Universe, params: Vec<TypeId>, return_t: TypeId) -> TypeId {
+
+        let ft = FunctionType {
+            params: params,
+            return_type: return_t,
+        };
+
+        let ft = ConstructedType::Function(ft);
+
+        match universe.type_constructor.contains(&ft) {
+            Some(id) => id,
+            None => {
+                let id = universe.new_type_id();
+                universe.type_constructor.map(ft, id);
                 id
             }
         }
@@ -355,17 +379,21 @@ impl Module {
 
 #[derive(Clone, Debug)]
 pub struct ScopedData {
-    type_map: HashMap<TypePath, TypeId>,
+    type_map: HashMap<ModulePath, TypeId>,
     var_map: HashMap<Ident, VarId>,
     var_type_map: HashMap<VarId, TypeId>,
-    fn_map: HashMap<TypePath, FnId>,
+    fn_map: HashMap<ModulePath, FnId>,
 }
 
 impl ScopedData {
 
-    pub fn insert_fn(&mut self, name: TypePath, fn_id: FnId) {
+    pub fn insert_fn(&mut self, name: ModulePath, fn_id: FnId) {
         // TODO: Fn name override behaviour?
         self.fn_map.insert(name, fn_id);
+    }
+
+    pub fn unmap_fn(&mut self, name: &ModulePath) {
+        self.fn_map.remove(&name).unwrap();
     }
 
     pub fn type_id<'a, 'b, 'c>(&'a self, universe: &'c Universe, type_annotation: TypeAnnotationRef<'b>) -> Result<TypeId, Err> {
@@ -383,16 +411,54 @@ impl ScopedData {
                                                                    size.clone());
                 Ok(type_id)
             },
+
+            TypeAnnotationRef::FnType(params, return_t) => {
+                let param_types = match params {
+                    Some(ref v) => {
+                        let mut new_params = Vec::new();
+                        for p in v.iter() {
+                            let p_type = ScopedData::type_id(self, universe, p.into())?;
+                            new_params.push(p_type);
+                        }
+
+                        new_params
+                    }
+
+                    None => Vec::with_capacity(0),
+                };
+
+                let return_t = match return_t {
+                    Some(r) => ScopedData::type_id(self, universe, r.into())?,
+                    None => universe.unit(),
+                };
+
+                Ok(TypeConstructor::construct_fn_type(universe, param_types, return_t))
+            }
         }
     }
 
-    pub fn insert_type(&mut self, path: TypePath, id: TypeId) -> Option<TypeId> {
+    pub fn insert_type(&mut self, path: ModulePath, id: TypeId) -> Option<TypeId> {
         self.type_map.insert(path, id)
+    }
+
+    pub fn binding_info(&self, name: &Ident) -> Result<BindingInfo, Err> {
+        match self.var_map.get(name) {
+            Some(v_id) => {
+                Ok(BindingInfo::Var(v_id.clone(), 
+                                    self.var_type_map.get(v_id).unwrap().clone()))
+            }
+            None => {
+                let p = ModulePath(vec![name.clone()]);
+                self.fn_map.get(&p)
+                    .map(|f| BindingInfo::Fn(f.clone()))
+                    .ok_or(Err::UnknownBinding(name.clone()))
+            }
+        }
     }
 
     pub fn var_info(&self, name: &Ident) -> Result<(VarId, TypeId), Err> {
         let var_id = self.var_map.get(name)
-                         .ok_or(Err::UnknownVar(name.clone()))?
+                         .ok_or(Err::UnknownBinding(name.clone()))?
                          .clone();
         let type_id = self.var_type_map
                           .get(&var_id)
@@ -410,19 +476,24 @@ impl ScopedData {
         }
     }
 
-    pub fn get_fn(&self, path: &TypePath) -> Result<FnId, Err> {
+    pub fn get_fn(&self, path: &ModulePath) -> Result<FnId, Err> {
         self.fn_map.get(path)
                    .map(|id| id.clone())
                    .ok_or(Err::UnknownFn(path.clone()))
     }
 
-    pub fn all_types(&self) -> Vec<(&TypePath, &TypeId)> {
+    pub fn all_types(&self) -> Vec<(&ModulePath, &TypeId)> {
         self.type_map.iter().collect()
     }
 
-    pub fn all_fns(&self) -> Vec<(&TypePath, &FnId)> {
+    pub fn all_fns(&self) -> Vec<(&ModulePath, &FnId)> {
         self.fn_map.iter().collect()
     }
+}
+
+pub enum BindingInfo {
+    Var(VarId, TypeId),
+    Fn(FnId),
 }
 
 #[derive(Clone, Debug)]
@@ -438,6 +509,24 @@ impl Function {
 
     pub fn cfg(&self) -> &CFG {
         &self.cfg
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum BindingId {
+    Var(VarId),
+    Fn(FnId),
+}
+
+impl From<VarId> for BindingId {
+    fn from(id: VarId) -> BindingId {
+        BindingId::Var(id)
+    }
+}
+
+impl From<FnId> for BindingId {
+    fn from(id: FnId) -> BindingId {
+        BindingId::Fn(id)
     }
 }
 

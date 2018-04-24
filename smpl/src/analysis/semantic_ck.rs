@@ -3,8 +3,9 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use err::Err;
-use ast::{Ident, TypePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
+use ast::{Ident, ModulePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
 
+use super::feature_checkers::*;
 use super::metadata::*;
 use super::smpl_type::*;
 use super::semantic_data::*;
@@ -124,7 +125,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
 
         unresolved = Vec::new();
         for struct_decl in struct_iter {
-            let (struct_t, order) = match generate_struct_type(program.universe(), 
+            let (struct_t, order) = match generate_struct_type(program, 
                                                                &module.module_scope,
                                                                &struct_decl) {
                 Ok(s) => s,
@@ -167,15 +168,12 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
 
         unresolved = Vec::new();
         for fn_decl in module_fn_iter {
-            let name: TypePath = fn_decl.name.clone().into();
+            let name: ModulePath = fn_decl.name.clone().into();
 
             let type_id = program.universe().new_type_id();
             let fn_id = program.universe().new_fn_id();
 
-            let fn_type = {
-                let (u, m, _) = program.analysis_context();
-                generate_fn_type(&module.module_scope, u, m, fn_id, &fn_decl)?
-            };
+            let fn_type = generate_fn_type(program, &module.module_scope, fn_id, &fn_decl)?;
 
             let cfg = CFG::generate(program.universe(), fn_decl.clone(), &fn_type)?;
 
@@ -188,6 +186,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
                 Err(e) => {
                     match e {
                         Err::UnknownFn(_) => {
+                            module.module_scope.unmap_fn(&name);
                             module.owned_fns.pop();
                             program.universe_mut().unmap_fn(fn_id);
                             unresolved.push(fn_decl);
@@ -221,9 +220,14 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
     Ok(ModuleCkSignal::Success)
 }
 
-fn generate_fn_type(scope: &ScopedData, universe: &Universe, metadata: &mut Metadata, fn_id: FnId, fn_def: &AstFunction) -> Result<FunctionType, Err> {
+fn generate_fn_type(program: &mut Program, scope: &ScopedData, fn_id: FnId, fn_def: &AstFunction) -> Result<FunctionType, Err> {
+    let (universe, metadata, features) = program.analysis_context();
     let ret_type = match fn_def.return_type {
-        Some(ref path) => scope.type_id(universe, path.into())?,
+        Some(ref path) => {
+            let type_id = scope.type_id(universe, path.into())?;
+            fn_sig_type_scanner(universe, features, type_id);
+            type_id
+        }
         None => universe.unit(),
     };
 
@@ -232,8 +236,11 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, metadata: &mut Meta
             let mut typed_params = Vec::new();
             let mut param_metadata = Vec::new();
             for p in params.iter() {
-                typed_params.push(scope.type_id(universe, (&p.param_type).into())?);
+                let type_id = scope.type_id(universe, (&p.param_type).into())?;
+                typed_params.push(type_id);
                 param_metadata.push(FunctionParameter::new(p.name.clone(), universe.new_var_id()));
+
+                fn_sig_type_scanner(universe, features, type_id);
             }
 
             metadata.insert_function_param_ids(fn_id, param_metadata);
@@ -252,7 +259,10 @@ fn generate_fn_type(scope: &ScopedData, universe: &Universe, metadata: &mut Meta
     })
 }
 
-fn generate_struct_type(universe: &Universe, scope: &ScopedData, struct_def: &Struct) -> Result<(StructType, Vec<FieldId>), Err> {
+fn generate_struct_type(program: &mut Program, scope: &ScopedData, struct_def: &Struct) -> Result<(StructType, Vec<FieldId>), Err> {
+    let (universe, metadata, features) = program.analysis_context();
+
+
     let mut fields = HashMap::new();
     let mut field_map = HashMap::new();
     let mut order = Vec::new();
@@ -265,6 +275,8 @@ fn generate_struct_type(universe: &Universe, scope: &ScopedData, struct_def: &St
             fields.insert(f_id, field_type);
             field_map.insert(f_name, f_id);
             order.push(f_id);
+
+            field_type_scanner(universe, features, field_type);
         }
     } 
 
@@ -324,6 +336,7 @@ fn main() {
     fn call_fn_success() {
         use super::super::control_flow::*;
         use super::super::typed_ast::*;
+        use analysis::*;
 
         let input = 
 "mod call_fn_success;
@@ -363,7 +376,7 @@ fn main() {
                 let tmp = e.get_tmp(*iter.last().unwrap());
                 match *tmp.value().data() {
                     Value::FnCall(ref call) => {
-                        assert_eq!(call.get_id().unwrap(), called_fn);
+                        assert_eq!(call.get_id().unwrap(), BindingId::Fn(called_fn));
                     },
 
                     ref v => panic!("Expected Value::FnCall. Found {:?}", v),
@@ -393,14 +406,14 @@ fn test() {
 
         let program = parse_module(input).unwrap();
         match check_program(vec![program]) {
-            Ok(_) => panic!("Passed analysis. Expected Err::UnknownVar"),
+            Ok(_) => panic!("Passed analysis. Expected Err::UnknownBinding"),
             Err(e) => {
                 match e {
-                    Err::UnknownVar(ident) => {
+                    Err::UnknownBinding(ident) => {
                         assert_eq!(ident, ident!("a"));
                     }
 
-                    e @ _ => panic!("Expected Err::UnknownVar. Found {:?}", e),
+                    e @ _ => panic!("Expected Err::UnknownBinding. Found {:?}", e),
                 }
             }
         }
@@ -777,5 +790,58 @@ fn test() {
 
         let mod1 = parse_module(mod1).unwrap();
         check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn function_value() {
+        let mod1 =
+"
+mod mod1;
+
+fn bar(a: i32) -> i32 {
+    return a + 5;
+}
+
+fn apply(f: Fn(i32) -> i32, in: i32) -> i32 {
+    return f(in);
+}
+
+fn foo() {
+    apply(bar, 10);
+}
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn mod_function_value() {
+        let mod2 =
+"
+mod mod2;
+
+fn foo() -> i32 {
+    return 5;
+}
+";
+        let mod1 =
+"
+mod mod1;
+
+use mod2;
+
+fn b() {
+    let i: i32 = mod2::foo();
+}
+
+fn main() {
+    let a: Fn() -> i32 = mod2::foo;
+}
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        let mod2 = parse_module(mod2).unwrap();
+        check_program(vec![mod1, mod2]).unwrap();
     }
 }
