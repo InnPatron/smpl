@@ -3,7 +3,7 @@ macro_rules! feature {
         pub const $i: &'static str = $e; 
     };
 
-    ($i: ident) => { pub const $i: &'static str = stringify!($e); };
+    ($i: ident) => { pub const $i: &'static str = stringify!($i); };
 }
 
 feature!(STATIC_ARRAY);
