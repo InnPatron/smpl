@@ -9,6 +9,7 @@ mod err;
 mod ast_macros;
 mod parser;
 mod ast;
+#[macro_use]
 mod analysis;
 mod code_gen;
 mod span;
