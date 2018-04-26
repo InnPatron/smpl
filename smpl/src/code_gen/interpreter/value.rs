@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub enum Value {
     Int(i32),
     Float(f32),
@@ -10,8 +11,10 @@ pub enum Value {
     Builtin,
 }
 
+#[derive(Debug, Clone)]
 pub struct Function;
 
+#[derive(Debug, Clone)]
 pub struct Struct(Vec<Value>);
 
 impl Struct {

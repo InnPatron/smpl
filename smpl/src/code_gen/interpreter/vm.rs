@@ -19,6 +19,7 @@ pub struct VM {
 
 }
 
+#[derive(Debug, Clone)]
 struct Env {
     env: HashMap<String, Value>,
 }
