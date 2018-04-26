@@ -121,37 +121,37 @@ impl FnEnv {
 
             Node::EnterScope => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::End)
+                Ok(NodeEval::Next(graph.next(current)))
             }
 
             Node::ExitScope => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::End)
+                Ok(NodeEval::Next(graph.next(current)))
             }
 
             Node::LocalVarDecl(ref decl) => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::End)
+                Ok(NodeEval::Next(graph.next(current)))
             }
 
             Node::Assignment(ref assign) => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::End)
+                Ok(NodeEval::Next(graph.next(current)))
             }
 
             Node::Expr(ref expr) => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::End)
+                Ok(NodeEval::Next(graph.next(current)))
             }
 
             Node::Return(ref ret_expr) => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::End)
+                Ok(NodeEval::Next(graph.next(current)))
             }
 
             Node::Condition(ref condition) => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::End)
+                Ok(NodeEval::Next(graph.next(current)))
             }
         }
     }
