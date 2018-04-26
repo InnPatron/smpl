@@ -24,12 +24,48 @@ struct Env {
 }
 
 impl Env {
+    pub fn map_var(&mut self, var: VarId, value: Value) -> Option<Value> {
+        self.map_value(Env::var_id(var), value)
+    }
+
+    pub fn map_tmp(&mut self, tmp: TmpId, value: Value) -> Option<Value> {
+        self.map_value(Env::tmp_id(tmp), value)
+    }
+
     pub fn map_value(&mut self, name: String, value: Value) -> Option<Value> {
         self.env.insert(name, value)
     }
 
+    pub fn get_mut(&mut self, name: &str) -> Option<&mut Value> {
+        self.env.get_mut(name)
+    }
+
+    pub fn get_var_mut(&mut self, id: VarId) -> Option<&mut Value> {
+        self.env.get_mut(&Env::var_id(id))
+    }
+
+    pub fn get_tmp_mut(&mut self, id: TmpId) -> Option<&mut Value> {
+        self.env.get_mut(&Env::tmp_id(id))
+    }
+
     pub fn get(&self, name: &str) -> Option<&Value> {
         self.env.get(name)
+    }
+
+    pub fn get_var(&self, id: VarId) -> Option<&Value> {
+        self.env.get(&Env::var_id(id))
+    }
+
+    pub fn get_tmp(&self, id: TmpId) -> Option<&Value> {
+        self.env.get(&Env::tmp_id(id))
+    }
+
+    fn tmp_id(id: TmpId) -> String {
+        format!("_tmp_{}", id.raw())
+    }
+
+    fn var_id(id: VarId) -> String {
+        format!("_var_{}", id.raw())
     }
 }
 
