@@ -19,8 +19,21 @@ pub struct VM {
 
 }
 
-struct FnEnv {
+struct Env {
     env: HashMap<String, Value>,
+}
+
+impl Env {
+    pub fn map_value(&mut self, name: String, value: Value) -> Option<Value> {
+        self.env.insert(name, value)
+    }
+
+    pub fn get(&self, name: &str) -> Option<&Value> {
+        self.env.get(name)
+    }
+}
+
+struct FnEnv {
     loop_heads: HashMap<LoopId, NodeIndex>,
     loop_result: HashMap<LoopId, bool>,
     previous_is_loop_head: bool,
