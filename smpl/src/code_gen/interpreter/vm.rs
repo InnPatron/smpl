@@ -71,6 +71,7 @@ impl Env {
 }
 
 struct FnEnv {
+    env: Env,
     loop_heads: HashMap<LoopId, NodeIndex>,
     loop_result: HashMap<LoopId, bool>,
     previous_is_loop_head: bool,
