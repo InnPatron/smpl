@@ -25,6 +25,12 @@ struct Env {
 }
 
 impl Env {
+    pub fn new() -> Env {
+        Env {
+            env: HashMap::new()
+        }
+    }
+
     pub fn map_var(&mut self, var: VarId, value: Value) -> Option<Value> {
         self.map_value(Env::var_id(var), value)
     }
