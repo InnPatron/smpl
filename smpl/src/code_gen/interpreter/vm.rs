@@ -70,7 +70,8 @@ impl Env {
     }
 }
 
-struct FnEnv {
+struct FnEnv<'a> {
+    universe: &'a Universe,
     env: Env,
     loop_heads: HashMap<LoopId, NodeIndex>,
     loop_result: HashMap<LoopId, bool>,
@@ -84,7 +85,7 @@ enum NodeEval {
     End,
 }
 
-impl FnEnv {
+impl<'a> FnEnv<'a> {
 
     fn pop_loop_stack(&mut self) -> LoopId {
         self.loop_stack.pop().unwrap()
