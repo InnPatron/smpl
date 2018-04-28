@@ -216,7 +216,7 @@ impl<'a> FnEnv<'a> {
 }
 
 mod Expr {
-    use std::ops::{Add, Sub, Div, Mul, BitAnd, BitOr};
+    use std::ops::{Add, Sub, Div, Mul, BitAnd, BitOr, Neg, Not};
 
     use ast::{Literal, BinOp, UniOp};
     use analysis::{Universe, Expr, Tmp, Value as AbstractValue, BindingId};
@@ -322,7 +322,25 @@ mod Expr {
             }
 
             AbstractValue::UniExpr(ref op, ref t) => {
-unimplemented!()
+                let t_id = t.data().clone();
+                let t_v = expr_env.get_tmp(t_id).unwrap();
+
+                irmatch!(*universe.get_type(t.type_id().unwrap());
+                         SmplType::Float => {
+                             let f = irmatch!(*t_v; Value::Float(f) => f);
+                             Value::Float(negate(f))
+                         },
+
+                         SmplType::Int => {
+                             let i = irmatch!(*t_v; Value::Int(i) => i);
+                             Value::Int(negate(i))
+                         },
+
+                         SmplType::Bool => {
+                             let b = irmatch!(*t_v; Value::Bool(b) => b);
+                             Value::Bool(not(b))
+                         }
+                 )
             }
 
             AbstractValue::StructInit(ref init) => {
@@ -341,6 +359,14 @@ unimplemented!()
 unimplemented!()
             }
         }
+    }
+
+    fn not<T: Not<Output=T>>(t: T) -> T {
+        !t
+    }
+
+    fn negate<T: Neg<Output=T>>(t: T) -> T {
+        -t
     }
 
     fn is_logical(op: BinOp) -> bool {
