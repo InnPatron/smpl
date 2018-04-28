@@ -214,3 +214,173 @@ impl<'a> FnEnv<'a> {
         }
     }
 }
+
+mod Expr {
+    use std::ops::{Add, Sub, Div, Mul, BitAnd, BitOr};
+
+    use ast::{Literal, BinOp, UniOp};
+    use analysis::{Universe, Expr, Tmp, Value as AbstractValue, BindingId};
+    use analysis::smpl_type::SmplType;
+    use super::Env;
+    use super::super::value::Value;
+
+    fn eval_expr(universe: &Universe, host_env: &Env, expr: &Expr) -> Value {
+        let mut expr_env = Env::new();
+        let mut last = None;
+        for id in expr.execution_order() {
+            let tmp = expr.get_tmp(id.clone());
+
+            let result = eval_tmp(universe, host_env, &expr_env, expr, tmp);
+            expr_env.map_tmp(*id, result.clone());
+            last = Some(result);
+        }
+
+        last.unwrap()
+    }
+
+    fn eval_tmp(universe: &Universe, host_env: &Env, expr_env: &Env, expr: &Expr, tmp: &Tmp) -> Value {
+        match *tmp.value().data() {
+            AbstractValue::Literal(ref literal) => {
+                match *literal {
+                    Literal::Bool(b) => Value::Bool(b),
+                    Literal::Int(i) => Value::Int(i as i32),
+                    Literal::Float(f) => Value::Float(f as f32),
+                    Literal::String(ref s) => Value::String(s.to_string()),
+                }
+            },
+
+            AbstractValue::Binding(ref binding) => {
+                let id = binding.get_id().unwrap();
+                match id {
+                    BindingId::Var(id) => host_env.get_var(id).map(|v| v.clone()).unwrap(),
+                    BindingId::Fn(id) => Value::Function(id),
+                }
+            }
+
+            AbstractValue::FieldAccess(ref access) => {
+                unimplemented!()
+            },
+
+            AbstractValue::FnCall(ref call) => {
+                unimplemented!()
+            }
+
+            AbstractValue::BinExpr(ref op, ref lhs, ref rhs) => {
+                let lh_id = lhs.data().clone();
+                let rh_id = rhs.data().clone();
+
+                let lh_v = expr_env.get_tmp(lh_id).unwrap();
+                let rh_v = expr_env.get_tmp(rh_id).unwrap();
+
+                match *universe.get_type(lhs.type_id().unwrap()) {
+                    SmplType::Int => {
+                        let lhs = irmatch!(*lh_v; Value::Int(i) => i);
+                        let rhs = irmatch!(*rh_v; Value::Int(i) => i);
+
+
+                        if is_math(op.clone()) {
+                            let result = math_op(op.clone(), lhs, rhs);
+                            Value::Int(result)
+                        } else {
+                            let result = cmp(op.clone(), lhs, rhs);
+                            Value::Bool(result)
+                        }
+                    }
+
+                    SmplType::Float => {
+                        let lhs = irmatch!(*lh_v; Value::Float(f) => f);
+                        let rhs = irmatch!(*rh_v; Value::Float(f) => f);
+
+
+                        if is_math(op.clone()) {
+                            let result = math_op(op.clone(), lhs, rhs);
+                            Value::Float(result)
+                        } else {
+                            let result = cmp(op.clone(), lhs, rhs);
+                            Value::Bool(result)
+                        }
+                    }
+                    
+                    SmplType::Bool => {
+                        let lhs = irmatch!(*lh_v; Value::Bool(b) => b);
+                        let rhs = irmatch!(*rh_v; Value::Bool(b) => b);
+
+
+                        if is_logical(op.clone()) {
+                            let result = logical(op.clone(), lhs, rhs);
+                            Value::Bool(result)
+                        } else {
+                            let result = cmp(op.clone(), lhs, rhs);
+                            Value::Bool(result)
+                        }
+                    }
+
+                    _ => {
+                        Value::Bool(cmp(op.clone(), lh_v, rh_v))
+                    }
+                }
+            }
+
+            AbstractValue::UniExpr(ref op, ref t) => {
+unimplemented!()
+            }
+
+            AbstractValue::StructInit(ref init) => {
+unimplemented!()
+            }
+
+            AbstractValue::ArrayInit(ref init) => {
+unimplemented!()
+            }
+
+            AbstractValue::Indexing(ref indexing) => {
+unimplemented!()
+            }
+
+            AbstractValue::ModAccess(ref access) => {
+unimplemented!()
+            }
+        }
+    }
+
+    fn is_logical(op: BinOp) -> bool {
+        match op {
+            BinOp::LogicalAnd | BinOp::LogicalOr => true,
+            _ => false,
+        }
+    }
+
+    fn is_math(op: BinOp) -> bool {
+        match op {
+            BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div => true,
+            _ => false
+        }
+    }
+
+    fn math_op<T: Add<Output=T> + Sub<Output=T> + Div<Output=T> + Mul<Output=T>>(op: BinOp, lhs: T, rhs: T) -> T {
+        irmatch!(op;
+            BinOp::Add => lhs + rhs,
+            BinOp::Sub => lhs - rhs,
+            BinOp::Mul => lhs * rhs,
+            BinOp::Div => lhs / rhs
+        )
+    }
+
+    fn cmp<T: PartialOrd>(op: BinOp, lhs: T, rhs: T) -> bool {
+        irmatch!(op;
+            BinOp::Eq => lhs == rhs,
+            BinOp::InEq => lhs != rhs,
+            BinOp::GreaterEq => lhs >= rhs,
+            BinOp::LesserEq => lhs <= rhs,
+            BinOp::Lesser => lhs < rhs,
+            BinOp::Greater => lhs > rhs
+        )
+    }
+
+    fn logical<T: BitAnd<Output=T> + BitOr<Output=T>>(op: BinOp, lhs: T, rhs: T) -> T {
+        irmatch!(op;
+                 BinOp::LogicalAnd => lhs & rhs,
+                 BinOp::LogicalOr => lhs | rhs
+        )
+    }
+}
