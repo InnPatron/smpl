@@ -1,20 +1,18 @@
-#[derive(Debug, Clone)]
+use analysis::FnId;
+
+#[derive(Debug, Clone, PartialOrd,PartialEq )]
 pub enum Value {
     Int(i32),
     Float(f32),
     Bool(bool),
     String(String),
     Array(Vec<Value>),
-    Function(Function),
+    Function(FnId),
     Struct(Struct),
-
-    Builtin,
+    Unit,
 }
 
-#[derive(Debug, Clone)]
-pub struct Function;
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialOrd, PartialEq)]
 pub struct Struct(Vec<Value>);
 
 impl Struct {
