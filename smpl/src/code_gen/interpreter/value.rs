@@ -27,7 +27,7 @@ impl Struct {
         self.0.insert(id, v)
     }
 
-    pub fn get_field(&mut self, id: FieldId) -> Option<&Value> {
+    pub fn get_field(&self, id: FieldId) -> Option<&Value> {
         self.0.get(&id)
     }
 
