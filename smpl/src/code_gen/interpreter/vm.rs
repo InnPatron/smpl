@@ -93,6 +93,26 @@ enum NodeEval {
 
 impl<'a> FnEnv<'a> {
 
+    fn new(program: &Program, fn_id: FnId, args: Option<Vec<Value>>) -> FnEnv {
+        let mut env = Env::new();
+
+        if let Some(args) = args {
+            for (arg, param_info) in args.into_iter()
+                .zip(program.metadata().function_param_ids(fn_id)) {
+                    env.map_var(param_info.var_id(), arg);
+            }
+        }
+
+        FnEnv {
+            program: program,
+            env: env,
+            loop_heads: HashMap::new(),
+            loop_result: HashMap::new(),
+            previous_is_loop_head: false,
+            loop_stack: Vec::new(),
+        }
+    }
+
     fn pop_loop_stack(&mut self) -> LoopId {
         self.loop_stack.pop().unwrap()
     }
