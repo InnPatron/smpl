@@ -368,7 +368,8 @@ unimplemented!()
             }
 
             AbstractValue::ModAccess(ref access) => {
-unimplemented!()
+                let fn_id = access.fn_id().unwrap();
+                Value::Function(fn_id)
             }
         }
     }
