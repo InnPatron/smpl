@@ -87,9 +87,8 @@ struct FnEnv<'a> {
 }
 
 enum NodeEval {
-    Value(Value),
     Next(NodeIndex),
-    End,
+    Return(Value),
 }
 
 impl<'a> FnEnv<'a> {
@@ -117,6 +116,19 @@ impl<'a> FnEnv<'a> {
         }
     }
 
+    fn eval(&mut self) -> Value {
+        let mut next_node = Some(self.graph.start());
+
+        while let Some(next) = next_node {
+            match self.eval_node(next).unwrap() {
+                NodeEval::Next(n) => next_node = Some(n),
+                NodeEval::Return(v) => return v,
+            }
+        }
+
+        unimplemented!()
+    }
+
     fn pop_loop_stack(&mut self) -> LoopId {
         self.loop_stack.pop().unwrap()
     }
@@ -133,7 +145,7 @@ impl<'a> FnEnv<'a> {
         match *self.graph.node_weight(current) {
             Node::End => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::End)
+                Ok(NodeEval::Return(Value::Unit))
             }
 
             Node::Start => {
