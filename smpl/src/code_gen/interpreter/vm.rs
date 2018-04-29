@@ -77,7 +77,7 @@ impl Env {
 }
 
 struct FnEnv<'a> {
-    universe: &'a Universe,
+    program: &'a Program,
     env: Env,
     loop_heads: HashMap<LoopId, NodeIndex>,
     loop_result: HashMap<LoopId, bool>,
@@ -219,18 +219,18 @@ mod Expr {
     use std::ops::{Add, Sub, Div, Mul, BitAnd, BitOr, Neg, Not};
 
     use ast::{Literal, BinOp, UniOp};
-    use analysis::{Universe, Expr, Tmp, Value as AbstractValue, BindingId, ArrayInit, PathSegment};
+    use analysis::{Program, Expr, Tmp, Value as AbstractValue, BindingId, ArrayInit, PathSegment};
     use analysis::smpl_type::SmplType;
     use super::Env;
     use super::super::value::*;
 
-    fn eval_expr(universe: &Universe, host_env: &Env, expr: &Expr) -> Value {
+    fn eval_expr(program: &Program, host_env: &Env, expr: &Expr) -> Value {
         let mut expr_env = Env::new();
         let mut last = None;
         for id in expr.execution_order() {
             let tmp = expr.get_tmp(id.clone());
 
-            let result = eval_tmp(universe, host_env, &expr_env, expr, tmp);
+            let result = eval_tmp(program, host_env, &expr_env, expr, tmp);
             expr_env.map_tmp(*id, result.clone());
             last = Some(result);
         }
@@ -238,7 +238,7 @@ mod Expr {
         last.unwrap()
     }
 
-    fn eval_tmp(universe: &Universe, host_env: &Env, expr_env: &Env, expr: &Expr, tmp: &Tmp) -> Value {
+    fn eval_tmp(program: &Program, host_env: &Env, expr_env: &Env, expr: &Expr, tmp: &Tmp) -> Value {
         match *tmp.value().data() {
             AbstractValue::Literal(ref literal) => {
                 match *literal {
@@ -266,7 +266,7 @@ mod Expr {
                 let mut value = root_var.clone();
 
                 if let Some(ref e) = path.root_indexing_expr() {
-                    value = eval_expr(universe, host_env, e);
+                    value = eval_expr(program, host_env, e);
                 }
 
                 for ps in path.path() {
@@ -281,7 +281,7 @@ mod Expr {
                             let field_to_index = struct_value.get_field(f.field_id()).unwrap();
                             let field = irmatch!(*field_to_index; Value::Array(ref a) => a);
 
-                            let indexer = eval_expr(universe, host_env, indexer);
+                            let indexer = eval_expr(program, host_env, indexer);
                             let indexer = irmatch!(indexer; Value::Int(i) => i);
 
 
@@ -304,7 +304,7 @@ mod Expr {
                 let lh_v = expr_env.get_tmp(lh_id).unwrap();
                 let rh_v = expr_env.get_tmp(rh_id).unwrap();
 
-                match *universe.get_type(lhs.type_id().unwrap()) {
+                match *program.universe().get_type(lhs.type_id().unwrap()) {
                     SmplType::Int => {
                         let lhs = irmatch!(*lh_v; Value::Int(i) => i);
                         let rhs = irmatch!(*rh_v; Value::Int(i) => i);
@@ -357,7 +357,7 @@ mod Expr {
                 let t_id = t.data().clone();
                 let t_v = expr_env.get_tmp(t_id).unwrap();
 
-                irmatch!(*universe.get_type(t.type_id().unwrap());
+                irmatch!(*program.universe().get_type(t.type_id().unwrap());
                          SmplType::Float => {
                              let f = irmatch!(*t_v; Value::Float(f) => f);
                              Value::Float(negate(f))
