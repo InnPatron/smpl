@@ -219,7 +219,7 @@ mod Expr {
     use std::ops::{Add, Sub, Div, Mul, BitAnd, BitOr, Neg, Not};
 
     use ast::{Literal, BinOp, UniOp};
-    use analysis::{Universe, Expr, Tmp, Value as AbstractValue, BindingId};
+    use analysis::{Universe, Expr, Tmp, Value as AbstractValue, BindingId, ArrayInit};
     use analysis::smpl_type::SmplType;
     use super::Env;
     use super::super::value::Value;
@@ -348,7 +348,19 @@ unimplemented!()
             }
 
             AbstractValue::ArrayInit(ref init) => {
-unimplemented!()
+                match *init {
+                    ArrayInit::List(ref v) => {
+                        Value::Array(v.iter().map(|element| {
+                            let element_id = element.data().clone();
+                            expr_env.get_tmp(element_id).unwrap().clone()
+                        }).collect())
+                    }
+
+                    ArrayInit::Value(ref v, size) => {
+                        let element = expr_env.get_tmp(v.data().clone()).unwrap();
+                        Value::Array((0..size).into_iter().map(|_| element.clone()).collect())
+                    }
+                }
             }
 
             AbstractValue::Indexing(ref indexing) => {
