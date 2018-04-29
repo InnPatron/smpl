@@ -126,7 +126,7 @@ impl<'a> FnEnv<'a> {
             }
         }
 
-        unimplemented!()
+        unreachable!()
     }
 
     fn pop_loop_stack(&mut self) -> LoopId {
