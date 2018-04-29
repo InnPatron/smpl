@@ -289,7 +289,7 @@ mod Expr {
                 let id = binding.get_id().unwrap();
                 match id {
                     BindingId::Var(id) => host_env.get_var(id).map(|v| v.clone()).unwrap(),
-                    BindingId::Fn(id) => Value::Function(id),
+                    BindingId::Fn(id) => Value::Function(id.into()),
                 }
             }
 
@@ -334,7 +334,7 @@ mod Expr {
                     BindingId::Var(var) => {
                         let var = host_env.get_var(var).unwrap();
                         let function = irmatch!(*var; Value::Function(ref fn_id) => fn_id.clone());
-                        function
+                        function.id()
                     }
 
                     BindingId::Fn(fn_id) => fn_id,
@@ -473,7 +473,7 @@ mod Expr {
 
             AbstractValue::ModAccess(ref access) => {
                 let fn_id = access.fn_id().unwrap();
-                Value::Function(fn_id)
+                Value::Function(fn_id.into())
             }
         }
     }

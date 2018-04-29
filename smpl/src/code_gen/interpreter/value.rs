@@ -10,9 +10,24 @@ pub enum Value {
     Bool(bool),
     String(String),
     Array(Vec<Value>),
-    Function(FnId),
+    Function(FnHandle),
     Struct(Struct),
     Unit,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FnHandle(FnId);
+
+impl FnHandle {
+    pub(crate) fn id(&self) -> FnId {
+        self.0.clone()
+    }
+}
+
+impl From<FnId> for FnHandle {
+    fn from(f: FnId) -> FnHandle {
+        FnHandle(f)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
