@@ -316,7 +316,7 @@ mod Expr {
                     }
 
                     _ => {
-                        Value::Bool(cmp(op.clone(), lh_v, rh_v))
+                        Value::Bool(partial_cmp(op.clone(), lh_v, rh_v))
                     }
                 }
             }
@@ -421,6 +421,13 @@ mod Expr {
             BinOp::Sub => lhs - rhs,
             BinOp::Mul => lhs * rhs,
             BinOp::Div => lhs / rhs
+        )
+    }
+
+    fn partial_cmp<T: PartialEq>(op: BinOp, lhs: T, rhs: T) -> bool {
+        irmatch!(op;
+                 BinOp::Eq => lhs == rhs,
+                 BinOp::InEq => lhs != rhs
         )
     }
 
