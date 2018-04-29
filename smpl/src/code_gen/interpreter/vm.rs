@@ -257,7 +257,7 @@ mod Expr {
     use ast::{Literal, BinOp, UniOp};
     use analysis::{Program, Expr, Tmp, Value as AbstractValue, BindingId, ArrayInit, PathSegment};
     use analysis::smpl_type::SmplType;
-    use super::Env;
+    use super::*;
     use super::super::value::*;
 
     fn eval_expr(program: &Program, host_env: &Env, expr: &Expr) -> Value {
@@ -330,7 +330,24 @@ mod Expr {
             },
 
             AbstractValue::FnCall(ref call) => {
-                unimplemented!()
+                let fn_id = match call.get_id().unwrap() {
+                    BindingId::Var(var) => {
+                        let var = host_env.get_var(var).unwrap();
+                        let function = irmatch!(*var; Value::Function(ref fn_id) => fn_id.clone());
+                        function
+                    }
+
+                    BindingId::Fn(fn_id) => fn_id,
+                };
+
+                let args = call.args().map(|v| {
+                    v.iter().map(|tmp| {
+                        expr_env.get_tmp(tmp.data().clone()).unwrap().clone()
+                    }).collect()
+                });
+
+                let mut fn_env = FnEnv::new(program, fn_id, args);
+                fn_env.eval()
             }
 
             AbstractValue::BinExpr(ref op, ref lhs, ref rhs) => {
