@@ -13,10 +13,28 @@ use analysis::*;
 use analysis::smpl_type::*;
 use analysis::metadata::*;
 
-use super::value::Value;
+use super::value::{Value, FnHandle};
 
 pub struct VM {
+    program: Program
+}
 
+impl VM {
+    pub fn new(program: Program) -> VM {
+        VM {
+            program: program
+        }
+    }
+
+    pub fn eval_fn(&self, handle: FnHandle) -> Value {
+        let mut fn_env = FnEnv::new(&self.program, handle.id(), None);
+        fn_env.eval()
+    }
+
+    pub fn eval_fn_args(&self, handle: FnHandle, args: Vec<Value>) -> Value {
+        let mut fn_env = FnEnv::new(&self.program, handle.id(), Some(args));
+        fn_env.eval()
+    }
 }
 
 #[derive(Debug, Clone)]
