@@ -1,6 +1,9 @@
-use analysis::FnId;
+use std::collections::HashMap;
 
-#[derive(Debug, Clone, PartialOrd,PartialEq )]
+use analysis::{FieldId, FnId};
+use analysis::smpl_type::*;
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Int(i32),
     Float(f32),
@@ -12,14 +15,23 @@ pub enum Value {
     Unit,
 }
 
-#[derive(Debug, Clone, PartialOrd, PartialEq)]
-pub struct Struct(Vec<Value>);
+#[derive(Debug, Clone, PartialEq)]
+pub struct Struct(HashMap<FieldId, Value>);
 
 impl Struct {
-    pub fn new(v: Vec<Value>) -> Struct {
-        Struct(v)
+    pub fn new() -> Struct {
+        Struct(HashMap::new())
     }
 
-    pub fn set_field(&mut self, nv: Value) {
+    pub fn set_field(&mut self, id: FieldId, v: Value) -> Option<Value> {
+        self.0.insert(id, v)
+    }
+
+    pub fn get_field(&mut self, id: FieldId) -> Option<&Value> {
+        self.0.get(&id)
+    }
+
+    pub fn get_field_mut(&mut self, id: FieldId) -> Option<&mut Value> {
+        self.0.get_mut(&id)
     }
 }

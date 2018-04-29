@@ -222,7 +222,7 @@ mod Expr {
     use analysis::{Universe, Expr, Tmp, Value as AbstractValue, BindingId, ArrayInit};
     use analysis::smpl_type::SmplType;
     use super::Env;
-    use super::super::value::Value;
+    use super::super::value::*;
 
     fn eval_expr(universe: &Universe, host_env: &Env, expr: &Expr) -> Value {
         let mut expr_env = Env::new();
@@ -344,7 +344,20 @@ mod Expr {
             }
 
             AbstractValue::StructInit(ref init) => {
-unimplemented!()
+                let mut s = Struct::new();
+
+                match init.field_init() {
+                    Some(ref v) => {
+                        for &(ref field_id, ref tmp) in v.iter() {
+                            let field_value = expr_env.get_tmp(tmp.data().clone()).unwrap();
+                            s.set_field(field_id.clone(), field_value.clone());
+                        }
+                    }
+
+                    None => ()
+                }
+
+                Value::Struct(s)
             }
 
             AbstractValue::ArrayInit(ref init) => {
