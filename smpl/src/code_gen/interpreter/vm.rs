@@ -219,7 +219,7 @@ mod Expr {
     use std::ops::{Add, Sub, Div, Mul, BitAnd, BitOr, Neg, Not};
 
     use ast::{Literal, BinOp, UniOp};
-    use analysis::{Universe, Expr, Tmp, Value as AbstractValue, BindingId, ArrayInit};
+    use analysis::{Universe, Expr, Tmp, Value as AbstractValue, BindingId, ArrayInit, PathSegment};
     use analysis::smpl_type::SmplType;
     use super::Env;
     use super::super::value::*;
@@ -258,7 +258,39 @@ mod Expr {
             }
 
             AbstractValue::FieldAccess(ref access) => {
-                unimplemented!()
+                let path = access.path();
+
+                let root_var = path.root_var_id();
+                let root_var = host_env.get_var(root_var).unwrap();
+
+                let mut value = root_var.clone();
+
+                if let Some(ref e) = path.root_indexing_expr() {
+                    value = eval_expr(universe, host_env, e);
+                }
+
+                for ps in path.path() {
+                    match *ps {
+                        PathSegment::Ident(ref f) => {
+                            let struct_value = irmatch!(value; Value::Struct(s) => s);
+                            value = struct_value.get_field(f.field_id()).unwrap().clone();
+                        }
+
+                        PathSegment::Indexing(ref f, ref indexer) => {
+                            let struct_value = irmatch!(value; Value::Struct(s) => s);
+                            let field_to_index = struct_value.get_field(f.field_id()).unwrap();
+                            let field = irmatch!(*field_to_index; Value::Array(ref a) => a);
+
+                            let indexer = eval_expr(universe, host_env, indexer);
+                            let indexer = irmatch!(indexer; Value::Int(i) => i);
+
+
+                            value = field.get(indexer as usize).unwrap().clone();
+                        }
+                    }
+                }
+
+                value
             },
 
             AbstractValue::FnCall(ref call) => {
