@@ -78,6 +78,7 @@ impl Env {
 
 struct FnEnv<'a> {
     program: &'a Program,
+    graph: &'a CFG,
     env: Env,
     loop_heads: HashMap<LoopId, NodeIndex>,
     loop_result: HashMap<LoopId, bool>,
@@ -103,8 +104,11 @@ impl<'a> FnEnv<'a> {
             }
         }
 
+        let f = program.universe().get_fn(fn_id);
+
         FnEnv {
             program: program,
+            graph: f.cfg(),
             env: env,
             loop_heads: HashMap::new(),
             loop_result: HashMap::new(),
@@ -125,8 +129,8 @@ impl<'a> FnEnv<'a> {
         self.loop_heads.get(&id).unwrap().clone()
     }
 
-    fn eval_node(&mut self, graph: &CFG, current: NodeIndex) -> Result<NodeEval, ()> {
-        match *graph.node_weight(current) {
+    fn eval_node(&mut self, current: NodeIndex) -> Result<NodeEval, ()> {
+        match *self.graph.node_weight(current) {
             Node::End => {
                 self.previous_is_loop_head = false;
                 Ok(NodeEval::End)
@@ -134,17 +138,17 @@ impl<'a> FnEnv<'a> {
 
             Node::Start => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(graph.next(current)))
+                Ok(NodeEval::Next(self.graph.next(current)))
             }
 
             Node::BranchSplit(id) => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(graph.next(current)))
+                Ok(NodeEval::Next(self.graph.next(current)))
             }
 
             Node::BranchMerge(id) => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(graph.next(current)))
+                Ok(NodeEval::Next(self.graph.next(current)))
             }
 
             Node::LoopHead(id) => {
@@ -153,7 +157,7 @@ impl<'a> FnEnv<'a> {
                 self.loop_stack.push(id);
                 self.loop_heads.insert(id, current);
 
-                Ok(NodeEval::Next(graph.next(current)))
+                Ok(NodeEval::Next(self.graph.next(current)))
             }
 
             Node::LoopFoot(id) => {
@@ -165,9 +169,9 @@ impl<'a> FnEnv<'a> {
                 if loop_result {
                     return Ok(NodeEval::Next(self.get_loop_head(loop_id)));
                 } else {
-                    let neighbors = neighbors!(graph, current);
+                    let neighbors = neighbors!(self.graph, current);
                     for n in neighbors {
-                        match *node_w!(graph, n) {
+                        match *node_w!(self.graph, n) {
                             Node::LoopHead(_) => continue,
                             _ => return Ok(NodeEval::Next(n)),
                         }
@@ -186,9 +190,9 @@ impl<'a> FnEnv<'a> {
             Node::Break(_) => {
                 self.previous_is_loop_head = false;
 
-                let neighbors = neighbors!(graph, current);
+                let neighbors = neighbors!(self.graph, current);
                 for n in neighbors {
-                    match *node_w!(graph, current) {
+                    match *node_w!(self.graph, current) {
                         Node::LoopFoot(_) => return Ok(NodeEval::Next(n)),
                         _ => continue,
                     }
@@ -199,37 +203,37 @@ impl<'a> FnEnv<'a> {
 
             Node::EnterScope => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(graph.next(current)))
+                Ok(NodeEval::Next(self.graph.next(current)))
             }
 
             Node::ExitScope => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(graph.next(current)))
+                Ok(NodeEval::Next(self.graph.next(current)))
             }
 
             Node::LocalVarDecl(ref decl) => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(graph.next(current)))
+                Ok(NodeEval::Next(self.graph.next(current)))
             }
 
             Node::Assignment(ref assign) => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(graph.next(current)))
+                Ok(NodeEval::Next(self.graph.next(current)))
             }
 
             Node::Expr(ref expr) => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(graph.next(current)))
+                Ok(NodeEval::Next(self.graph.next(current)))
             }
 
             Node::Return(ref ret_expr) => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(graph.next(current)))
+                Ok(NodeEval::Next(self.graph.next(current)))
             }
 
             Node::Condition(ref condition) => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(graph.next(current)))
+                Ok(NodeEval::Next(self.graph.next(current)))
             }
         }
     }
