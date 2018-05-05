@@ -278,7 +278,7 @@ mod Expr {
     use super::*;
     use super::super::value::*;
 
-    fn eval_expr(program: &Program, host_env: &Env, expr: &Expr) -> Value {
+    pub fn eval_expr(program: &Program, host_env: &Env, expr: &Expr) -> Value {
         let mut expr_env = Env::new();
         let mut last = None;
         for id in expr.execution_order() {
