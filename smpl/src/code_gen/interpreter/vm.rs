@@ -261,7 +261,11 @@ impl<'a> FnEnv<'a> {
 
             Node::Return(ref ret_expr) => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(self.graph.next(current)))
+                let value = match *ret_expr {
+                    Some(ref expr) => Expr::eval_expr(self.program, &self.env, expr),
+                    None => Value::Unit
+                };
+                Ok(NodeEval::Return(value))
             }
 
             Node::Condition(ref condition) => {
