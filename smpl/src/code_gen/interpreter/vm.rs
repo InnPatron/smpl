@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use petgraph::graph;
 use petgraph::graph::NodeIndex;
@@ -39,7 +41,7 @@ impl VM {
 
 #[derive(Debug, Clone)]
 struct Env {
-    env: HashMap<String, Value>,
+    env: HashMap<String, Rc<RefCell<Value>>>,
 }
 
 impl Env {
@@ -58,31 +60,19 @@ impl Env {
     }
 
     pub fn map_value(&mut self, name: String, value: Value) -> Option<Value> {
-        self.env.insert(name, value)
+        self.env.insert(name, Rc::new(RefCell::new(value))).map(|rc| rc.borrow().clone())
     }
 
-    pub fn get_mut(&mut self, name: &str) -> Option<&mut Value> {
-        self.env.get_mut(name)
+    pub fn get(&self, name: &str) -> Option<Value> {
+        self.env.get(name).map(|r| (*r.borrow()).clone())
     }
 
-    pub fn get_var_mut(&mut self, id: VarId) -> Option<&mut Value> {
-        self.env.get_mut(&Env::var_id(id))
+    pub fn get_var(&self, id: VarId) -> Option<Value> {
+        self.get(&Env::var_id(id))
     }
 
-    pub fn get_tmp_mut(&mut self, id: TmpId) -> Option<&mut Value> {
-        self.env.get_mut(&Env::tmp_id(id))
-    }
-
-    pub fn get(&self, name: &str) -> Option<&Value> {
-        self.env.get(name)
-    }
-
-    pub fn get_var(&self, id: VarId) -> Option<&Value> {
-        self.env.get(&Env::var_id(id))
-    }
-
-    pub fn get_tmp(&self, id: TmpId) -> Option<&Value> {
-        self.env.get(&Env::tmp_id(id))
+    pub fn get_tmp(&self, id: TmpId) -> Option<Value> {
+        self.get(&Env::tmp_id(id))
     }
 
     fn tmp_id(id: TmpId) -> String {
@@ -358,7 +348,7 @@ mod Expr {
                 let fn_id = match call.get_id().unwrap() {
                     BindingId::Var(var) => {
                         let var = host_env.get_var(var).unwrap();
-                        let function = irmatch!(*var; Value::Function(ref fn_id) => fn_id.clone());
+                        let function = irmatch!(var; Value::Function(fn_id) => fn_id);
                         function.id()
                     }
 
@@ -384,8 +374,8 @@ mod Expr {
 
                 match *program.universe().get_type(lhs.type_id().unwrap()) {
                     SmplType::Int => {
-                        let lhs = irmatch!(*lh_v; Value::Int(i) => i);
-                        let rhs = irmatch!(*rh_v; Value::Int(i) => i);
+                        let lhs = irmatch!(lh_v; Value::Int(i) => i);
+                        let rhs = irmatch!(rh_v; Value::Int(i) => i);
 
 
                         if is_math(op.clone()) {
@@ -398,8 +388,8 @@ mod Expr {
                     }
 
                     SmplType::Float => {
-                        let lhs = irmatch!(*lh_v; Value::Float(f) => f);
-                        let rhs = irmatch!(*rh_v; Value::Float(f) => f);
+                        let lhs = irmatch!(lh_v; Value::Float(f) => f);
+                        let rhs = irmatch!(rh_v; Value::Float(f) => f);
 
 
                         if is_math(op.clone()) {
@@ -412,8 +402,8 @@ mod Expr {
                     }
                     
                     SmplType::Bool => {
-                        let lhs = irmatch!(*lh_v; Value::Bool(b) => b);
-                        let rhs = irmatch!(*rh_v; Value::Bool(b) => b);
+                        let lhs = irmatch!(lh_v; Value::Bool(b) => b);
+                        let rhs = irmatch!(rh_v; Value::Bool(b) => b);
 
 
                         if is_logical(op.clone()) {
@@ -437,17 +427,17 @@ mod Expr {
 
                 irmatch!(*program.universe().get_type(t.type_id().unwrap());
                          SmplType::Float => {
-                             let f = irmatch!(*t_v; Value::Float(f) => f);
+                             let f = irmatch!(t_v; Value::Float(f) => f);
                              Value::Float(negate(f))
                          },
 
                          SmplType::Int => {
-                             let i = irmatch!(*t_v; Value::Int(i) => i);
+                             let i = irmatch!(t_v; Value::Int(i) => i);
                              Value::Int(negate(i))
                          },
 
                          SmplType::Bool => {
-                             let b = irmatch!(*t_v; Value::Bool(b) => b);
+                             let b = irmatch!(t_v; Value::Bool(b) => b);
                              Value::Bool(not(b))
                          }
                  )
@@ -488,10 +478,10 @@ mod Expr {
 
             AbstractValue::Indexing(ref indexing) => {
                 let array = expr_env.get_tmp(indexing.array.data().clone()).unwrap();
-                let array = irmatch!(array; &Value::Array(ref v) => v);
+                let array = irmatch!(array; Value::Array(v) => v);
 
                 let indexer = expr_env.get_tmp(indexing.indexer.data().clone()).unwrap();
-                let indexer = irmatch!(indexer; &Value::Int(i) => i);
+                let indexer = irmatch!(indexer; Value::Int(i) => i);
 
                 array.get(indexer as usize).unwrap().clone()
             }
