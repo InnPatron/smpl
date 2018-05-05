@@ -250,6 +250,47 @@ impl<'a> FnEnv<'a> {
 
             Node::Assignment(ref assign) => {
                 self.previous_is_loop_head = false;
+
+                let path = assign.assignee().path();
+
+                let root_var = path.root_var_id();
+                let root_var = self.env.get_var_mut(root_var).unwrap();
+
+                let mut assignee = root_var;
+
+                if let Some(ref e) = path.root_indexing_expr() {
+                    let indexer = Expr::eval_expr(self.program, &self.env, e);
+                    let indexer = irmatch!(indexer; Value::Int(i) => i);
+
+                    let array  = irmatch!(assignee; &mut Value::Array(ref mut a) => a);
+                    assignee = array.get_mut(indexer as usize).unwrap();
+                }
+
+                for ps in path.path() {
+                    match *ps {
+                        PathSegment::Ident(ref f) => {
+                            let struct_value = irmatch!(assignee; &mut Value::Struct(ref mut s) => s);
+                            assignee = struct_value.get_field_mut(f.field_id()).unwrap();
+                        }
+
+                        PathSegment::Indexing(ref f, ref indexer) => {
+                            let struct_value = irmatch!(assignee; &mut Value::Struct(ref mut s) => s);
+                            let field_to_index = struct_value.get_field_mut(f.field_id()).unwrap();
+                            let field = irmatch!(field_to_index; &mut Value::Array(ref mut a) => a);
+
+                            let indexer = Expr::eval_expr(self.program, &self.env, indexer);
+                            let indexer = irmatch!(indexer; Value::Int(i) => i);
+
+
+                            assignee = field.get_mut(indexer as usize).unwrap();
+                        }
+                    }
+                }
+
+                let value = Expr::eval_expr(self.program, &self.env, assign.value());
+                *assignee = value;
+
+
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
 
