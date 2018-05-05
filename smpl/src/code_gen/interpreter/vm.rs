@@ -255,6 +255,7 @@ impl<'a> FnEnv<'a> {
 
             Node::Expr(ref expr) => {
                 self.previous_is_loop_head = false;
+                Expr::eval_expr(self.program, &self.env, expr);
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
 
