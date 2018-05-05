@@ -489,8 +489,9 @@ mod Expr {
             }
 
             AbstractValue::Indexing(ref indexing) => {
-                let array = expr_env.get_tmp(indexing.array.data().clone()).unwrap();
-                let array = irmatch!(array; Value::Array(v) => v);
+                let array = expr_env.ref_tmp(indexing.array.data().clone()).unwrap();
+                let array = array.borrow();
+                let array = irmatch!(*array; Value::Array(ref v) => v);
 
                 let indexer = expr_env.get_tmp(indexing.indexer.data().clone()).unwrap();
                 let indexer = irmatch!(indexer; Value::Int(i) => i);
