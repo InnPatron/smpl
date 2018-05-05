@@ -75,6 +75,18 @@ impl Env {
         self.get(&Env::tmp_id(id))
     }
 
+    pub fn ref_value(&self, name: &str) -> Option<Rc<RefCell<Value>>> {
+        self.env.get(name).map(|r| r.clone())
+    }
+
+    pub fn ref_var(&self, id: VarId) -> Option<Rc<RefCell<Value>>> {
+        self.ref_value(&Env::var_id(id))
+    }
+
+    pub fn ref_tmp(&self, id: TmpId) -> Option<Rc<RefCell<Value>>> {
+        self.ref_value(&Env::tmp_id(id))
+    }
+
     fn tmp_id(id: TmpId) -> String {
         format!("_tmp_{}", id.raw())
     }
