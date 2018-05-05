@@ -243,6 +243,8 @@ impl<'a> FnEnv<'a> {
 
             Node::LocalVarDecl(ref decl) => {
                 self.previous_is_loop_head = false;
+                let value = Expr::eval_expr(self.program, &self.env, decl.init_expr());
+                self.env.map_var(decl.var_id(), value);
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
 
