@@ -252,6 +252,51 @@ impl<'a> FnEnv<'a> {
 
             Node::Assignment(ref assign) => {
                 self.previous_is_loop_head = false;
+                let path = assign.assignee().path();
+
+                let root_var = path.root_var_id();
+                let root_var = self.env.ref_var(root_var).unwrap();
+
+                let mut value = root_var;
+                if let Some(ref e) = path.root_indexing_expr() {
+                    value = {
+                        let borrow = value.borrow();
+                        let indexer = Expr::eval_expr(self.program, &self.env, e);
+                        let indexer = irmatch!(indexer; Value::Int(i) => i);
+                        let array = irmatch!(*borrow; Value::Array(ref a) => a);
+                        array.get(indexer as usize).unwrap().clone()
+                    };
+                }
+
+                for ps in path.path() {
+                    match *ps {
+                        PathSegment::Ident(ref f) => {
+                            value = {
+                                let value = value.borrow();
+                                let struct_value = irmatch!(*value; Value::Struct(ref s) => s);
+                                struct_value.ref_field(f.field_id()).unwrap()
+                            };
+                        }
+
+                        PathSegment::Indexing(ref f, ref indexer) => {
+                            value = {
+                                let value = value.borrow();
+                                let struct_value = irmatch!(*value; Value::Struct(ref s) => s);
+                                let field_to_index = struct_value.ref_field(f.field_id()).unwrap();
+                                let field_to_index = field_to_index.borrow();
+                                let field = irmatch!(*field_to_index; Value::Array(ref a) => a);
+
+                                let indexer = Expr::eval_expr(self.program, &self.env, indexer);
+                                let indexer = irmatch!(indexer; Value::Int(i) => i);
+                                field.get(indexer as usize).unwrap().clone()
+                            };
+                        }
+                    }
+                }
+
+                let mut borrow = value.borrow_mut();
+                *borrow = Expr::eval_expr(self.program, &self.env, assign.value());
+
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
 
