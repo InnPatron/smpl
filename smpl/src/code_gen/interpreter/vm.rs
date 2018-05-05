@@ -324,36 +324,45 @@ mod Expr {
                 let path = access.path();
 
                 let root_var = path.root_var_id();
-                let root_var = host_env.get_var(root_var).unwrap();
+                let root_var = host_env.ref_var(root_var).unwrap();
 
-                let mut value = root_var.clone();
+                let mut value = root_var;
 
                 if let Some(ref e) = path.root_indexing_expr() {
-                    value = eval_expr(program, host_env, e);
+                    unimplemented!();
+                    let indexer = eval_expr(program, host_env, e);
+                    let indexer = irmatch!(indexer; Value::Int(i) => i);
                 }
 
                 for ps in path.path() {
                     match *ps {
                         PathSegment::Ident(ref f) => {
-                            let struct_value = irmatch!(value; Value::Struct(s) => s);
-                            value = struct_value.get_field(f.field_id()).unwrap().clone();
+                            value = {
+                                let value = value.borrow();
+                                let struct_value = irmatch!(*value; Value::Struct(ref s) => s);
+                                struct_value.ref_field(f.field_id()).unwrap()
+                            };
                         }
 
                         PathSegment::Indexing(ref f, ref indexer) => {
-                            let struct_value = irmatch!(value; Value::Struct(s) => s);
-                            let field_to_index = struct_value.get_field(f.field_id()).unwrap();
-                            let field = irmatch!(*field_to_index; Value::Array(ref a) => a);
+                            value = {
+                                let value = value.borrow();
+                                let struct_value = irmatch!(*value; Value::Struct(ref s) => s);
+                                let field_to_index = struct_value.ref_field(f.field_id()).unwrap();
+                                let field_to_index = field_to_index.borrow();
+                                let field = irmatch!(*field_to_index; Value::Array(ref a) => a);
 
-                            let indexer = eval_expr(program, host_env, indexer);
-                            let indexer = irmatch!(indexer; Value::Int(i) => i);
-
-
-                            value = field.get(indexer as usize).unwrap().clone();
+                                let indexer = eval_expr(program, host_env, indexer);
+                                let indexer = irmatch!(indexer; Value::Int(i) => i);
+                                field.get(indexer as usize).unwrap().clone()
+                            };
                         }
                     }
                 }
+                let borrow = value.borrow();
+                let ret = borrow.clone();
 
-                value
+                ret
             },
 
             AbstractValue::FnCall(ref call) => {
@@ -477,13 +486,13 @@ mod Expr {
                     ArrayInit::List(ref v) => {
                         Value::Array(v.iter().map(|element| {
                             let element_id = element.data().clone();
-                            expr_env.get_tmp(element_id).unwrap().clone()
+                            Rc::new(RefCell::new(expr_env.get_tmp(element_id).unwrap().clone()))
                         }).collect())
                     }
 
                     ArrayInit::Value(ref v, size) => {
                         let element = expr_env.get_tmp(v.data().clone()).unwrap();
-                        Value::Array((0..size).into_iter().map(|_| element.clone()).collect())
+                        Value::Array((0..size).into_iter().map(|_| Rc::new(RefCell::new(element.clone()))).collect())
                     }
                 }
             }
@@ -496,7 +505,9 @@ mod Expr {
                 let indexer = expr_env.get_tmp(indexing.indexer.data().clone()).unwrap();
                 let indexer = irmatch!(indexer; Value::Int(i) => i);
 
-                array.get(indexer as usize).unwrap().clone()
+                let indexed_value = array.get(indexer as usize).unwrap();
+                let indexed_value = indexed_value.borrow();
+                indexed_value.clone()
             }
 
             AbstractValue::ModAccess(ref access) => {

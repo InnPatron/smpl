@@ -11,7 +11,7 @@ pub enum Value {
     Float(f32),
     Bool(bool),
     String(String),
-    Array(Vec<Value>),
+    Array(Vec<Rc<RefCell<Value>>>),
     Function(FnHandle),
     Struct(Struct),
     Unit,
