@@ -329,9 +329,13 @@ mod Expr {
                 let mut value = root_var;
 
                 if let Some(ref e) = path.root_indexing_expr() {
-                    unimplemented!();
-                    let indexer = eval_expr(program, host_env, e);
-                    let indexer = irmatch!(indexer; Value::Int(i) => i);
+                    value = {
+                        let borrow = value.borrow();
+                        let indexer = eval_expr(program, host_env, e);
+                        let indexer = irmatch!(indexer; Value::Int(i) => i);
+                        let array = irmatch!(*borrow; Value::Array(ref a) => a);
+                        array.get(indexer as usize).unwrap().clone()
+                    };
                 }
 
                 for ps in path.path() {
