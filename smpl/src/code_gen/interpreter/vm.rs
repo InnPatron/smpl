@@ -316,8 +316,24 @@ impl<'a> FnEnv<'a> {
             }
 
             Node::Condition(ref condition) => {
+                let value = Expr::eval_expr(self.program, &self.env, condition);
+                let value = irmatch!(value; Value::Bool(b) => b);
+                let (t_b, f_b) = self.graph.after_condition(current);
+                let next = if value {
+                    t_b
+                } else {
+                    f_b
+                };
+
+                if self.previous_is_loop_head {
+                    let id = self.pop_loop_stack();
+                    self.loop_result.insert(id, value);
+                    self.loop_stack.push(id);
+                }
+
+
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(self.graph.next(current)))
+                Ok(NodeEval::Next(self.graph.next(next)))
             }
         }
     }
