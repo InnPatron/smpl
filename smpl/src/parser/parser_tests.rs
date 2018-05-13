@@ -246,6 +246,7 @@ init NAME {
     fn test_parse_FnDecl() {
         let input = "fn test_fn(arg: i32, test: float, next: String) { }";
         let func = parse_FnDecl(input).unwrap();
+        let func = func.data().clone();
         assert_eq!(func.name, ident!("test_fn"));
         assert_eq!(func.body, Block(Vec::new()));
 
@@ -274,7 +275,8 @@ struct TestStruct {
         let _struct = parse_StructDecl(input).unwrap();
         let _struct2 = parse_StructDecl(input2).unwrap();
 
-
+        let _struct = _struct.data();
+        let _struct2 = _struct2.data();
         assert_eq!(_struct.name, ident!("TestStruct"));
         assert_eq!(_struct.body, StructBody(Some(vec![
             StructField {

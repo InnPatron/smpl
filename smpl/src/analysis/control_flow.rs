@@ -674,7 +674,8 @@ let b: int = 3;
             return_type: universe.unit(),
         };
         let fn_def = parse_FnDecl(input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
+        let fn_def = fn_def.data();
+        let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -744,7 +745,8 @@ if (test) {
             return_type: universe.unit(),
         };
         let fn_def = parse_FnDecl(input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
+        let fn_def = fn_def.data();
+        let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -893,7 +895,8 @@ if (test) {
             return_type: universe.unit(),
         };
         let fn_def = parse_FnDecl(input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
+        let fn_def = fn_def.data();
+        let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -1054,7 +1057,8 @@ if (test) {
             return_type: universe.unit(),
         };
         let fn_def = parse_FnDecl(input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
+        let fn_def = fn_def.data();
+        let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
