@@ -60,6 +60,7 @@
 use std::str::FromStr;
 use ast::*;
 use ascii::*;
+use span::Span;
 
 grammar;
 
@@ -78,8 +79,8 @@ DeclStmt: DeclStmt = {
 	<u: UseDecl> => DeclStmt::Use(u),
 };
 
-UseDecl: UseDecl = {
-	"use" <i: Ident> ";" => UseDecl(i),
+UseDecl: AstNode<UseDecl> = {
+	<l: @L> "use" <i: Ident> ";" <r: @R> => AstNode::new(UseDecl(i), Span::new(l, r)),
 };
 
 /// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" type_annotation]? block

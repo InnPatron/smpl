@@ -1,5 +1,5 @@
 use analysis::{FnId, TypeId};
-use ast::{BinOp, Ident, TypeAnnotation, ModulePath, Path, UniOp};
+use ast::*;
 
 #[derive(Clone, Debug)]
 pub enum Err {
@@ -10,7 +10,7 @@ pub enum Err {
     UnknownType(TypeAnnotation),
     UnknownBinding(Ident),
     UnknownFn(ModulePath),
-    UnresolvedUses(Vec<Ident>),
+    UnresolvedUses(Vec<AstNode<UseDecl>>),
     UnresolvedStructs(Vec<Ident>),
     UnresolvedFns(Vec<Ident>),
     MissingModName,

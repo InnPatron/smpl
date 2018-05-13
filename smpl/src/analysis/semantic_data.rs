@@ -666,7 +666,7 @@ impl ModuleId {
 
 pub struct ModuleCkData {
     pub name: Ident,
-    pub unresolved_module_uses: Vec<UseDecl>,
+    pub unresolved_module_uses: Vec<AstNode<UseDecl>>,
     pub unresolved_module_structs: Vec<Struct>,
     pub unresolved_module_fns: Vec<AstFunction>,
     pub module_scope: ScopedData,

@@ -47,7 +47,7 @@ pub fn check_program(modules: Vec<AstModule>) -> Result<Program, Err> {
         } else if end_count == start_count {
             let mut unresolved = Vec::new();
             for mod_uses in queue.into_iter().map(|module| module.unresolved_module_uses) {
-                let mod_uses = mod_uses.into_iter().map(|u| u.0);
+                let mod_uses = mod_uses.into_iter();
                 unresolved.extend(mod_uses);
             }
 
@@ -69,9 +69,9 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
 
     let mut missing_modules = Vec::new();
     for use_decl in module.unresolved_module_uses.into_iter() {
-        match program.universe().module_id(&use_decl.0) {
+        match program.universe().module_id(&use_decl.data().0) {
             Some(id) => {
-                let imported_name = use_decl.0.clone();
+                let imported_name = use_decl.data().0.clone();
                 let imported_module = program.universe().get_module(id);
                 let imported_scope = imported_module.module_scope();
 

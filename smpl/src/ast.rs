@@ -43,7 +43,7 @@ impl Module {
 }
 
 pub enum DeclStmt {
-    Use(UseDecl),
+    Use(AstNode<UseDecl>),
     Struct(Struct),
     Function(Function),
 }
