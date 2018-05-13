@@ -12,7 +12,7 @@ pub enum Err {
     UnknownFn(ModulePath),
     UnresolvedUses(Vec<AstNode<UseDecl>>),
     UnresolvedStructs(Vec<AstNode<Struct>>),
-    UnresolvedFns(Vec<Ident>),
+    UnresolvedFns(Vec<AstNode<Function>>),
     MissingModName,
 }
 

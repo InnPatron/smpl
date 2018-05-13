@@ -45,13 +45,7 @@ impl Module {
 pub enum DeclStmt {
     Use(AstNode<UseDecl>),
     Struct(AstNode<Struct>),
-    Function(Function),
-}
-
-impl From<Function> for DeclStmt {
-    fn from(f: Function) -> DeclStmt {
-        DeclStmt::Function(f)
-    }
+    Function(AstNode<Function>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

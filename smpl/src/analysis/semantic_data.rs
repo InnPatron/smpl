@@ -668,7 +668,7 @@ pub struct ModuleCkData {
     pub name: Ident,
     pub unresolved_module_uses: Vec<AstNode<UseDecl>>,
     pub unresolved_module_structs: Vec<AstNode<Struct>>,
-    pub unresolved_module_fns: Vec<AstFunction>,
+    pub unresolved_module_fns: Vec<AstNode<AstFunction>>,
     pub module_scope: ScopedData,
     pub owned_types: Vec<TypeId>,
     pub owned_fns: Vec<FnId>,

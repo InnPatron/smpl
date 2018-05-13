@@ -168,14 +168,14 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
 
         unresolved = Vec::new();
         for fn_decl in module_fn_iter {
-            let name: ModulePath = fn_decl.name.clone().into();
+            let name: ModulePath = fn_decl.data().name.clone().into();
 
             let type_id = program.universe().new_type_id();
             let fn_id = program.universe().new_fn_id();
 
-            let fn_type = generate_fn_type(program, &module.module_scope, fn_id, &fn_decl)?;
+            let fn_type = generate_fn_type(program, &module.module_scope, fn_id, &fn_decl.data())?;
 
-            let cfg = CFG::generate(program.universe(), fn_decl.clone(), &fn_type)?;
+            let cfg = CFG::generate(program.universe(), fn_decl.data().clone(), &fn_type)?;
 
             program.universe_mut().insert_fn(fn_id, type_id, fn_type, cfg);
             module.module_scope.insert_fn(name.clone(), fn_id);
@@ -204,7 +204,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
             break;
         } else if end_count == start_count {
             // No function declarations were resolved. Return error.
-            return Err(Err::UnresolvedFns(unresolved.into_iter().map(|f| f.name).collect()));
+            return Err(Err::UnresolvedFns(unresolved.into_iter().collect()));
         } else if end_count > start_count {
             unreachable!();
         }

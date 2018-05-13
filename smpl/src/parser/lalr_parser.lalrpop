@@ -74,7 +74,7 @@ pub Module: Module = {
 
 /// decl_stmt -> fn_decl | struct_decl | use_decl
 DeclStmt: DeclStmt = {
-	<f: FnDecl> => f.into(),
+	<f: FnDecl> => DeclStmt::Function(f),
 	<s: StructDecl> => DeclStmt::Struct(s),
 	<u: UseDecl> => DeclStmt::Use(u),
 };
@@ -84,14 +84,14 @@ UseDecl: AstNode<UseDecl> = {
 };
 
 /// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" type_annotation]? block
-pub FnDecl: Function = {
-	"fn" <name: Ident> "(" <params: FnParameterList?> ")" <return_type: ("->" TypeAnnotation)?> <b: Block> => {
-		Function::new(
+pub FnDecl: AstNode<Function> = {
+	<l: @L> "fn" <name: Ident> "(" <params: FnParameterList?> ")" <return_type: ("->" TypeAnnotation)?> <b: Block> <r: @R> => {
+		AstNode::new(Function::new(
 			name,
 			params,
 			return_type.map(|r| r.1),
 			b,
-		)
+		), Span::new(l, r))
 	}
 };
 
