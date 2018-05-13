@@ -75,7 +75,7 @@ pub Module: Module = {
 /// decl_stmt -> fn_decl | struct_decl | use_decl
 DeclStmt: DeclStmt = {
 	<f: FnDecl> => f.into(),
-	<s: StructDecl> => s.into(),
+	<s: StructDecl> => DeclStmt::Struct(s),
 	<u: UseDecl> => DeclStmt::Use(u),
 };
 
@@ -112,12 +112,12 @@ FnParameter: FnParameter = {
 };
 
 /// struct_decl -> "struct" ident "{" struct_field_list "}"
-pub StructDecl: Struct = {
-	"struct" <name: Ident> "{" <fields: StructFieldList?>"}" => {
-		Struct {
+pub StructDecl: AstNode<Struct> = {
+	<l: @L> "struct" <name: Ident> "{" <fields: StructFieldList?>"}" <r: @R> => {
+		AstNode::new(Struct {
 			name: name,
 			body: StructBody(fields)
-		}
+		}, Span::new(l, r))
 	}
 };
 

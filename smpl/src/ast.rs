@@ -44,14 +44,8 @@ impl Module {
 
 pub enum DeclStmt {
     Use(AstNode<UseDecl>),
-    Struct(Struct),
+    Struct(AstNode<Struct>),
     Function(Function),
-}
-
-impl From<Struct> for DeclStmt {
-    fn from(s: Struct) -> DeclStmt {
-        DeclStmt::Struct(s)
-    }
 }
 
 impl From<Function> for DeclStmt {

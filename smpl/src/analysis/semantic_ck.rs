@@ -127,7 +127,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
         for struct_decl in struct_iter {
             let (struct_t, order) = match generate_struct_type(program, 
                                                                &module.module_scope,
-                                                               &struct_decl) {
+                                                               &struct_decl.data()) {
                 Ok(s) => s,
                 Err(e) => {
                     match e {
@@ -155,7 +155,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
             break;
         } else if end_count == start_count {
             // No struct declarations were resolved. Return error.
-            return Err(Err::UnresolvedStructs(unresolved.into_iter().map(|s| s.name).collect()));
+            return Err(Err::UnresolvedStructs(unresolved.into_iter().collect()));
         } else if end_count > start_count {
             unreachable!();
         }
