@@ -287,6 +287,13 @@ impl Ident {
     pub fn new(str: &str) -> Ident {
         Ident(AsciiString::from_str(str).unwrap())
     }
+
+    pub fn try_new(str: &str) -> Option<Ident> {
+        match AsciiString::from_str(str) {
+            Ok(str) => Some(Ident(str)),
+            Err(..) => None
+        }
+    }
 }
 
 impl fmt::Display for Ident {
