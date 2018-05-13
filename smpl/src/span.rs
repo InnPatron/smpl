@@ -1,4 +1,4 @@
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Span {
     start: usize,   // Inclusive
     end: usize,     // Exclusive

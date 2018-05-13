@@ -7,13 +7,13 @@ use ascii::AsciiString;
 
 use span::Span;
 
-#[derive(Debug, Clone)]
-pub struct AstNode<T: ::std::fmt::Debug + Clone> {
+#[derive(Debug, Clone, PartialEq)]
+pub struct AstNode<T: ::std::fmt::Debug + Clone + PartialEq> {
     data: T,
     span: Span,
 }
 
-impl<T> AstNode<T> where T: ::std::fmt::Debug + Clone {
+impl<T> AstNode<T> where T: ::std::fmt::Debug + Clone + PartialEq {
     pub fn new(data: T, span: Span) -> AstNode<T> {
         AstNode {
             data: data,
