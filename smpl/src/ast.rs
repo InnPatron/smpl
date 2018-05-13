@@ -30,6 +30,10 @@ impl<T> AstNode<T> where T: ::std::fmt::Debug + Clone + PartialEq {
     }
 }
 
+impl<T> Eq for AstNode<T> where T: ::std::fmt::Debug + Clone + Eq {
+
+}
+
 pub struct Module(pub Option<Ident>, pub Vec<DeclStmt>);
 
 impl Module {
