@@ -5,6 +5,31 @@ use std::borrow::Borrow;
 
 use ascii::AsciiString;
 
+use span::Span;
+
+#[derive(Debug, Clone)]
+pub struct AstNode<T: ::std::fmt::Debug + Clone> {
+    data: T,
+    span: Span,
+}
+
+impl<T> AstNode<T> where T: ::std::fmt::Debug + Clone {
+    pub fn new(data: T, span: Span) -> AstNode<T> {
+        AstNode {
+            data: data,
+            span: span
+        }
+    }
+
+    pub fn data(&self) -> &T {
+        &self.data
+    }
+
+    pub fn span(&self) -> Span {
+        self.span.clone()
+    }
+}
+
 pub struct Module(pub Option<Ident>, pub Vec<DeclStmt>);
 
 impl Module {
