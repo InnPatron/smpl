@@ -78,7 +78,7 @@ impl Assignment {
 #[derive(Debug, Clone, PartialEq)]
 pub struct LocalVarDecl {
     var_type: ast::AstNode<ast::TypeAnnotation>,
-    var_name: ast::Ident,
+    var_name: ast::AstNode<ast::Ident>,
     var_init: self::Expr,
     type_id: Cell<Option<TypeId>>,
     var_id: VarId,
@@ -100,7 +100,7 @@ impl LocalVarDecl {
     }
 
     pub fn var_name(&self) -> &ast::Ident {
-        &self.var_name
+        self.var_name.data()
     }
 
     pub fn set_type_id(&self, id: TypeId) {
@@ -356,12 +356,12 @@ impl FieldAccess {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Binding {
-    ident: ast::Ident,
+    ident: ast::AstNode<ast::Ident>,
     binding_id: Cell<Option<BindingId>>,
 }
 
 impl Binding {
-    pub fn new(ident: ast::Ident) -> Binding {
+    pub fn new(ident: ast::AstNode<ast::Ident>) -> Binding {
         Binding {
             ident: ident,
             binding_id: Cell::new(None),
@@ -369,7 +369,7 @@ impl Binding {
     }
 
     pub fn ident(&self) -> &ast::Ident {
-        &self.ident
+        self.ident.data()
     }
 
     pub fn set_id<T>(&self, id: T) where T: Into<BindingId> + ::std::fmt::Debug {
@@ -426,7 +426,7 @@ impl FnCall {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Path {
-    root_name: ast::Ident,
+    root_name: ast::AstNode<ast::Ident>,
     root_indexing: Option<self::Expr>,
     root_var: RefCell<Option<Typed<VarId>>>,
     path: Vec<self::PathSegment>,
@@ -460,7 +460,7 @@ impl self::Path {
     }
 
     pub fn root_name(&self) -> &ast::Ident {
-        &self.root_name
+        self.root_name.data()
     }
 
     pub fn root_indexing_expr(&self) -> Option<&self::Expr> {
@@ -518,13 +518,13 @@ pub enum PathSegment {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field {
-    name: ast::Ident,
+    name: ast::AstNode<ast::Ident>,
     field_id: RefCell<Option<Typed<FieldId>>>
 }
 
 impl Field {
 
-    pub fn new(name: ast::Ident) -> Field {
+    pub fn new(name: ast::AstNode<ast::Ident>) -> Field {
         Field {
             name: name,
             field_id: RefCell::new(None),
@@ -532,7 +532,7 @@ impl Field {
     }
 
     pub fn name(&self) -> &ast::Ident {
-        &self.name
+        self.name.data()
     }
 
     pub fn field_id(&self) -> FieldId {

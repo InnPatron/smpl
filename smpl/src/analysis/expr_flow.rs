@@ -38,7 +38,7 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
                     .into_iter()
                     .map(|(name, expr)| {
                         let expr = Typed::untyped(flatten_expr(universe, scope, *expr));
-                        (name, expr)
+                        (name.data().clone(), expr)
                     })
                     .collect::<Vec<_>>()
             });

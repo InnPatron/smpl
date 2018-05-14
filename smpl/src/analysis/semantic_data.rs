@@ -700,7 +700,7 @@ impl ModuleCkData {
         }
 
         Ok(ModuleCkData {
-            name: module.0.ok_or(Err::MissingModName)?,
+            name: module.0.ok_or(Err::MissingModName)?.data().clone(),
             unresolved_module_uses: module_uses,
             unresolved_module_structs: module_structs,
             unresolved_module_fns: module_fns,
@@ -744,7 +744,7 @@ impl fmt::Display for ModulePath {
 
 impl From<AstModulePath> for ModulePath {
     fn from(p: AstModulePath) -> ModulePath {
-        ModulePath::new(p.0)
+        ModulePath::new(p.0.into_iter().map(|node| node.data().clone()).collect())
     }
 }
 

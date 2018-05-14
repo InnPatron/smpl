@@ -521,7 +521,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                     // Search for the function
                     let fn_type_id = if fn_call.path().0.len() == 1 {
                         let binding = self.current_scope.binding_info(fn_call.path()
-                                                                      .0.get(0).unwrap());
+                                                                      .0.get(0).unwrap().data());
                         if binding.is_ok() {
                             match binding.unwrap() {
                                 BindingInfo::Fn(fn_id) => {

@@ -69,7 +69,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
 
     let mut missing_modules = Vec::new();
     for use_decl in module.unresolved_module_uses.into_iter() {
-        match program.universe().module_id(&use_decl.data().0) {
+        match program.universe().module_id(use_decl.data().0.data()) {
             Some(id) => {
                 let imported_name = use_decl.data().0.clone();
                 let imported_module = program.universe().get_module(id);
@@ -79,7 +79,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
                                               .into_iter()
                                               .map(|(path, id)| {
                                                   let mut path = path.clone();
-                                                  path.0.insert(0, imported_name.clone());
+                                                  path.0.insert(0, imported_name.data().clone());
                                                   
                                                   (path, id.clone())
                                               })
@@ -88,7 +88,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
                                             .into_iter()
                                             .map(|(path, id)| {
                                                 let mut path = path.clone();
-                                                path.0.insert(0, imported_name.clone());
+                                                path.0.insert(0, imported_name.data().clone());
                                                   
                                                 (path, id.clone())
                                             })
@@ -168,7 +168,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
 
         unresolved = Vec::new();
         for fn_decl in module_fn_iter {
-            let name: AstModulePath = fn_decl.data().name.clone().into();
+            let name = fn_decl.data().name.data().clone();
 
             let type_id = program.universe().new_type_id();
             let fn_id = program.universe().new_fn_id();
@@ -186,7 +186,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
                 Err(e) => {
                     match e {
                         Err::UnknownFn(_) => {
-                            module.module_scope.unmap_fn(&name.clone().into());
+                            module.module_scope.unmap_fn(&name.into());
                             module.owned_fns.pop();
                             program.universe_mut().unmap_fn(fn_id);
                             unresolved.push(fn_decl);
@@ -241,7 +241,7 @@ fn generate_fn_type(program: &mut Program, scope: &ScopedData, fn_id: FnId, fn_d
                 let type_path = param.param_type.data();
                 let type_id = scope.type_id(universe, type_path.into())?;
                 typed_params.push(type_id);
-                param_metadata.push(FunctionParameter::new(param.name.clone(), universe.new_var_id()));
+                param_metadata.push(FunctionParameter::new(param.name.data().clone(), universe.new_var_id()));
 
                 fn_sig_type_scanner(universe, features, type_id);
             }
@@ -272,7 +272,7 @@ fn generate_struct_type(program: &mut Program, scope: &ScopedData, struct_def: &
     if let Some(ref body) = struct_def.body.0 {
         for field in body.iter() {
             let f_id = universe.new_field_id();
-            let f_name = field.name.clone();
+            let f_name = field.name.data().clone();
             let f_type_path = &field.field_type;
             let path_data = f_type_path.data();
             let field_type = scope.type_id(universe, path_data.into())?;
@@ -285,7 +285,7 @@ fn generate_struct_type(program: &mut Program, scope: &ScopedData, struct_def: &
     } 
 
     let struct_t = StructType {
-        name: struct_def.name.clone(),
+        name: struct_def.name.data().clone(),
         fields: fields,
         field_map: field_map,
     };

@@ -427,7 +427,7 @@ StructInit: StructInit = {
 /// struct_field_init_list -> struct_field_init "," struct_field_init_list
 ///		      -> struct_field_init ","?
 /// struct_field_init -> ident ":" expr 
-StructFieldInitList: Vec<(Ident, Box<Expr>)> = {
+StructFieldInitList: Vec<(AstNode<Ident>, Box<Expr>)> = {
 	<first: StructFieldInit> "," <tail: StructFieldInitList> => {
 		let mut v = vec![first];
 		v.extend(tail);
@@ -439,7 +439,7 @@ StructFieldInitList: Vec<(Ident, Box<Expr>)> = {
 	},
 };
 
-StructFieldInit: (Ident, Box<Expr>) = {
+StructFieldInit: (AstNode<Ident>, Box<Expr>) = {
 	<name: Ident> ":" <init: Expr> => (name, Box::new(init)),
 };
 
@@ -488,8 +488,11 @@ Number: String = {
 };
 
 /// ident -> [a-zA-Z_] [a-zA-Z0-9_]*
-Ident: Ident = {
-	<ident: r"[A-Za-z_][_A-Za-z0-9]*"> => { Ident(AsciiString::from_str(ident).unwrap()) }
+Ident: AstNode<Ident> = {
+	<l: @L> <ident: r"[A-Za-z_][_A-Za-z0-9]*"> <r: @R> => { 
+		AstNode::new(Ident(AsciiString::from_str(ident).unwrap()), 
+						Span::new(l, r))
+	}
 };
 
 /// path -> ident ["." ident]*

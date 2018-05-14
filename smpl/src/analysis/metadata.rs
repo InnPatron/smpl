@@ -58,14 +58,15 @@ impl Metadata {
     }
 
     pub fn find_main(program: &mut Program) -> Result<(), Err> {
-        use ast::ModulePath;
+        use ast::{AstNode, ModulePath};
+        use span::Span;
 
         let (u, m, f) = program.analysis_context();
         let universe = u;
 
         for (_, mod_id) in universe.all_modules().into_iter() {
             let module = universe.get_module(*mod_id);
-            if let Ok(id) = module.module_scope().get_fn(&type_path!("main")) {
+            if let Ok(id) = module.module_scope().get_fn(&ModulePath(vec![AstNode::new(ident!["main"], Span::new(0, 0))])) {
                 if m.main.is_none() {
                     m.main = Some((id, *mod_id))
                 } else {
