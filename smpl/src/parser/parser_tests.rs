@@ -237,7 +237,7 @@ init NAME {
         let input = "let a: int = 10;";
         let stmt = parse_ExprStmt(input).unwrap();
         if let ExprStmt::LocalVarDecl(ref decl) = stmt {
-            assert_eq!(decl.var_type, TypeAnnotation::Path(type_path!("int")));
+            assert_eq!(*decl.var_type.data(), TypeAnnotation::Path(type_path!("int")));
             assert_eq!(decl.var_name, ident!("a"));
         }
     }
@@ -254,8 +254,8 @@ init NAME {
                             (ident!("test"), type_path!("float")),
                             (ident!("next"), type_path!("String"))];
         for (param, expected) in func.params.unwrap().iter().zip(expected.iter()) {
-            assert_eq!(param.name, expected.0);
-            assert_eq!(param.param_type, TypeAnnotation::Path(expected.1.clone()));
+            assert_eq!(param.data().name, expected.0);
+            assert_eq!(*param.data().param_type.data(), TypeAnnotation::Path(expected.1.clone()));
         }
     }
 
@@ -275,20 +275,17 @@ struct TestStruct {
         let _struct = parse_StructDecl(input).unwrap();
         let _struct2 = parse_StructDecl(input2).unwrap();
 
-        let _struct = _struct.data();
-        let _struct2 = _struct2.data();
+        let _struct = _struct.data().clone();
+        let _struct2 = _struct2.data().clone();
         assert_eq!(_struct.name, ident!("TestStruct"));
-        assert_eq!(_struct.body, StructBody(Some(vec![
-            StructField {
-                name: ident!("field1"),
-                field_type: TypeAnnotation::Path(type_path!("Type1")),
-            },
+        let struct_field_0 = _struct.clone().body.0.map(|v| v.get(0).unwrap().clone()).unwrap();
+        let struct_field_1 = _struct2.clone().body.0.map(|v| v.get(1).unwrap().clone()).unwrap();
 
-            StructField {
-                name: ident!("field2"),
-                field_type: TypeAnnotation::Path(type_path!("Type2")),
-            },
-        ])));
+        assert_eq!(struct_field_0.name, ident!("field1"));
+        assert_eq!(struct_field_1.name, ident!("field2"));
+
+        assert_eq!(*struct_field_0.field_type.data(), TypeAnnotation::Path(type_path!("Type1")));
+        assert_eq!(*struct_field_1.field_type.data(), TypeAnnotation::Path(type_path!("Type2")));
 
         assert_eq!(_struct.name, _struct2.name);
         assert_eq!(_struct.body, _struct2.body);
