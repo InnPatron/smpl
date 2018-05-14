@@ -54,25 +54,9 @@ pub struct UseDecl(pub Ident);
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: Ident,
-    pub params: Option<Vec<FnParameter>>,
+    pub params: Option<Vec<AstNode<FnParameter>>>,
     pub return_type: Option<AstNode<TypeAnnotation>>,
     pub body: Block,
-}
-
-impl Function {
-    pub fn new(
-        name: Ident,
-        params: Option<Vec<FnParameter>>,
-        return_type: Option<AstNode<TypeAnnotation>>,
-        body: Block,
-    ) -> Function {
-        Function {
-            name: name,
-            params: params,
-            return_type: return_type,
-            body: body,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

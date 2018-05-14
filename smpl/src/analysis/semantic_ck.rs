@@ -237,10 +237,11 @@ fn generate_fn_type(program: &mut Program, scope: &ScopedData, fn_id: FnId, fn_d
             let mut typed_params = Vec::new();
             let mut param_metadata = Vec::new();
             for p in params.iter() {
-                let data = (&p.param_type).data();
-                let type_id = scope.type_id(universe, data.into())?;
+                let param = p.data();
+                let type_path = param.param_type.data();
+                let type_id = scope.type_id(universe, type_path.into())?;
                 typed_params.push(type_id);
-                param_metadata.push(FunctionParameter::new(p.name.clone(), universe.new_var_id()));
+                param_metadata.push(FunctionParameter::new(param.name.clone(), universe.new_var_id()));
 
                 fn_sig_type_scanner(universe, features, type_id);
             }

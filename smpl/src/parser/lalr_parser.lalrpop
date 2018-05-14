@@ -86,17 +86,17 @@ UseDecl: AstNode<UseDecl> = {
 /// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" type_annotation]? block
 pub FnDecl: AstNode<Function> = {
 	<l: @L> "fn" <name: Ident> "(" <params: FnParameterList?> ")" <return_type: ("->" TypeAnnotation)?> <b: Block> <r: @R> => {
-		AstNode::new(Function::new(
-			name,
-			params,
-			return_type.map(|r| r.1),
-			b,
-		), Span::new(l, r))
+		AstNode::new(Function {
+			name: name,
+			params: params,
+			return_type: return_type.map(|r| r.1),
+			body: b,
+		}, Span::new(l, r))
 	}
 };
 
 /// param_list -> param ["," param]*
-FnParameterList: Vec<FnParameter> = {
+FnParameterList: Vec<AstNode<FnParameter>> = {
 	<first: FnParameter> <tail: ("," <FnParameter>)*> => {
 		let mut v = vec![first];
 		v.extend(tail);
@@ -105,12 +105,12 @@ FnParameterList: Vec<FnParameter> = {
 };
 
 /// param -> ident ":" type_annotation
-FnParameter: FnParameter = {
-	<name: Ident> ":"  <param_type: TypeAnnotation> => {
-		FnParameter {
+FnParameter: AstNode<FnParameter> = {
+	<l: @L> <name: Ident> ":"  <param_type: TypeAnnotation> <r: @R> => {
+		AstNode::new(FnParameter {
 			name: name,
 			param_type: param_type,
-		}
+		}, Span::new(l, r))
 	}
 };
 
