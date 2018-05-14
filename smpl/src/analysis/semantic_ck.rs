@@ -3,7 +3,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use err::Err;
-use ast::{Ident, ModulePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
+use ast::{Ident, ModulePath as AstModulePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
 
 use super::feature_checkers::*;
 use super::metadata::*;
@@ -96,7 +96,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
 
                 // Bring imported types into scope
                 for (path, imported) in all_types.into_iter() {
-                    if module.module_scope.insert_type(path.clone(), imported).is_some() {
+                    if module.module_scope.insert_type(path.clone().into(), imported).is_some() {
                         panic!("Should not have overrwritten {}. Paths should be unique by prefixing with the originating module.", path);
                     }
                 }
@@ -168,7 +168,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
 
         unresolved = Vec::new();
         for fn_decl in module_fn_iter {
-            let name: ModulePath = fn_decl.data().name.clone().into();
+            let name: AstModulePath = fn_decl.data().name.clone().into();
 
             let type_id = program.universe().new_type_id();
             let fn_id = program.universe().new_fn_id();
@@ -178,7 +178,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
             let cfg = CFG::generate(program.universe(), fn_decl.data().clone(), &fn_type)?;
 
             program.universe_mut().insert_fn(fn_id, type_id, fn_type, cfg);
-            module.module_scope.insert_fn(name.clone(), fn_id);
+            module.module_scope.insert_fn(name.clone().into(), fn_id);
             module.owned_fns.push(fn_id);
 
             match analyze_fn(program, &module.module_scope, fn_id, module_id)  {
@@ -186,7 +186,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
                 Err(e) => {
                     match e {
                         Err::UnknownFn(_) => {
-                            module.module_scope.unmap_fn(&name);
+                            module.module_scope.unmap_fn(&name.clone().into());
                             module.owned_fns.pop();
                             program.universe_mut().unmap_fn(fn_id);
                             unresolved.push(fn_decl);

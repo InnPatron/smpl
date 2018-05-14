@@ -728,7 +728,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                 }
 
                 Value::ModAccess(ref access) => {
-                    let fn_id = self.current_scope.get_fn(access.path())?;
+                    let fn_id = self.current_scope.get_fn(&access.path())?;
                     let func = self.universe.get_fn(fn_id);
 
                     let fn_type_id = func.type_id();

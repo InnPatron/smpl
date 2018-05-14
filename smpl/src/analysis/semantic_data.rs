@@ -1,10 +1,14 @@
 use std::collections::HashMap;
 use std::cell::{RefCell, Cell};
 use std::rc::Rc;
+use std::slice::Iter;
+use std::fmt;
+
+use ascii::AsciiString;
 
 use err::Err;
 use ast::*;
-use ast::{Module as AstModule, Function as AstFunction};
+use ast::{Module as AstModule, Function as AstFunction, ModulePath as AstModulePath};
 use feature::PresentFeatures;
 
 use super::metadata::Metadata;
@@ -399,7 +403,7 @@ impl ScopedData {
     pub fn type_id<'a, 'b, 'c>(&'a self, universe: &'c Universe, type_annotation: TypeAnnotationRef<'b>) -> Result<TypeId, Err> {
         match type_annotation {
             TypeAnnotationRef::Path(path) => {
-                self.type_map.get(path)
+                self.type_map.get(&path.clone().into())
                     .map(|id| id.clone())
                     .ok_or(Err::UnknownType(type_annotation.into()))
             }
@@ -482,8 +486,8 @@ impl ScopedData {
         }
     }
 
-    pub fn get_fn(&self, path: &ModulePath) -> Result<FnId, Err> {
-        self.fn_map.get(path)
+    pub fn get_fn(&self, path: &AstModulePath) -> Result<FnId, Err> {
+        self.fn_map.get(&path.clone().into())
                    .map(|id| id.clone())
                    .ok_or(Err::UnknownFn(path.clone()))
     }
@@ -711,4 +715,43 @@ impl ModuleCkData {
 pub enum ModuleCkSignal {
     Defer(ModuleCkData),
     Success,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ModulePath(pub Vec<Ident>);
+
+impl ModulePath {
+    pub fn new(v: Vec<Ident>) -> ModulePath {
+        ModulePath(v)
+    }
+
+    pub fn iter(&self) -> Iter<Ident> {
+        self.0.iter()
+    }
+}
+
+impl fmt::Display for ModulePath {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let buffer = self.0
+            .iter()
+            .fold(AsciiString::new(), |mut buffer, ref item| {
+                buffer.push_str(&item.0);
+                buffer
+            });
+        write!(f, "{}", buffer)
+    }
+}
+
+impl From<AstModulePath> for ModulePath {
+    fn from(p: AstModulePath) -> ModulePath {
+        ModulePath::new(p.0)
+    }
+}
+
+impl From<Ident> for ModulePath {
+    fn from(i: Ident) -> ModulePath {
+        let mut v = Vec::with_capacity(1);
+        v.push(i);
+        ModulePath(v)
+    }
 }
