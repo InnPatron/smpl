@@ -7,19 +7,33 @@ use ascii::AsciiString;
 
 use span::Span;
 
-#[derive(Debug, Clone)]
-pub struct AstNode<T: ::std::fmt::Debug + Clone + PartialEq> {
+#[derive(Debug)]
+pub struct AstNode<T: ::std::fmt::Debug> {
     data: T,
     span: Span,
 }
 
-impl<T> PartialEq for AstNode<T> where T: ::std::fmt::Debug + Clone + PartialEq{
+impl<T> PartialEq for AstNode<T> where T: ::std::fmt::Debug + PartialEq {
     fn eq(&self, other: &AstNode<T>) -> bool {
         self.data == other.data
     }
 }
 
-impl<T> AstNode<T> where T: ::std::fmt::Debug + Clone + PartialEq {
+impl<T> Eq for AstNode<T> where T: ::std::fmt::Debug + Eq { }
+
+impl<T> ::std::hash::Hash for AstNode<T> where T: ::std::fmt::Debug + ::std::hash::Hash {
+   fn hash<H: ::std::hash::Hasher>(&self, state: &mut H) {
+       self.data.hash(state);
+   }
+}
+
+impl<T> Clone for AstNode<T> where T: ::std::fmt::Debug + Clone {
+    fn clone(&self) -> AstNode<T> {
+        AstNode::new(self.data.clone(), self.span.clone())
+    }
+}
+
+impl<T> AstNode<T> where T: ::std::fmt::Debug {
     pub fn new(data: T, span: Span) -> AstNode<T> {
         AstNode {
             data: data,
