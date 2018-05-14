@@ -284,7 +284,7 @@ impl fmt::Display for Ident {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TypeAnnotation {
     Path(ModulePath),
     Array(Box<TypeAnnotation>, u64),
@@ -301,7 +301,7 @@ impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TypeAnnotationRef<'a> {
     Path(&'a ModulePath),
     Array(&'a TypeAnnotation, &'a u64),
