@@ -7,10 +7,16 @@ use ascii::AsciiString;
 
 use span::Span;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct AstNode<T: ::std::fmt::Debug + Clone + PartialEq> {
     data: T,
     span: Span,
+}
+
+impl<T> PartialEq for AstNode<T> where T: ::std::fmt::Debug + Clone + PartialEq{
+    fn eq(&self, other: &AstNode<T>) -> bool {
+        self.data == other.data
+    }
 }
 
 impl<T> AstNode<T> where T: ::std::fmt::Debug + Clone + PartialEq {
