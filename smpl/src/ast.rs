@@ -55,7 +55,7 @@ pub struct UseDecl(pub Ident);
 pub struct Function {
     pub name: Ident,
     pub params: Option<Vec<FnParameter>>,
-    pub return_type: Option<TypeAnnotation>,
+    pub return_type: Option<AstNode<TypeAnnotation>>,
     pub body: Block,
 }
 
@@ -63,7 +63,7 @@ impl Function {
     pub fn new(
         name: Ident,
         params: Option<Vec<FnParameter>>,
-        return_type: Option<TypeAnnotation>,
+        return_type: Option<AstNode<TypeAnnotation>>,
         body: Block,
     ) -> Function {
         Function {
@@ -78,16 +78,7 @@ impl Function {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnParameter {
     pub name: Ident,
-    pub param_type: TypeAnnotation,
-}
-
-impl FnParameter {
-    pub fn new(name: Ident, param_type: TypeAnnotation) -> FnParameter {
-        FnParameter {
-            name: name,
-            param_type: param_type,
-        }
-    }
+    pub param_type: AstNode<TypeAnnotation>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -102,7 +93,7 @@ pub struct StructBody(pub Option<Vec<StructField>>);
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructField {
     pub name: Ident,
-    pub field_type: TypeAnnotation,
+    pub field_type: AstNode<TypeAnnotation>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -145,19 +136,9 @@ impl Assignment {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct LocalVarDecl {
-    pub var_type: TypeAnnotation,
+    pub var_type: AstNode<TypeAnnotation>,
     pub var_name: Ident,
     pub var_init: Expr,
-}
-
-impl LocalVarDecl {
-    pub fn new(var_type: TypeAnnotation, var_name: Ident, var_init: Expr) -> LocalVarDecl {
-        LocalVarDecl {
-            var_type: var_type,
-            var_name: var_name,
-            var_init: var_init,
-        }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -287,8 +268,8 @@ impl fmt::Display for Ident {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeAnnotation {
     Path(ModulePath),
-    Array(Box<TypeAnnotation>, u64),
-    FnType(Option<Vec<TypeAnnotation>>, Option<Box<TypeAnnotation>>),
+    Array(Box<AstNode<TypeAnnotation>>, u64),
+    FnType(Option<Vec<AstNode<TypeAnnotation>>>, Option<Box<AstNode<TypeAnnotation>>>),
 }
 
 impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
@@ -304,8 +285,8 @@ impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeAnnotationRef<'a> {
     Path(&'a ModulePath),
-    Array(&'a TypeAnnotation, &'a u64),
-    FnType(Option<&'a [TypeAnnotation]>, Option<&'a TypeAnnotation>),
+    Array(&'a AstNode<TypeAnnotation>, &'a u64),
+    FnType(Option<&'a [AstNode<TypeAnnotation>]>, Option<&'a AstNode<TypeAnnotation>>),
 }
 
 impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {

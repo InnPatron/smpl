@@ -224,7 +224,8 @@ fn generate_fn_type(program: &mut Program, scope: &ScopedData, fn_id: FnId, fn_d
     let (universe, metadata, features) = program.analysis_context();
     let ret_type = match fn_def.return_type {
         Some(ref path) => {
-            let type_id = scope.type_id(universe, path.into())?;
+            let data = path.data();
+            let type_id = scope.type_id(universe, data.into())?;
             fn_sig_type_scanner(universe, features, type_id);
             type_id
         }
@@ -236,7 +237,8 @@ fn generate_fn_type(program: &mut Program, scope: &ScopedData, fn_id: FnId, fn_d
             let mut typed_params = Vec::new();
             let mut param_metadata = Vec::new();
             for p in params.iter() {
-                let type_id = scope.type_id(universe, (&p.param_type).into())?;
+                let data = (&p.param_type).data();
+                let type_id = scope.type_id(universe, data.into())?;
                 typed_params.push(type_id);
                 param_metadata.push(FunctionParameter::new(p.name.clone(), universe.new_var_id()));
 
@@ -271,7 +273,8 @@ fn generate_struct_type(program: &mut Program, scope: &ScopedData, struct_def: &
             let f_id = universe.new_field_id();
             let f_name = field.name.clone();
             let f_type_path = &field.field_type;
-            let field_type = scope.type_id(universe, f_type_path.into())?;
+            let path_data = f_type_path.data();
+            let field_type = scope.type_id(universe, path_data.into())?;
             fields.insert(f_id, field_type);
             field_map.insert(f_name, f_id);
             order.push(f_id);

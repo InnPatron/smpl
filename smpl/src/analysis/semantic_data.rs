@@ -405,6 +405,7 @@ impl ScopedData {
             }
 
             TypeAnnotationRef::Array(base_type, size) => {
+                let base_type = base_type.data();
                 let base_type = ScopedData::type_id(self, universe, base_type.into())?;
                 let type_id = TypeConstructor::construct_array_type(universe, 
                                                                    base_type, 
@@ -417,7 +418,8 @@ impl ScopedData {
                     Some(ref v) => {
                         let mut new_params = Vec::new();
                         for p in v.iter() {
-                            let p_type = ScopedData::type_id(self, universe, p.into())?;
+                            let p_path = p.data();
+                            let p_type = ScopedData::type_id(self, universe, p_path.into())?;
                             new_params.push(p_type);
                         }
 
@@ -428,7 +430,11 @@ impl ScopedData {
                 };
 
                 let return_t = match return_t {
-                    Some(r) => ScopedData::type_id(self, universe, r.into())?,
+                    Some(r) => {
+                        let r_path = r.data();
+                        ScopedData::type_id(self, universe, r_path.into())?
+                    },
+
                     None => universe.unit(),
                 };
 

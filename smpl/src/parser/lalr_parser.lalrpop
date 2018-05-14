@@ -107,7 +107,10 @@ FnParameterList: Vec<FnParameter> = {
 /// param -> ident ":" type_annotation
 FnParameter: FnParameter = {
 	<name: Ident> ":"  <param_type: TypeAnnotation> => {
-		FnParameter::new(name, param_type)
+		FnParameter {
+			name: name,
+			param_type: param_type,
+		}
 	}
 };
 
@@ -177,11 +180,11 @@ ReturnStmt: Option<Expr> = {
 /// local_var_decl -> "let" ident ":" type_annotation  "=" expr ";"
 LocalVarDecl: LocalVarDecl = {
 	"let" <name: Ident> ":" <var_type: TypeAnnotation> "=" <e: Expr> ";" => {
-		LocalVarDecl::new(
-			var_type,
-			name,
-			e,
-		)
+		LocalVarDecl {
+			var_type: var_type,
+			var_name: name,
+			var_init: e,
+		}
 	},
 };
 
@@ -524,10 +527,10 @@ ModulePath: ModulePath = {
 	}
 };
 
-TypeAnnotation: TypeAnnotation = {
-	<p: ModuleBinding> => TypeAnnotation::Path(p),
-	<ArrayType>,
-	<FunctionTypeAnnotation>,
+TypeAnnotation: AstNode<TypeAnnotation> = {
+	<l: @L> <p: ModuleBinding> <r: @R> => AstNode::new(TypeAnnotation::Path(p), Span::new(l, r)),
+	<l: @L> <a: ArrayType> <r: @R> => AstNode::new(a, Span::new(l, r)),
+	<l: @L> <f: FunctionTypeAnnotation> <r: @R> => AstNode::new(f, Span::new(l, r)),
 };
 
 FunctionTypeAnnotation: TypeAnnotation = {
@@ -536,7 +539,7 @@ FunctionTypeAnnotation: TypeAnnotation = {
 	}
 };
 
-FunctionTypeAnnotationParameterList: Vec<TypeAnnotation> = {
+FunctionTypeAnnotationParameterList: Vec<AstNode<TypeAnnotation>> = {
 	<first: TypeAnnotation> <tail: FunctionTypeAnnotationParameterList> => {
 		let mut v = vec![first];
 		v.extend(tail);

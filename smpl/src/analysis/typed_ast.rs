@@ -77,7 +77,7 @@ impl Assignment {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LocalVarDecl {
-    var_type: ast::TypeAnnotation,
+    var_type: ast::AstNode<ast::TypeAnnotation>,
     var_name: ast::Ident,
     var_init: self::Expr,
     type_id: Cell<Option<TypeId>>,
@@ -96,7 +96,7 @@ impl LocalVarDecl {
     }
 
     pub fn type_annotation(&self) -> &ast::TypeAnnotation {
-        &self.var_type
+        self.var_type.data()
     }
 
     pub fn var_name(&self) -> &ast::Ident {
