@@ -41,6 +41,10 @@ impl<T> AstNode<T> where T: ::std::fmt::Debug {
         }
     }
 
+    pub fn to_data(self) -> (T, Span) {
+        (self.data, self.span)
+    }
+
     pub fn data(&self) -> &T {
         &self.data
     }
