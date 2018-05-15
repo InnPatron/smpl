@@ -168,16 +168,16 @@ pub struct While {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    Bin(BinExpr),
-    Uni(UniExpr),
-    Literal(Literal),
+    Bin(AstNode<BinExpr>),
+    Uni(AstNode<UniExpr>),
+    Literal(AstNode<Literal>),
     Binding(AstNode<Ident>),
-    FieldAccess(Path),
-    FnCall(FnCall),
-    StructInit(StructInit),
-    ArrayInit(ArrayInit),
-    Indexing(Indexing),
-    ModAccess(ModulePath),
+    FieldAccess(AstNode<Path>),
+    FnCall(AstNode<FnCall>),
+    StructInit(AstNode<StructInit>),
+    ArrayInit(AstNode<ArrayInit>),
+    Indexing(AstNode<Indexing>),
+    ModAccess(AstNode<ModulePath>),
 }
 
 #[derive(Clone, Debug, PartialEq)]

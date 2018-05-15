@@ -1,7 +1,7 @@
 use super::semantic_data::{TmpId, Universe};
 use super::typed_ast::*;
 use super::typed_ast::Binding as TypedBinding;
-use ast::{Expr as AstExpr, Literal, ArrayInit as AstArrayInit};
+use ast::{AstNode, Expr as AstExpr, Literal, ArrayInit as AstArrayInit};
 
 pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
@@ -14,6 +14,7 @@ pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
 pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId {
     match e {
         AstExpr::Bin(bin) => {
+            let (bin, _) = bin.to_data();
             let lhs = flatten_expr(universe, scope, *bin.lhs);
             let rhs = flatten_expr(universe, scope, *bin.rhs);
             scope.map_tmp(
@@ -23,15 +24,18 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
         }
 
         AstExpr::Uni(uni) => {
+            let (uni, _) = uni.to_data();
             let expr = flatten_expr(universe, scope, *uni.expr);
             scope.map_tmp(universe, Value::UniExpr(uni.op, Typed::untyped(expr)))
         }
 
         AstExpr::Literal(literal) => {
+            let (literal, _) = literal.to_data();
             scope.map_tmp(universe, Value::Literal(literal))
         }
 
         AstExpr::StructInit(init) => {
+            let (init, _) = init.to_data();
             let struct_name = init.struct_name;
             let field_init = init.field_init.map(|field_init_list| {
                 field_init_list
@@ -53,10 +57,12 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
         }
 
         AstExpr::FieldAccess(path) => {
+            let (path, _) = path.to_data();
             scope.map_tmp(universe, Value::FieldAccess(FieldAccess::new(universe, path)))
         }
 
         AstExpr::FnCall(fn_call) => {
+            let (fn_call, _) = fn_call.to_data();
             let path = fn_call.path;
             let args = fn_call.args.map(|vec| {
                 vec.into_iter()
@@ -70,6 +76,7 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
         }
 
         AstExpr::ArrayInit(init) => {
+            let (init, _) = init.to_data();
             match init {
                 AstArrayInit::InitList(vec) => {
                     let list = vec.into_iter()
@@ -92,6 +99,7 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
         }
 
         AstExpr::Indexing(indexing) => {
+            let (indexing, _) = indexing.to_data();
             let array_expr = indexing.array;
             let indexing_expr = indexing.indexer;
 
@@ -107,6 +115,7 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId 
         }
 
         AstExpr::ModAccess(path) => {
+            let (path, _) = path.to_data();
             scope.map_tmp(universe, Value::ModAccess(ModAccess::new(path)))
         }
     }

@@ -240,12 +240,12 @@ pub Expr: Expr = {
 
 /// truth_expr -> truth_expr ["&&" | "||"] strict_eq_expr | strict_eq_expr
 pub TruthExpr: Expr = {
-	<lhs: TruthExpr> <op: TruthOp> <rhs: StrictEqExpr> => {
-		Expr::Bin(BinExpr {
+	<l: @L> <lhs: TruthExpr> <op: TruthOp> <rhs: StrictEqExpr> <r: @R> => {
+		Expr::Bin(AstNode::new(BinExpr {
 			op: op,
 			lhs: Box::new(lhs),
 			rhs: Box::new(rhs),
-		})
+		}, Span::new(l, r)))
 	},
 
 	<StrictEqExpr>,
@@ -253,12 +253,12 @@ pub TruthExpr: Expr = {
 
 /// strict_eq_expr -> strict_eq_expr ["==" | "!="] relative_cmp_expr | relative_cmp_expr
 StrictEqExpr: Expr = {
-	<lhs: StrictEqExpr> <op: StrictEqOp> <rhs: RelativeCmpBranch> => {
-		Expr::Bin(BinExpr {
+	<l: @L> <lhs: StrictEqExpr> <op: StrictEqOp> <rhs: RelativeCmpBranch> <r: @R> => {
+		Expr::Bin(AstNode::new(BinExpr {
 			op: op,
 			lhs: Box::new(lhs),
 			rhs: Box::new(rhs),
-		})
+		}, Span::new(l, r)))
 	},
 
 	<RelativeCmpBranch>,
@@ -266,12 +266,12 @@ StrictEqExpr: Expr = {
 
 /// relative_cmp_expr -> math_expr [">" | ">=" | "<" | "<="] math_expr | math_expr
 RelativeCmpBranch: Expr = {
-	<lhs: MathExpr> <op: RelativeEqOp> <rhs: MathExpr> => {
-		Expr::Bin(BinExpr {
+	<l: @L> <lhs: MathExpr> <op: RelativeEqOp> <rhs: MathExpr> <r: @R> => {
+		Expr::Bin(AstNode::new(BinExpr {
 			op: op,
 			lhs: Box::new(lhs),
 			rhs: Box::new(rhs),
-		})
+		}, Span::new(l, r)))
 	},
 
 	<MathExpr>,
@@ -296,12 +296,12 @@ StrictEqOp: BinOp = {
 
 /// math_expr -> math_expr ["+" | "-"] factor | factor
 pub MathExpr: Expr = {
-	<lhs: MathExpr> <op: AddOp> <rhs: Factor> => {
-		Expr::Bin(BinExpr {
+	<l: @L> <lhs: MathExpr> <op: AddOp> <rhs: Factor> <r: @R> => {
+		Expr::Bin(AstNode::new(BinExpr {
 			op: op,
 			lhs: Box::new(lhs),
 			rhs: Box::new(rhs),
-		})
+		}, Span::new(l, r)))
 	},
 
 	Factor,
@@ -314,12 +314,12 @@ AddOp: BinOp = {
 
 /// factor -> factor ["*" | "/" | "%"] uni_expr | uni_expr
 Factor: Expr = {
-	<lhs: Factor> <op: FactorOp> <rhs: UniExpr> => {
-		Expr::Bin(BinExpr {
+	<l: @L> <lhs: Factor> <op: FactorOp> <rhs: UniExpr> <r: @R> => {
+		Expr::Bin(AstNode::new(BinExpr {
 			op: op,
 			lhs: Box::new(lhs),
 			rhs: Box::new(rhs),
-		})
+		}, Span::new(l, r)))
 	},
 
 	<UniExpr>
@@ -334,7 +334,7 @@ FactorOp: BinOp = {
 
 /// uni_expr -> ["-" | "!" | "&" | "*"] uni_expr | expr_leaf
 UniExpr: Expr = {
-	<op: UniOp> <u: UniExpr> => Expr::Uni(UniExpr { op: op, expr: Box::new(u) }),
+	<l: @L> <op: UniOp> <u: UniExpr> <r: @R> => Expr::Uni(AstNode::new(UniExpr { op: op, expr: Box::new(u) }, Span::new(l, r))),
 	<ExprLeaf>
 };
 
@@ -348,13 +348,13 @@ UniOp: UniOp = {
 /// expr_leaf -> "(" expr ")"| literal | fn_call | path | struct_init
 ExprLeaf: Expr = {
 	<ExprPath>,
-	<i: Indexing> => Expr::Indexing(i),
+	<l: @L> <i: Indexing> <r: @R> => Expr::Indexing(AstNode::new(i, Span::new(l, r))),
 
 	<Primary>,
 };
 
 ExprPath: Expr = {
-	<path: Path> => {
+	<l: @L> <path: Path> <r: @R> => {
 		let mut path = path;
 		if path.0.len() == 1 {
 			let segment = path.0.pop().unwrap();
@@ -365,25 +365,25 @@ ExprPath: Expr = {
 						array: Box::new(Expr::Binding(i)),
 						indexer: e
 					};
-					Expr::Indexing(i)
+					Expr::Indexing(AstNode::new(i, Span::new(l, r)))
 				}
 			}
 		} else {
-			Expr::FieldAccess(path)
+			Expr::FieldAccess(AstNode::new(path, Span::new(l, r)))
 		}
 	},
 
-	<p: ModulePath> => Expr::ModAccess(p),
+	<l: @L> <p: ModulePath> <r: @R> => Expr::ModAccess(AstNode::new(p, Span::new(l, r))),
 };
 
 Primary: Expr = {
-	"(" <e: Expr> ")" => e,
-	<l: Literal> => Expr::Literal(l),
-	<f: FnCall> => Expr::FnCall(f),
+	<l: @L> "(" <e: Expr> ")" <r: @R> => e,
+	<l: @L> <lit: Literal> <r: @R> => Expr::Literal(AstNode::new(lit, Span::new(l, r))),
+	<l: @L> <f: FnCall> <r: @R> => Expr::FnCall(AstNode::new(f, Span::new(l, r))),
 
-	<a: ArrayInit> => Expr::ArrayInit(a),
+	<l: @L> <a: ArrayInit> <r: @R> => Expr::ArrayInit(AstNode::new(a, Span::new(l, r))),
 
-	<struct_init: StructInit> => Expr::StructInit(struct_init),
+	<l: @L> <struct_init: StructInit> <r: @R> => Expr::StructInit(AstNode::new(struct_init, Span::new(l, r))),
 };
 
 Indexing: Indexing = {
