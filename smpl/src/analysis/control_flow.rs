@@ -396,8 +396,9 @@ impl CFG {
         let mut head = previous;
 
         append_node!(cfg, head, previous, Node::EnterScope);
-
-        let instructions = fn_def.body.0;
+    
+        let (body, _) = fn_def.body.to_data();
+        let instructions = body.0;
         let fn_graph = CFG::get_branch(universe, &mut cfg, instructions, None)?;
 
         // Append the function body.
@@ -448,7 +449,8 @@ impl CFG {
                         let mut previous_condition = None;
 
                         for branch in if_data.branches.into_iter() {
-                            let instructions = branch.block.0;
+                            let (block, _) = branch.block.to_data();
+                            let instructions = block.0;
                             let branch_graph =
                                 CFG::get_branch(universe, cfg, instructions, loop_data)?;
                             let condition_node = {
@@ -494,7 +496,7 @@ impl CFG {
                         if let Some(block) = if_data.default_block {
                             // Found default branch ("else")
                             // Connect branch via false edge
-
+                            let (block, _) = block.to_data();
                             let instructions = block.0;
                             let branch_graph =
                                 CFG::get_branch(universe, cfg, instructions, loop_data)?;
@@ -539,8 +541,8 @@ impl CFG {
                         cfg.graph.add_edge(loop_foot, loop_head, Edge::BackEdge);
 
                         append_node_index!(cfg, head, previous, loop_head);
-
-                        let instructions = while_data.block.0;
+                        let (block, _) = while_data.block.to_data();
+                        let instructions = block.0;
                         let loop_body = CFG::get_branch(
                             universe,
                             cfg,

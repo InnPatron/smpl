@@ -79,7 +79,7 @@ pub struct Function {
     pub name: AstNode<Ident>,
     pub params: Option<Vec<AstNode<FnParameter>>>,
     pub return_type: Option<AstNode<TypeAnnotation>>,
-    pub body: Block,
+    pub body: AstNode<Block>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -151,19 +151,19 @@ pub struct LocalVarDecl {
 #[derive(Clone, Debug, PartialEq)]
 pub struct If {
     pub branches: Vec<Branch>,
-    pub default_block: Option<Block>,
+    pub default_block: Option<AstNode<Block>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Branch {
     pub conditional: Expr,
-    pub block: Block,
+    pub block: AstNode<Block>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct While {
     pub conditional: Expr,
-    pub block: Block,
+    pub block: AstNode<Block>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

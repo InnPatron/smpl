@@ -157,8 +157,8 @@ pub Stmt: Stmt = {
 };
 
 /// block -> "{" [stmt]*  "}"
-Block: Block = {
-	"{" <s: Stmt*> "}" => Block(s)
+Block: AstNode<Block> = {
+	<l: @L> "{" <s: Stmt*> "}" <r: @R> => AstNode::new(Block(s), Span::new(l, r)),
 };
 
 /// expr_stmt -> if_stmt | while_stmt | local_var_decl | assignment
