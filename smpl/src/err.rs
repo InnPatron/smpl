@@ -1,4 +1,5 @@
 use analysis::{FnId, TypeId};
+use span::Span;
 use ast::*;
 
 #[derive(Clone, Debug)]
@@ -16,11 +17,11 @@ pub enum Err {
     MissingModName,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ControlFlowErr {
     MissingReturn,
-    BadBreak,
-    BadContinue,
+    BadBreak(Span),
+    BadContinue(Span),
 }
 
 impl From<ControlFlowErr> for Err {

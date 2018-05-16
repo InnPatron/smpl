@@ -583,7 +583,7 @@ impl CFG {
                             cfg.graph.add_edge(break_id, foot, Edge::Normal);
                         } else {
                             // Found a break statement not inside a loop.
-                            return Err(ControlFlowErr::BadBreak);
+                            return Err(ControlFlowErr::BadBreak(span));
                         }
                     }
 
@@ -596,7 +596,7 @@ impl CFG {
                             cfg.graph.add_edge(continue_id, loop_head, Edge::BackEdge);
                         } else {
                             // Found a continue statement not inside a loop.
-                            return Err(ControlFlowErr::BadContinue);
+                            return Err(ControlFlowErr::BadContinue(span));
                         }
                     }
 
