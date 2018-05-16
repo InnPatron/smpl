@@ -2,6 +2,8 @@ use std::cell::{RefCell, Cell};
 use std::collections::HashMap;
 use std::slice::Iter;
 
+use span::Span;
+
 pub use ast::BinOp;
 pub use ast::UniOp;
 pub use ast::Literal;
@@ -147,13 +149,14 @@ impl Expr {
         self.execution_order.iter()
     }
 
-    pub fn map_tmp(&mut self, universe: &Universe, val: Value) -> TmpId {
+    pub fn map_tmp(&mut self, universe: &Universe, val: Value, span: Span) -> TmpId {
         let tmp = Tmp {
             id: universe.new_tmp_id(),
             value: Typed {
                 data: val,
                 data_type: Cell::new(None),
-            }
+            },
+            span: span,
         };
         let id = tmp.id;
 
@@ -171,6 +174,7 @@ impl Expr {
 pub struct Tmp {
     id: TmpId,
     value: Typed<Value>,
+    span: Span,
 }
 
 impl Tmp {
@@ -180,6 +184,10 @@ impl Tmp {
 
     pub fn value(&self) -> &Typed<Value> {
         &self.value
+    }
+
+    pub fn span(&self) -> Span {
+        self.span
     }
 }
 
