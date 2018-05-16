@@ -6,6 +6,8 @@ use feature::*;
 use ast;
 use err::*;
 
+use span::Span;
+
 use super::metadata::{Metadata, FnLayout};
 
 
@@ -155,6 +157,7 @@ fn resolve_bin_op(
     op: &ast::BinOp,
     lhs: TypeId,
     rhs: TypeId,
+    span: Span,
 ) -> Result<TypeId, Err> {
     use ast::BinOp::*;
 
@@ -172,6 +175,7 @@ fn resolve_bin_op(
                     expected: vec![universe.int(), universe.float()],
                     lhs: lhs,
                     rhs: rhs,
+                    span: span,
                 }.into()),
             }
         }
@@ -183,6 +187,7 @@ fn resolve_bin_op(
                 expected: vec![universe.boolean()],
                 lhs: lhs,
                 rhs: rhs,
+                span: span,
             }.into()),
         },
 
@@ -190,7 +195,7 @@ fn resolve_bin_op(
             if *lh_type == *rh_type {
                 Ok(universe.boolean())
             } else {
-                Err(TypeErr::LhsRhsInEq(lhs, rhs).into())
+                Err(TypeErr::LhsRhsInEq(lhs, rhs, span).into())
             }
         }
     }
@@ -200,6 +205,7 @@ fn resolve_uni_op(
     universe: &Universe,
     op: &ast::UniOp,
     tmp_type_id: TypeId,
+    span: Span,
 ) -> Result<TypeId, Err> {
     use ast::UniOp::*;
 
@@ -212,6 +218,7 @@ fn resolve_uni_op(
                 op: op.clone(),
                 expected: vec![universe.int(), universe.float()],
                 expr: tmp_type_id,
+                span: span,
             }.into()),
         },
 
@@ -221,6 +228,7 @@ fn resolve_uni_op(
                 op: op.clone(),
                 expected: vec![universe.boolean()],
                 expr: tmp_type_id,
+                span: span,
             }.into()),
         },
 
@@ -233,6 +241,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
     fn resolve_field_access(
         &mut self,
         field_access: &FieldAccess,
+        span: Span
     ) -> Result<TypeId, Err> {
 
         let path = field_access.path();
@@ -258,7 +267,8 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                 SmplType::Int => (),
                 _ => {
                     return Err(TypeErr::InvalidIndex { 
-                        found: indexing_type_id
+                        found: indexing_type_id,
+                        span: e.span(),
                     }.into());
                 }
             }
@@ -269,7 +279,8 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                 }
                 _ => {
                     return Err(TypeErr::NotAnArray { 
-                        found: var_type_id 
+                        found: var_type_id,
+                        span: e.span()
                     }.into());
                 }
             }
@@ -289,6 +300,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                             let field_id = struct_type.field_id(name).ok_or(TypeErr::UnknownField {
                                 name: name.clone(),
                                 struct_type: current_type_id,
+                                span: span,
                             })?;
                             current_type_id = struct_type.field_type(field_id).unwrap();
 
@@ -301,6 +313,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                             let field_id = struct_type.field_id(name).ok_or(TypeErr::UnknownField {
                                 name: name.clone(),
                                 struct_type: current_type_id,
+                                span: span,
                             })?;
 
                             let field_type_id = struct_type.field_type(field_id).unwrap();
@@ -317,7 +330,8 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
 
                                 _ => {
                                     return Err(TypeErr::InvalidIndex { 
-                                        found: indexing_type_id
+                                        found: indexing_type_id,
+                                        span: indexing.span(),
                                     }.into());
                                 },
                             }
@@ -329,7 +343,8 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
 
                                 _ => {
                                     return Err(TypeErr::NotAnArray { 
-                                        found: field_type_id
+                                        found: field_type_id,
+                                        span: span,
                                     }.into());
                                 },
                             }
@@ -343,6 +358,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                         index: index,
                         invalid_type: current_type_id,
                         root_type: root_var_type_id,
+                        span: span,
                     }.into());
                 }
             }
@@ -388,6 +404,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                             return Err(TypeErr::NotAStruct {
                                 type_name: type_name.clone(),
                                 found: struct_type_id,
+                                span: tmp.span(),
                             }.into());
                         }
                     }
@@ -405,7 +422,8 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                         return Err(TypeErr::StructNotFullyInitialized {
                             type_name: type_name.clone(),
                             struct_type: struct_type_id,
-                            missing_fields: unknown_fields
+                            missing_fields: unknown_fields,
+                            span: tmp.span(),
                         }.into());
                     }
 
@@ -434,6 +452,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                             .map(|(ident, _)| ident.clone())
                                             .collect::<Vec<_>>()
                                     },
+                                    span: tmp.span(),
                                 }.into());
                             }
                             // Go threw initialization list and check expressions
@@ -450,6 +469,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                     return Err(TypeErr::UnexpectedType {
                                         found: tmp_type_id,
                                         expected: field_type_id,
+                                        span: tmp.span(),
                                     }.into());
                                 }
                             }
@@ -468,6 +488,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                             .map(|(ident, _)| ident.clone())
                                             .collect::<Vec<_>>()
                                     },
+                                    span: tmp.span(),
                                 }.into());
                             }
                         }
@@ -496,7 +517,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
 
                 Value::FieldAccess(ref field_access) => {
                     let accessed_field_type_id =
-                        self.resolve_field_access(field_access)?;
+                        self.resolve_field_access(field_access, tmp.span())?;
 
                     tmp_type = accessed_field_type_id;
                 }
@@ -508,13 +529,13 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                     lhs.set_type_id(lhs_type_id);
                     rhs.set_type_id(rhs_type_id);
 
-                    tmp_type = resolve_bin_op(self.universe, op, lhs_type_id, rhs_type_id)?;
+                    tmp_type = resolve_bin_op(self.universe, op, lhs_type_id, rhs_type_id, tmp.span())?;
                 }
 
                 Value::UniExpr(ref op, ref uni_e) => {
                     let tmp_type_id = expr.get_tmp(*uni_e.data()).value().type_id().unwrap();
 
-                    tmp_type = resolve_uni_op(self.universe, op, tmp_type_id)?;
+                    tmp_type = resolve_uni_op(self.universe, op, tmp_type_id, tmp.span())?;
                 }
 
                 Value::FnCall(ref fn_call) => {
@@ -580,6 +601,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                         fn_type: fn_type_id,
                                         found_args: arg_type_ids.len(),
                                         expected_param: fn_type.params.len(),
+                                        span: tmp.span(),
                                     }.into());
                                 }
 
@@ -596,6 +618,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                             index: index,
                                             arg: *arg,
                                             param: param.clone(),
+                                            span: tmp.span(),
                                         }.into());
                                     }
                                 }
@@ -607,6 +630,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                         fn_type: fn_type_id,
                                         found_args: 0,
                                         expected_param: fn_type.params.len(),
+                                        span: tmp.span(),
                                     }.into());
                                 }
                             }
@@ -631,12 +655,12 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                     let tmp_value = tmp.value();
                                     let tmp_value_type_id = tmp_value.type_id().unwrap();
                                     tmp_id.set_type_id(tmp_value_type_id);
-                                    tmp_value_type_id
+                                    (tmp_value_type_id, tmp.span())
                                 });
 
                             let mut expected_element_type_id = None;
 
-                            for (i, element_type_id) in element_type_ids.enumerate() {
+                            for (i, (element_type_id, span)) in element_type_ids.enumerate() {
                                 let current_element_type = self.universe.get_type(element_type_id);
 
                                 if expected_element_type_id.is_none() {
@@ -651,7 +675,8 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                     return Err(TypeErr::HeterogenousArray {
                                         expected: expected_element_type_id.unwrap(),
                                         found: element_type_id,
-                                        index: i
+                                        index: i,
+                                        span: span,
                                     }.into());
                                 }
                             }
@@ -699,7 +724,8 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
 
                             _ => {
                                 return Err(TypeErr::NotAnArray { 
-                                    found: tmp_type_id
+                                    found: tmp_type_id,
+                                    span: tmp.span(),
                                 }.into());
                             }
                         }
@@ -718,7 +744,8 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                             SmplType::Int => (),
                             _ => {
                                 return Err(TypeErr::InvalidIndex { 
-                                    found: tmp_type_id
+                                    found: tmp_type_id,
+                                    span: tmp.span(),
                                 }.into());
                             }
                         }
@@ -807,7 +834,7 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
         if var_type == expr_type {
             self.current_scope.insert_var(name, var_id, var_type_id);
         } else {
-            return Err(TypeErr::LhsRhsInEq(var_type_id, expr_type_id).into());
+            return Err(TypeErr::LhsRhsInEq(var_type_id, expr_type_id, var_decl.span()).into());
         }
         
         // Local variable types metadata
@@ -820,15 +847,17 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
         let assignee = assignment.assignee();
 
         let assignee_type_id =
-            self.resolve_field_access(assignee)?;
+            self.resolve_field_access(assignee, assignment.access_span())?;
 
         let expr_type_id = self.resolve_expr(assignment.value())?;
 
         let assignee_type = self.universe.get_type(assignee_type_id);
         let expr_type = self.universe.get_type(expr_type_id);
 
+        let assignment_span = Span::combine(assignment.access_span(), assignment.value().span());
+
         if assignee_type != expr_type {
-            return Err(TypeErr::LhsRhsInEq(assignee_type_id, expr_type_id).into());
+            return Err(TypeErr::LhsRhsInEq(assignee_type_id, expr_type_id, assignment_span).into());
         }
 
         Ok(())
@@ -849,6 +878,7 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
             return Err(TypeErr::InEqFnReturn {
                 expr: expr_type_id,
                 fn_return: self.fn_return_type_id,
+                return_span: span,
             }.into());
         }
 
@@ -862,6 +892,7 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
             return Err(TypeErr::UnexpectedType {
                 found: expr_type_id,
                 expected: self.universe.boolean(),
+                span: condition.span(),
             }.into());
         }
 
@@ -885,6 +916,7 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
             return Err(TypeErr::UnexpectedType {
                 found: expr_type_id,
                 expected: self.universe.boolean(),
+                span: condition.span(),
             }.into());
         }
 
