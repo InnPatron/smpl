@@ -5,7 +5,7 @@ use petgraph::visit::EdgeRef;
 use ast;
 use err::ControlFlowErr;
 
-
+use span::Span;
 
 use super::smpl_type::{FunctionType, SmplType};
 use super::expr_flow;
@@ -90,7 +90,7 @@ pub enum Node {
     EnterScope,
     ExitScope,
 
-    Return(Option<typed_ast::Expr>),
+    Return(Span, Option<typed_ast::Expr>),
     Break(LoopId),
     Continue(LoopId),
 }
@@ -180,7 +180,7 @@ impl CFG {
 
     pub fn after_return(&self, id: graph::NodeIndex) -> graph::NodeIndex {
         match *node_w!(self, id) {
-            Node::Return(_) => (),
+            Node::Return(..) => (),
             _ => panic!("Should only be given a Node::Return"),
         }
 
@@ -410,7 +410,8 @@ impl CFG {
 
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
         if *universe.get_type(fn_type.return_type) == SmplType::Unit {
-            append_node!(cfg, head, previous, Node::Return(None));
+            // TODO: Figure out how to get last line of function
+            append_node!(cfg, head, previous, Node::Return(Span::new(0, 0), None));
         }
 
         append_node!(cfg, head, previous, Node::ExitScope);
@@ -600,9 +601,9 @@ impl CFG {
                         }
                     }
 
-                    ExprStmt::Return(expr) => {
+                    ExprStmt::Return(span, expr) => {
                         let expr = expr.map(|expr| expr_flow::flatten(universe, expr));
-                        let ret = cfg.graph.add_node(Node::Return(expr));
+                        let ret = cfg.graph.add_node(Node::Return(span, expr));
                         append_node_index!(cfg, head, previous, ret);
                     }
 

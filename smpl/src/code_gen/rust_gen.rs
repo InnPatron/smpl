@@ -7,6 +7,8 @@ use petgraph::graph::NodeIndex;
 
 use feature::*;
 
+use span::Span;
+
 use ast::{Ident, BinOp, UniOp};
 
 use analysis::*;
@@ -765,7 +767,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn ret(&mut self, _id: NodeIndex, expr: Option<&Expr>) -> Result<(), ()> {
+    fn ret(&mut self, _id: NodeIndex, span: Span, expr: Option<&Expr>) -> Result<(), ()> {
         match expr {
             Some(ref expr) => {
                 let expr = self.emit_expr(expr);

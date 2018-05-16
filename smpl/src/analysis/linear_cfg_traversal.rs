@@ -2,6 +2,8 @@ use petgraph::graph::NodeIndex;
 use petgraph::Direction;
 use petgraph::visit::EdgeRef;
 
+use span::Span;
+
 use super::control_flow::*;
 use super::typed_ast::*;
 
@@ -17,7 +19,7 @@ pub trait Passenger<E> {
     fn local_var_decl(&mut self, id: NodeIndex, decl: &LocalVarDecl) -> Result<(), E>;
     fn assignment(&mut self, id: NodeIndex, assign: &Assignment) -> Result<(), E>;
     fn expr(&mut self, id: NodeIndex, expr: &Expr) -> Result<(), E>;
-    fn ret(&mut self, id: NodeIndex, expr: Option<&Expr>) -> Result<(), E>;
+    fn ret(&mut self, id: NodeIndex, span: Span, expr: Option<&Expr>) -> Result<(), E>;
 
     fn loop_condition(&mut self, id: NodeIndex, e: &Expr) -> Result<(), E>;
     fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
@@ -147,8 +149,8 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 Ok(Some(self.graph.next(current)))
             }
 
-            Node::Return(ref ret_expr) => {
-                self.passenger.ret(current, ret_expr.as_ref())?;
+            Node::Return(ref span, ref ret_expr) => {
+                self.passenger.ret(current, span.clone(), ret_expr.as_ref())?;
                 self.previous_is_loop_head = false;
                 Ok(Some(self.graph.after_return(current)))
             }

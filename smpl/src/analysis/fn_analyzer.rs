@@ -142,7 +142,7 @@ fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, E
     use super::control_flow::Node;
  
     match *cfg.node_weight(id) {
-        Node::Return(_) => Ok(None),
+        Node::Return(..) => Ok(None),
 
         Node::BranchMerge(_) => Ok(Some(cfg.before_branch_merge(id))),
 
@@ -867,7 +867,7 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
         self.resolve_expr(expr).map(|_| ())
     }
 
-    fn ret(&mut self, _id: NodeIndex, expr: Option<&Expr>) -> Result<(), Err> {
+    fn ret(&mut self, _id: NodeIndex, span: Span, expr: Option<&Expr>) -> Result<(), Err> {
         let expr_type_id = match expr {
             Some(ref expr) => self.resolve_expr(expr)?,
 

@@ -167,7 +167,7 @@ pub ExprStmt: ExprStmt = {
 	<while_stmt: WhileStmt> => ExprStmt::While(while_stmt),
 	<local_var_decl: LocalVarDecl> => ExprStmt::LocalVarDecl(local_var_decl),
 	<assignment: Assignment> => ExprStmt::Assignment(assignment),
-	<return_stmt: ReturnStmt> => ExprStmt::Return(return_stmt),
+	<l: @L> <return_stmt: ReturnStmt> <r: @R> => ExprStmt::Return(Span::new(l, r), return_stmt),
 	<l: @L> "continue;" <r: @R> => ExprStmt::Continue(Span::new(l, r)),
 	<l: @L> "break;" <r: @R> => ExprStmt::Break(Span::new(l, r)),
 };
