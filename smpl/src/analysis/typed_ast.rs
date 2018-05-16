@@ -130,6 +130,7 @@ impl LocalVarDecl {
 pub struct Expr {
     map: HashMap<TmpId, Tmp>,
     execution_order: Vec<TmpId>,
+    span: Option<Span>,
 }
 
 impl Expr {
@@ -138,6 +139,7 @@ impl Expr {
         Expr {
             map: HashMap::new(),
             execution_order: Vec::new(),
+            span: None,
         }
     }
 
@@ -147,6 +149,18 @@ impl Expr {
 
     pub fn execution_order(&self) -> Iter<TmpId> {
         self.execution_order.iter()
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        if self.span.is_some() {
+            panic!();
+        } else {
+            self.span = Some(span);
+        }
+    }
+
+    pub fn span(&self) -> Span {
+        self.span.clone().unwrap()
     }
 
     pub fn map_tmp(&mut self, universe: &Universe, val: Value, span: Span) -> TmpId {
