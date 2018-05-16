@@ -90,6 +90,7 @@ pub struct LocalVarDecl {
     var_init: self::Expr,
     type_id: Cell<Option<TypeId>>,
     var_id: VarId,
+    span: Span,
 }
 
 impl LocalVarDecl {
@@ -100,7 +101,12 @@ impl LocalVarDecl {
             var_init: expr_flow::flatten(universe, decl.var_init),
             type_id: Cell::new(None),
             var_id: universe.new_var_id(),
+            span: decl.span,
         }
+    }
+
+    pub fn span(&self) -> Span {
+        self.span
     }
 
     pub fn type_annotation(&self) -> &ast::TypeAnnotation {

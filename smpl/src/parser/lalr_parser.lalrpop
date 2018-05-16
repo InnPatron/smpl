@@ -179,11 +179,12 @@ ReturnStmt: Option<Expr> = {
 
 /// local_var_decl -> "let" ident ":" type_annotation  "=" expr ";"
 LocalVarDecl: LocalVarDecl = {
-	"let" <name: Ident> ":" <var_type: TypeAnnotation> "=" <e: Expr> ";" => {
+	<l: @L> "let" <name: Ident> ":" <var_type: TypeAnnotation> "=" <e: Expr> ";" <r: @R> => {
 		LocalVarDecl {
 			var_type: var_type,
 			var_name: name,
 			var_init: e,
+			span: Span::new(l, r),
 		}
 	},
 };
