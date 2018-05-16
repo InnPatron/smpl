@@ -190,11 +190,12 @@ LocalVarDecl: LocalVarDecl = {
 
 /// assignment -> path "=" expr ";"
 Assignment: Assignment = {
-	<name: Path> "=" <e: Expr> ";" => {
-		Assignment::new(
-			name,
-			e,
-		)
+	<l: @L> <name: Path> <r: @R> "=" <e: Expr> ";" => {
+		Assignment {
+			name: name,
+			span: Span::new(l, r),
+			value: e,
+		}
 	}
 };
 

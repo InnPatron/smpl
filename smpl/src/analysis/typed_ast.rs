@@ -57,6 +57,7 @@ impl<T> Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Assignment {
     field_access: FieldAccess,
+    access_span: Span,
     value: self::Expr,
 }
 
@@ -65,7 +66,12 @@ impl Assignment {
         Assignment {
             field_access: FieldAccess::new(universe, assignment.name),
             value: expr_flow::flatten(universe, assignment.value),
+            access_span: assignment.span,
         }
+    }
+
+    pub fn access_span(&self) -> Span {
+        self.access_span
     }
 
     pub fn assignee(&self) -> &FieldAccess {

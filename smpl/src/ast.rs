@@ -129,16 +129,8 @@ pub struct StructInit {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Assignment {
     pub name: Path,
+    pub span: Span,
     pub value: Expr,
-}
-
-impl Assignment {
-    pub fn new(name: Path, value: Expr) -> Assignment {
-        Assignment {
-            name: name,
-            value: value,
-        }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
