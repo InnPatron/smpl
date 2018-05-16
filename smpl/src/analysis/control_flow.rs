@@ -572,7 +572,7 @@ impl CFG {
                         previous = Some(loop_foot);
                     }
 
-                    ExprStmt::Break => {
+                    ExprStmt::Break(span) => {
                         if let Some((_, foot, loop_id)) = loop_data {
                             let break_id = cfg.graph.add_node(Node::Break(loop_id));
                             append_node_index!(cfg, head, previous, break_id);
@@ -585,7 +585,7 @@ impl CFG {
                         }
                     }
 
-                    ExprStmt::Continue => {
+                    ExprStmt::Continue(span) => {
                         if let Some((loop_head, _, loop_id)) = loop_data {
                             let continue_id = cfg.graph.add_node(Node::Continue(loop_id));
                             append_node_index!(cfg, head, previous, continue_id);

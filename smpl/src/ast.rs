@@ -116,8 +116,8 @@ pub enum ExprStmt {
     LocalVarDecl(LocalVarDecl),
     Assignment(Assignment),
     Return(Option<Expr>),
-    Break,
-    Continue,
+    Break(Span),
+    Continue(Span),
 }
 
 #[derive(Clone, Debug, PartialEq)]

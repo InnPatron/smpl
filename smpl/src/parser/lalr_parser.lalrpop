@@ -168,8 +168,8 @@ pub ExprStmt: ExprStmt = {
 	<local_var_decl: LocalVarDecl> => ExprStmt::LocalVarDecl(local_var_decl),
 	<assignment: Assignment> => ExprStmt::Assignment(assignment),
 	<return_stmt: ReturnStmt> => ExprStmt::Return(return_stmt),
-	"continue;" => ExprStmt::Continue,
-	"break;" => ExprStmt::Break,
+	<l: @L> "continue;" <r: @R> => ExprStmt::Continue(Span::new(l, r)),
+	<l: @L> "break;" <r: @R> => ExprStmt::Break(Span::new(l, r)),
 };
 
 /// return -> "return" expr ";"
