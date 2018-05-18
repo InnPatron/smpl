@@ -83,10 +83,10 @@ init NAME {
 
         // Check init_1
         {
-            let expected = Expr::StructInit(StructInit {
+            let expected = Expr::StructInit(dummy_node!(StructInit {
                 struct_name: type_path!("NAME"),
                 field_init: None,
-            });
+            }));
 
             assert_eq!(init_1, expected);
         }
@@ -98,11 +98,11 @@ init NAME {
                                         int!(2 => BoxExpr)) => BoxExpr);
             let field2_init = boolean!(true => BoxExpr);
 
-            let expected = Expr::StructInit(StructInit {
+            let expected = Expr::StructInit(dummy_node!(StructInit {
                 struct_name: type_path!("NAME"),
-                field_init: Some(vec![(ident!("field1"), field_init), 
-                                      (ident!("field2"), field2_init)]),
-            });
+                field_init: Some(vec![(dummy_node!(ident!("field1")), field_init), 
+                                      (dummy_node!(ident!("field2")), field2_init)]),
+            }));
 
             assert_eq!(init_2, expected);
         }
@@ -118,6 +118,7 @@ init NAME {
         let op;
         match expr {
             Expr::Bin(bin_expr) => {
+                let (bin_expr, _) = bin_expr.to_data();
                 op = bin_expr.op;
                 lhs = bin_expr.lhs;
                 rhs = bin_expr.rhs;
@@ -134,6 +135,7 @@ init NAME {
             let lower_op;
             match *lhs {
                 Expr::Bin(bin_expr) => {
+                    let (bin_expr, _) = bin_expr.to_data();
                     lower_lhs = bin_expr.lhs;
                     lower_rhs = bin_expr.rhs;
                     lower_op = bin_expr.op;
@@ -148,9 +150,10 @@ init NAME {
             {
                 match *lower_lhs {
                     Expr::Bin(bin_expr) => {
+                        let (bin_expr, _) = bin_expr.to_data();
                         assert_eq!(bin_expr.op, BinOp::InEq);
-                        assert_eq!(*bin_expr.lhs, Expr::Literal(Literal::Int(5)));
-                        assert_eq!(*bin_expr.rhs, Expr::Literal(Literal::Int(3)));
+                        assert_eq!(*bin_expr.lhs, int!(5 => Expr));
+                        assert_eq!(*bin_expr.rhs, int!(3 => Expr));
                     }
 
                     e @ _ => panic!("Expected BinExpr. Found {:?}", e),
@@ -161,10 +164,11 @@ init NAME {
             {
                 match *lower_rhs {
                     Expr::Bin(bin_expr) => {
+                        let (bin_expr, _) = bin_expr.to_data();
                         assert_eq!(bin_expr.op, BinOp::Eq);
                         assert_eq!(*bin_expr.lhs,
-                                   Expr::Literal(Literal::String(AsciiString::from_str("something").unwrap())));
-                        assert_eq!(*bin_expr.rhs, Expr::Literal(Literal::Bool(false)));
+                                   string!("something" => Expr));
+                        assert_eq!(*bin_expr.rhs, boolean!(false => Expr));
                     }
 
                     e @ _ => panic!("Expected BinExpr. Found {:?}", e),
@@ -176,6 +180,7 @@ init NAME {
         {
             match *rhs {
                 Expr::Literal(lit) => {
+                    let (lit, _) = lit.to_data();
                     assert_eq!(lit, Literal::Bool(true));
                 },
 
@@ -238,7 +243,7 @@ init NAME {
         let stmt = parse_ExprStmt(input).unwrap();
         if let ExprStmt::LocalVarDecl(ref decl) = stmt {
             assert_eq!(*decl.var_type.data(), TypeAnnotation::Path(type_path!("int")));
-            assert_eq!(decl.var_name, ident!("a"));
+            assert_eq!(decl.var_name, dummy_node!(ident!("a")));
         }
     }
 
@@ -247,12 +252,12 @@ init NAME {
         let input = "fn test_fn(arg: i32, test: float, next: String) { }";
         let func = parse_FnDecl(input).unwrap();
         let func = func.data().clone();
-        assert_eq!(func.name, ident!("test_fn"));
-        assert_eq!(func.body, Block(Vec::new()));
+        assert_eq!(func.name, dummy_node!(ident!("test_fn")));
+        assert_eq!(func.body, dummy_node!(Block(Vec::new())));
 
-        let expected = vec![(ident!("arg"), type_path!("i32")),
-                            (ident!("test"), type_path!("float")),
-                            (ident!("next"), type_path!("String"))];
+        let expected = vec![(dummy_node!(ident!("arg")), type_path!("i32")),
+                            (dummy_node!(ident!("test")), type_path!("float")),
+                            (dummy_node!(ident!("next")), type_path!("String"))];
         for (param, expected) in func.params.unwrap().iter().zip(expected.iter()) {
             assert_eq!(param.data().name, expected.0);
             assert_eq!(*param.data().param_type.data(), TypeAnnotation::Path(expected.1.clone()));
@@ -277,12 +282,12 @@ struct TestStruct {
 
         let _struct = _struct.data().clone();
         let _struct2 = _struct2.data().clone();
-        assert_eq!(_struct.name, ident!("TestStruct"));
+        assert_eq!(_struct.name, dummy_node!(ident!("TestStruct")));
         let struct_field_0 = _struct.clone().body.0.map(|v| v.get(0).unwrap().clone()).unwrap();
         let struct_field_1 = _struct2.clone().body.0.map(|v| v.get(1).unwrap().clone()).unwrap();
 
-        assert_eq!(struct_field_0.name, ident!("field1"));
-        assert_eq!(struct_field_1.name, ident!("field2"));
+        assert_eq!(struct_field_0.name, dummy_node!(ident!("field1")));
+        assert_eq!(struct_field_1.name, dummy_node!(ident!("field2")));
 
         assert_eq!(*struct_field_0.field_type.data(), TypeAnnotation::Path(type_path!("Type1")));
         assert_eq!(*struct_field_1.field_type.data(), TypeAnnotation::Path(type_path!("Type2")));
