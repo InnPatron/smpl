@@ -714,7 +714,7 @@ let b: int = 3;
             let ret = var_decl_2_neighbors.next().unwrap();
             let mut ret_neighbors = neighbors!(cfg, ret);
             match *node_w!(cfg, ret) {
-                Node::Return(_) => (),
+                Node::Return(..) => (),
                 ref n @ _ => panic!("Expected to find Node::Return. Found {:?}", n),
             }
 
@@ -859,7 +859,7 @@ if (test) {
             let return_n = cfg.graph.neighbors(merge).next().unwrap();
             let mut return_neighbors = neighbors!(cfg, return_n);
             match *node_w!(cfg, return_n) {
-                Node::Return(_) => (),
+                Node::Return(..) => (),
                 ref n @ _ => panic!("Expected to find Node::Return. Found {:?}", n),
             }
 
@@ -1031,7 +1031,7 @@ if (test) {
             let mut implicit_return_neighbors = neighbors!(cfg, implicit_return);
             assert_eq!(implicit_return_neighbors.clone().count(), 1);
             match *node_w!(cfg, implicit_return) {
-                Node::Return(_) => (),
+                Node::Return(..) => (),
                 ref n @ _ => println!("Expected return node. Found {:?}", n),
             }
 
@@ -1144,7 +1144,7 @@ if (test) {
         let mut return_neighbors = neighbors!(cfg, implicit_return);
         assert_eq!(return_neighbors.clone().count(), 1);
         match *node_w!(cfg, implicit_return) {
-            Node::Return(_) => (),
+            Node::Return(..) => (),
             ref n @ _ => panic!("Expected return node. Found {:?}", n),
         }
 
