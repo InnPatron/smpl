@@ -7,8 +7,7 @@ macro_rules! boolean {
 
     ($val: expr => Expr) => {{
         use ast::Expr;
-        use span::Span;
-        Expr::Literal(AstNode::new(boolean!($val), Span::new(0, 0)))
+        Expr::Literal(boolean!($val))
     }};
 
     ($val: expr => BoxExpr) => {{
@@ -25,8 +24,7 @@ macro_rules! int {
 
     ($int: expr => Expr) => {{
         use ast::Expr;
-        use span::Span;
-        Expr::Literal(AstNode::new(int!($int), Span::new(0, 0)))
+        Expr::Literal(int!($int))
     }};
 
     ($int: expr => BoxExpr) => {{
@@ -45,8 +43,7 @@ macro_rules! ident {
 
     ($ident: expr => Expr) => {{
         use ast::Expr;
-        use span::Span;
-        Expr::Ident(AstNode::new(ident!($ident), Span::new(0, 0)))
+        Expr::Ident(ident!($ident))
     }};
 
     ($ident: expr => BoxExpr) => {{
@@ -57,10 +54,9 @@ macro_rules! ident {
 #[allow(unused_macros)]
 macro_rules! path {
     ($($segment: expr),*) => {{
-        use span::Span;
         use ast::PathSegment as ASTPathSegment;
         let mut v = Vec::new();
-        $(v.push(ASTPathSegment::Ident(AstNode::new(ident!($segment), Span::new(0, 0))));)*;
+        $(v.push(ASTPathSegment::Ident(ident!($segment)));)*;
         Path(v)
     }};
 }
@@ -68,9 +64,8 @@ macro_rules! path {
 #[allow(unused_macros)]
 macro_rules! type_path {
     ($($segment: expr),*) => {{
-        use span::Span;
         let mut v = Vec::new();
-        $(v.push(AstNode::new(ident!($segment), Span::new(0, 0)));)*;
+        $(v.push(ident!($segment));)*;
         ModulePath(v)
     }};
 }
@@ -98,8 +93,7 @@ macro_rules! bin_expr {
 
     (($lhs: expr, $op: expr, $rhs: expr) => Expr) => {{
         use ast::Expr;
-        use span::Span;
-        Expr::Bin(AstNode::new(bin_expr!($lhs, $op, $rhs), Span::new(0, 0)))
+        Expr::Bin(bin_expr!($lhs, $op, $rhs))
     }};
 
     (($lhs: expr, $op: expr, $rhs: expr) => BoxExpr) => {{
