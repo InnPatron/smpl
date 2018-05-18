@@ -80,11 +80,11 @@ impl Universe {
 
     pub fn std() -> Universe {
 
-        let unit = (TypeId(0), type_path!("Unit"), SmplType::Unit);
-        let int = (TypeId(1), type_path!("i32"), SmplType::Int);
-        let float = (TypeId(2), type_path!("f32"), SmplType::Float);
-        let string = (TypeId(3), type_path!("String"), SmplType::String);
-        let boolean = (TypeId(4), type_path!("bool"), SmplType::Bool);
+        let unit = (TypeId(0), internal_module_path!("Unit"), SmplType::Unit);
+        let int = (TypeId(1), internal_module_path!("i32"), SmplType::Int);
+        let float = (TypeId(2), internal_module_path!("f32"), SmplType::Float);
+        let string = (TypeId(3), internal_module_path!("String"), SmplType::String);
+        let boolean = (TypeId(4), internal_module_path!("bool"), SmplType::Bool);
 
         let type_map = vec![
             unit.clone(),

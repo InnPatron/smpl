@@ -76,6 +76,16 @@ macro_rules! type_path {
 }
 
 #[allow(unused_macros)]
+macro_rules! internal_module_path {
+    ($($segment: expr),*) => {{
+        use span::Span;
+        let mut v = Vec::new();
+        $(v.push(ident!($segment));)*;
+        ModulePath(v)
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! bin_expr {
     ($lhs: expr, $op: expr, $rhs: expr) => {{
         use ast::BinExpr;
