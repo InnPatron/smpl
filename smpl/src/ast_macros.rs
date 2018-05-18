@@ -24,6 +24,24 @@ macro_rules! boolean {
 }
 
 #[allow(unused_macros)]
+macro_rules! string {
+    ($val: expr) => {{
+        use ast::Literal;
+        use ascii::AsciiString;
+        Literal::String(AsciiString::from_str($val).unwrap())
+    }};
+
+    ($val: expr => Expr) => {{
+        use ast::Expr;
+        Expr::Literal(dummy_node!(string!($val)))
+    }};
+
+    ($val: expr => BoxExpr) => {{
+        Box::new(string!($val => Expr))
+    }}
+}
+
+#[allow(unused_macros)]
 macro_rules! int {
     ($int: expr) => {{
         use ast::Literal;
