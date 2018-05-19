@@ -75,24 +75,24 @@ pub enum Node {
     Start,
     End,
 
-    Expr(typed_ast::Expr),
+    Expr(ExprData),
 
-    BranchSplit(BranchingId),
-    BranchMerge(BranchingId),
+    BranchSplit(BranchingData),
+    BranchMerge(BranchingData),
 
-    Assignment(typed_ast::Assignment),
-    LocalVarDecl(typed_ast::LocalVarDecl),
-    Condition(typed_ast::Expr),
+    Assignment(AssignmentData),
+    LocalVarDecl(LocalVarDeclData),
+    Condition(ExprData),
 
-    LoopHead(LoopId),
-    LoopFoot(LoopId),
+    LoopHead(LoopData),
+    LoopFoot(LoopData),
 
     EnterScope,
     ExitScope,
 
-    Return(Span, Option<typed_ast::Expr>),
-    Break(LoopId),
-    Continue(LoopId),
+    Return(ReturnData),
+    Break(LoopData),
+    Continue(LoopData),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -101,6 +101,42 @@ pub enum Edge {
     True,
     False,
     BackEdge,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExprData {
+    pub expr: typed_ast::Expr,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BranchingData {
+    pub branch_id: BranchingId,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AssignmentData {
+    pub assignment: typed_ast::Assignment,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LocalVarDeclData {
+    pub decl: typed_ast::LocalVarDecl,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LoopData {
+    pub loop_id: LoopId,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReturnData {
+    pub expr: Option<typed_ast::Expr>,
+    pub span: Span,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -411,7 +447,10 @@ impl CFG {
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
         if *universe.get_type(fn_type.return_type) == SmplType::Unit {
             // TODO: Figure out how to get last line of function
-            append_node!(cfg, head, previous, Node::Return(Span::new(0, 0), None));
+            append_node!(cfg, head, previous, Node::Return(ReturnData {
+                expr: None,
+                span: Span::new(0, 0),
+            }));
         }
 
         append_node!(cfg, head, previous, Node::ExitScope);
@@ -442,10 +481,16 @@ impl CFG {
                     // All if statements begin and and with Node::BranchSplit and Node::BranchMerge
                     ExprStmt::If(if_data) => {
                         let id = universe.new_branching_id();
-                        append_node!(cfg, head, previous, Node::BranchSplit(id), Edge::Normal);
+                        append_node!(cfg, head, previous, Node::BranchSplit(BranchingData {
+                            branch_id: id,
+                            span: unimplemented!(),
+                        }), Edge::Normal);
 
                         // All branches come back together at a Node::BranchMerge
-                        let merge_node = cfg.graph.add_node(Node::BranchMerge(id));
+                        let merge_node = cfg.graph.add_node(Node::BranchMerge(BranchingData {
+                            branch_id: id,
+                            span: unimplemented!(),
+                        }));
 
                         let mut previous_condition = None;
 
@@ -456,7 +501,10 @@ impl CFG {
                                 CFG::get_branch(universe, cfg, instructions, loop_data)?;
                             let condition_node = {
                                 let expr = expr_flow::flatten(universe, branch.conditional);
-                                cfg.graph.add_node(Node::Condition(expr))
+                                cfg.graph.add_node(Node::Condition(ExprData {
+                                    expr: expr,
+                                     span: unimplemented!(),
+                                }))
                             };
 
                             // Check if there was a previous condition / branch
@@ -536,8 +584,14 @@ impl CFG {
                     // All loops being and end with Node::LoopHead and Node::LoopFoot
                     ExprStmt::While(while_data) => {
                         let loop_id = universe.new_loop_id();
-                        let loop_head = cfg.graph.add_node(Node::LoopHead(loop_id));
-                        let loop_foot = cfg.graph.add_node(Node::LoopFoot(loop_id));
+                        let loop_head = cfg.graph.add_node(Node::LoopHead(LoopData {
+                            loop_id: loop_id,
+                            span: unimplemented!(),
+                        }));
+                        let loop_foot = cfg.graph.add_node(Node::LoopFoot(LoopData {
+                            loop_id: loop_id,
+                            span: unimplemented!(),
+                        }));
 
                         cfg.graph.add_edge(loop_foot, loop_head, Edge::BackEdge);
 
@@ -552,7 +606,10 @@ impl CFG {
                         )?;
                         let condition = {
                             let expr = expr_flow::flatten(universe, while_data.conditional);
-                            cfg.graph.add_node(Node::Condition(expr))
+                            cfg.graph.add_node(Node::Condition(ExprData {
+                                expr: expr,
+                                span: unimplemented!(),
+                            }))
                         };
 
                         append_node_index!(cfg, head, previous, condition);
@@ -577,7 +634,10 @@ impl CFG {
 
                     ExprStmt::Break(span) => {
                         if let Some((_, foot, loop_id)) = loop_data {
-                            let break_id = cfg.graph.add_node(Node::Break(loop_id));
+                            let break_id = cfg.graph.add_node(Node::Break(LoopData {
+                                loop_id: loop_id,
+                                span: span,
+                            }));
                             append_node_index!(cfg, head, previous, break_id);
 
                             // Add an edge to the foot of the loop.
@@ -590,7 +650,10 @@ impl CFG {
 
                     ExprStmt::Continue(span) => {
                         if let Some((loop_head, _, loop_id)) = loop_data {
-                            let continue_id = cfg.graph.add_node(Node::Continue(loop_id));
+                            let continue_id = cfg.graph.add_node(Node::Continue(LoopData {
+                                loop_id: loop_id,
+                                span: span,
+                            }));
                             append_node_index!(cfg, head, previous, continue_id);
 
                             // Add a backedge to the head of the loop.
@@ -603,34 +666,49 @@ impl CFG {
 
                     ExprStmt::Return(span, expr) => {
                         let expr = expr.map(|expr| expr_flow::flatten(universe, expr));
-                        let ret = cfg.graph.add_node(Node::Return(span, expr));
+                        let ret = cfg.graph.add_node(Node::Return(ReturnData {
+                            expr: expr,
+                            span: span,
+                        }));
                         append_node_index!(cfg, head, previous, ret);
                     }
 
                     ExprStmt::LocalVarDecl(decl) => {
+                        let decl = typed_ast::LocalVarDecl::new(universe, decl);
                         append_node!(
                             cfg,
                             head,
                             previous,
-                            Node::LocalVarDecl(typed_ast::LocalVarDecl::new(universe, decl))
+                            Node::LocalVarDecl(LocalVarDeclData {
+                                decl: decl,
+                                span: unimplemented!(),
+                            })
                         );
                     }
 
                     ExprStmt::Assignment(assignment) => {
+                        let assignment = typed_ast::Assignment::new(universe, assignment);
                         append_node!(
                             cfg,
                             head,
                             previous,
-                            Node::Assignment(typed_ast::Assignment::new(universe, assignment))
+                            Node::Assignment(AssignmentData {
+                                assignment: assignment,
+                                span: unimplemented!(),
+                            })
                         );
                     }
                 }
             } else if let Stmt::Expr(expr) = stmt {
+                let expr = expr_flow::flatten(universe, expr);
                 append_node!(
                     cfg,
                     head,
                     previous,
-                    Node::Expr(expr_flow::flatten(universe, expr))
+                    Node::Expr(ExprData {
+                        expr: expr,
+                        span: unimplemented!(),
+                    })
                 );
             }
         }
