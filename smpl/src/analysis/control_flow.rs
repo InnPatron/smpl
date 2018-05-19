@@ -610,7 +610,7 @@ impl CFG {
                     }
 
                     ExprStmt::LocalVarDecl(decl) => {
-                        let decl = typed_ast::LocalVarDecl::new(universe, decl);
+                        let decl = typed_ast::LocalVarDecl::new(universe, decl, expr_stmt_span);
                         append_node!(
                             cfg,
                             head,

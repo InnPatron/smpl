@@ -95,14 +95,14 @@ pub struct LocalVarDecl {
 }
 
 impl LocalVarDecl {
-    pub fn new(universe: &Universe, decl: ast::LocalVarDecl) -> LocalVarDecl {
+    pub fn new(universe: &Universe, decl: ast::LocalVarDecl, stmt_span: Span) -> LocalVarDecl {
         LocalVarDecl {
             var_type: decl.var_type,
             var_name: decl.var_name,
             var_init: expr_flow::flatten(universe, decl.var_init),
             type_id: Cell::new(None),
             var_id: universe.new_var_id(),
-            span: decl.span,
+            span: stmt_span,
         }
     }
 
