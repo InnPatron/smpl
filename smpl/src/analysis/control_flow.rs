@@ -5,12 +5,14 @@ use petgraph::visit::EdgeRef;
 use ast;
 use err::ControlFlowErr;
 
-
+use span::Span;
 
 use super::smpl_type::{FunctionType, SmplType};
 use super::expr_flow;
 use super::typed_ast;
 use super::semantic_data::{BranchingId, LoopId, Universe};
+
+use super::control_data::*;
 
 macro_rules! node_w {
     ($CFG: expr, $node: expr) => {
@@ -63,50 +65,18 @@ macro_rules! append_node_index {
     };
 }
 
-#[derive(Clone, Debug)]
-pub struct CFG {
-    graph: graph::Graph<Node, Edge>,
-    start: graph::NodeIndex,
-    end: graph::NodeIndex,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Node {
-    Start,
-    End,
-
-    Expr(typed_ast::Expr),
-
-    BranchSplit(BranchingId),
-    BranchMerge(BranchingId),
-
-    Assignment(typed_ast::Assignment),
-    LocalVarDecl(typed_ast::LocalVarDecl),
-    Condition(typed_ast::Expr),
-
-    LoopHead(LoopId),
-    LoopFoot(LoopId),
-
-    EnterScope,
-    ExitScope,
-
-    Return(Option<typed_ast::Expr>),
-    Break(LoopId),
-    Continue(LoopId),
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Edge {
-    Normal,
-    True,
-    False,
-    BackEdge,
-}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct BranchData {
     head: Option<graph::NodeIndex>,
     foot: Option<graph::NodeIndex>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CFG {
+    graph: graph::Graph<Node, Edge>,
+    start: graph::NodeIndex,
+    end: graph::NodeIndex,
 }
 
 impl CFG {
@@ -129,7 +99,7 @@ impl CFG {
     pub fn after_loop_foot(&self, id: graph::NodeIndex) -> graph::NodeIndex {
         let loop_id;
         match *node_w!(self, id) {
-            Node::LoopFoot(id) => loop_id = id,
+            Node::LoopFoot(ref data) => loop_id = data.loop_id,
             _ => panic!("Should only be given a Node::LoopFoot"),
         }
 
@@ -142,8 +112,8 @@ impl CFG {
 
         for n in neighbors {
             match *node_w!(self, n) {
-                Node::LoopHead(id) => {
-                    if loop_id != id {
+                Node::LoopHead(ref data) => {
+                    if loop_id != data.loop_id {
                         return n;
                     }
                 }
@@ -180,7 +150,7 @@ impl CFG {
 
     pub fn after_return(&self, id: graph::NodeIndex) -> graph::NodeIndex {
         match *node_w!(self, id) {
-            Node::Return(_) => (),
+            Node::Return(..) => (),
             _ => panic!("Should only be given a Node::Return"),
         }
 
@@ -321,12 +291,12 @@ impl CFG {
 
     pub fn before_loop_foot(&self, id: graph::NodeIndex) -> graph::NodeIndex {
         match *self.node_weight(id) {
-            Node::LoopFoot(loop_id) => {
+            Node::LoopFoot(ref loop_data) => {
                 let mut found_loop_break = false;
                 for n in self.neighbors_in(id) {
                     match *self.node_weight(n) {
-                        Node::Break(break_id) => {
-                            if break_id != loop_id {
+                        Node::Break(ref break_data) => {
+                            if break_data.loop_id != loop_data.loop_id {
                                 return n;
                             } else if found_loop_break {
                                 return n;
@@ -347,11 +317,11 @@ impl CFG {
 
     pub fn before_loop_head(&self, id: graph::NodeIndex) -> graph::NodeIndex {
         match *self.node_weight(id) {
-            Node::LoopHead(loop_id) => {
+            Node::LoopHead(ref loop_data) => {
                 for n in self.neighbors_in(id) {
                     match *self.node_weight(n) {
-                        Node::Continue(cont_id) => {
-                            if cont_id != loop_id {
+                        Node::Continue(ref cont_data) => {
+                            if cont_data.loop_id != loop_data.loop_id {
                                 return n;
                             }
                         }
@@ -396,8 +366,9 @@ impl CFG {
         let mut head = previous;
 
         append_node!(cfg, head, previous, Node::EnterScope);
-
-        let instructions = fn_def.body.0;
+    
+        let (body, _) = fn_def.body.to_data();
+        let instructions = body.0;
         let fn_graph = CFG::get_branch(universe, &mut cfg, instructions, None)?;
 
         // Append the function body.
@@ -409,7 +380,11 @@ impl CFG {
 
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
         if *universe.get_type(fn_type.return_type) == SmplType::Unit {
-            append_node!(cfg, head, previous, Node::Return(None));
+            // TODO: Figure out how to get last line of function
+            append_node!(cfg, head, previous, Node::Return(ReturnData {
+                expr: None,
+                span: Span::new(0, 0),
+            }));
         }
 
         append_node!(cfg, head, previous, Node::ExitScope);
@@ -436,24 +411,34 @@ impl CFG {
         // Go through all the instructions
         for stmt in instructions.into_iter() {
             if let Stmt::ExprStmt(expr_stmt) = stmt {
+                let (expr_stmt, expr_stmt_span) = expr_stmt.to_data();
                 match expr_stmt {
                     // All if statements begin and and with Node::BranchSplit and Node::BranchMerge
                     ExprStmt::If(if_data) => {
                         let id = universe.new_branching_id();
-                        append_node!(cfg, head, previous, Node::BranchSplit(id), Edge::Normal);
+                        append_node!(cfg, head, previous, Node::BranchSplit(BranchingData {
+                            branch_id: id,
+                        }), Edge::Normal);
 
                         // All branches come back together at a Node::BranchMerge
-                        let merge_node = cfg.graph.add_node(Node::BranchMerge(id));
+                        let merge_node = cfg.graph.add_node(Node::BranchMerge(BranchingData {
+                            branch_id: id,
+                        }));
 
                         let mut previous_condition = None;
 
                         for branch in if_data.branches.into_iter() {
-                            let instructions = branch.block.0;
+                            let (block, _) = branch.block.to_data();
+                            let instructions = block.0;
                             let branch_graph =
                                 CFG::get_branch(universe, cfg, instructions, loop_data)?;
                             let condition_node = {
-                                let expr = expr_flow::flatten(universe, branch.conditional);
-                                cfg.graph.add_node(Node::Condition(expr))
+                                let (conditional, con_span) = branch.conditional.to_data();
+                                let expr = expr_flow::flatten(universe, conditional);
+                                cfg.graph.add_node(Node::Condition(ExprData {
+                                    expr: expr,
+                                     span: con_span,
+                                }))
                             };
 
                             // Check if there was a previous condition / branch
@@ -494,7 +479,7 @@ impl CFG {
                         if let Some(block) = if_data.default_block {
                             // Found default branch ("else")
                             // Connect branch via false edge
-
+                            let (block, _) = block.to_data();
                             let instructions = block.0;
                             let branch_graph =
                                 CFG::get_branch(universe, cfg, instructions, loop_data)?;
@@ -532,15 +517,22 @@ impl CFG {
 
                     // All loops being and end with Node::LoopHead and Node::LoopFoot
                     ExprStmt::While(while_data) => {
+                        let (block, _) = while_data.block.to_data();
+
                         let loop_id = universe.new_loop_id();
-                        let loop_head = cfg.graph.add_node(Node::LoopHead(loop_id));
-                        let loop_foot = cfg.graph.add_node(Node::LoopFoot(loop_id));
+                        let loop_head = cfg.graph.add_node(Node::LoopHead(LoopData {
+                            loop_id: loop_id,
+                            span: block.1,
+                        }));
+                        let loop_foot = cfg.graph.add_node(Node::LoopFoot(LoopData {
+                            loop_id: loop_id,
+                            span: block.2,
+                        }));
 
                         cfg.graph.add_edge(loop_foot, loop_head, Edge::BackEdge);
 
                         append_node_index!(cfg, head, previous, loop_head);
-
-                        let instructions = while_data.block.0;
+                        let instructions = block.0;
                         let loop_body = CFG::get_branch(
                             universe,
                             cfg,
@@ -548,8 +540,12 @@ impl CFG {
                             Some((loop_head, loop_foot, loop_id)),
                         )?;
                         let condition = {
-                            let expr = expr_flow::flatten(universe, while_data.conditional);
-                            cfg.graph.add_node(Node::Condition(expr))
+                            let (conditional, con_span) = while_data.conditional.to_data();
+                            let expr = expr_flow::flatten(universe, conditional);
+                            cfg.graph.add_node(Node::Condition(ExprData {
+                                expr: expr,
+                                span: con_span,
+                            }))
                         };
 
                         append_node_index!(cfg, head, previous, condition);
@@ -572,62 +568,84 @@ impl CFG {
                         previous = Some(loop_foot);
                     }
 
-                    ExprStmt::Break => {
+                    ExprStmt::Break(span) => {
                         if let Some((_, foot, loop_id)) = loop_data {
-                            let break_id = cfg.graph.add_node(Node::Break(loop_id));
+                            let break_id = cfg.graph.add_node(Node::Break(LoopData {
+                                loop_id: loop_id,
+                                span: span,
+                            }));
                             append_node_index!(cfg, head, previous, break_id);
 
                             // Add an edge to the foot of the loop.
                             cfg.graph.add_edge(break_id, foot, Edge::Normal);
                         } else {
                             // Found a break statement not inside a loop.
-                            return Err(ControlFlowErr::BadBreak);
+                            return Err(ControlFlowErr::BadBreak(span));
                         }
                     }
 
-                    ExprStmt::Continue => {
+                    ExprStmt::Continue(span) => {
                         if let Some((loop_head, _, loop_id)) = loop_data {
-                            let continue_id = cfg.graph.add_node(Node::Continue(loop_id));
+                            let continue_id = cfg.graph.add_node(Node::Continue(LoopData {
+                                loop_id: loop_id,
+                                span: span,
+                            }));
                             append_node_index!(cfg, head, previous, continue_id);
 
                             // Add a backedge to the head of the loop.
                             cfg.graph.add_edge(continue_id, loop_head, Edge::BackEdge);
                         } else {
                             // Found a continue statement not inside a loop.
-                            return Err(ControlFlowErr::BadContinue);
+                            return Err(ControlFlowErr::BadContinue(span));
                         }
                     }
 
-                    ExprStmt::Return(expr) => {
+                    ExprStmt::Return(span, expr) => {
                         let expr = expr.map(|expr| expr_flow::flatten(universe, expr));
-                        let ret = cfg.graph.add_node(Node::Return(expr));
+                        let ret = cfg.graph.add_node(Node::Return(ReturnData {
+                            expr: expr,
+                            span: span,
+                        }));
                         append_node_index!(cfg, head, previous, ret);
                     }
 
                     ExprStmt::LocalVarDecl(decl) => {
+                        let decl = typed_ast::LocalVarDecl::new(universe, decl, expr_stmt_span);
                         append_node!(
                             cfg,
                             head,
                             previous,
-                            Node::LocalVarDecl(typed_ast::LocalVarDecl::new(universe, decl))
+                            Node::LocalVarDecl(LocalVarDeclData {
+                                decl: decl,
+                                span: expr_stmt_span,
+                            })
                         );
                     }
 
                     ExprStmt::Assignment(assignment) => {
+                        let assignment = typed_ast::Assignment::new(universe, assignment);
                         append_node!(
                             cfg,
                             head,
                             previous,
-                            Node::Assignment(typed_ast::Assignment::new(universe, assignment))
+                            Node::Assignment(AssignmentData {
+                                assignment: assignment,
+                                span: expr_stmt_span,
+                            })
                         );
                     }
                 }
             } else if let Stmt::Expr(expr) = stmt {
+                let (expr, span) = expr.to_data();
+                let expr = expr_flow::flatten(universe, expr);
                 append_node!(
                     cfg,
                     head,
                     previous,
-                    Node::Expr(expr_flow::flatten(universe, expr))
+                    Node::Expr(ExprData {
+                        expr: expr,
+                        span: span,
+                    })
                 );
             }
         }
@@ -674,7 +692,8 @@ let b: int = 3;
             return_type: universe.unit(),
         };
         let fn_def = parse_FnDecl(input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
+        let fn_def = fn_def.data();
+        let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -710,7 +729,7 @@ let b: int = 3;
             let ret = var_decl_2_neighbors.next().unwrap();
             let mut ret_neighbors = neighbors!(cfg, ret);
             match *node_w!(cfg, ret) {
-                Node::Return(_) => (),
+                Node::Return(..) => (),
                 ref n @ _ => panic!("Expected to find Node::Return. Found {:?}", n),
             }
 
@@ -744,7 +763,8 @@ if (test) {
             return_type: universe.unit(),
         };
         let fn_def = parse_FnDecl(input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
+        let fn_def = fn_def.data();
+        let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -854,7 +874,7 @@ if (test) {
             let return_n = cfg.graph.neighbors(merge).next().unwrap();
             let mut return_neighbors = neighbors!(cfg, return_n);
             match *node_w!(cfg, return_n) {
-                Node::Return(_) => (),
+                Node::Return(..) => (),
                 ref n @ _ => panic!("Expected to find Node::Return. Found {:?}", n),
             }
 
@@ -893,7 +913,8 @@ if (test) {
             return_type: universe.unit(),
         };
         let fn_def = parse_FnDecl(input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
+        let fn_def = fn_def.data();
+        let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -1025,7 +1046,7 @@ if (test) {
             let mut implicit_return_neighbors = neighbors!(cfg, implicit_return);
             assert_eq!(implicit_return_neighbors.clone().count(), 1);
             match *node_w!(cfg, implicit_return) {
-                Node::Return(_) => (),
+                Node::Return(..) => (),
                 ref n @ _ => println!("Expected return node. Found {:?}", n),
             }
 
@@ -1054,7 +1075,8 @@ if (test) {
             return_type: universe.unit(),
         };
         let fn_def = parse_FnDecl(input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def, &fn_type).unwrap();
+        let fn_def = fn_def.data();
+        let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -1080,7 +1102,7 @@ if (test) {
         let loop_id;
         let loop_head = enter_neighbors.next().unwrap();
         match *node_w!(cfg, loop_head) {
-            Node::LoopHead(id) => loop_id = id,
+            Node::LoopHead(ref loop_data) => loop_id = loop_data.loop_id,
             ref n @ _ => panic!("Expected to find Node::LoopHead. Found {:?}", n),
         }
 
@@ -1125,7 +1147,7 @@ if (test) {
         let foot = exit_neighbors.next().unwrap();
         let mut foot_neighbors = neighbors!(cfg, foot);
         match *node_w!(cfg, foot) {
-            Node::LoopFoot(id) => assert_eq!(id, loop_id),
+            Node::LoopFoot(ref loop_data) => assert_eq!(loop_data.loop_id, loop_id),
             ref n @ _ => panic!("Expected to find Node::LoopFoot. Found {:?}", n),
         }
 
@@ -1137,7 +1159,7 @@ if (test) {
         let mut return_neighbors = neighbors!(cfg, implicit_return);
         assert_eq!(return_neighbors.clone().count(), 1);
         match *node_w!(cfg, implicit_return) {
-            Node::Return(_) => (),
+            Node::Return(..) => (),
             ref n @ _ => panic!("Expected return node. Found {:?}", n),
         }
 

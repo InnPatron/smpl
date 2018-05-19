@@ -7,6 +7,8 @@ use petgraph::graph::NodeIndex;
 
 use feature::*;
 
+use span::Span;
+
 use ast::{Ident, BinOp, UniOp};
 
 use analysis::*;
@@ -598,23 +600,23 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn branch_split(&mut self, _id: NodeIndex) -> Result<(), ()> {
+    fn branch_split(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), ()> {
         // Emit nothing
         Ok(())
     }
 
-    fn branch_merge(&mut self, _id: NodeIndex) -> Result<(), ()> {
+    fn branch_merge(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), ()> {
         // Emit nothing
         Ok(())
     }
 
-    fn loop_head(&mut self, _id: NodeIndex) -> Result<(), ()> {
+    fn loop_head(&mut self, _id: NodeIndex, _: &LoopData) -> Result<(), ()> {
         self.output.emit_line("loop {");
         self.output.shift_right();
         Ok(())
     }
 
-    fn loop_foot(&mut self, _id: NodeIndex) -> Result<(), ()> {
+    fn loop_foot(&mut self, _id: NodeIndex, _: &LoopData) -> Result<(), ()> {
         /*
         if self.previous_is_loop_head {
             self.output.emit_line("{ break; }");
@@ -629,13 +631,13 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn cont(&mut self, _id: NodeIndex) -> Result<(), ()> {
+    fn cont(&mut self, _id: NodeIndex, _: &LoopData) -> Result<(), ()> {
         self.output.emit_line("continue;");
         self.output.line_pad();
         Ok(())
     }
 
-    fn br(&mut self, _id: NodeIndex) -> Result<(), ()> {
+    fn br(&mut self, _id: NodeIndex, _: &LoopData) -> Result<(), ()> {
         self.output.emit_line("break;");
         self.output.line_pad();
         Ok(())
@@ -653,7 +655,8 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn local_var_decl(&mut self, _id: NodeIndex, var_decl: &LocalVarDecl) -> Result<(), ()> {
+    fn local_var_decl(&mut self, _id: NodeIndex, var_decl: &LocalVarDeclData) -> Result<(), ()> {
+        let var_decl = &var_decl.decl;
         let var_id = var_decl.var_id();
         let type_id = var_decl.type_id().unwrap();
         let expr = self.emit_expr(var_decl.init_expr());
@@ -670,7 +673,8 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn assignment(&mut self, _id: NodeIndex, assignment: &Assignment) -> Result<(), ()> { 
+    fn assignment(&mut self, _id: NodeIndex, assignment: &AssignmentData) -> Result<(), ()> { 
+        let assignment = &assignment.assignment;
         let path = assignment.assignee().path();
         let root_var_id = path.root_var_id();
         let root_var = RustGenFmt::var_id(root_var_id);
@@ -759,13 +763,15 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn expr(&mut self, _id: NodeIndex, expr: &Expr) -> Result<(), ()> {
+    fn expr(&mut self, _id: NodeIndex, expr: &ExprData) -> Result<(), ()> {
+        let expr = &expr.expr;
         self.emit_expr(expr);
         self.output.line_pad();
         Ok(())
     }
 
-    fn ret(&mut self, _id: NodeIndex, expr: Option<&Expr>) -> Result<(), ()> {
+    fn ret(&mut self, _id: NodeIndex, rData: &ReturnData) -> Result<(), ()> {
+        let expr = &rData.expr;
         match expr {
             Some(ref expr) => {
                 let expr = self.emit_expr(expr);
@@ -779,7 +785,8 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn loop_condition(&mut self, _id: NodeIndex, condition_expr: &Expr) -> Result<(), ()> {
+    fn loop_condition(&mut self, _id: NodeIndex, condition_expr: &ExprData) -> Result<(), ()> {
+        let condition_expr = &condition_expr.expr;
         self.emit_condition(condition_expr);
 
         Ok(())
@@ -796,7 +803,8 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn branch_condition(&mut self, _id: NodeIndex, condition_expr: &Expr) -> Result<(), ()> {
+    fn branch_condition(&mut self, _id: NodeIndex, condition_expr: &ExprData) -> Result<(), ()> {
+        let condition_expr = &condition_expr.expr;
         self.emit_condition(condition_expr);
 
         Ok(())
@@ -810,7 +818,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn branch_end_true_path(&mut self, _id: NodeIndex) -> Result<(), ()> {
+    fn branch_end_true_path(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), ()> {
         // Emit nothing
         Ok(())
     }
@@ -826,7 +834,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn branch_end_false_path(&mut self, _id: NodeIndex) -> Result<(), ()> {
+    fn branch_end_false_path(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), ()> {
         // Emit nothing
         Ok(())
     }

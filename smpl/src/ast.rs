@@ -5,81 +5,92 @@ use std::borrow::Borrow;
 
 use ascii::AsciiString;
 
-pub struct Module(pub Option<Ident>, pub Vec<DeclStmt>);
+use span::Span;
+
+#[derive(Debug)]
+pub struct AstNode<T: ::std::fmt::Debug> {
+    data: T,
+    span: Span,
+}
+
+impl<T> PartialEq for AstNode<T> where T: ::std::fmt::Debug + PartialEq {
+    fn eq(&self, other: &AstNode<T>) -> bool {
+        self.data == other.data
+    }
+}
+
+impl<T> Eq for AstNode<T> where T: ::std::fmt::Debug + Eq { }
+
+impl<T> ::std::hash::Hash for AstNode<T> where T: ::std::fmt::Debug + ::std::hash::Hash {
+   fn hash<H: ::std::hash::Hasher>(&self, state: &mut H) {
+       self.data.hash(state);
+   }
+}
+
+impl<T> Clone for AstNode<T> where T: ::std::fmt::Debug + Clone {
+    fn clone(&self) -> AstNode<T> {
+        AstNode::new(self.data.clone(), self.span.clone())
+    }
+}
+
+impl<T> AstNode<T> where T: ::std::fmt::Debug {
+    pub fn new(data: T, span: Span) -> AstNode<T> {
+        AstNode {
+            data: data,
+            span: span
+        }
+    }
+
+    pub fn to_data(self) -> (T, Span) {
+        (self.data, self.span)
+    }
+
+    pub fn data(&self) -> &T {
+        &self.data
+    }
+
+    pub fn span(&self) -> Span {
+        self.span.clone()
+    }
+}
+
+pub struct Module(pub Option<AstNode<Ident>>, pub Vec<DeclStmt>);
 
 impl Module {
     pub fn name(&self) -> Option<&Ident> {
-        self.0.as_ref()
-    }
-
-    pub fn set_name(&mut self, new: AsciiString) {
-        self.0 = Some(Ident(new));
+        match self.0 {
+            Some(ref node) => Some(node.data()),
+            None => None,
+        }
     }
 }
 
 pub enum DeclStmt {
-    Use(UseDecl),
-    Struct(Struct),
-    Function(Function),
-}
-
-impl From<Struct> for DeclStmt {
-    fn from(s: Struct) -> DeclStmt {
-        DeclStmt::Struct(s)
-    }
-}
-
-impl From<Function> for DeclStmt {
-    fn from(f: Function) -> DeclStmt {
-        DeclStmt::Function(f)
-    }
+    Use(AstNode<UseDecl>),
+    Struct(AstNode<Struct>),
+    Function(AstNode<Function>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct UseDecl(pub Ident);
+pub struct UseDecl(pub AstNode<Ident>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
-    pub name: Ident,
-    pub params: Option<Vec<FnParameter>>,
-    pub return_type: Option<TypeAnnotation>,
-    pub body: Block,
-}
-
-impl Function {
-    pub fn new(
-        name: Ident,
-        params: Option<Vec<FnParameter>>,
-        return_type: Option<TypeAnnotation>,
-        body: Block,
-    ) -> Function {
-        Function {
-            name: name,
-            params: params,
-            return_type: return_type,
-            body: body,
-        }
-    }
+    pub name: AstNode<Ident>,
+    pub params: Option<Vec<AstNode<FnParameter>>>,
+    pub return_type: Option<AstNode<TypeAnnotation>>,
+    pub body: AstNode<Block>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnParameter {
-    pub name: Ident,
-    pub param_type: TypeAnnotation,
-}
-
-impl FnParameter {
-    pub fn new(name: Ident, param_type: TypeAnnotation) -> FnParameter {
-        FnParameter {
-            name: name,
-            param_type: param_type,
-        }
-    }
+    pub name: AstNode<Ident>,
+    pub param_type: AstNode<TypeAnnotation>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Struct {
-    pub name: Ident,
+    pub name: AstNode<Ident>,
     pub body: StructBody,
 }
 
@@ -88,95 +99,94 @@ pub struct StructBody(pub Option<Vec<StructField>>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructField {
-    pub name: Ident,
-    pub field_type: TypeAnnotation,
+    pub name: AstNode<Ident>,
+    pub field_type: AstNode<TypeAnnotation>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
-    ExprStmt(ExprStmt),
-    Expr(Expr),
+    ExprStmt(AstNode<ExprStmt>),
+    Expr(AstNode<Expr>),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum ExprStmt {
     If(If),
     While(While),
     LocalVarDecl(LocalVarDecl),
     Assignment(Assignment),
-    Return(Option<Expr>),
-    Break,
-    Continue,
+    Return(Span, Option<Expr>),
+    Break(Span),
+    Continue(Span),
+}
+
+impl PartialEq for ExprStmt {
+    fn eq(&self, other: &ExprStmt) -> bool {
+        use self::ExprStmt::*;
+
+        match (self, other) {
+            (&If(ref lhs), &If(ref rhs)) => lhs == rhs,
+            (&While(ref lhs), &While(ref rhs)) => lhs == rhs,
+            (&LocalVarDecl(ref lhs), &LocalVarDecl(ref rhs)) => lhs == rhs,
+            (&Assignment(ref lhs), &Assignment(ref rhs)) => lhs == rhs,
+            (&Return(_, ref lhs), &Return(_, ref rhs)) => lhs == rhs,
+            (&Break(..), &Break(..)) => true,
+            (&Continue(..), &Continue(..)) => true,
+
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructInit {
     pub struct_name: ModulePath,
-    pub field_init: Option<Vec<(Ident, Box<Expr>)>>,
+    pub field_init: Option<Vec<(AstNode<Ident>, Box<Expr>)>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Assignment {
-    pub name: Path,
+    pub name: AstNode<Path>,
     pub value: Expr,
-}
-
-impl Assignment {
-    pub fn new(name: Path, value: Expr) -> Assignment {
-        Assignment {
-            name: name,
-            value: value,
-        }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct LocalVarDecl {
-    pub var_type: TypeAnnotation,
-    pub var_name: Ident,
+    pub var_type: AstNode<TypeAnnotation>,
+    pub var_name: AstNode<Ident>,
     pub var_init: Expr,
-}
-
-impl LocalVarDecl {
-    pub fn new(var_type: TypeAnnotation, var_name: Ident, var_init: Expr) -> LocalVarDecl {
-        LocalVarDecl {
-            var_type: var_type,
-            var_name: var_name,
-            var_init: var_init,
-        }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct If {
     pub branches: Vec<Branch>,
-    pub default_block: Option<Block>,
+    pub default_block: Option<AstNode<Block>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Branch {
-    pub conditional: Expr,
-    pub block: Block,
+    pub conditional: AstNode<Expr>,
+    pub block: AstNode<Block>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct While {
-    pub conditional: Expr,
-    pub block: Block,
+    pub conditional: AstNode<Expr>,
+    pub block: AstNode<Block>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    Bin(BinExpr),
-    Uni(UniExpr),
-    Literal(Literal),
-    Binding(Ident),
-    FieldAccess(Path),
-    FnCall(FnCall),
-    StructInit(StructInit),
-    ArrayInit(ArrayInit),
-    Indexing(Indexing),
-    ModAccess(ModulePath),
+    Bin(AstNode<BinExpr>),
+    Uni(AstNode<UniExpr>),
+    Literal(AstNode<Literal>),
+    Binding(AstNode<Ident>),
+    FieldAccess(AstNode<Path>),
+    FnCall(AstNode<FnCall>),
+    StructInit(AstNode<StructInit>),
+    ArrayInit(AstNode<ArrayInit>),
+    Indexing(AstNode<Indexing>),
+    ModAccess(AstNode<ModulePath>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -253,8 +263,14 @@ pub enum Literal {
     Bool(bool),
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct Block(pub Vec<Stmt>);
+#[derive(Clone, Debug)]
+pub struct Block(pub Vec<Stmt>, pub Span, pub Span);
+
+impl PartialEq for Block {
+    fn eq(&self, other: &Block) -> bool {
+        self.0 == other.0
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Ident(pub AsciiString);
@@ -271,11 +287,11 @@ impl fmt::Display for Ident {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TypeAnnotation {
     Path(ModulePath),
-    Array(Box<TypeAnnotation>, u64),
-    FnType(Option<Vec<TypeAnnotation>>, Option<Box<TypeAnnotation>>),
+    Array(Box<AstNode<TypeAnnotation>>, u64),
+    FnType(Option<Vec<AstNode<TypeAnnotation>>>, Option<Box<AstNode<TypeAnnotation>>>),
 }
 
 impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
@@ -288,11 +304,11 @@ impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TypeAnnotationRef<'a> {
     Path(&'a ModulePath),
-    Array(&'a TypeAnnotation, &'a u64),
-    FnType(Option<&'a [TypeAnnotation]>, Option<&'a TypeAnnotation>),
+    Array(&'a AstNode<TypeAnnotation>, &'a u64),
+    FnType(Option<&'a [AstNode<TypeAnnotation>]>, Option<&'a AstNode<TypeAnnotation>>),
 }
 
 impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
@@ -307,17 +323,11 @@ impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ModulePath(pub Vec<Ident>);
+pub struct ModulePath(pub Vec<AstNode<Ident>>);
 
 impl ModulePath {
-    pub fn iter(&self) -> Iter<Ident> {
-        self.0.iter()
-    }
-}
-
-impl From<Ident> for ModulePath {
-    fn from(ident: Ident) -> ModulePath {
-        ModulePath(vec![ident])
+    pub fn iter<'a>(&'a self) -> Box<Iterator<Item=&Ident> + 'a> {
+        Box::new(self.0.iter().map(|node| &node.data))
     }
 }
 
@@ -332,7 +342,7 @@ impl fmt::Display for ModulePath {
         let buffer = self.0
             .iter()
             .fold(AsciiString::new(), |mut buffer, ref item| {
-                buffer.push_str(&item.0);
+                buffer.push_str(&item.data().0);
                 buffer
             });
         write!(f, "{}", buffer)
@@ -348,14 +358,8 @@ impl Path {
     }
 }
 
-impl From<Ident> for Path {
-    fn from(ident: Ident) -> Path {
-        Path(vec![PathSegment::Ident(ident)])
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum PathSegment {
-    Ident(Ident),
-    Indexing(Ident, Box<Expr>),
+    Ident(AstNode<Ident>),
+    Indexing(AstNode<Ident>, Box<Expr>),
 }

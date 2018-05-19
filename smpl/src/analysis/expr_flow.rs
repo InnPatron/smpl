@@ -1,113 +1,129 @@
 use super::semantic_data::{TmpId, Universe};
 use super::typed_ast::*;
 use super::typed_ast::Binding as TypedBinding;
-use ast::{Expr as AstExpr, Literal, ArrayInit as AstArrayInit};
+
+use span::Span;
+
+use ast::{AstNode, Expr as AstExpr, Literal, ArrayInit as AstArrayInit};
 
 pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
 
-    flatten_expr(universe, &mut expr, e);
+    let (_, span) = flatten_expr(universe, &mut expr, e);
+    expr.set_span(span);
 
     expr
 }
 
-pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> TmpId {
+pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId, Span) {
     match e {
         AstExpr::Bin(bin) => {
-            let lhs = flatten_expr(universe, scope, *bin.lhs);
-            let rhs = flatten_expr(universe, scope, *bin.rhs);
-            scope.map_tmp(
+            let (bin, span) = bin.to_data();
+            let (lhs, _) = flatten_expr(universe, scope, *bin.lhs);
+            let (rhs, _) = flatten_expr(universe, scope, *bin.rhs);
+            (scope.map_tmp(
                 universe,
                 Value::BinExpr(bin.op, Typed::untyped(lhs), Typed::untyped(rhs)),
-            )
+                span
+            ), span)
         }
 
         AstExpr::Uni(uni) => {
-            let expr = flatten_expr(universe, scope, *uni.expr);
-            scope.map_tmp(universe, Value::UniExpr(uni.op, Typed::untyped(expr)))
+            let (uni, span) = uni.to_data();
+            let expr = flatten_expr(universe, scope, *uni.expr).0;
+            (scope.map_tmp(universe, Value::UniExpr(uni.op, Typed::untyped(expr)), span), span)
         }
 
         AstExpr::Literal(literal) => {
-            scope.map_tmp(universe, Value::Literal(literal))
+            let (literal, span) = literal.to_data();
+            (scope.map_tmp(universe, Value::Literal(literal), span), span)
         }
 
         AstExpr::StructInit(init) => {
+            let (init, span) = init.to_data();
             let struct_name = init.struct_name;
             let field_init = init.field_init.map(|field_init_list| {
                 field_init_list
                     .into_iter()
                     .map(|(name, expr)| {
-                        let expr = Typed::untyped(flatten_expr(universe, scope, *expr));
-                        (name, expr)
+                        let expr = Typed::untyped(flatten_expr(universe, scope, *expr).0);
+                        (name.data().clone(), expr)
                     })
                     .collect::<Vec<_>>()
             });
-            scope.map_tmp(
+            (scope.map_tmp(
                 universe,
                 Value::StructInit(StructInit::new(struct_name, field_init)),
-            )
+                span
+            ), span)
         }
 
         AstExpr::Binding(ident) => {
-            scope.map_tmp(universe, Value::Binding(TypedBinding::new(ident)))
+            let span = ident.span();
+            (scope.map_tmp(universe, Value::Binding(TypedBinding::new(ident)), span), span)
         }
 
         AstExpr::FieldAccess(path) => {
-            scope.map_tmp(universe, Value::FieldAccess(FieldAccess::new(universe, path)))
+            let (path, span) = path.to_data();
+            (scope.map_tmp(universe, Value::FieldAccess(FieldAccess::new(universe, path)), span), span)
         }
 
         AstExpr::FnCall(fn_call) => {
+            let (fn_call, span) = fn_call.to_data();
             let path = fn_call.path;
             let args = fn_call.args.map(|vec| {
                 vec.into_iter()
-                    .map(|e| Typed::untyped(flatten_expr(universe, scope, e)))
+                    .map(|e| Typed::untyped(flatten_expr(universe, scope, e).0))
                     .collect::<Vec<_>>()
             });
 
             let fn_call = FnCall::new(path, args);
 
-            scope.map_tmp(universe, Value::FnCall(fn_call))
+            (scope.map_tmp(universe, Value::FnCall(fn_call), span), span)
         }
 
         AstExpr::ArrayInit(init) => {
+            let (init, span) = init.to_data();
             match init {
                 AstArrayInit::InitList(vec) => {
                     let list = vec.into_iter()
                         .map(|element| {
-                            Typed::untyped(flatten_expr(universe, scope, element))
+                            Typed::untyped(flatten_expr(universe, scope, element).0)
                         })
                     .collect();
 
                     let init = ArrayInit::List(list);
 
-                    scope.map_tmp(universe, Value::ArrayInit(init))
+                    (scope.map_tmp(universe, Value::ArrayInit(init), span), span)
                 }
                 AstArrayInit::Value(expr, size) => {
-                    let value = Typed::untyped(flatten_expr(universe, scope, *expr));
+                    let value = Typed::untyped(flatten_expr(universe, scope, *expr).0);
                     let init = ArrayInit::Value(value, size);
 
-                    scope.map_tmp(universe, Value::ArrayInit(init))
+                    (scope.map_tmp(universe, Value::ArrayInit(init), span), span)
                 }
             }
         }
 
         AstExpr::Indexing(indexing) => {
+            let (indexing, span) = indexing.to_data();
             let array_expr = indexing.array;
             let indexing_expr = indexing.indexer;
 
-            let array = Typed::untyped(flatten_expr(universe, scope, *array_expr));
-            let indexer = Typed::untyped(flatten_expr(universe, scope, *indexing_expr));
+            let array = Typed::untyped(flatten_expr(universe, scope, *array_expr).0);
+            let indexer = Typed::untyped(flatten_expr(universe, scope, *indexing_expr).0);
 
             let indexing = Indexing {
                 array: array,
                 indexer: indexer,
             };
 
-            scope.map_tmp(universe, Value::Indexing(indexing))
+            (scope.map_tmp(universe, Value::Indexing(indexing), span), span)
         }
 
         AstExpr::ModAccess(path) => {
-            scope.map_tmp(universe, Value::ModAccess(ModAccess::new(path)))
+            let (path, span) = path.to_data();
+            (scope.map_tmp(universe, Value::ModAccess(ModAccess::new(path)), span), span)
         }
     }
 }

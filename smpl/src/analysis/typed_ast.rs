@@ -2,6 +2,8 @@ use std::cell::{RefCell, Cell};
 use std::collections::HashMap;
 use std::slice::Iter;
 
+use span::Span;
+
 pub use ast::BinOp;
 pub use ast::UniOp;
 pub use ast::Literal;
@@ -52,18 +54,31 @@ impl<T> Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
 }
 
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Assignment {
     field_access: FieldAccess,
+    access_span: Span,
     value: self::Expr,
+}
+
+impl PartialEq for Assignment {
+    fn eq(&self, other: &Assignment) -> bool {
+        self.field_access == other.field_access && self.value == other.value
+    }
 }
 
 impl Assignment {
     pub fn new(universe: &Universe, assignment: ast::Assignment) -> Assignment {
+        let (name, name_span) = assignment.name.to_data();
         Assignment {
-            field_access: FieldAccess::new(universe, assignment.name),
+            field_access: FieldAccess::new(universe, name),
             value: expr_flow::flatten(universe, assignment.value),
+            access_span: name_span,
         }
+    }
+
+    pub fn access_span(&self) -> Span {
+        self.access_span
     }
 
     pub fn assignee(&self) -> &FieldAccess {
@@ -75,32 +90,45 @@ impl Assignment {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct LocalVarDecl {
-    var_type: ast::TypeAnnotation,
-    var_name: ast::Ident,
+    var_type: ast::AstNode<ast::TypeAnnotation>,
+    var_name: ast::AstNode<ast::Ident>,
     var_init: self::Expr,
     type_id: Cell<Option<TypeId>>,
     var_id: VarId,
+    span: Span,
+}
+
+impl PartialEq for LocalVarDecl {
+    fn eq(&self, other: &LocalVarDecl) -> bool {
+        self.var_type == other.var_type && self.var_name == other.var_name && self.var_init == other.var_init &&
+            self.type_id == other.type_id && self.var_id == other.var_id
+    }
 }
 
 impl LocalVarDecl {
-    pub fn new(universe: &Universe, decl: ast::LocalVarDecl) -> LocalVarDecl {
+    pub fn new(universe: &Universe, decl: ast::LocalVarDecl, stmt_span: Span) -> LocalVarDecl {
         LocalVarDecl {
             var_type: decl.var_type,
             var_name: decl.var_name,
             var_init: expr_flow::flatten(universe, decl.var_init),
             type_id: Cell::new(None),
             var_id: universe.new_var_id(),
+            span: stmt_span,
         }
     }
 
+    pub fn span(&self) -> Span {
+        self.span
+    }
+
     pub fn type_annotation(&self) -> &ast::TypeAnnotation {
-        &self.var_type
+        self.var_type.data()
     }
 
     pub fn var_name(&self) -> &ast::Ident {
-        &self.var_name
+        self.var_name.data()
     }
 
     pub fn set_type_id(&self, id: TypeId) {
@@ -124,10 +152,17 @@ impl LocalVarDecl {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Expr {
     map: HashMap<TmpId, Tmp>,
     execution_order: Vec<TmpId>,
+    span: Option<Span>,
+}
+
+impl PartialEq for Expr {
+    fn eq(&self, other: &Expr) -> bool {
+        self.map == other.map && self.execution_order == other.execution_order
+    }
 }
 
 impl Expr {
@@ -136,6 +171,7 @@ impl Expr {
         Expr {
             map: HashMap::new(),
             execution_order: Vec::new(),
+            span: None,
         }
     }
 
@@ -147,13 +183,26 @@ impl Expr {
         self.execution_order.iter()
     }
 
-    pub fn map_tmp(&mut self, universe: &Universe, val: Value) -> TmpId {
+    pub fn set_span(&mut self, span: Span) {
+        if self.span.is_some() {
+            panic!();
+        } else {
+            self.span = Some(span);
+        }
+    }
+
+    pub fn span(&self) -> Span {
+        self.span.clone().unwrap()
+    }
+
+    pub fn map_tmp(&mut self, universe: &Universe, val: Value, span: Span) -> TmpId {
         let tmp = Tmp {
             id: universe.new_tmp_id(),
             value: Typed {
                 data: val,
                 data_type: Cell::new(None),
-            }
+            },
+            span: span,
         };
         let id = tmp.id;
 
@@ -167,10 +216,17 @@ impl Expr {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Tmp {
     id: TmpId,
     value: Typed<Value>,
+    span: Span,
+}
+
+impl PartialEq for Tmp {
+    fn eq(&self, other: &Tmp) -> bool {
+        self.id == other.id && self.value == other.value
+    }
 }
 
 impl Tmp {
@@ -180,6 +236,10 @@ impl Tmp {
 
     pub fn value(&self) -> &Typed<Value> {
         &self.value
+    }
+
+    pub fn span(&self) -> Span {
+        self.span
     }
 }
 
@@ -356,12 +416,12 @@ impl FieldAccess {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Binding {
-    ident: ast::Ident,
+    ident: ast::AstNode<ast::Ident>,
     binding_id: Cell<Option<BindingId>>,
 }
 
 impl Binding {
-    pub fn new(ident: ast::Ident) -> Binding {
+    pub fn new(ident: ast::AstNode<ast::Ident>) -> Binding {
         Binding {
             ident: ident,
             binding_id: Cell::new(None),
@@ -369,7 +429,7 @@ impl Binding {
     }
 
     pub fn ident(&self) -> &ast::Ident {
-        &self.ident
+        self.ident.data()
     }
 
     pub fn set_id<T>(&self, id: T) where T: Into<BindingId> + ::std::fmt::Debug {
@@ -426,7 +486,7 @@ impl FnCall {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Path {
-    root_name: ast::Ident,
+    root_name: ast::AstNode<ast::Ident>,
     root_indexing: Option<self::Expr>,
     root_var: RefCell<Option<Typed<VarId>>>,
     path: Vec<self::PathSegment>,
@@ -460,7 +520,7 @@ impl self::Path {
     }
 
     pub fn root_name(&self) -> &ast::Ident {
-        &self.root_name
+        self.root_name.data()
     }
 
     pub fn root_indexing_expr(&self) -> Option<&self::Expr> {
@@ -518,13 +578,13 @@ pub enum PathSegment {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field {
-    name: ast::Ident,
+    name: ast::AstNode<ast::Ident>,
     field_id: RefCell<Option<Typed<FieldId>>>
 }
 
 impl Field {
 
-    pub fn new(name: ast::Ident) -> Field {
+    pub fn new(name: ast::AstNode<ast::Ident>) -> Field {
         Field {
             name: name,
             field_id: RefCell::new(None),
@@ -532,7 +592,7 @@ impl Field {
     }
 
     pub fn name(&self) -> &ast::Ident {
-        &self.name
+        self.name.data()
     }
 
     pub fn field_id(&self) -> FieldId {

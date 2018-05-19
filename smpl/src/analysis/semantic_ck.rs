@@ -3,7 +3,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use err::Err;
-use ast::{Ident, ModulePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
+use ast::{Ident, ModulePath as AstModulePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
 
 use super::feature_checkers::*;
 use super::metadata::*;
@@ -47,7 +47,7 @@ pub fn check_program(modules: Vec<AstModule>) -> Result<Program, Err> {
         } else if end_count == start_count {
             let mut unresolved = Vec::new();
             for mod_uses in queue.into_iter().map(|module| module.unresolved_module_uses) {
-                let mod_uses = mod_uses.into_iter().map(|u| u.0);
+                let mod_uses = mod_uses.into_iter();
                 unresolved.extend(mod_uses);
             }
 
@@ -69,9 +69,9 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
 
     let mut missing_modules = Vec::new();
     for use_decl in module.unresolved_module_uses.into_iter() {
-        match program.universe().module_id(&use_decl.0) {
+        match program.universe().module_id(use_decl.data().0.data()) {
             Some(id) => {
-                let imported_name = use_decl.0.clone();
+                let imported_name = use_decl.data().0.clone();
                 let imported_module = program.universe().get_module(id);
                 let imported_scope = imported_module.module_scope();
 
@@ -79,7 +79,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
                                               .into_iter()
                                               .map(|(path, id)| {
                                                   let mut path = path.clone();
-                                                  path.0.insert(0, imported_name.clone());
+                                                  path.0.insert(0, imported_name.data().clone());
                                                   
                                                   (path, id.clone())
                                               })
@@ -88,7 +88,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
                                             .into_iter()
                                             .map(|(path, id)| {
                                                 let mut path = path.clone();
-                                                path.0.insert(0, imported_name.clone());
+                                                path.0.insert(0, imported_name.data().clone());
                                                   
                                                 (path, id.clone())
                                             })
@@ -96,7 +96,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
 
                 // Bring imported types into scope
                 for (path, imported) in all_types.into_iter() {
-                    if module.module_scope.insert_type(path.clone(), imported).is_some() {
+                    if module.module_scope.insert_type(path.clone().into(), imported).is_some() {
                         panic!("Should not have overrwritten {}. Paths should be unique by prefixing with the originating module.", path);
                     }
                 }
@@ -127,7 +127,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
         for struct_decl in struct_iter {
             let (struct_t, order) = match generate_struct_type(program, 
                                                                &module.module_scope,
-                                                               &struct_decl) {
+                                                               &struct_decl.data()) {
                 Ok(s) => s,
                 Err(e) => {
                     match e {
@@ -155,7 +155,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
             break;
         } else if end_count == start_count {
             // No struct declarations were resolved. Return error.
-            return Err(Err::UnresolvedStructs(unresolved.into_iter().map(|s| s.name).collect()));
+            return Err(Err::UnresolvedStructs(unresolved.into_iter().collect()));
         } else if end_count > start_count {
             unreachable!();
         }
@@ -168,17 +168,17 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
 
         unresolved = Vec::new();
         for fn_decl in module_fn_iter {
-            let name: ModulePath = fn_decl.name.clone().into();
+            let name = fn_decl.data().name.data().clone();
 
             let type_id = program.universe().new_type_id();
             let fn_id = program.universe().new_fn_id();
 
-            let fn_type = generate_fn_type(program, &module.module_scope, fn_id, &fn_decl)?;
+            let fn_type = generate_fn_type(program, &module.module_scope, fn_id, &fn_decl.data())?;
 
-            let cfg = CFG::generate(program.universe(), fn_decl.clone(), &fn_type)?;
+            let cfg = CFG::generate(program.universe(), fn_decl.data().clone(), &fn_type)?;
 
             program.universe_mut().insert_fn(fn_id, type_id, fn_type, cfg);
-            module.module_scope.insert_fn(name.clone(), fn_id);
+            module.module_scope.insert_fn(name.clone().into(), fn_id);
             module.owned_fns.push(fn_id);
 
             match analyze_fn(program, &module.module_scope, fn_id, module_id)  {
@@ -186,7 +186,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
                 Err(e) => {
                     match e {
                         Err::UnknownFn(_) => {
-                            module.module_scope.unmap_fn(&name);
+                            module.module_scope.unmap_fn(&name.into());
                             module.owned_fns.pop();
                             program.universe_mut().unmap_fn(fn_id);
                             unresolved.push(fn_decl);
@@ -204,7 +204,7 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
             break;
         } else if end_count == start_count {
             // No function declarations were resolved. Return error.
-            return Err(Err::UnresolvedFns(unresolved.into_iter().map(|f| f.name).collect()));
+            return Err(Err::UnresolvedFns(unresolved.into_iter().collect()));
         } else if end_count > start_count {
             unreachable!();
         }
@@ -224,7 +224,8 @@ fn generate_fn_type(program: &mut Program, scope: &ScopedData, fn_id: FnId, fn_d
     let (universe, metadata, features) = program.analysis_context();
     let ret_type = match fn_def.return_type {
         Some(ref path) => {
-            let type_id = scope.type_id(universe, path.into())?;
+            let data = path.data();
+            let type_id = scope.type_id(universe, data.into())?;
             fn_sig_type_scanner(universe, features, type_id);
             type_id
         }
@@ -236,9 +237,11 @@ fn generate_fn_type(program: &mut Program, scope: &ScopedData, fn_id: FnId, fn_d
             let mut typed_params = Vec::new();
             let mut param_metadata = Vec::new();
             for p in params.iter() {
-                let type_id = scope.type_id(universe, (&p.param_type).into())?;
+                let param = p.data();
+                let type_path = param.param_type.data();
+                let type_id = scope.type_id(universe, type_path.into())?;
                 typed_params.push(type_id);
-                param_metadata.push(FunctionParameter::new(p.name.clone(), universe.new_var_id()));
+                param_metadata.push(FunctionParameter::new(param.name.data().clone(), universe.new_var_id()));
 
                 fn_sig_type_scanner(universe, features, type_id);
             }
@@ -269,9 +272,10 @@ fn generate_struct_type(program: &mut Program, scope: &ScopedData, struct_def: &
     if let Some(ref body) = struct_def.body.0 {
         for field in body.iter() {
             let f_id = universe.new_field_id();
-            let f_name = field.name.clone();
+            let f_name = field.name.data().clone();
             let f_type_path = &field.field_type;
-            let field_type = scope.type_id(universe, f_type_path.into())?;
+            let path_data = f_type_path.data();
+            let field_type = scope.type_id(universe, path_data.into())?;
             fields.insert(f_id, field_type);
             field_map.insert(f_name, f_id);
             order.push(f_id);
@@ -281,7 +285,7 @@ fn generate_struct_type(program: &mut Program, scope: &ScopedData, struct_def: &
     } 
 
     let struct_t = StructType {
-        name: struct_def.name.clone(),
+        name: struct_def.name.data().clone(),
         fields: fields,
         field_map: field_map,
     };
@@ -371,7 +375,8 @@ fn main() {
             main.cfg().next(scope_enter)
         };
         match *main.cfg().node_weight(fn_call) {
-            Node::Expr(ref e) => {
+            Node::Expr(ref edata) => {
+                let e = &edata.expr;
                 let mut iter = e.execution_order();
                 let tmp = e.get_tmp(*iter.last().unwrap());
                 match *tmp.value().data() {

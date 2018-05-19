@@ -1,10 +1,14 @@
 use std::collections::HashMap;
 use std::cell::{RefCell, Cell};
 use std::rc::Rc;
+use std::slice::Iter;
+use std::fmt;
+
+use ascii::AsciiString;
 
 use err::Err;
 use ast::*;
-use ast::{Module as AstModule, Function as AstFunction};
+use ast::{Module as AstModule, Function as AstFunction, ModulePath as AstModulePath};
 use feature::PresentFeatures;
 
 use super::metadata::Metadata;
@@ -76,11 +80,11 @@ impl Universe {
 
     pub fn std() -> Universe {
 
-        let unit = (TypeId(0), type_path!("Unit"), SmplType::Unit);
-        let int = (TypeId(1), type_path!("i32"), SmplType::Int);
-        let float = (TypeId(2), type_path!("f32"), SmplType::Float);
-        let string = (TypeId(3), type_path!("String"), SmplType::String);
-        let boolean = (TypeId(4), type_path!("bool"), SmplType::Bool);
+        let unit = (TypeId(0), internal_module_path!("Unit"), SmplType::Unit);
+        let int = (TypeId(1), internal_module_path!("i32"), SmplType::Int);
+        let float = (TypeId(2), internal_module_path!("f32"), SmplType::Float);
+        let string = (TypeId(3), internal_module_path!("String"), SmplType::String);
+        let boolean = (TypeId(4), internal_module_path!("bool"), SmplType::Bool);
 
         let type_map = vec![
             unit.clone(),
@@ -399,12 +403,13 @@ impl ScopedData {
     pub fn type_id<'a, 'b, 'c>(&'a self, universe: &'c Universe, type_annotation: TypeAnnotationRef<'b>) -> Result<TypeId, Err> {
         match type_annotation {
             TypeAnnotationRef::Path(path) => {
-                self.type_map.get(path)
+                self.type_map.get(&path.clone().into())
                     .map(|id| id.clone())
                     .ok_or(Err::UnknownType(type_annotation.into()))
             }
 
             TypeAnnotationRef::Array(base_type, size) => {
+                let base_type = base_type.data();
                 let base_type = ScopedData::type_id(self, universe, base_type.into())?;
                 let type_id = TypeConstructor::construct_array_type(universe, 
                                                                    base_type, 
@@ -417,7 +422,8 @@ impl ScopedData {
                     Some(ref v) => {
                         let mut new_params = Vec::new();
                         for p in v.iter() {
-                            let p_type = ScopedData::type_id(self, universe, p.into())?;
+                            let p_path = p.data();
+                            let p_type = ScopedData::type_id(self, universe, p_path.into())?;
                             new_params.push(p_type);
                         }
 
@@ -428,7 +434,11 @@ impl ScopedData {
                 };
 
                 let return_t = match return_t {
-                    Some(r) => ScopedData::type_id(self, universe, r.into())?,
+                    Some(r) => {
+                        let r_path = r.data();
+                        ScopedData::type_id(self, universe, r_path.into())?
+                    },
+
                     None => universe.unit(),
                 };
 
@@ -476,8 +486,8 @@ impl ScopedData {
         }
     }
 
-    pub fn get_fn(&self, path: &ModulePath) -> Result<FnId, Err> {
-        self.fn_map.get(path)
+    pub fn get_fn(&self, path: &AstModulePath) -> Result<FnId, Err> {
+        self.fn_map.get(&path.clone().into())
                    .map(|id| id.clone())
                    .ok_or(Err::UnknownFn(path.clone()))
     }
@@ -666,9 +676,9 @@ impl ModuleId {
 
 pub struct ModuleCkData {
     pub name: Ident,
-    pub unresolved_module_uses: Vec<UseDecl>,
-    pub unresolved_module_structs: Vec<Struct>,
-    pub unresolved_module_fns: Vec<AstFunction>,
+    pub unresolved_module_uses: Vec<AstNode<UseDecl>>,
+    pub unresolved_module_structs: Vec<AstNode<Struct>>,
+    pub unresolved_module_fns: Vec<AstNode<AstFunction>>,
     pub module_scope: ScopedData,
     pub owned_types: Vec<TypeId>,
     pub owned_fns: Vec<FnId>,
@@ -690,7 +700,7 @@ impl ModuleCkData {
         }
 
         Ok(ModuleCkData {
-            name: module.0.ok_or(Err::MissingModName)?,
+            name: module.0.ok_or(Err::MissingModName)?.data().clone(),
             unresolved_module_uses: module_uses,
             unresolved_module_structs: module_structs,
             unresolved_module_fns: module_fns,
@@ -705,4 +715,43 @@ impl ModuleCkData {
 pub enum ModuleCkSignal {
     Defer(ModuleCkData),
     Success,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ModulePath(pub Vec<Ident>);
+
+impl ModulePath {
+    pub fn new(v: Vec<Ident>) -> ModulePath {
+        ModulePath(v)
+    }
+
+    pub fn iter(&self) -> Iter<Ident> {
+        self.0.iter()
+    }
+}
+
+impl fmt::Display for ModulePath {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let buffer = self.0
+            .iter()
+            .fold(AsciiString::new(), |mut buffer, ref item| {
+                buffer.push_str(&item.0);
+                buffer
+            });
+        write!(f, "{}", buffer)
+    }
+}
+
+impl From<AstModulePath> for ModulePath {
+    fn from(p: AstModulePath) -> ModulePath {
+        ModulePath::new(p.0.into_iter().map(|node| node.data().clone()).collect())
+    }
+}
+
+impl From<Ident> for ModulePath {
+    fn from(i: Ident) -> ModulePath {
+        let mut v = Vec::with_capacity(1);
+        v.push(i);
+        ModulePath(v)
+    }
 }

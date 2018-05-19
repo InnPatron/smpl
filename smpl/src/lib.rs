@@ -11,6 +11,7 @@ mod parser;
 mod ast;
 mod analysis;
 mod code_gen;
+mod span;
 
 
 pub use self::err::Err;
@@ -25,9 +26,3 @@ pub use analysis::check_program;
 
 
 pub use self::code_gen::RustBackend;
-
-
-
-use std::ops::Range;
-
-pub type Span = Range<usize>;
