@@ -17,7 +17,7 @@ pub enum Err {
     MissingModName,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum ControlFlowErr {
     MissingReturn,
     BadBreak(Span),

@@ -109,7 +109,7 @@ pub enum Stmt {
     Expr(AstNode<Expr>),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum ExprStmt {
     If(If),
     While(While),
@@ -118,6 +118,24 @@ pub enum ExprStmt {
     Return(Span, Option<Expr>),
     Break(Span),
     Continue(Span),
+}
+
+impl PartialEq for ExprStmt {
+    fn eq(&self, other: &ExprStmt) -> bool {
+        use self::ExprStmt::*;
+
+        match (self, other) {
+            (&If(ref lhs), &If(ref rhs)) => lhs == rhs,
+            (&While(ref lhs), &While(ref rhs)) => lhs == rhs,
+            (&LocalVarDecl(ref lhs), &LocalVarDecl(ref rhs)) => lhs == rhs,
+            (&Assignment(ref lhs), &Assignment(ref rhs)) => lhs == rhs,
+            (&Return(_, ref lhs), &Return(_, ref rhs)) => lhs == rhs,
+            (&Break(..), &Break(..)) => true,
+            (&Continue(..), &Continue(..)) => true,
+
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

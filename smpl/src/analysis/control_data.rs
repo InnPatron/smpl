@@ -43,32 +43,62 @@ pub struct BranchingData {
     pub branch_id: BranchingId,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct ExprData {
     pub expr: typed_ast::Expr,
     pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl PartialEq for ExprData {
+    fn eq(&self, other: &Self) -> bool {
+        self.expr == other.expr
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct AssignmentData {
     pub assignment: typed_ast::Assignment,
     pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl PartialEq for AssignmentData {
+    fn eq(&self, other: &Self) -> bool {
+        self.assignment == other.assignment
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct LocalVarDeclData {
     pub decl: typed_ast::LocalVarDecl,
     pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl PartialEq for LocalVarDeclData {
+    fn eq(&self, other: &Self) -> bool {
+        self.decl == other.decl
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct LoopData {
     pub loop_id: LoopId,
     pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl PartialEq for LoopData {
+    fn eq(&self, other: &Self) -> bool {
+        self.loop_id == other.loop_id
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct ReturnData {
     pub expr: Option<typed_ast::Expr>,
     pub span: Span,
+}
+
+impl PartialEq for ReturnData {
+    fn eq(&self, other: &Self) -> bool {
+        self.expr == other.expr
+    }
 }

@@ -54,11 +54,17 @@ impl<T> Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
 }
 
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Assignment {
     field_access: FieldAccess,
     access_span: Span,
     value: self::Expr,
+}
+
+impl PartialEq for Assignment {
+    fn eq(&self, other: &Assignment) -> bool {
+        self.field_access == other.field_access && self.value == other.value
+    }
 }
 
 impl Assignment {
@@ -84,7 +90,7 @@ impl Assignment {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct LocalVarDecl {
     var_type: ast::AstNode<ast::TypeAnnotation>,
     var_name: ast::AstNode<ast::Ident>,
@@ -92,6 +98,13 @@ pub struct LocalVarDecl {
     type_id: Cell<Option<TypeId>>,
     var_id: VarId,
     span: Span,
+}
+
+impl PartialEq for LocalVarDecl {
+    fn eq(&self, other: &LocalVarDecl) -> bool {
+        self.var_type == other.var_type && self.var_name == other.var_name && self.var_init == other.var_init &&
+            self.type_id == other.type_id && self.var_id == other.var_id
+    }
 }
 
 impl LocalVarDecl {
@@ -139,11 +152,17 @@ impl LocalVarDecl {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Expr {
     map: HashMap<TmpId, Tmp>,
     execution_order: Vec<TmpId>,
     span: Option<Span>,
+}
+
+impl PartialEq for Expr {
+    fn eq(&self, other: &Expr) -> bool {
+        self.map == other.map && self.execution_order == other.execution_order
+    }
 }
 
 impl Expr {
@@ -197,11 +216,17 @@ impl Expr {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Tmp {
     id: TmpId,
     value: Typed<Value>,
     span: Span,
+}
+
+impl PartialEq for Tmp {
+    fn eq(&self, other: &Tmp) -> bool {
+        self.id == other.id && self.value == other.value
+    }
 }
 
 impl Tmp {
