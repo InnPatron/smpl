@@ -5,6 +5,8 @@ use std::rc::Rc;
 use analysis::{FieldId, FnId};
 use analysis::smpl_type::*;
 
+use super::vm_i::FnHandle;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Int(i32),
@@ -14,22 +16,8 @@ pub enum Value {
     Array(Vec<Rc<RefCell<Value>>>),
     Function(FnHandle),
     Struct(Struct),
+    BuiltIn(Box<fn(Vec<Value>) -> Value>),
     Unit,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct FnHandle(FnId);
-
-impl FnHandle {
-    pub(crate) fn id(&self) -> FnId {
-        self.0.clone()
-    }
-}
-
-impl From<FnId> for FnHandle {
-    fn from(f: FnId) -> FnHandle {
-        FnHandle(f)
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

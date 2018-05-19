@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use ascii::AsciiString;
+
 use petgraph::graph;
 use petgraph::graph::NodeIndex;
 use petgraph::Direction;
@@ -15,7 +17,8 @@ use analysis::*;
 use analysis::smpl_type::*;
 use analysis::metadata::*;
 
-use super::value::{Value, FnHandle};
+use super::vm_i::*;
+use super::value::Value;
 
 pub struct VM {
     program: Program
