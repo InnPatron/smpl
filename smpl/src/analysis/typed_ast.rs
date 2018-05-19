@@ -63,10 +63,11 @@ pub struct Assignment {
 
 impl Assignment {
     pub fn new(universe: &Universe, assignment: ast::Assignment) -> Assignment {
+        let (name, name_span) = assignment.name.to_data();
         Assignment {
-            field_access: FieldAccess::new(universe, assignment.name),
+            field_access: FieldAccess::new(universe, name),
             value: expr_flow::flatten(universe, assignment.value),
-            access_span: assignment.span,
+            access_span: name_span,
         }
     }
 

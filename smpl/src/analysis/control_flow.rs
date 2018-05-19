@@ -411,6 +411,7 @@ impl CFG {
         // Go through all the instructions
         for stmt in instructions.into_iter() {
             if let Stmt::ExprStmt(expr_stmt) = stmt {
+                let (expr_stmt, expr_stmt_span) = expr_stmt.to_data();
                 match expr_stmt {
                     // All if statements begin and and with Node::BranchSplit and Node::BranchMerge
                     ExprStmt::If(if_data) => {
@@ -434,10 +435,11 @@ impl CFG {
                             let branch_graph =
                                 CFG::get_branch(universe, cfg, instructions, loop_data)?;
                             let condition_node = {
-                                let expr = expr_flow::flatten(universe, branch.conditional);
+                                let (conditional, con_span) = branch.conditional.to_data();
+                                let expr = expr_flow::flatten(universe, conditional);
                                 cfg.graph.add_node(Node::Condition(ExprData {
                                     expr: expr,
-                                     span: unimplemented!(),
+                                     span: con_span,
                                 }))
                             };
 
@@ -517,20 +519,21 @@ impl CFG {
 
                     // All loops being and end with Node::LoopHead and Node::LoopFoot
                     ExprStmt::While(while_data) => {
+                        let (block, _) = while_data.block.to_data();
+
                         let loop_id = universe.new_loop_id();
                         let loop_head = cfg.graph.add_node(Node::LoopHead(LoopData {
                             loop_id: loop_id,
-                            span: unimplemented!(),
+                            span: block.1,
                         }));
                         let loop_foot = cfg.graph.add_node(Node::LoopFoot(LoopData {
                             loop_id: loop_id,
-                            span: unimplemented!(),
+                            span: block.2,
                         }));
 
                         cfg.graph.add_edge(loop_foot, loop_head, Edge::BackEdge);
 
                         append_node_index!(cfg, head, previous, loop_head);
-                        let (block, _) = while_data.block.to_data();
                         let instructions = block.0;
                         let loop_body = CFG::get_branch(
                             universe,
@@ -539,10 +542,11 @@ impl CFG {
                             Some((loop_head, loop_foot, loop_id)),
                         )?;
                         let condition = {
-                            let expr = expr_flow::flatten(universe, while_data.conditional);
+                            let (conditional, con_span) = while_data.conditional.to_data();
+                            let expr = expr_flow::flatten(universe, conditional);
                             cfg.graph.add_node(Node::Condition(ExprData {
                                 expr: expr,
-                                span: unimplemented!(),
+                                span: con_span,
                             }))
                         };
 
@@ -615,7 +619,7 @@ impl CFG {
                             previous,
                             Node::LocalVarDecl(LocalVarDeclData {
                                 decl: decl,
-                                span: unimplemented!(),
+                                span: expr_stmt_span,
                             })
                         );
                     }
@@ -628,12 +632,13 @@ impl CFG {
                             previous,
                             Node::Assignment(AssignmentData {
                                 assignment: assignment,
-                                span: unimplemented!(),
+                                span: expr_stmt_span,
                             })
                         );
                     }
                 }
             } else if let Stmt::Expr(expr) = stmt {
+                let (expr, span) = expr.to_data();
                 let expr = expr_flow::flatten(universe, expr);
                 append_node!(
                     cfg,
@@ -641,7 +646,7 @@ impl CFG {
                     previous,
                     Node::Expr(ExprData {
                         expr: expr,
-                        span: unimplemented!(),
+                        span: span,
                     })
                 );
             }

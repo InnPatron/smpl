@@ -105,8 +105,8 @@ pub struct StructField {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
-    ExprStmt(ExprStmt),
-    Expr(Expr),
+    ExprStmt(AstNode<ExprStmt>),
+    Expr(AstNode<Expr>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -128,8 +128,7 @@ pub struct StructInit {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Assignment {
-    pub name: Path,
-    pub span: Span,
+    pub name: AstNode<Path>,
     pub value: Expr,
 }
 
@@ -149,13 +148,13 @@ pub struct If {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Branch {
-    pub conditional: Expr,
+    pub conditional: AstNode<Expr>,
     pub block: AstNode<Block>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct While {
-    pub conditional: Expr,
+    pub conditional: AstNode<Expr>,
     pub block: AstNode<Block>,
 }
 
@@ -248,7 +247,7 @@ pub enum Literal {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Block(pub Vec<Stmt>);
+pub struct Block(pub Vec<Stmt>, pub Span, pub Span);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Ident(pub AsciiString);

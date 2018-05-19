@@ -152,13 +152,15 @@ StructField: StructField = {
 
 /// stmt -> expr ";" | expr_stmt
 pub Stmt: Stmt = {
-	<e: Expr> ";" => Stmt::Expr(e),
-	<e: ExprStmt> => Stmt::ExprStmt(e),
+	<l: @L> <e: Expr> ";" <r: @R> => Stmt::Expr(AstNode::new(e, Span::new(l, r))),
+	<l: @L> <e: ExprStmt> <r: @R> => Stmt::ExprStmt(AstNode::new(e, Span::new(l, r))),
 };
 
 /// block -> "{" [stmt]*  "}"
 Block: AstNode<Block> = {
-	<l: @L> "{" <s: Stmt*> "}" <r: @R> => AstNode::new(Block(s), Span::new(l, r)),
+	<l: @L> <ll: @L> "{" <rr: @R> <s: Stmt*> <lll: @L> "}" <rrr: @R> <r: @R> => {
+		AstNode::new(Block(s, Span::new(ll, rr), Span::new(lll, rrr)), Span::new(l, r))
+	}
 };
 
 /// expr_stmt -> if_stmt | while_stmt | local_var_decl | assignment
@@ -191,10 +193,9 @@ LocalVarDecl: LocalVarDecl = {
 
 /// assignment -> path "=" expr ";"
 Assignment: Assignment = {
-	<l: @L> <name: Path> <r: @R> "=" <e: Expr> ";" => {
+	<ll: @L> <l: @L> <name: Path> <r: @R> "=" <e: Expr> ";" <rr: @R> => {
 		Assignment {
-			name: name,
-			span: Span::new(l, r),
+			name: AstNode::new(name, Span::new(l, r)),
 			value: e,
 		}
 	}
@@ -217,9 +218,9 @@ IfStmt: If = {
 
 /// branch -> expr block
 Branch: Branch = {
-	<conditional: Expr> <block: Block> => {
+	<l: @L> <conditional: Expr> <r: @R> <block: Block> => {
 		Branch {
-			conditional: conditional,
+			conditional: AstNode::new(conditional, Span::new(l, r)),
 			block: block
 		}
 	}
@@ -227,9 +228,9 @@ Branch: Branch = {
 
 /// while_stmt -> "while" expr block
 WhileStmt: While = {
-	"while" <conditional: Expr> <block: Block> => {
+	"while" <l: @L> <conditional: Expr> <r: @R> <block: Block> => {
 		While {
-			conditional: conditional,
+			conditional: AstNode::new(conditional, Span::new(l, r)),
 			block: block
 		}
 	},
