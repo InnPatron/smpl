@@ -1099,7 +1099,7 @@ if (test) {
         let loop_id;
         let loop_head = enter_neighbors.next().unwrap();
         match *node_w!(cfg, loop_head) {
-            Node::LoopHead(id) => loop_id = id,
+            Node::LoopHead(ref loop_data) => loop_id = loop_data.loop_id,
             ref n @ _ => panic!("Expected to find Node::LoopHead. Found {:?}", n),
         }
 
@@ -1144,7 +1144,7 @@ if (test) {
         let foot = exit_neighbors.next().unwrap();
         let mut foot_neighbors = neighbors!(cfg, foot);
         match *node_w!(cfg, foot) {
-            Node::LoopFoot(id) => assert_eq!(id, loop_id),
+            Node::LoopFoot(ref loop_data) => assert_eq!(loop_data.loop_id, loop_id),
             ref n @ _ => panic!("Expected to find Node::LoopFoot. Found {:?}", n),
         }
 

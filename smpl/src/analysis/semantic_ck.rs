@@ -375,7 +375,8 @@ fn main() {
             main.cfg().next(scope_enter)
         };
         match *main.cfg().node_weight(fn_call) {
-            Node::Expr(ref e) => {
+            Node::Expr(ref edata) => {
+                let e = &edata.expr;
                 let mut iter = e.execution_order();
                 let tmp = e.get_tmp(*iter.last().unwrap());
                 match *tmp.value().data() {
