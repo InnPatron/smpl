@@ -41,7 +41,6 @@ pub enum Edge {
 #[derive(Debug, Clone, PartialEq)]
 pub struct BranchingData {
     pub branch_id: BranchingId,
-    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
