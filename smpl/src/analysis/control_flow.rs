@@ -12,6 +12,8 @@ use super::expr_flow;
 use super::typed_ast;
 use super::semantic_data::{BranchingId, LoopId, Universe};
 
+use super::control_data::*;
+
 macro_rules! node_w {
     ($CFG: expr, $node: expr) => {
         $CFG.graph().node_weight($node).unwrap()
@@ -63,86 +65,18 @@ macro_rules! append_node_index {
     };
 }
 
-#[derive(Clone, Debug)]
-pub struct CFG {
-    graph: graph::Graph<Node, Edge>,
-    start: graph::NodeIndex,
-    end: graph::NodeIndex,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Node {
-    Start,
-    End,
-
-    Expr(ExprData),
-
-    BranchSplit(BranchingData),
-    BranchMerge(BranchingData),
-
-    Assignment(AssignmentData),
-    LocalVarDecl(LocalVarDeclData),
-    Condition(ExprData),
-
-    LoopHead(LoopData),
-    LoopFoot(LoopData),
-
-    EnterScope,
-    ExitScope,
-
-    Return(ReturnData),
-    Break(LoopData),
-    Continue(LoopData),
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Edge {
-    Normal,
-    True,
-    False,
-    BackEdge,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ExprData {
-    pub expr: typed_ast::Expr,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct BranchingData {
-    pub branch_id: BranchingId,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct AssignmentData {
-    pub assignment: typed_ast::Assignment,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct LocalVarDeclData {
-    pub decl: typed_ast::LocalVarDecl,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct LoopData {
-    pub loop_id: LoopId,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ReturnData {
-    pub expr: Option<typed_ast::Expr>,
-    pub span: Span,
-}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct BranchData {
     head: Option<graph::NodeIndex>,
     foot: Option<graph::NodeIndex>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CFG {
+    graph: graph::Graph<Node, Edge>,
+    start: graph::NodeIndex,
+    end: graph::NodeIndex,
 }
 
 impl CFG {

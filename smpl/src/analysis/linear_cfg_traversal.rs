@@ -5,6 +5,7 @@ use petgraph::visit::EdgeRef;
 use span::Span;
 
 use super::control_flow::*;
+use super::control_data::*;
 use super::typed_ast::*;
 
 pub trait Passenger<E> {

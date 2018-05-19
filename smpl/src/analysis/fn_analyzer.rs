@@ -139,7 +139,7 @@ fn return_trace(cfg: &CFG) -> Result<(), Err> {
 }
 
 fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, Err> {
-    use super::control_flow::Node;
+    use super::control_data::Node;
  
     match *cfg.node_weight(id) {
         Node::Return(..) => Ok(None),

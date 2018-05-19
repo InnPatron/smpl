@@ -5,6 +5,7 @@ mod semantic_data;
 mod typed_ast;
 #[macro_use]
 mod control_flow;
+mod control_data;
 mod expr_flow;
 mod fn_analyzer;
 mod linear_cfg_traversal;
@@ -15,4 +16,5 @@ pub use self::typed_ast::*;
 pub use self::semantic_data::*;
 pub use self::linear_cfg_traversal::{Traverser, Passenger};
 pub use self::semantic_data::{Program, Module};
-pub use self::control_flow::{CFG, Node};
+pub use self::control_flow::CFG;
+pub use self::control_data::*;
