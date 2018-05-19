@@ -181,6 +181,8 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
             module.module_scope.insert_fn(name.clone().into(), fn_id);
             module.owned_fns.push(fn_id);
 
+            program.metadata_mut().insert_module_fn(module_id, fn_decl.data().name.data().clone(), fn_id);
+
             match analyze_fn(program, &module.module_scope, fn_id, module_id)  {
                 Ok(f) => f,
                 Err(e) => {

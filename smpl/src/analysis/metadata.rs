@@ -12,6 +12,8 @@ pub struct Metadata {
     field_ordering: HashMap<TypeId, FieldOrdering>,
     array_types: HashMap<ModuleId, Vec<TypeId>>,
     main: Option<(FnId, ModuleId)>,
+
+    fn_map: HashMap<(ModuleId, Ident), FnId>,
 }
 
 impl Metadata {
@@ -23,7 +25,16 @@ impl Metadata {
             field_ordering: HashMap::new(),
             array_types: HashMap::new(),
             main: None,
+            fn_map: HashMap::new(),
         }
+    }
+
+    pub fn insert_module_fn(&mut self, mod_id: ModuleId, name: Ident, fn_id: FnId) {
+        self.fn_map.insert((mod_id, name), fn_id);
+    }
+
+    pub fn module_fn(&self, mod_id: ModuleId, name: Ident) -> Option<FnId> {
+        self.fn_map.get(&(mod_id, name)).map(|id| id.clone())
     }
 
     pub fn insert_field_ordering(&mut self, id: TypeId, data: FieldOrdering) {
