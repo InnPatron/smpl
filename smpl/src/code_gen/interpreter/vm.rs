@@ -173,26 +173,26 @@ impl<'a> FnEnv<'a> {
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
 
-            Node::BranchSplit(id) => {
+            Node::BranchSplit(_) => {
                 self.previous_is_loop_head = false;
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
 
-            Node::BranchMerge(id) => {
+            Node::BranchMerge(_) => {
                 self.previous_is_loop_head = false;
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
 
-            Node::LoopHead(id) => {
+            Node::LoopHead(ref data) => {
                 self.previous_is_loop_head = true;
 
-                self.loop_stack.push(id);
-                self.loop_heads.insert(id, current);
+                self.loop_stack.push(data.loop_id);
+                self.loop_heads.insert(data.loop_id, current);
 
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
 
-            Node::LoopFoot(id) => {
+            Node::LoopFoot(_) => {
                 self.previous_is_loop_head = false;
 
                 let loop_id = self.pop_loop_stack();
@@ -213,7 +213,7 @@ impl<'a> FnEnv<'a> {
                 unreachable!();
             }
 
-            Node::Continue(id) => {
+            Node::Continue(_) => {
                 self.previous_is_loop_head = false;
                 let loop_id = self.pop_loop_stack();
                 Ok(NodeEval::Next(self.get_loop_head(loop_id)))
@@ -243,16 +243,16 @@ impl<'a> FnEnv<'a> {
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
 
-            Node::LocalVarDecl(ref decl) => {
+            Node::LocalVarDecl(ref data) => {
                 self.previous_is_loop_head = false;
-                let value = Expr::eval_expr(self.program, &self.env, decl.init_expr());
-                self.env.map_var(decl.var_id(), value);
+                let value = Expr::eval_expr(self.program, &self.env, data.decl.init_expr());
+                self.env.map_var(data.decl.var_id(), value);
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
 
-            Node::Assignment(ref assign) => {
+            Node::Assignment(ref data) => {
                 self.previous_is_loop_head = false;
-                let path = assign.assignee().path();
+                let path = data.assignment.assignee().path();
 
                 let root_var = path.root_var_id();
                 let root_var = self.env.ref_var(root_var).unwrap();
@@ -295,28 +295,28 @@ impl<'a> FnEnv<'a> {
                 }
 
                 let mut borrow = value.borrow_mut();
-                *borrow = Expr::eval_expr(self.program, &self.env, assign.value());
+                *borrow = Expr::eval_expr(self.program, &self.env, data.assignment.value());
 
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
 
-            Node::Expr(ref expr) => {
+            Node::Expr(ref data) => {
                 self.previous_is_loop_head = false;
-                Expr::eval_expr(self.program, &self.env, expr);
+                Expr::eval_expr(self.program, &self.env, &data.expr);
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
 
-            Node::Return(ref ret_expr) => {
+            Node::Return(ref data) => {
                 self.previous_is_loop_head = false;
-                let value = match *ret_expr {
+                let value = match data.expr {
                     Some(ref expr) => Expr::eval_expr(self.program, &self.env, expr),
                     None => Value::Unit
                 };
                 Ok(NodeEval::Return(value))
             }
 
-            Node::Condition(ref condition) => {
-                let value = Expr::eval_expr(self.program, &self.env, condition);
+            Node::Condition(ref data) => {
+                let value = Expr::eval_expr(self.program, &self.env, &data.expr);
                 let value = irmatch!(value; Value::Bool(b) => b);
                 let (t_b, f_b) = self.graph.after_condition(current);
                 let next = if value {
