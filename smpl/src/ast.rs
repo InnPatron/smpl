@@ -246,8 +246,14 @@ pub enum Literal {
     Bool(bool),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Block(pub Vec<Stmt>, pub Span, pub Span);
+
+impl PartialEq for Block {
+    fn eq(&self, other: &Block) -> bool {
+        self.0 == other.0
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Ident(pub AsciiString);

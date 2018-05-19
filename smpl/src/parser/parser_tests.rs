@@ -253,7 +253,7 @@ init NAME {
         let func = parse_FnDecl(input).unwrap();
         let func = func.data().clone();
         assert_eq!(func.name, dummy_node!(ident!("test_fn")));
-        assert_eq!(func.body, dummy_node!(Block(Vec::new())));
+        assert_eq!(func.body, dummy_node!(Block(Vec::new(), Span::new(0, 0), Span::new(0, 0))));
 
         let expected = vec![(dummy_node!(ident!("arg")), type_path!("i32")),
                             (dummy_node!(ident!("test")), type_path!("float")),
