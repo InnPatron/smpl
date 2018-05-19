@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::str::FromStr;
 
 use ascii::AsciiString;
 
@@ -39,6 +40,21 @@ impl VM {
     pub fn eval_fn_args(&self, handle: FnHandle, args: Vec<Value>) -> Value {
         let mut fn_env = FnEnv::new(&self.program, handle.id(), Some(args));
         fn_env.eval()
+    }
+
+    pub fn query_module(&self, module: &str, name: &str) -> Result<Option<FnHandle>, String> {
+        let module = Ident(AsciiString::from_str(module).map_err(|_| "Invalid module name")?);
+        let name = Ident(AsciiString::from_str(name).map_err(|_| "Invalid name")?);
+        let mod_id = self.program.universe().module_id(&module);
+
+        match mod_id {
+            Some(mod_id) => {
+                Ok(self.program.metadata().module_fn(mod_id, name)
+                    .map(|fn_id| fn_id.into()))
+            }
+
+            None => Err(format!("Module '{}' does not exist", module)),
+        }
     }
 }
 
