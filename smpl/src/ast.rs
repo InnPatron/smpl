@@ -137,7 +137,6 @@ pub struct LocalVarDecl {
     pub var_type: AstNode<TypeAnnotation>,
     pub var_name: AstNode<Ident>,
     pub var_init: Expr,
-    pub span: Span,
 }
 
 #[derive(Clone, Debug, PartialEq)]
