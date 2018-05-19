@@ -11,28 +11,28 @@ use super::typed_ast::*;
 pub trait Passenger<E> {
     fn start(&mut self, id: NodeIndex) -> Result<(), E>;
     fn end(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn loop_head(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn loop_foot(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn cont(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn br(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn loop_head(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
+    fn loop_foot(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
+    fn cont(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
+    fn br(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
     fn enter_scope(&mut self, id: NodeIndex) -> Result<(), E>;
     fn exit_scope(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn local_var_decl(&mut self, id: NodeIndex, decl: &LocalVarDecl) -> Result<(), E>;
-    fn assignment(&mut self, id: NodeIndex, assign: &Assignment) -> Result<(), E>;
-    fn expr(&mut self, id: NodeIndex, expr: &Expr) -> Result<(), E>;
-    fn ret(&mut self, id: NodeIndex, span: Span, expr: Option<&Expr>) -> Result<(), E>;
+    fn local_var_decl(&mut self, id: NodeIndex, decl: &LocalVarDeclData) -> Result<(), E>;
+    fn assignment(&mut self, id: NodeIndex, assign: &AssignmentData) -> Result<(), E>;
+    fn expr(&mut self, id: NodeIndex, expr: &ExprData) -> Result<(), E>;
+    fn ret(&mut self, id: NodeIndex, rdata: &ReturnData) -> Result<(), E>;
 
-    fn loop_condition(&mut self, id: NodeIndex, e: &Expr) -> Result<(), E>;
+    fn loop_condition(&mut self, id: NodeIndex, e: &ExprData) -> Result<(), E>;
     fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
 
-    fn branch_split(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn branch_merge(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn branch_condition(&mut self, id: NodeIndex, e: &Expr) -> Result<(), E>;
+    fn branch_split(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E>;
+    fn branch_merge(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E>;
+    fn branch_condition(&mut self, id: NodeIndex, e: &ExprData) -> Result<(), E>;
     fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn branch_end_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn branch_end_false_path(&mut self, id: NodeIndex) -> Result<(), E>;
+    fn branch_end_true_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E>;
+    fn branch_end_false_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E>;
 }
 
 pub struct Traverser<'a, 'b, E: 'b> {
@@ -84,38 +84,38 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 Ok(Some(self.graph.next(current)))
             }
 
-            Node::BranchSplit(id) => {
-                self.passenger.branch_split(current)?;
+            Node::BranchSplit(ref branch_data) => {
+                self.passenger.branch_split(current, branch_data)?;
                 self.previous_is_loop_head = false;
                 Ok(Some(self.graph.next(current)))
             }
 
-            Node::BranchMerge(id) => {
-                self.passenger.branch_merge(current)?;
+            Node::BranchMerge(ref branch_data) => {
+                self.passenger.branch_merge(current, branch_data)?;
                 self.previous_is_loop_head = false;
                 Ok(Some(self.graph.next(current)))
             }
 
-            Node::LoopHead(_) => {
-                self.passenger.loop_head(current)?;
+            Node::LoopHead(ref data) => {
+                self.passenger.loop_head(current, data)?;
                 self.previous_is_loop_head = true;
                 Ok(Some(self.graph.next(current)))
             }
 
-            Node::LoopFoot(_) => {
-                self.passenger.loop_foot(current)?;
+            Node::LoopFoot(ref data) => {
+                self.passenger.loop_foot(current, data)?;
                 self.previous_is_loop_head = false;
                 Ok(Some(self.graph.after_loop_foot(current)))
             }
 
-            Node::Continue(_) => {
-                self.passenger.cont(current)?;
+            Node::Continue(ref data) => {
+                self.passenger.cont(current, data)?;
                 self.previous_is_loop_head = false;
                 Ok(Some(self.graph.after_continue(current)))
             }
 
-            Node::Break(_) => {
-                self.passenger.br(current)?;
+            Node::Break(ref data) => {
+                self.passenger.br(current, data)?;
                 self.previous_is_loop_head = false;
                 Ok(Some(self.graph.after_break(current)))
             }
@@ -150,8 +150,8 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 Ok(Some(self.graph.next(current)))
             }
 
-            Node::Return(ref span, ref ret_expr) => {
-                self.passenger.ret(current, span.clone(), ret_expr.as_ref())?;
+            Node::Return(ref rdata) => {
+                self.passenger.ret(current, rdata)?;
                 self.previous_is_loop_head = false;
                 Ok(Some(self.graph.after_return(current)))
             }
@@ -208,8 +208,8 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     let mut current_node = true_path;
                     for _ in 0..self.node_count {
                         match *self.graph.node_weight(current_node) {
-                            Node::BranchMerge(id) => {
-                                self.passenger.branch_end_true_path(current_node)?;
+                            Node::BranchMerge(ref branch_data) => {
+                                self.passenger.branch_end_true_path(current_node, branch_data)?;
                                 merge = Some(current_node);
                                 break;
                             }
@@ -234,8 +234,8 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     let mut merge = None;
                     for _ in 0..self.node_count {
                         match *self.graph.node_weight(current_node) {
-                            Node::BranchMerge(id) => {
-                                self.passenger.branch_end_false_path(current_node)?;
+                            Node::BranchMerge(ref branch_data) => {
+                                self.passenger.branch_end_false_path(current_node, branch_data)?;
                                 merge = Some(current_node);
                                 break;
                             }

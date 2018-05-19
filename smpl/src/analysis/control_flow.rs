@@ -99,7 +99,7 @@ impl CFG {
     pub fn after_loop_foot(&self, id: graph::NodeIndex) -> graph::NodeIndex {
         let loop_id;
         match *node_w!(self, id) {
-            Node::LoopFoot(id) => loop_id = id,
+            Node::LoopFoot(ref data) => loop_id = data.loop_id,
             _ => panic!("Should only be given a Node::LoopFoot"),
         }
 
@@ -112,8 +112,8 @@ impl CFG {
 
         for n in neighbors {
             match *node_w!(self, n) {
-                Node::LoopHead(id) => {
-                    if loop_id != id {
+                Node::LoopHead(ref data) => {
+                    if loop_id != data.loop_id {
                         return n;
                     }
                 }
@@ -291,12 +291,12 @@ impl CFG {
 
     pub fn before_loop_foot(&self, id: graph::NodeIndex) -> graph::NodeIndex {
         match *self.node_weight(id) {
-            Node::LoopFoot(loop_id) => {
+            Node::LoopFoot(ref loop_data) => {
                 let mut found_loop_break = false;
                 for n in self.neighbors_in(id) {
                     match *self.node_weight(n) {
-                        Node::Break(break_id) => {
-                            if break_id != loop_id {
+                        Node::Break(ref break_data) => {
+                            if break_data.loop_id != loop_data.loop_id {
                                 return n;
                             } else if found_loop_break {
                                 return n;
@@ -317,11 +317,11 @@ impl CFG {
 
     pub fn before_loop_head(&self, id: graph::NodeIndex) -> graph::NodeIndex {
         match *self.node_weight(id) {
-            Node::LoopHead(loop_id) => {
+            Node::LoopHead(ref loop_data) => {
                 for n in self.neighbors_in(id) {
                     match *self.node_weight(n) {
-                        Node::Continue(cont_id) => {
-                            if cont_id != loop_id {
+                        Node::Continue(ref cont_data) => {
+                            if cont_data.loop_id != loop_data.loop_id {
                                 return n;
                             }
                         }

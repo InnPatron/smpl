@@ -14,6 +14,7 @@ use super::metadata::{Metadata, FnLayout};
 use super::smpl_type::*;
 use super::linear_cfg_traversal::*;
 use super::control_flow::CFG;
+use super::control_data::*;
 use super::typed_ast::*;
 use super::semantic_data::{VarId, FnId, ScopedData, TypeId, Universe, TypeConstructor, ModuleId, Program, BindingInfo};
 
@@ -783,27 +784,27 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
         Ok(())
     }
 
-    fn branch_split(&mut self, _id: NodeIndex) -> Result<(), Err> {
+    fn branch_split(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), Err> {
         Ok(())
     }
 
-    fn branch_merge(&mut self, _id: NodeIndex) -> Result<(), Err> {
+    fn branch_merge(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), Err> {
         Ok(())
     }
 
-    fn loop_head(&mut self, _id: NodeIndex) -> Result<(), Err> {
+    fn loop_head(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), Err> {
         Ok(())
     }
 
-    fn loop_foot(&mut self, _id: NodeIndex) -> Result<(), Err> {
+    fn loop_foot(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), Err> {
         Ok(())
     }
 
-    fn cont(&mut self, _id: NodeIndex) -> Result<(), Err> {
+    fn cont(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), Err> {
         Ok(())
     }
 
-    fn br(&mut self, _id: NodeIndex) -> Result<(), Err> {
+    fn br(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), Err> {
         Ok(())
     }
 
@@ -819,7 +820,8 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
         Ok(())
     }
 
-    fn local_var_decl(&mut self, _id: NodeIndex, var_decl: &LocalVarDecl) -> Result<(), Err> {
+    fn local_var_decl(&mut self, _id: NodeIndex, var_decl: &LocalVarDeclData) -> Result<(), Err> {
+        let var_decl = &var_decl.decl;
         let name = var_decl.var_name().clone();
         let var_id = var_decl.var_id();
         let var_type_annotation = var_decl.type_annotation();
@@ -843,7 +845,8 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
         Ok(())
     }
 
-    fn assignment(&mut self, _id: NodeIndex, assignment: &Assignment) -> Result<(), Err> {
+    fn assignment(&mut self, _id: NodeIndex, assignment: &AssignmentData) -> Result<(), Err> {
+        let assignment = &assignment.assignment;
         let assignee = assignment.assignee();
 
         let assignee_type_id =
@@ -863,11 +866,13 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
         Ok(())
     }
 
-    fn expr(&mut self, _id: NodeIndex, expr: &Expr) -> Result<(), Err> {
-        self.resolve_expr(expr).map(|_| ())
+    fn expr(&mut self, _id: NodeIndex, expr: &ExprData) -> Result<(), Err> {
+        self.resolve_expr(&expr.expr).map(|_| ())
     }
 
-    fn ret(&mut self, _id: NodeIndex, span: Span, expr: Option<&Expr>) -> Result<(), Err> {
+    fn ret(&mut self, _id: NodeIndex, rdata: &ReturnData) -> Result<(), Err> {
+        let expr = rdata.expr.as_ref();
+        let span = rdata.span.clone();
         let expr_type_id = match expr {
             Some(ref expr) => self.resolve_expr(expr)?,
 
@@ -885,7 +890,8 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
         Ok(())
     }
 
-    fn loop_condition(&mut self, _id: NodeIndex, condition: &Expr) -> Result<(), Err> {
+    fn loop_condition(&mut self, _id: NodeIndex, condition: &ExprData) -> Result<(), Err> {
+        let condition = &condition.expr;
         let expr_type_id = self.resolve_expr(condition)?;
 
         if *self.universe.get_type(expr_type_id) != SmplType::Bool {
@@ -909,7 +915,8 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
         Ok(())
     }
 
-    fn branch_condition(&mut self, _id: NodeIndex, condition: &Expr) -> Result<(), Err> {
+    fn branch_condition(&mut self, _id: NodeIndex, condition: &ExprData) -> Result<(), Err> {
+        let condition = &condition.expr;
         let expr_type_id = self.resolve_expr(condition)?;
 
         if *self.universe.get_type(expr_type_id) != SmplType::Bool {
@@ -933,12 +940,12 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
         Ok(())
     }
 
-    fn branch_end_true_path(&mut self, _id: NodeIndex) -> Result<(), Err> {
+    fn branch_end_true_path(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), Err> {
         // Do nothing
         Ok(())
     }
 
-    fn branch_end_false_path(&mut self, _id: NodeIndex) -> Result<(), Err> {
+    fn branch_end_false_path(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), Err> {
         // Do nothing
         Ok(())
     }
