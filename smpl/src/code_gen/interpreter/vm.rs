@@ -842,4 +842,34 @@ fn test2() -> i32 {
 
         assert_eq!(Value::Int(3), result);
     }
+
+    #[test]
+    fn interpreter_field_access() {
+        let mod1 =
+"mod mod1;
+
+struct T {
+    f: i32
+}
+
+fn test() -> i32 {
+    let t: T = init T { f: 1336 };
+
+    return t.f + 1;
+}
+
+";
+
+        let modules = vec![parse_module(mod1).unwrap()];
+
+        let program = check_program(modules).unwrap();
+
+        let mut vm = VM::new(program);
+        
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Int(1337), result);
+    }
 }
