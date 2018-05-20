@@ -853,7 +853,9 @@ struct T {
 }
 
 fn test() -> i32 {
-    let t: T = init T { f: 1336 };
+    let t: T = init T { f: 1335 };
+
+    t.f = t.f + 1;
 
     return t.f + 1;
 }
