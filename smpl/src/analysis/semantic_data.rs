@@ -8,7 +8,7 @@ use ascii::AsciiString;
 
 use err::Err;
 use ast::*;
-use ast::{Module as AstModule, Function as AstFunction, ModulePath as AstModulePath};
+use ast::{Module as AstModule, Function as AstFunction, ModulePath as AstModulePath, BuiltinFunction as AstBuiltinFunction};
 use feature::PresentFeatures;
 
 use super::metadata::Metadata;
@@ -65,6 +65,7 @@ pub struct Universe {
     type_constructor: TypeConstructor,
     types: HashMap<TypeId, Rc<SmplType>>,
     fn_map: HashMap<FnId, Function>,
+    builtin_fn_map: HashMap<FnId, BuiltinFunction>,
     module_map: HashMap<ModuleId, Module>,
     module_name: HashMap<Ident, ModuleId>,
     id_counter: Cell<u64>,
@@ -98,6 +99,7 @@ impl Universe {
             type_constructor: TypeConstructor::new(),
             types: type_map.clone().into_iter().map(|(id, _, t)| (id, Rc::new(t))).collect(),
             fn_map: HashMap::new(),
+            builtin_fn_map: HashMap::new(),
             module_map: HashMap::new(),
             module_name: HashMap::new(),
             id_counter: Cell::new(5),
@@ -174,6 +176,18 @@ impl Universe {
         }
     }
 
+    pub fn insert_builtin_fn(&mut self, fn_id: FnId, type_id: TypeId, fn_t: FunctionType) {
+        self.insert_type(type_id, SmplType::Function(fn_t));
+
+        let builtin = BuiltinFunction {
+            fn_type: type_id
+        };
+
+        if self.builtin_fn_map.insert(fn_id, builtin).is_some() {
+            panic!("Attempting to override builtin function with FnId {} in the Universe", fn_id.0);
+        }
+    }
+
     pub fn insert_type(&mut self, id: TypeId, t: SmplType) {
         if self.types.insert(id, Rc::new(t)).is_some() {
             panic!("Attempting to override type with TypeId {} in the Universe", id.0);
@@ -192,6 +206,10 @@ impl Universe {
 
     pub fn get_fn(&self, id: FnId) -> &Function {
         self.fn_map.get(&id).unwrap()
+    }
+
+    pub fn get_builtin_fn(&self, id: FnId) -> &BuiltinFunction {
+        self.builtin_fn_map.get(&id).unwrap()
     }
 
     fn inc_counter(&self) -> u64 {
@@ -507,6 +525,17 @@ pub enum BindingInfo {
 }
 
 #[derive(Clone, Debug)]
+pub struct BuiltinFunction {
+    fn_type: TypeId,
+}
+
+impl BuiltinFunction {
+    pub fn type_id(&self) -> TypeId {
+        self.fn_type
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct Function {
     fn_type: TypeId,
     cfg: CFG,
@@ -679,6 +708,7 @@ pub struct ModuleCkData {
     pub unresolved_module_uses: Vec<AstNode<UseDecl>>,
     pub unresolved_module_structs: Vec<AstNode<Struct>>,
     pub unresolved_module_fns: Vec<AstNode<AstFunction>>,
+    pub unresolved_module_builtin_fns: Vec<AstNode<AstBuiltinFunction>>,
     pub module_scope: ScopedData,
     pub owned_types: Vec<TypeId>,
     pub owned_fns: Vec<FnId>,
@@ -690,12 +720,14 @@ impl ModuleCkData {
         let mut module_uses = Vec::new();
         let mut module_structs = Vec::new();
         let mut module_fns = Vec::new();
+        let mut module_builtin_fns = Vec::new();
 
         for decl_stmt in module.1.into_iter() {
             match decl_stmt {
                 DeclStmt::Struct(d) => module_structs.push(d),
                 DeclStmt::Function(d) => module_fns.push(d),
                 DeclStmt::Use(d) => module_uses.push(d),
+                DeclStmt::BuiltinFunction(d) => module_builtin_fns.push(d),
             }
         }
 
@@ -704,6 +736,7 @@ impl ModuleCkData {
             unresolved_module_uses: module_uses,
             unresolved_module_structs: module_structs,
             unresolved_module_fns: module_fns,
+            unresolved_module_builtin_fns: module_builtin_fns,
             module_scope: universe.std_scope(),
             owned_types: Vec::new(),
             owned_fns: Vec::new(),

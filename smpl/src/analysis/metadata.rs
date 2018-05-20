@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Iter;
 
 use ast::Ident;
@@ -14,6 +14,7 @@ pub struct Metadata {
     main: Option<(FnId, ModuleId)>,
 
     fn_map: HashMap<(ModuleId, Ident), FnId>,
+    builtin: HashSet<FnId>,
 }
 
 impl Metadata {
@@ -26,7 +27,16 @@ impl Metadata {
             array_types: HashMap::new(),
             main: None,
             fn_map: HashMap::new(),
+            builtin: HashSet::new(),
         }
+    }
+
+    pub fn insert_builtin(&mut self, id: FnId) {
+        self.builtin.insert(id);
+    }
+
+    pub fn is_builtin(&mut self, id: FnId) -> bool {
+        self.builtin.contains(&id)
     }
 
     pub fn insert_module_fn(&mut self, mod_id: ModuleId, name: Ident, fn_id: FnId) {

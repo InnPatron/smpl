@@ -77,10 +77,22 @@ DeclStmt: DeclStmt = {
 	<f: FnDecl> => DeclStmt::Function(f),
 	<s: StructDecl> => DeclStmt::Struct(s),
 	<u: UseDecl> => DeclStmt::Use(u),
+	<bf: BuiltinFnDecl> => DeclStmt::BuiltinFunction(bf),
 };
 
 UseDecl: AstNode<UseDecl> = {
 	<l: @L> "use" <i: Ident> ";" <r: @R> => AstNode::new(UseDecl(i), Span::new(l, r)),
+};
+
+/// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" type_annotation]? block
+pub BuiltinFnDecl: AstNode<BuiltinFunction> = {
+	<l: @L> "builtin" "fn" <name: Ident> "(" <params: FnParameterList?> ")" <return_type: ("->" TypeAnnotation)?> ";" <r: @R> => {
+		AstNode::new(BuiltinFunction {
+			name: name,
+			params: params,
+			return_type: return_type.map(|r| r.1),
+		}, Span::new(l, r))
+	}
 };
 
 /// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" type_annotation]? block
