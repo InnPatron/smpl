@@ -284,6 +284,12 @@ impl PartialEq for Block {
 pub struct Ident(pub AsciiString);
 
 impl Ident {
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl Ident {
     pub fn new(str: &str) -> Ident {
         Ident(AsciiString::from_str(str).unwrap())
     }
