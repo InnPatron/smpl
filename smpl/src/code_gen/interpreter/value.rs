@@ -16,7 +16,6 @@ pub enum Value {
     Array(Vec<Rc<RefCell<Value>>>),
     Function(FnHandle),
     Struct(Struct),
-    BuiltIn(Box<fn(Vec<Value>) -> Value>),
     Unit,
 }
 
