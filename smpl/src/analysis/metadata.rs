@@ -35,7 +35,7 @@ impl Metadata {
         self.builtin.insert(id);
     }
 
-    pub fn is_builtin(&mut self, id: FnId) -> bool {
+    pub fn is_builtin(&self, id: FnId) -> bool {
         self.builtin.contains(&id)
     }
 
