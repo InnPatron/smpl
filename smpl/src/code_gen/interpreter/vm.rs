@@ -695,3 +695,32 @@ mod Expr {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use parser::parse_module;
+    use analysis::check_program;
+    use code_gen::interpreter::*;
+
+    #[test]
+    fn interpreter_basic() {
+        let mod1 =
+"mod mod1;
+
+fn test(a: i32, b: i32) -> i32 {
+    return a + b;
+}";
+
+        let modules = vec![parse_module(mod1).unwrap()];
+
+        let program = check_program(modules).unwrap();
+
+        let vm = VM::new(program);
+        
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn_args(fn_handle, vec![Value::Int(5), Value::Int(7)]);
+
+        assert_eq!(Value::Int(12), result);
+    }
+}
