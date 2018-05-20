@@ -1,5 +1,11 @@
 use analysis::{FieldId, FnId, TypeId};
 
+use super::value::Value;
+
+pub trait BuiltInFn {
+    fn execute(&self, args: Option<Vec<Value>>) -> Value;
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModQuery {
     FnHandle(FnHandle),

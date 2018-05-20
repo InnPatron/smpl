@@ -22,24 +22,36 @@ use super::vm_i::*;
 use super::value::Value;
 
 pub struct VM {
-    program: Program
+    program: Program,
+    builtins: HashMap<FnId, Box<BuiltInFn>>,
 }
 
 impl VM {
     pub fn new(program: Program) -> VM {
         VM {
-            program: program
+            program: program,
+            builtins: HashMap::new(),
         }
     }
 
     pub fn eval_fn(&self, handle: FnHandle) -> Value {
-        let mut fn_env = FnEnv::new(&self.program, handle.id(), None);
-        fn_env.eval()
+        let id = handle.id();
+        if self.program.metadata().is_builtin(id) {
+            self.builtins.get(&id).expect("Missing a built-in").execute(None)
+        } else {
+            let mut fn_env = FnEnv::new(&self.program, id, None);
+            fn_env.eval()
+        }
     }
 
     pub fn eval_fn_args(&self, handle: FnHandle, args: Vec<Value>) -> Value {
-        let mut fn_env = FnEnv::new(&self.program, handle.id(), Some(args));
-        fn_env.eval()
+        let id = handle.id();
+        if self.program.metadata().is_builtin(id) {
+            self.builtins.get(&id).expect("Missing a built-in").execute(Some(args))
+        } else {
+            let mut fn_env = FnEnv::new(&self.program, id, Some(args));
+            fn_env.eval()
+        }
     }
 
     pub fn query_module(&self, module: &str, name: &str) -> Result<Option<FnHandle>, String> {
