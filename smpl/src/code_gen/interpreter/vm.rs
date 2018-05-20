@@ -703,6 +703,21 @@ mod tests {
     use analysis::check_program;
     use code_gen::interpreter::*;
 
+    struct Add;
+    
+    impl BuiltInFn for Add {
+        fn execute(&self, args: Option<Vec<Value>>) -> Value {
+            let args = args.unwrap();
+            let lhs = args.get(0).unwrap();
+            let rhs = args.get(1).unwrap();
+
+            let lhs = irmatch!(lhs; Value::Int(i) => i);
+            let rhs = irmatch!(rhs; Value::Int(i) => i);
+
+            return Value::Int(lhs + rhs);
+        }
+    }
+
     #[test]
     fn interpreter_basic() {
         let mod1 =
@@ -752,5 +767,30 @@ fn test(a: i32, b: i32) -> T {
         let result = irmatch!(result; Value::Int(i) => i);
 
         assert_eq!(12, result);
+    }
+
+    #[test]
+    fn interpreter_builtin() {
+        let mod1 =
+"mod mod1;
+
+builtin fn add(a: i32, b: i32) -> i32;
+
+fn test(a: i32, b: i32) -> i32 {
+    return add(a, b);
+}";
+
+        let modules = vec![parse_module(mod1).unwrap()];
+
+        let program = check_program(modules).unwrap();
+
+        let mut vm = VM::new(program);
+        vm.insert_builtin("mod1", "add", Box::new(Add));
+        
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn_args(fn_handle, vec![Value::Int(5), Value::Int(7)]);
+
+        assert_eq!(Value::Int(12), result);
     }
 }
