@@ -54,6 +54,32 @@ impl VM {
         }
     }
 
+    pub fn insert_builtin(&mut self, module_str: &str, name_str: &str, builtin: Box<BuiltInFn>) 
+        -> Result<Option<Box<BuiltInFn>>, String> {
+
+        let module = Ident(AsciiString::from_str(module_str).map_err(|_| "Invalid module name")?);
+        let name = Ident(AsciiString::from_str(name_str).map_err(|_| "Invalid name")?);
+        let mod_id = self.program.universe().module_id(&module);
+
+        match mod_id {
+            Some(mod_id) => {
+                match self.program.metadata().module_fn(mod_id, name) {
+                    Some(fn_id) => {
+                        if self.program.metadata().is_builtin(fn_id) {
+                            Ok(self.builtins.insert(fn_id, builtin))
+                        } else {
+                            Err(format!("{}::{} is not a valid builtin function", module_str, name_str))
+                        }
+                    }
+
+                    None => Err(format!("{} is not a function in {}", name_str, module_str)),
+                }
+            }
+
+            None => Err(format!("Module '{}' does not exist", module_str)),
+        }
+    }
+
     pub fn query_module(&self, module: &str, name: &str) -> Result<Option<FnHandle>, String> {
         let module = Ident(AsciiString::from_str(module).map_err(|_| "Invalid module name")?);
         let name = Ident(AsciiString::from_str(name).map_err(|_| "Invalid name")?);
