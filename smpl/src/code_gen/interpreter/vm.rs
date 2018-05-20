@@ -39,7 +39,7 @@ impl VM {
         if self.program.metadata().is_builtin(id) {
             self.builtins.get(&id).expect("Missing a built-in").execute(None)
         } else {
-            let mut fn_env = FnEnv::new(&self.program, id, None);
+            let mut fn_env = FnEnv::new(&self, id, None);
             fn_env.eval()
         }
     }
@@ -49,7 +49,7 @@ impl VM {
         if self.program.metadata().is_builtin(id) {
             self.builtins.get(&id).expect("Missing a built-in").execute(Some(args))
         } else {
-            let mut fn_env = FnEnv::new(&self.program, id, Some(args));
+            let mut fn_env = FnEnv::new(self, id, Some(args));
             fn_env.eval()
         }
     }
@@ -93,6 +93,10 @@ impl VM {
 
             None => Err(format!("Module '{}' does not exist", module)),
         }
+    }
+
+    fn program(&self) -> &Program {
+        &self.program
     }
 }
 
@@ -154,7 +158,7 @@ impl Env {
 }
 
 struct FnEnv<'a> {
-    program: &'a Program,
+    vm: &'a VM,
     graph: &'a CFG,
     env: Env,
     loop_heads: HashMap<LoopId, NodeIndex>,
@@ -170,20 +174,20 @@ enum NodeEval {
 
 impl<'a> FnEnv<'a> {
 
-    fn new(program: &Program, fn_id: FnId, args: Option<Vec<Value>>) -> FnEnv {
+    fn new(vm: &VM, fn_id: FnId, args: Option<Vec<Value>>) -> FnEnv {
         let mut env = Env::new();
 
         if let Some(args) = args {
             for (arg, param_info) in args.into_iter()
-                .zip(program.metadata().function_param_ids(fn_id)) {
+                .zip(vm.program().metadata().function_param_ids(fn_id)) {
                     env.map_var(param_info.var_id(), arg);
             }
         }
 
-        let f = program.universe().get_fn(fn_id);
+        let f = vm.program().universe().get_fn(fn_id);
 
         FnEnv {
-            program: program,
+            vm: vm,
             graph: f.cfg(),
             env: env,
             loop_heads: HashMap::new(),
@@ -302,7 +306,7 @@ impl<'a> FnEnv<'a> {
 
             Node::LocalVarDecl(ref data) => {
                 self.previous_is_loop_head = false;
-                let value = Expr::eval_expr(self.program, &self.env, data.decl.init_expr());
+                let value = Expr::eval_expr(self.vm, &self.env, data.decl.init_expr());
                 self.env.map_var(data.decl.var_id(), value);
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
@@ -318,7 +322,7 @@ impl<'a> FnEnv<'a> {
                 if let Some(ref e) = path.root_indexing_expr() {
                     value = {
                         let borrow = value.borrow();
-                        let indexer = Expr::eval_expr(self.program, &self.env, e);
+                        let indexer = Expr::eval_expr(self.vm, &self.env, e);
                         let indexer = irmatch!(indexer; Value::Int(i) => i);
                         let array = irmatch!(*borrow; Value::Array(ref a) => a);
                         array.get(indexer as usize).unwrap().clone()
@@ -343,7 +347,7 @@ impl<'a> FnEnv<'a> {
                                 let field_to_index = field_to_index.borrow();
                                 let field = irmatch!(*field_to_index; Value::Array(ref a) => a);
 
-                                let indexer = Expr::eval_expr(self.program, &self.env, indexer);
+                                let indexer = Expr::eval_expr(self.vm, &self.env, indexer);
                                 let indexer = irmatch!(indexer; Value::Int(i) => i);
                                 field.get(indexer as usize).unwrap().clone()
                             };
@@ -352,28 +356,28 @@ impl<'a> FnEnv<'a> {
                 }
 
                 let mut borrow = value.borrow_mut();
-                *borrow = Expr::eval_expr(self.program, &self.env, data.assignment.value());
+                *borrow = Expr::eval_expr(self.vm, &self.env, data.assignment.value());
 
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
 
             Node::Expr(ref data) => {
                 self.previous_is_loop_head = false;
-                Expr::eval_expr(self.program, &self.env, &data.expr);
+                Expr::eval_expr(self.vm, &self.env, &data.expr);
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
 
             Node::Return(ref data) => {
                 self.previous_is_loop_head = false;
                 let value = match data.expr {
-                    Some(ref expr) => Expr::eval_expr(self.program, &self.env, expr),
+                    Some(ref expr) => Expr::eval_expr(self.vm, &self.env, expr),
                     None => Value::Unit
                 };
                 Ok(NodeEval::Return(value))
             }
 
             Node::Condition(ref data) => {
-                let value = Expr::eval_expr(self.program, &self.env, &data.expr);
+                let value = Expr::eval_expr(self.vm, &self.env, &data.expr);
                 let value = irmatch!(value; Value::Bool(b) => b);
                 let (t_b, f_b) = self.graph.after_condition(current);
                 let next = if value {
@@ -405,13 +409,13 @@ mod Expr {
     use super::*;
     use super::super::value::*;
 
-    pub(in super) fn eval_expr(program: &Program, host_env: &Env, expr: &Expr) -> Value {
+    pub(in super) fn eval_expr(vm: &VM, host_env: &Env, expr: &Expr) -> Value {
         let mut expr_env = Env::new();
         let mut last = None;
         for id in expr.execution_order() {
             let tmp = expr.get_tmp(id.clone());
 
-            let result = eval_tmp(program, host_env, &expr_env, expr, tmp);
+            let result = eval_tmp(vm, host_env, &expr_env, expr, tmp);
             expr_env.map_tmp(*id, result.clone());
             last = Some(result);
         }
@@ -419,7 +423,7 @@ mod Expr {
         last.unwrap()
     }
 
-    fn eval_tmp(program: &Program, host_env: &Env, expr_env: &Env, expr: &Expr, tmp: &Tmp) -> Value {
+    fn eval_tmp(vm: &VM, host_env: &Env, expr_env: &Env, expr: &Expr, tmp: &Tmp) -> Value {
         match *tmp.value().data() {
             AbstractValue::Literal(ref literal) => {
                 match *literal {
@@ -449,7 +453,7 @@ mod Expr {
                 if let Some(ref e) = path.root_indexing_expr() {
                     value = {
                         let borrow = value.borrow();
-                        let indexer = eval_expr(program, host_env, e);
+                        let indexer = eval_expr(vm, host_env, e);
                         let indexer = irmatch!(indexer; Value::Int(i) => i);
                         let array = irmatch!(*borrow; Value::Array(ref a) => a);
                         array.get(indexer as usize).unwrap().clone()
@@ -474,7 +478,7 @@ mod Expr {
                                 let field_to_index = field_to_index.borrow();
                                 let field = irmatch!(*field_to_index; Value::Array(ref a) => a);
 
-                                let indexer = eval_expr(program, host_env, indexer);
+                                let indexer = eval_expr(vm, host_env, indexer);
                                 let indexer = irmatch!(indexer; Value::Int(i) => i);
                                 field.get(indexer as usize).unwrap().clone()
                             };
@@ -504,7 +508,7 @@ mod Expr {
                     }).collect()
                 });
 
-                let mut fn_env = FnEnv::new(program, fn_id, args);
+                let mut fn_env = FnEnv::new(vm, fn_id, args);
                 fn_env.eval()
             }
 
@@ -515,7 +519,7 @@ mod Expr {
                 let lh_v = expr_env.get_tmp(lh_id).unwrap();
                 let rh_v = expr_env.get_tmp(rh_id).unwrap();
 
-                match *program.universe().get_type(lhs.type_id().unwrap()) {
+                match *vm.program().universe().get_type(lhs.type_id().unwrap()) {
                     SmplType::Int => {
                         let lhs = irmatch!(lh_v; Value::Int(i) => i);
                         let rhs = irmatch!(rh_v; Value::Int(i) => i);
@@ -568,7 +572,7 @@ mod Expr {
                 let t_id = t.data().clone();
                 let t_v = expr_env.get_tmp(t_id).unwrap();
 
-                irmatch!(*program.universe().get_type(t.type_id().unwrap());
+                irmatch!(*vm.program().universe().get_type(t.type_id().unwrap());
                          SmplType::Float => {
                              let f = irmatch!(t_v; Value::Float(f) => f);
                              Value::Float(negate(f))
