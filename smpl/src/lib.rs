@@ -2,6 +2,8 @@ extern crate ascii;
 extern crate itertools;
 extern crate petgraph;
 extern crate lalrpop_util;
+#[macro_use]
+extern crate irmatch;
 
 mod feature;
 mod err;
@@ -9,6 +11,7 @@ mod err;
 mod ast_macros;
 mod parser;
 mod ast;
+#[macro_use]
 mod analysis;
 mod code_gen;
 mod span;

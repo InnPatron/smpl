@@ -1,6 +1,7 @@
 use std::cell::{RefCell, Cell};
 use std::collections::HashMap;
 use std::slice::Iter;
+use std::iter::Iterator;
 
 use span::Span;
 
@@ -333,6 +334,16 @@ impl StructInit {
     pub fn field_init(&self) -> Option<Vec<(FieldId, Typed<TmpId>)>> {
         self.mapped_field_init.borrow()
             .clone()
+    }
+
+    pub fn init_order<'a>(&'a self) -> Option<impl Iterator<Item=&'a ast::Ident>> {
+        match self.field_init {
+            Some(ref vec) => {
+                Some(vec.iter().map(|(ref ident, _)| ident))
+            }
+
+            None => None,
+        }
     }
 
     pub fn set_field_init(&self, universe: &Universe) 
