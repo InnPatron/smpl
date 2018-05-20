@@ -355,8 +355,10 @@ impl<'a> FnEnv<'a> {
                     }
                 }
 
+                let result = Expr::eval_expr(self.vm, &self.env, data.assignment.value());
+
                 let mut borrow = value.borrow_mut();
-                *borrow = Expr::eval_expr(self.vm, &self.env, data.assignment.value());
+                *borrow = result;
 
                 Ok(NodeEval::Next(self.graph.next(current)))
             }
