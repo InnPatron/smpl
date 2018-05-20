@@ -724,4 +724,33 @@ fn test(a: i32, b: i32) -> i32 {
 
         assert_eq!(Value::Int(12), result);
     }
+
+    #[test]
+    fn interpreter_struct() {
+        let mod1 =
+"mod mod1;
+
+struct T {
+    f: i32
+}
+
+fn test(a: i32, b: i32) -> T {
+    return init T { f: a + b };
+}";
+
+        let modules = vec![parse_module(mod1).unwrap()];
+
+        let program = check_program(modules).unwrap();
+
+        let vm = VM::new(program);
+        
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn_args(fn_handle, vec![Value::Int(5), Value::Int(7)]);
+
+        let result = irmatch!(result; Value::Struct(s) => s.get_field("f").unwrap());
+        let result = irmatch!(result; Value::Int(i) => i);
+
+        assert_eq!(12, result);
+    }
 }
