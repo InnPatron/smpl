@@ -1,8 +1,13 @@
 [package]
 name = "smpl"
-version = "0.1.0"
+version = "0.1.2"
 authors = ["Alexander Vo <randomcivvy0121@gmail.com>"]
 workspace = ".."
+
+description = "Core library to compile the SMPL language"
+
+license="MIT"
+repository="https://github.com/InnPatron/smpl-mirror"
 
 [build-dependencies]
 lalrpop = "0.13.1"
