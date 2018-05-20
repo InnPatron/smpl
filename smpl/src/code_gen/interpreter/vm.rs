@@ -502,14 +502,24 @@ mod Expr {
                     BindingId::Fn(fn_id) => fn_id,
                 };
 
-                let args = call.args().map(|v| {
+                let args: Option<Vec<_>> = call.args().map(|v| {
                     v.iter().map(|tmp| {
                         expr_env.get_tmp(tmp.data().clone()).unwrap().clone()
                     }).collect()
                 });
 
-                let mut fn_env = FnEnv::new(vm, fn_id, args);
-                fn_env.eval()
+                match args {
+                    Some(args) => {
+                        if args.len() > 0 {
+                            vm.eval_fn_args(fn_id.into(), args)
+                        } else {
+                            vm.eval_fn(fn_id.into())
+                        }
+                    } 
+
+                    None => vm.eval_fn(fn_id.into()),
+                }
+
             }
 
             AbstractValue::BinExpr(ref op, ref lhs, ref rhs) => {
