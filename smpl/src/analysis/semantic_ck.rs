@@ -161,6 +161,27 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
         }
     }
 
+    // Resolve builtin functions
+    let mut unresolved = module.unresolved_module_builtin_fns;
+    let start_count = unresolved.len();
+    let mut module_fn_iter = unresolved.into_iter();
+
+    for fn_decl in module_fn_iter {
+        let name = fn_decl.data().name.data().clone();
+
+        let type_id = program.universe().new_type_id();
+        let fn_id = program.universe().new_fn_id();
+
+        let fn_type = generate_builtin_fn_type(program, &module.module_scope, fn_id, &fn_decl.data())?;
+
+        program.universe_mut().insert_builtin_fn(fn_id, type_id, fn_type);
+
+        module.module_scope.insert_fn(name.clone().into(), fn_id);
+        module.owned_fns.push(fn_id);
+
+        program.metadata_mut().insert_module_fn(module_id, fn_decl.data().name.data().clone(), fn_id);
+    }
+
     let mut unresolved = module.unresolved_module_fns;
     loop {
         let start_count = unresolved.len();
@@ -210,25 +231,6 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
         } else if end_count > start_count {
             unreachable!();
         }
-    }
-
-    // Resolve builtin functions
-    let mut unresolved = module.unresolved_module_builtin_fns;
-    let start_count = unresolved.len();
-    let mut module_fn_iter = unresolved.into_iter();
-
-    for fn_decl in module_fn_iter {
-        let name = fn_decl.data().name.data().clone();
-
-        let type_id = program.universe().new_type_id();
-        let fn_id = program.universe().new_fn_id();
-
-        let fn_type = generate_builtin_fn_type(program, &module.module_scope, fn_id, &fn_decl.data())?;
-
-        module.module_scope.insert_fn(name.clone().into(), fn_id);
-        module.owned_fns.push(fn_id);
-
-        program.metadata_mut().insert_module_fn(module_id, fn_decl.data().name.data().clone(), fn_id);
     }
 
     let module = Module::new(module.module_scope, 
