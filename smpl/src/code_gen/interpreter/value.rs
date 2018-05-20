@@ -20,22 +20,22 @@ pub enum Value {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Struct(HashMap<FieldId, Rc<RefCell<Value>>>);
+pub struct Struct(HashMap<String, Rc<RefCell<Value>>>);
 
 impl Struct {
     pub fn new() -> Struct {
         Struct(HashMap::new())
     }
 
-    pub fn set_field(&mut self, id: FieldId, v: Value) -> Option<Value> {
-        self.0.insert(id, Rc::new(RefCell::new(v))).map(|rc| rc.borrow().clone())
+    pub fn set_field(&mut self, name: String, v: Value) -> Option<Value> {
+        self.0.insert(name, Rc::new(RefCell::new(v))).map(|rc| rc.borrow().clone())
     }
 
-    pub fn get_field(&self, id: FieldId) -> Option<Value> {
-        self.0.get(&id).map(|rc| (*rc.borrow()).clone())
+    pub fn get_field(&self, name: &str) -> Option<Value> {
+        self.0.get(name).map(|rc| (*rc.borrow()).clone())
     }
 
-    pub fn ref_field(&self, id: FieldId) -> Option<Rc<RefCell<Value>>> {
-        self.0.get(&id).map(|rc| rc.clone())
+    pub fn ref_field(&self, name: &str) -> Option<Rc<RefCell<Value>>> {
+        self.0.get(name).map(|rc| rc.clone())
     }
 }

@@ -331,7 +331,7 @@ impl<'a> FnEnv<'a> {
                             value = {
                                 let value = value.borrow();
                                 let struct_value = irmatch!(*value; Value::Struct(ref s) => s);
-                                struct_value.ref_field(f.field_id()).unwrap()
+                                struct_value.ref_field(f.name().as_str()).unwrap()
                             };
                         }
 
@@ -339,7 +339,7 @@ impl<'a> FnEnv<'a> {
                             value = {
                                 let value = value.borrow();
                                 let struct_value = irmatch!(*value; Value::Struct(ref s) => s);
-                                let field_to_index = struct_value.ref_field(f.field_id()).unwrap();
+                                let field_to_index = struct_value.ref_field(f.name().as_str()).unwrap();
                                 let field_to_index = field_to_index.borrow();
                                 let field = irmatch!(*field_to_index; Value::Array(ref a) => a);
 
@@ -462,7 +462,7 @@ mod Expr {
                             value = {
                                 let value = value.borrow();
                                 let struct_value = irmatch!(*value; Value::Struct(ref s) => s);
-                                struct_value.ref_field(f.field_id()).unwrap()
+                                struct_value.ref_field(f.name().as_str()).unwrap()
                             };
                         }
 
@@ -470,7 +470,7 @@ mod Expr {
                             value = {
                                 let value = value.borrow();
                                 let struct_value = irmatch!(*value; Value::Struct(ref s) => s);
-                                let field_to_index = struct_value.ref_field(f.field_id()).unwrap();
+                                let field_to_index = struct_value.ref_field(f.name().as_str()).unwrap();
                                 let field_to_index = field_to_index.borrow();
                                 let field = irmatch!(*field_to_index; Value::Array(ref a) => a);
 
@@ -591,9 +591,10 @@ mod Expr {
 
                 match init.field_init() {
                     Some(ref v) => {
-                        for &(ref field_id, ref tmp) in v.iter() {
+                        let init_order = init.init_order().unwrap();
+                        for (ident, (_, ref tmp)) in init_order.into_iter().zip(v.iter()) {
                             let field_value = expr_env.get_tmp(tmp.data().clone()).unwrap();
-                            s.set_field(field_id.clone(), field_value.clone());
+                            s.set_field(ident.as_str().to_string(), field_value.clone());
                         }
                     }
 
