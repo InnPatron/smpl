@@ -3,7 +3,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use err::Err;
-use ast::{Ident, ModulePath as AstModulePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule};
+use ast::{Ident, ModulePath as AstModulePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule, BuiltinFunction as AstBuiltinFunction};
 
 use super::feature_checkers::*;
 use super::metadata::*;
@@ -212,6 +212,25 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
         }
     }
 
+    // Resolve builtin functions
+    let mut unresolved = module.unresolved_module_builtin_fns;
+    let start_count = unresolved.len();
+    let mut module_fn_iter = unresolved.into_iter();
+
+    for fn_decl in module_fn_iter {
+        let name = fn_decl.data().name.data().clone();
+
+        let type_id = program.universe().new_type_id();
+        let fn_id = program.universe().new_fn_id();
+
+        let fn_type = generate_builtin_fn_type(program, &module.module_scope, fn_id, &fn_decl.data())?;
+
+        module.module_scope.insert_fn(name.clone().into(), fn_id);
+        module.owned_fns.push(fn_id);
+
+        program.metadata_mut().insert_module_fn(module_id, fn_decl.data().name.data().clone(), fn_id);
+    }
+
     let module = Module::new(module.module_scope, 
                              module.owned_types, 
                              module.owned_fns, 
@@ -220,6 +239,48 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
     program.universe_mut().map_module(module_id, module_name, module);
     
     Ok(ModuleCkSignal::Success)
+}
+
+fn generate_builtin_fn_type(program: &mut Program, scope: &ScopedData, fn_id: FnId, fn_def: &AstBuiltinFunction) -> Result<FunctionType, Err> {
+    let (universe, metadata, features) = program.analysis_context();
+    let ret_type = match fn_def.return_type {
+        Some(ref path) => {
+            let data = path.data();
+            let type_id = scope.type_id(universe, data.into())?;
+            fn_sig_type_scanner(universe, features, type_id);
+            type_id
+        }
+        None => universe.unit(),
+    };
+
+    let params = match fn_def.params {
+        Some(ref params) => {
+            let mut typed_params = Vec::new();
+            let mut param_metadata = Vec::new();
+            for p in params.iter() {
+                let param = p.data();
+                let type_path = param.param_type.data();
+                let type_id = scope.type_id(universe, type_path.into())?;
+                typed_params.push(type_id);
+                param_metadata.push(FunctionParameter::new(param.name.data().clone(), universe.new_var_id()));
+
+                fn_sig_type_scanner(universe, features, type_id);
+            }
+
+            metadata.insert_function_param_ids(fn_id, param_metadata);
+
+            typed_params
+        }
+        None => {
+            metadata.insert_function_param_ids(fn_id, Vec::with_capacity(0));
+            Vec::with_capacity(0)
+        }
+    };
+
+    Ok(FunctionType {
+        params: params,
+        return_type: ret_type,
+    })
 }
 
 fn generate_fn_type(program: &mut Program, scope: &ScopedData, fn_id: FnId, fn_def: &AstFunction) -> Result<FunctionType, Err> {
