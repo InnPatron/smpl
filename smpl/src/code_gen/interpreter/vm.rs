@@ -872,4 +872,30 @@ fn test() -> i32 {
 
         assert_eq!(Value::Int(1337), result);
     }
+
+    #[test]
+    fn interpreter_array() {
+        let mod1 =
+"mod mod1;
+
+fn test() -> i32 {
+    let t: [i32; 5] = [1, 2, 3, 4, 5];
+
+    return t[0] + t[1] + t[2] + t[3] + t[4];
+}
+
+";
+
+        let modules = vec![parse_module(mod1).unwrap()];
+
+        let program = check_program(modules).unwrap();
+
+        let mut vm = VM::new(program);
+        
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Int(1 + 2 + 3 + 4 + 5), result);
+    }
 }
