@@ -548,8 +548,13 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                             match binding.unwrap() {
                                 BindingInfo::Fn(fn_id) => {
                                     fn_call.set_id(fn_id);
-                                    let func = self.universe.get_fn(fn_id);
-                                    Some(func.type_id())
+                                    if self.metadata.is_builtin(fn_id)  {
+                                        let func = self.universe.get_builtin_fn(fn_id);
+                                        Some(func.type_id())
+                                    } else {
+                                        let func = self.universe.get_fn(fn_id);
+                                        Some(func.type_id())
+                                    }
                                 }
                                 BindingInfo::Var(v_id, v_type_id) => {
                                     // Function call on a local variable / parameter
