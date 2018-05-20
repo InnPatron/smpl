@@ -69,10 +69,18 @@ pub enum DeclStmt {
     Use(AstNode<UseDecl>),
     Struct(AstNode<Struct>),
     Function(AstNode<Function>),
+    BuiltinFunction(AstNode<BuiltinFunction>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UseDecl(pub AstNode<Ident>);
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BuiltinFunction {
+    pub name: AstNode<Ident>,
+    pub params: Option<Vec<AstNode<FnParameter>>>,
+    pub return_type: Option<AstNode<TypeAnnotation>>,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
