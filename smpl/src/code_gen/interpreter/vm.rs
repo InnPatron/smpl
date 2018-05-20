@@ -807,4 +807,39 @@ fn test(a: i32, b: i32) -> i32 {
 
         assert_eq!(Value::Int(12), result);
     }
+
+    #[test]
+    fn interpreter_intermod_builtin() {
+        let mod1 =
+"mod mod1;
+
+builtin fn add(a: i32, b: i32) -> i32;
+
+fn test(a: i32, b: i32) -> i32 {
+    return add(a, b);
+}";
+
+        let mod2 =
+"mod mod2;
+
+use mod1;
+
+fn test2() -> i32 {
+    return mod1::add(1, 2);
+}
+";
+
+        let modules = vec![parse_module(mod1).unwrap(), parse_module(mod2).unwrap()];
+
+        let program = check_program(modules).unwrap();
+
+        let mut vm = VM::new(program);
+        vm.insert_builtin("mod1", "add", Box::new(Add));
+        
+        let fn_handle = vm.query_module("mod2", "test2").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Int(3), result);
+    }
 }
