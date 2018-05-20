@@ -63,6 +63,10 @@ impl Module {
             None => None,
         }
     }
+
+    pub fn set_name(&mut self, name: AsciiString) {
+        self.0 = Some(AstNode::new(Ident(name), Span::new(0, 0)));
+    }
 }
 
 pub enum DeclStmt {
