@@ -937,4 +937,25 @@ fn main() {
         let mod1 = parse_module(mod1).unwrap();
         check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn builtin_function() {
+        let mod1 =
+"
+mod mod1;
+
+struct T {
+    i: i32
+}
+
+builtin fn test_function(t: T) -> bool;
+
+fn main() {
+    let t: T = init T {i: 1337};
+    test_function(t);
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
 }
