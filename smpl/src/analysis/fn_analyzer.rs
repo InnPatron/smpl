@@ -579,8 +579,14 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                         Some(fn_type_id) => fn_type_id,
                         None => {
                             let fn_id = self.current_scope.get_fn(fn_call.path())?;
-                            let func = self.universe.get_fn(fn_id);
-                            func.type_id()
+                            fn_call.set_id(fn_id);
+                            if self.metadata.is_builtin(fn_id) {
+                                let func = self.universe.get_builtin_fn(fn_id);
+                                func.type_id()
+                            } else {
+                                let func = self.universe.get_fn(fn_id);
+                                func.type_id()
+                            }
                         }
                     };
 
