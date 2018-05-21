@@ -64,7 +64,7 @@ fn main() {
 
 ## Running SMPL code.
 
-Currently, SMPL only compiles into Rust (no interpreter or other backends). The easiest way to run SMPL code is to compile it and put it into a Cargo project (see smpl-tests/bin_test.sh)
+Currently, SMPL only compiles into Rust. The easiest way to run SMPL code is to compile it and put it into a Cargo project (see smpl-tests/bin_test.sh). Please note that the Rust backend does NOT support all language features.
 
 ```
 smplc -i INPUT_FILE -o OUTPUT_DIR -b 0
@@ -72,9 +72,11 @@ smplc -i INPUT_FILE -o OUTPUT_DIR -b 0
 
 The `-b` flag stands for backend. The Rust backend is '0'.
 
+Alternatively, the SMPL core library has an embeddable serial interpreter which can run the full language.
+
 ## Build instructions
 
-Install [Rust and Cargo](https://www.rust-lang.org/en-US/). Requires version 1.23+
+Install [Rust and Cargo](https://www.rust-lang.org/en-US/). Requires version 1.26+
 
 ```
 cargo build
@@ -86,8 +88,8 @@ cargo run
 1. ~~Arrays~~
 2. Resizable arrays
 3. Pointers
-4. First-class functions
-5. Interpreter
+4. ~~First-class functions~~
+5. ~~Interpreter~~
 6. More code generators (LLVM, x86_64 ASM).
 7. Implement optimizations (constant folding, dead code elimination, etc.)
 8. Integrate [Cycle-collecting reference counters](https://gitlab.com/Random_Civvy/cc) for garbage collection.
