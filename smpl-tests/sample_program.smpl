@@ -50,5 +50,5 @@ fn main() {
 
 	point.y = 20;
 
-	let test_b: bool = point.x == point.y;
+	let test_b = point.x == point.y;
 }
