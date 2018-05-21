@@ -13,3 +13,5 @@ feature!(FUNCTION_VALUE);
 feature!(MOD_ACCESS);
 
 feature!(BUILTIN_FN);
+
+feature!(UNCHECKED_BUILTIN_FN_PARAMS);
