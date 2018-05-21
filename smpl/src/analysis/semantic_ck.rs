@@ -287,7 +287,8 @@ fn generate_builtin_fn_type(program: &mut Program, scope: &ScopedData, fn_id: Fn
         }
 
         BuiltinFnParams::Unchecked => {
-            metadata.insert_unchecked_builtin_params(fn_id);;
+            metadata.insert_unchecked_builtin_params(fn_id);
+            features.add_feature(UNCHECKED_BUILTIN_FN_PARAMS);
             Vec::with_capacity(0)
         }
 
