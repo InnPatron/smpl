@@ -241,8 +241,9 @@ init NAME {
     fn test_parse_local_var_decl() {
         let input = "let a: int = 10;";
         let stmt = parse_ExprStmt(input).unwrap();
-        if let ExprStmt::LocalVarDecl(ref decl) = stmt {
-            assert_eq!(*decl.var_type.data(), TypeAnnotation::Path(type_path!("int")));
+        if let ExprStmt::LocalVarDecl(decl) = stmt {
+            let anno = decl.var_type.unwrap();
+            assert_eq!(*anno.data(), TypeAnnotation::Path(type_path!("int")));
             assert_eq!(decl.var_name, dummy_node!(ident!("a")));
         }
     }
