@@ -734,6 +734,23 @@ mod tests {
         }
     }
 
+    struct VarArgSum;
+
+    impl BuiltInFn for VarArgSum {
+        fn execute(&self, args: Option<Vec<Value>>) -> Value {
+            let args = args.unwrap();
+
+            let mut sum = 0;
+
+            for arg in args.iter() {
+                let value = irmatch!(arg; Value::Int(i) => i);
+                sum += value;
+            }
+
+            return Value::Int(sum);
+        }
+    } 
+
     #[test]
     fn interpreter_basic() {
         let mod1 =
@@ -808,6 +825,31 @@ fn test(a: i32, b: i32) -> i32 {
         let result = vm.eval_fn_args(fn_handle, vec![Value::Int(5), Value::Int(7)]);
 
         assert_eq!(Value::Int(12), result);
+    }
+
+    #[test]
+    fn interpreter_builtin_unchecked_params() {
+        let mod1 =
+"mod mod1;
+
+builtin fn sum(UNCHECKED) -> i32;
+
+fn test(a: i32, b: i32) -> i32 {
+    return sum(a, b, 100, 2);
+}";
+
+        let modules = vec![parse_module(mod1).unwrap()];
+
+        let program = check_program(modules).unwrap();
+
+        let mut vm = VM::new(program);
+        vm.insert_builtin("mod1", "sum", Box::new(VarArgSum));
+        
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn_args(fn_handle, vec![Value::Int(5), Value::Int(7)]);
+
+        assert_eq!(Value::Int(114), result);
     }
 
     #[test]

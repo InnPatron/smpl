@@ -86,13 +86,18 @@ UseDecl: AstNode<UseDecl> = {
 
 /// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" type_annotation]? block
 pub BuiltinFnDecl: AstNode<BuiltinFunction> = {
-	<l: @L> "builtin" "fn" <name: Ident> "(" <params: FnParameterList?> ")" <return_type: ("->" TypeAnnotation)?> ";" <r: @R> => {
+	<l: @L> "builtin" "fn" <name: Ident> "(" <params: BuiltinFnParams> ")" <return_type: ("->" TypeAnnotation)?> ";" <r: @R> => {
 		AstNode::new(BuiltinFunction {
 			name: name,
 			params: params,
 			return_type: return_type.map(|r| r.1),
 		}, Span::new(l, r))
 	}
+};
+
+BuiltinFnParams: BuiltinFnParams = {
+	"UNCHECKED" => BuiltinFnParams::Unchecked,
+	<params: FnParameterList?> => BuiltinFnParams::Checked(params),
 };
 
 /// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" type_annotation]? block

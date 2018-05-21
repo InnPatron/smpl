@@ -15,6 +15,8 @@ pub struct Metadata {
 
     fn_map: HashMap<(ModuleId, Ident), FnId>,
     builtin: HashSet<FnId>,
+
+    unchecked_builtins_params: HashSet<FnId>,
 }
 
 impl Metadata {
@@ -28,6 +30,7 @@ impl Metadata {
             main: None,
             fn_map: HashMap::new(),
             builtin: HashSet::new(),
+            unchecked_builtins_params: HashSet::new(),
         }
     }
 
@@ -37,6 +40,15 @@ impl Metadata {
 
     pub fn is_builtin(&self, id: FnId) -> bool {
         self.builtin.contains(&id)
+    }
+
+    pub fn insert_unchecked_builtin_params(&mut self, id: FnId) {
+        self.insert_builtin(id);
+        self.unchecked_builtins_params.insert(id);
+    }
+
+    pub fn is_builtin_params_unchecked(&self, id: FnId) -> bool {
+        self.unchecked_builtins_params.contains(&id)
     }
 
     pub fn insert_module_fn(&mut self, mod_id: ModuleId, name: Ident, fn_id: FnId) {

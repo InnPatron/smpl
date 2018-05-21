@@ -3,7 +3,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use err::Err;
-use ast::{Ident, ModulePath as AstModulePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule, BuiltinFunction as AstBuiltinFunction};
+use ast::{Ident, ModulePath as AstModulePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule, BuiltinFunction as AstBuiltinFunction, BuiltinFnParams};
 
 use super::feature_checkers::*;
 use super::metadata::*;
@@ -260,27 +260,38 @@ fn generate_builtin_fn_type(program: &mut Program, scope: &ScopedData, fn_id: Fn
     };
 
     let params = match fn_def.params {
-        Some(ref params) => {
-            let mut typed_params = Vec::new();
-            let mut param_metadata = Vec::new();
-            for p in params.iter() {
-                let param = p.data();
-                let type_path = param.param_type.data();
-                let type_id = scope.type_id(universe, type_path.into())?;
-                typed_params.push(type_id);
-                param_metadata.push(FunctionParameter::new(param.name.data().clone(), universe.new_var_id()));
+        BuiltinFnParams::Checked(ref params) => {
+            match *params {
+                Some(ref params) => {
+                    let mut typed_params = Vec::new();
+                    let mut param_metadata = Vec::new();
+                    for p in params.iter() {
+                        let param = p.data();
+                        let type_path = param.param_type.data();
+                        let type_id = scope.type_id(universe, type_path.into())?;
+                        typed_params.push(type_id);
+                        param_metadata.push(FunctionParameter::new(param.name.data().clone(), universe.new_var_id()));
 
-                fn_sig_type_scanner(universe, features, type_id);
+                        fn_sig_type_scanner(universe, features, type_id);
+                    }
+
+                    metadata.insert_function_param_ids(fn_id, param_metadata);
+
+                    typed_params
+                }
+                None => {
+                    metadata.insert_function_param_ids(fn_id, Vec::with_capacity(0));
+                    Vec::with_capacity(0)
+                }
             }
-
-            metadata.insert_function_param_ids(fn_id, param_metadata);
-
-            typed_params
         }
-        None => {
-            metadata.insert_function_param_ids(fn_id, Vec::with_capacity(0));
+
+        BuiltinFnParams::Unchecked => {
+            metadata.insert_unchecked_builtin_params(fn_id);
+            features.add_feature(UNCHECKED_BUILTIN_FN_PARAMS);
             Vec::with_capacity(0)
         }
+
     };
 
     Ok(FunctionType {
@@ -963,6 +974,79 @@ fn main() {
 
         let mod1 = parse_module(mod1).unwrap();
         check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn unchecked_params_builtin_function() {
+        let mod1 =
+"
+mod mod1;
+
+struct T {
+    i: i32
+}
+
+builtin fn test_function(UNCHECKED) -> bool;
+
+fn main() {
+    let t: T = init T {i: 1337};
+    test_function(1, 2, 3);
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn deny_unchecked_params_builtin_function_local() {
+        let mod1 =
+"
+mod mod1;
+
+builtin fn test_function(UNCHECKED) -> bool;
+
+fn main() {
+    let t = test_function;
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Found Ok. Expected Err::UncheckedFunctionBinding"),
+            Err(e) => {
+                match e {
+                    Err::UncheckedFunctionBinding(..) => (),
+                    _ => panic!("Expected Err::UncheckedFunctionBinding. Found {:?}", e),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn deny_unchecked_params_builtin_function_struct() {
+        let mod1 =
+"
+mod mod1;
+
+struct T {
+    i: Fn() -> bool,
+}
+
+builtin fn test_function(UNCHECKED) -> bool;
+
+fn main() {
+    let t = init T { i: test_function };
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Found Ok. Expected Err::UncheckedFunctionBinding"),
+            Err(e) => {
+                match e {
+                    Err::UncheckedFunctionBinding(..) => (),
+                    _ => panic!("Expected Err::UncheckedFunctionBinding. Found {:?}", e),
+                }
+            }
+        }
     }
 
     #[test]
