@@ -13,7 +13,7 @@ use super::semantic_data::Module;
 use super::control_flow::CFG;
 use super::fn_analyzer::analyze_fn;
 
-use feature::PresentFeatures;
+use feature::*;
 
 pub fn check_program(modules: Vec<AstModule>) -> Result<Program, Err> {
     let mut metadata = Metadata::new();
@@ -174,11 +174,14 @@ fn check_module(program: &mut Program, mut module: ModuleCkData) -> Result<Modul
 
         let fn_type = generate_builtin_fn_type(program, &module.module_scope, fn_id, &fn_decl.data())?;
 
+        program.features_mut().add_feature(BUILTIN_FN);
+
         program.universe_mut().insert_builtin_fn(fn_id, type_id, fn_type);
 
         module.module_scope.insert_fn(name.clone().into(), fn_id);
         module.owned_fns.push(fn_id);
 
+        
         program.metadata_mut().insert_builtin(fn_id);
         program.metadata_mut().insert_module_fn(module_id, fn_decl.data().name.data().clone(), fn_id);
     }

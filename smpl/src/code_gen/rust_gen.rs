@@ -30,6 +30,7 @@ impl RustBackend {
 
         denied.push(FeatureReasoning::with_feature(MOD_ACCESS));
         denied.push(FeatureReasoning::with_feature(FUNCTION_VALUE));
+        denied.push(FeatureReasoning::with_feature(BUILTIN_FN));
 
         FeatureInfo::new(required, denied)
     }
