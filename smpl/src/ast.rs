@@ -82,8 +82,14 @@ pub struct UseDecl(pub AstNode<Ident>);
 #[derive(Debug, Clone, PartialEq)]
 pub struct BuiltinFunction {
     pub name: AstNode<Ident>,
-    pub params: Option<Vec<AstNode<FnParameter>>>,
+    pub params: BuiltinFnParams,
     pub return_type: Option<AstNode<TypeAnnotation>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum BuiltinFnParams {
+    Unchecked,
+    Checked(Option<Vec<AstNode<FnParameter>>>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
