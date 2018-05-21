@@ -164,7 +164,7 @@ pub struct Assignment {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct LocalVarDecl {
-    pub var_type: AstNode<TypeAnnotation>,
+    pub var_type: Option<AstNode<TypeAnnotation>>,
     pub var_name: AstNode<Ident>,
     pub var_init: Expr,
 }

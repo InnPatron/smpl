@@ -833,13 +833,19 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
 
     fn local_var_decl(&mut self, _id: NodeIndex, var_decl: &LocalVarDeclData) -> Result<(), Err> {
         let var_decl = &var_decl.decl;
+
+        let expr_type_id = self.resolve_expr(var_decl.init_expr())?;
+
         let name = var_decl.var_name().clone();
         let var_id = var_decl.var_id();
         let var_type_annotation = var_decl.type_annotation();
-        let var_type_id = self.current_scope.type_id(self.universe, var_type_annotation.into())?;
-        let var_type = self.universe.get_type(var_type_id);
+        let var_type_id = match var_type_annotation {
+            Some(type_annotation) => self.current_scope.type_id(self.universe, type_annotation.into())?,
 
-        let expr_type_id = self.resolve_expr(var_decl.init_expr())?;
+            None => expr_type_id,
+        };
+
+        let var_type = self.universe.get_type(var_type_id);
         let expr_type = self.universe.get_type(expr_type_id);
 
         var_decl.set_type_id(var_type_id);

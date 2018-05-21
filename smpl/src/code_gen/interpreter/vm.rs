@@ -932,4 +932,34 @@ fn test() -> i32 {
 
         assert_eq!(Value::Int(420), result);
     }
+
+    #[test]
+    fn interpreter_optional_local_type_annotation() {
+        let mod1 =
+"mod mod1;
+
+fn test2(a: i32) -> i32 {
+    return a * 2;
+}
+
+fn test() -> i32 {
+    let func = test2;
+
+    return func(210);
+}
+
+";
+
+        let modules = vec![parse_module(mod1).unwrap()];
+
+        let program = check_program(modules).unwrap();
+
+        let mut vm = VM::new(program);
+        
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Int(420), result);
+    }
 }

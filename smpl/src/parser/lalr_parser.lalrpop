@@ -193,9 +193,9 @@ ReturnStmt: Option<Expr> = {
 
 /// local_var_decl -> "let" ident ":" type_annotation  "=" expr ";"
 LocalVarDecl: LocalVarDecl = {
-	"let" <name: Ident> ":" <var_type: TypeAnnotation> "=" <e: Expr> ";" => {
+	"let" <name: Ident> <anno: (":" TypeAnnotation)?> "=" <e: Expr> ";" => {
 		LocalVarDecl {
-			var_type: var_type,
+			var_type: anno.map(|(_, ta)| ta),
 			var_name: name,
 			var_init: e,
 		}

@@ -964,4 +964,27 @@ fn main() {
         let mod1 = parse_module(mod1).unwrap();
         check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn optional_local_type_annotation() {
+        let mod1 =
+"
+mod mod1;
+
+struct T {
+    i: i32
+}
+
+fn test_function(t: T) -> i32 {
+    return t.i;
+}
+
+fn main() {
+    let t = init T {i: 1337};
+    test_function(t);
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
 }
