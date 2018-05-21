@@ -14,6 +14,7 @@ pub enum Err {
     UnresolvedUses(Vec<AstNode<UseDecl>>),
     UnresolvedStructs(Vec<AstNode<Struct>>),
     UnresolvedFns(Vec<AstNode<Function>>),
+    UncheckedFunctionBinding(Ident),
     MissingModName,
 }
 

@@ -507,6 +507,11 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
 
                         BindingInfo::Fn(fn_id) => {
                             self.features.add_feature(FUNCTION_VALUE);
+
+                            if(self.metadata.is_builtin_params_unchecked(fn_id)) {
+                                return Err(Err::UncheckedFunctionBinding(var.ident().clone()));
+                            }
+
                             let f = self.universe.get_fn(fn_id);
                             let fn_type_id = f.type_id();
 
