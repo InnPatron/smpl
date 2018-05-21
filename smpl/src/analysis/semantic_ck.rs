@@ -998,6 +998,58 @@ fn main() {
     }
 
     #[test]
+    fn deny_unchecked_params_builtin_function_local() {
+        let mod1 =
+"
+mod mod1;
+
+builtin fn test_function(UNCHECKED) -> bool;
+
+fn main() {
+    let t = test_function;
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Found Ok. Expected Err::UncheckedFunctionBinding"),
+            Err(e) => {
+                match e {
+                    Err::UncheckedFunctionBinding(..) => (),
+                    _ => panic!("Expected Err::UncheckedFunctionBinding. Found {:?}", e),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn deny_unchecked_params_builtin_function_struct() {
+        let mod1 =
+"
+mod mod1;
+
+struct T {
+    i: Fn() -> bool,
+}
+
+builtin fn test_function(UNCHECKED) -> bool;
+
+fn main() {
+    let t = init T { i: test_function };
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Found Ok. Expected Err::UncheckedFunctionBinding"),
+            Err(e) => {
+                match e {
+                    Err::UncheckedFunctionBinding(..) => (),
+                    _ => panic!("Expected Err::UncheckedFunctionBinding. Found {:?}", e),
+                }
+            }
+        }
+    }
+
+    #[test]
     fn optional_local_type_annotation() {
         let mod1 =
 "
