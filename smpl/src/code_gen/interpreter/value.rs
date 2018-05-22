@@ -38,4 +38,8 @@ impl Struct {
     pub fn ref_field(&self, name: &str) -> Option<Rc<RefCell<Value>>> {
         self.0.get(name).map(|rc| rc.clone())
     }
+
+    pub fn fields(&self) -> impl Iterator<Item=(&str, Rc<RefCell<Value>>)> {
+        self.0.iter().map(|(k, v)| (k.as_str(), v.clone()))
+    }
 }
