@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::fmt;
 
 use analysis::{FieldId, FnId};
 use analysis::smpl_type::*;
@@ -17,6 +18,38 @@ pub enum Value {
     Function(FnHandle),
     Struct(Struct),
     Unit,
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Value::Int(i) => write!(f, "{}", i),
+            Value::Float(flt) => write!(f, "{}", flt),
+            Value::Bool(b) => write!(f, "{}", b),
+            Value::String(ref s) => write!(f, "\"{}\"", s),
+            Value::Array(ref a) => {
+                write!(f, "[ ")?;
+                for value in a {
+                    let value = value.borrow();
+                    write!(f, "{},", value)?
+                }
+                write!(f, " ]")
+            },
+
+            Value::Struct(ref s) => {
+                write!(f, "{{ ")?;
+                for (k, v) in s.fields() {
+                    let v = v.borrow();
+                    write!(f, "{}: {},", k, v)?;
+                }
+                write!(f, " }}")
+            },
+
+            Value::Function(..) => write!(f, "Function"),   // TODO: Add more information
+
+            Value::Unit => write!(f, "()"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
