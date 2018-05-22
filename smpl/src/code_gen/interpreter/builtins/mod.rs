@@ -1,5 +1,6 @@
 pub mod log;
 pub mod convert;
+pub mod math;
 
 pub const MOD_LOG: &'static str = "log";
 pub const LOG_PRINT: &'static str = "print";
@@ -38,4 +39,53 @@ builtin fn is_int(s: String) -> bool;
 
 builtin fn string_to_float(s: String) -> f32;
 builtin fn string_to_int(s: String) -> i32;
+";
+
+
+pub const MOD_MATH: &'static str = "math";
+
+pub const MATH_SIN: &'static str = "sin";
+pub const MATH_COS: &'static str = "cos";
+pub const MATH_TAN: &'static str = "tan";
+
+pub const MATH_ASIN: &'static str = "asin";
+pub const MATH_ACOS: &'static str = "acos";
+pub const MATH_ATAN: &'static str = "atan";
+pub const MATH_ATAN2: &'static str = "atan2";
+
+pub const MATH_TO_RADIANS: &'static str = "to_radians";
+pub const MATH_TO_DEGREES: &'static str = "to_degrees";
+
+pub const MATH_FPOWF: &'static str = "fpowf";
+pub const MATH_FPOWI: &'static str = "fpowi";
+pub const MATH_IPOW: &'static str = "ipow";
+
+pub const MATH_FLOOR: &'static str = "floor";
+pub const MATH_CEIL: &'static str = "ceil";
+pub const MATH_ROUND: &'static str = "round";
+
+
+pub const MATH_DECLARATION: &'static str =
+"
+mod math;
+
+builtin fn sin(r: f32) -> f32;
+builtin fn cos(r: f32) -> f32;
+builtin fn tan(r: f32) -> f32;
+
+builtin fn asin(r: f32) -> f32;
+builtin fn acos(r: f32) -> f32;
+builtin fn atan(r: f32) -> f32;
+builtin fn atan2(r: f32, other: f32) -> f32;
+
+builtin fn to_radians(degrees: f32) -> f32;
+builtin fn to_degrees(radians: f32) -> f32;
+
+builtin fn fpowf(base: f32, power: f32) -> f32;
+builtin fn fpowi(base: f32, power: i32) -> f32;
+builtin fn ipow(base: i32, power: i32) -> i32;
+
+builtin fn floor(f: f32) -> f32;
+builtin fn ceil(f: f32) -> f32;
+builtin fn round(f: f32) -> f32;
 ";
