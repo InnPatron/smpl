@@ -1,6 +1,7 @@
 pub mod log;
 pub mod convert;
 pub mod math;
+pub mod err;
 
 pub const MOD_LOG: &'static str = "log";
 pub const LOG_PRINT: &'static str = "print";
@@ -88,4 +89,16 @@ builtin fn ipow(base: i32, power: i32) -> i32;
 builtin fn floor(f: f32) -> f32;
 builtin fn ceil(f: f32) -> f32;
 builtin fn round(f: f32) -> f32;
+";
+
+
+pub const MOD_ERR: &'static str = "err";
+
+pub const ERR_PANIC: &'static str = "panic";
+
+pub const ERR_DECLARATION: &'static str =
+"
+mod err;
+
+builtin fn panic(msg: String);
 ";
