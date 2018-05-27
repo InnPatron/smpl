@@ -137,7 +137,8 @@ mod tests {
     #[test]
     fn expr_exec_order_ck() {
         let input = "5 + 2 / 3";
-        let expr = parse_Expr(input).unwrap();
+        let parser = ExprParser::new();
+        let expr = parser.parse(input).unwrap();
 
         let universe = Universe::std();
 

@@ -17,7 +17,8 @@ mod parser_tests;
 
 pub fn parse_module(input: &str) -> Result<Module, Err>{
     let input = prune_input(input);
-    lalr_parser::parse_Module(&input).map_err(|e| Err::ParseErr(format!("{:?}", e)))
+    let parser = lalr_parser::ModuleParser::new();
+    parser.parse(&input).map_err(|e| Err::ParseErr(format!("{:?}", e)))
 }
 
 fn prune_input(input: &str) -> String {

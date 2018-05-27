@@ -404,7 +404,7 @@ pub Literal: Literal = {
 };
 
 Number: String = {
-	<number: r"[-]?[0-9]+[.[0-9]*]?"> => number.to_string(),
+	<number: r"[-]?[0-9]+[\.[0-9]*]?"> => number.to_string(),
 };
 
 Ident: AstNode<Ident> = {

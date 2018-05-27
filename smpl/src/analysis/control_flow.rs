@@ -691,7 +691,8 @@ let b: int = 3;
             params: vec![universe.int()],
             return_type: universe.unit(),
         };
-        let fn_def = parse_FnDecl(input).unwrap();
+        let parser = FnDeclParser::new();
+        let fn_def = parser.parse(input).unwrap();
         let fn_def = fn_def.data();
         let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
@@ -762,7 +763,8 @@ if (test) {
             params: vec![universe.int()],
             return_type: universe.unit(),
         };
-        let fn_def = parse_FnDecl(input).unwrap();
+        let parser = FnDeclParser::new();
+        let fn_def = parser.parse(input).unwrap();
         let fn_def = fn_def.data();
         let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
@@ -912,7 +914,8 @@ if (test) {
             params: vec![universe.int()],
             return_type: universe.unit(),
         };
-        let fn_def = parse_FnDecl(input).unwrap();
+        let parser = FnDeclParser::new();
+        let fn_def = parser.parse(input).unwrap();
         let fn_def = fn_def.data();
         let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
@@ -1074,7 +1077,8 @@ if (test) {
             params: vec![universe.int()],
             return_type: universe.unit(),
         };
-        let fn_def = parse_FnDecl(input).unwrap();
+        let parser = FnDeclParser::new();
+        let fn_def = parser.parse(input).unwrap();
         let fn_def = fn_def.data();
         let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
