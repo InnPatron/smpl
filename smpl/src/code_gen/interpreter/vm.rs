@@ -12,12 +12,15 @@ use petgraph::visit::EdgeRef;
 
 use feature::*;
 
-use ast::{Ident, BinOp, UniOp};
+use ast::{Module, Ident, BinOp, UniOp};
+
+use err::Err;
 
 use analysis::*;
 use analysis::smpl_type::*;
 use analysis::metadata::*;
 
+use super::loader;
 use super::vm_i::*;
 use super::value::Value;
 
@@ -27,11 +30,17 @@ pub struct VM {
 }
 
 impl VM {
-    pub fn new(program: Program) -> VM {
-        VM {
+    pub fn new(user_modules: Vec<Module>) -> Result<VM, Err> {
+        let modules = loader::include(user_modules);
+        let program = check_program(modules)?;
+        let mut vm = VM {
             program: program,
             builtins: HashMap::new(),
-        }
+        };
+
+        loader::load(&mut vm);
+
+        Ok(vm)
     }
 
     pub fn eval_fn(&self, handle: FnHandle) -> Value {
