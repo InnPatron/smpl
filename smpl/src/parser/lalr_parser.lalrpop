@@ -506,15 +506,11 @@ Ident: AstNode<Ident> = {
 
 /// path -> ident ["." ident]*
 Path: Path = {
-	<p: PathSegmentList> => Path(p),
-};
-
-PathSegmentList: Vec<PathSegment> = {
-	<first: PathSegment> "." <tail: PathSegmentList> => {
-		let mut p = tail;
-		p.insert(0, first);
-		p
-	},
+	<first: PathSegment> <tail: ("." <PathSegment>)+> => {
+		let mut v = vec![first];
+		v.extend(tail);
+		Path(v)
+	}
 };
 
 PathSegment: PathSegment = {
