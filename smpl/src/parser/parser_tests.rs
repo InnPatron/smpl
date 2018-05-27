@@ -431,4 +431,10 @@ struct TestStruct {
             assert_eq!(e, root);
         }
     }
+
+    #[test]
+    fn parse_float_expr() {
+        let input = "1.5";
+        parse_Expr(input).unwrap();
+    }
 }
