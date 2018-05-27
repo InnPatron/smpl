@@ -373,24 +373,14 @@ ExprLeaf: Expr = {
 };
 
 ExprPath: Expr = {
-	<l: @L> <path: Path> <r: @R> => {
-		let mut path = path;
-		if path.0.len() == 1 {
-			let segment = path.0.pop().unwrap();
-			match segment {
-				PathSegment::Ident(i) => Expr::Binding(i),
-				PathSegment::Indexing(i, e) => {
-					let i = Indexing {
-						array: Box::new(Expr::Binding(i)),
-						indexer: e
-					};
-					Expr::Indexing(AstNode::new(i, Span::new(l, r)))
-				}
-			}
-		} else {
-			Expr::FieldAccess(AstNode::new(path, Span::new(l, r)))
-		}
-	},
+	<l: @L> <path: Path> <r: @R> => Expr::FieldAccess(AstNode::new(path, Span::new(l, r))),
+
+	<i: Ident> => Expr::Binding(i),
+
+	<l: @L> <i: Ident> "[" <e: Expr> "]" <r: @R> => Expr::Indexing(AstNode::new(Indexing {
+		array: Box::new(Expr::Binding(i)),
+		indexer: Box::new(e),
+	}, Span::new(l, r))),
 
 	<l: @L> <p: ModulePath> <r: @R> => Expr::ModAccess(AstNode::new(p, Span::new(l, r))),
 };
@@ -525,8 +515,6 @@ PathSegmentList: Vec<PathSegment> = {
 		p.insert(0, first);
 		p
 	},
-
-	<segment: PathSegment> => vec![segment],
 };
 
 PathSegment: PathSegment = {
