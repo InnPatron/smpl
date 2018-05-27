@@ -214,6 +214,13 @@ Assignment: Assignment = {
 			name: AstNode::new(name, Span::new(l, r)),
 			value: e,
 		}
+	},
+
+	<ll: @L> <l: @L> <seg: PathSegment> <r: @R> "=" <e: Expr> ";" <rr: @R> => {
+		Assignment {
+			name: AstNode::new(Path(vec![seg]), Span::new(l, r)),
+			value: e,
+		}
 	}
 };
 
