@@ -1,6 +1,7 @@
 mod vm;
 mod value;
 mod vm_i;
+mod loader;
 
 pub mod builtins;
 
