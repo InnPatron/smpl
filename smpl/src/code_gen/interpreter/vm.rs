@@ -771,9 +771,7 @@ fn test(a: i32, b: i32) -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let vm = VM::new(program);
+        let vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -797,9 +795,7 @@ fn test(a: i32, b: i32) -> T {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let vm = VM::new(program);
+        let vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -824,9 +820,7 @@ fn test(a: i32, b: i32) -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
         vm.insert_builtin("mod1", "add", Box::new(Add));
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
@@ -849,9 +843,8 @@ fn test(a: i32, b: i32) -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
 
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
         vm.insert_builtin("mod1", "sum", Box::new(VarArgSum));
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
@@ -884,9 +877,7 @@ fn test2() -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap(), parse_module(mod2).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
         vm.insert_builtin("mod1", "add", Box::new(Add));
         
         let fn_handle = vm.query_module("mod2", "test2").unwrap().unwrap();
@@ -917,9 +908,7 @@ fn test() -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -943,9 +932,7 @@ fn test() -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -973,9 +960,7 @@ fn test() -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -1003,9 +988,7 @@ fn test() -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -1030,9 +1013,7 @@ fn recurse(i: i32) -> i32 {
 ";
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
 
         let fn_handle = vm.query_module("mod1", "recurse").unwrap().unwrap();
 
@@ -1066,9 +1047,7 @@ fn recurse_b(i: i32) -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
 
         let fn_handle = vm.query_module("mod1", "recurse_a").unwrap().unwrap();
 
