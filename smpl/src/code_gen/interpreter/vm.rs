@@ -1055,4 +1055,27 @@ fn recurse_b(i: i32) -> i32 {
 
         assert_eq!(Value::Int(-5), result);    
     }
+
+    #[test]
+    fn interpreter_loaded_builtin() {
+        let mod1 =
+"
+mod mod1;
+use math;
+
+fn test_floor() -> f32 {
+    let f = math::floor(1.5);
+    return f;
+}
+";
+        let modules = vec![parse_module(mod1).unwrap()];
+
+        let mut vm = VM::new(modules).unwrap();
+
+        let fn_handle = vm.query_module("mod1", "test_floor").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Float(1.0), result);
+    }
 }
