@@ -69,7 +69,7 @@ pub enum Token {
 
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 struct Location {
     byte_index: usize,
     char_index: usize,
