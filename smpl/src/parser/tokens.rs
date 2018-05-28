@@ -500,3 +500,23 @@ fn is_ident_continue(c: char) -> bool {
 fn is_digit(c: char) -> bool {
     c.is_digit(10)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn unwrap(v: Option<Result<SpannedToken, SpannedError>>) -> Token {
+        v.expect("Some").expect("Ok").to_data().1
+    }
+
+    #[test]
+    fn tokenize_mod_decl() {
+        let input = "mod test;";
+        let mut tok = Tokenizer::new(input);
+        
+        assert_eq!(Token::Mod, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("test".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Semi, unwrap(tok.next()));
+        assert_eq!(None, tok.next());
+    }
+}
