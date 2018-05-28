@@ -33,7 +33,7 @@ impl SpannedToken {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Token {
     Identifier(String),
     StringLiteral(String),
@@ -133,7 +133,7 @@ impl LocationSpan {
 }
 
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Location {
     byte_index: usize,
     char_index: usize,
@@ -170,13 +170,13 @@ impl Location {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct SpannedError {
     error: TokenizerError,
     location: Location,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum TokenizerError {
 
 }
