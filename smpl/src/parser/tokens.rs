@@ -98,6 +98,15 @@ impl LocationSpan {
         }
     }
 
+    pub fn span_1(start: Location, char_size: usize) -> LocationSpan {
+        let mut end = start.clone();
+        end.byte_index += char_size;
+        end.char_index += 1;
+        end.column += 1;
+
+        LocationSpan::new(start, end)
+    }
+
     pub fn start(&self) -> Location {
         self.start
     }
