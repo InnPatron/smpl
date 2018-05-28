@@ -91,6 +91,13 @@ pub struct LocationSpan {
 }
 
 impl LocationSpan {
+    pub fn new(start: Location, end: Location) -> LocationSpan {
+        LocationSpan {
+            start: start,
+            end: end,
+        }
+    }
+
     pub fn start(&self) -> Location {
         self.start
     }
