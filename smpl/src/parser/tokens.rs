@@ -14,6 +14,13 @@ pub struct SpannedToken {
 }
 
 impl SpannedToken {
+    pub fn new(token: Token, location: LocationSpan) -> SpannedToken {
+        SpannedToken {
+            token: token,
+            location: location,
+        }
+    }
+
     pub fn to_data(self) -> (LocationSpan, Token) {
         (self.location, self.token)
     }
