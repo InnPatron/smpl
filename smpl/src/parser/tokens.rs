@@ -41,6 +41,7 @@ pub enum Token {
     FloatLiteral(f64),
     BoolLiteral(bool),
 
+    FnTypeSignal,
     Fn,
     Struct,
     Mod,
@@ -351,6 +352,7 @@ impl<'input> Tokenizer<'input> {
         let (end, ident) = self.take_while(start, is_ident_continue);
 
         let token = match ident {
+            "Fn" => Token::FnTypeSignal,
             "fn" => Token::Fn,
             "mod" => Token::Mod,
             "struct" => Token::Struct,
