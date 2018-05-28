@@ -6,6 +6,7 @@ use std::iter::{Iterator, Peekable, Enumerate};
 
 use span::Span;
 
+#[derive(Debug)]
 pub struct SpannedToken {
     token: Token,
     location: LocationSpan,
@@ -32,6 +33,7 @@ impl SpannedToken {
     }
 }
 
+#[derive(Debug)]
 pub enum Token {
     Identifier(String),
     StringLiteral(String),
@@ -94,7 +96,7 @@ pub enum Token {
 
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct LocationSpan {
     start: Location,
     end: Location,
@@ -131,7 +133,7 @@ impl LocationSpan {
 }
 
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Location {
     byte_index: usize,
     char_index: usize,
