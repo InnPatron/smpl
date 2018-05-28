@@ -561,6 +561,8 @@ mod tests {
         assert_eq!(Token::Colon, unwrap(tok.next()));
         assert_eq!(Token::Identifier("f32".to_string()), unwrap(tok.next()));
 
+        assert_eq!(Token::RBrace, unwrap(tok.next()));
+        assert_eq!(None, tok.next());
     }
 
     #[test]
