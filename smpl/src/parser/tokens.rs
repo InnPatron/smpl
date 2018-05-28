@@ -186,6 +186,7 @@ pub struct SpannedError {
 pub enum TokenizerError {
     UnexpectedChar(char),
     UnexpectedEndOfInput,
+    UnterminatedStringLiteral,
 }
 
 struct CharInput<'input> {
@@ -426,18 +427,20 @@ impl<'input> Tokenizer<'input> {
     }
 
     fn string_literal(&mut self, start: Location) -> Result<SpannedToken, SpannedError> {
-        let (end, literal) = self.take_until(start, |c| c == '\"');
-        if literal.len() < 2 || literal.chars().rev().next().unwrap() != '\"' {
-            Err(SpannedError {
-                error: TokenizerError::UnexpectedEndOfInput,
-                location: start,
-            })
-        } else {
-            // Remove quotes at literal[0] and literal[literal.len() - 1]
-            // Range is [1, literal.len() - 1)
-            let literal = literal[1..literal.len() - 1].to_string();
-            Ok(SpannedToken::new(Token::StringLiteral(literal), LocationSpan::new(start, end)))
+        let mut literal = String::new();
+        while let Some((e, ch)) = self.chars.next() {
+            match ch {
+                '\"' => return Ok(SpannedToken::new(Token::StringLiteral(literal), LocationSpan::new(start, e))),
+                
+                // TODO: Track escape characters
+                ch => literal.push(ch),
+            }
         }
+
+        Err(SpannedError {
+            error: TokenizerError::UnterminatedStringLiteral,
+            location: start
+        })
     }
 }
 
