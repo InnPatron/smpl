@@ -594,4 +594,50 @@ mod hello;";
         assert_eq!(Token::Semi, unwrap(tok.next()));
         assert_eq!(None, tok.next());
     }
+
+    #[test]
+    fn tokenize_literals() {
+        let input = 
+"true 
+false 
+1337 
+-1337 
+1 
+-1 
+1.0 
+1. 
+-1. 
+-1.0
+";
+        let mut tok = Tokenizer::new(input);
+
+        assert_eq!(Token::BoolLiteral(true), unwrap(tok.next()));
+        assert_eq!(Token::BoolLiteral(false), unwrap(tok.next()));
+
+        assert_eq!(Token::IntLiteral(1337), unwrap(tok.next()));
+        assert_eq!(Token::IntLiteral(-1337), unwrap(tok.next()));
+        assert_eq!(Token::IntLiteral(1), unwrap(tok.next()));
+        assert_eq!(Token::IntLiteral(-1), unwrap(tok.next()));
+
+        assert_eq!(Token::FloatLiteral(1.0), unwrap(tok.next()));
+        assert_eq!(Token::FloatLiteral(1.0), unwrap(tok.next()));
+        assert_eq!(Token::FloatLiteral(-1.0), unwrap(tok.next()));
+        assert_eq!(Token::FloatLiteral(-1.0), unwrap(tok.next()));
+
+        assert_eq!(None, tok.next());
+    }
+
+    #[test]
+    fn tokenize_string_literal() {
+        let input = 
+"\" this is lit \"
+\" -erally\"
+";
+        let mut tok = Tokenizer::new(input);
+
+        assert_eq!(Token::StringLiteral(" this is lit ".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::StringLiteral(" -erally".to_string()), unwrap(tok.next()));
+
+        assert_eq!(None, tok.next());
+    }
 }
