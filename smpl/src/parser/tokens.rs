@@ -170,6 +170,7 @@ pub enum TokenizerError {
 
 struct CharInput<'input> {
     chars: Peekable<Enumerate<CharIndices<'input>>>,
+    lookahead: Option<(Location, char)>,
     line: usize,
     column: usize,
 }
@@ -180,15 +181,12 @@ impl<'input> CharInput<'input> {
             chars: input.char_indices().enumerate().peekable(),
             line: 1,
             column: 1,
+            lookahead: None,
         }
     }
 
-    fn peek(&mut self) -> Option<(Location, char)> {
-        let line = self.line;
-        let column = self.column;
-        self.chars.peek().map(|(char_index, (byte_index, c))| {
-            (Location::new(byte_index.clone(), char_index.clone(), line, column), c.clone())
-        })
+    fn peek(&self) -> Option<(Location, char)> {
+        self.lookahead
     }
 }
 
@@ -196,7 +194,7 @@ impl<'input> Iterator for CharInput<'input> {
     type Item = (Location, char);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.chars.next().map(|(char_index, (byte_index, c))| {
+        let result = self.chars.next().map(|(char_index, (byte_index, c))| {
             if c == '\n' {
                 self.line += 1;
                 self.column = 1;
@@ -204,7 +202,15 @@ impl<'input> Iterator for CharInput<'input> {
                 self.column += 1;
             }
             (Location::new(byte_index, char_index, self.line, self.column), c.clone())
-        })
+        });
+
+        let line = self.line;
+        let column = self.column; 
+        self.lookahead = self.chars.peek().map(|(char_index, (byte_index, c))| {
+            (Location::new(byte_index.clone(), char_index.clone(), line, column), c.clone())
+        });
+
+        result
     }
 }
 
@@ -226,7 +232,7 @@ impl<'input> Tokenizer<'input> {
         while let Some(_) = self.chars.next() { }
     }
 
-    fn test_lookahead<F>(&mut self, mut test: F) -> bool
+    fn test_lookahead<F>(&self, mut test: F) -> bool
         where F: FnMut(char) -> bool {
         self.chars.peek().map_or(false, |c| test(c.1))
     }
