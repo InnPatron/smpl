@@ -359,6 +359,13 @@ impl<'input> Iterator for Tokenizer<'input> {
                     continue;
                 },
 
+                '-' if self.test_lookahead(|c| c == '>')
+                    => {
+
+                    let (end, _) = self.chars.next().unwrap();
+                    Some(Ok(SpannedToken::new(Token::Arrow, LocationSpan::new(start, end))))
+                },
+
                 ',' => Some(Ok(SpannedToken::new(Token::Comma,  LocationSpan::span_1(start, 1)))),
                 '.' => Some(Ok(SpannedToken::new(Token::Dot,    LocationSpan::span_1(start, 1)))),
                 ';' => Some(Ok(SpannedToken::new(Token::Semi,   LocationSpan::span_1(start, 1)))),
