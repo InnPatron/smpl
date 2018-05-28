@@ -142,6 +142,12 @@ impl Location {
     }
 }
 
+type SpannedError = (TokenizerError, Location);
+
+pub enum TokenizerError {
+
+}
+
 struct CharInput<'input> {
     chars: Peekable<Enumerate<CharIndices<'input>>>,
     line: usize,
