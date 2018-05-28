@@ -713,4 +713,13 @@ A1b2
         assert_eq!(Token::Elif, unwrap(tok.next()));
         assert_eq!(Token::Let, unwrap(tok.next()));
     }
+
+    #[test]
+    fn tokenize_end_of_input() {
+        let input = "let";
+        let mut tok = Tokenizer::new(input);
+
+        assert_eq!(Token::Let, unwrap(tok.next()));
+        assert_eq!(None, tok.next());
+    }
 }
