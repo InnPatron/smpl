@@ -742,4 +742,28 @@ A1b2
         assert_eq!(Token::ColonColon, unwrap(tok.next()));
         assert_eq!(Token::Identifier("baz".to_string()), unwrap(tok.next()));
     }
+
+    #[test]
+    fn tokenize_field_access() {
+        let input = "foo.bar.baz";
+        let mut tok = Tokenizer::new(input);
+
+        assert_eq!(Token::Identifier("foo".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Dot, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("bar".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Dot, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("baz".to_string()), unwrap(tok.next()));
+    }
+
+    #[test]
+    fn tokenize_comma_list() {
+        let input = "foo, bar,baz";
+        let mut tok = Tokenizer::new(input);
+
+        assert_eq!(Token::Identifier("foo".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Comma, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("bar".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Comma, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("baz".to_string()), unwrap(tok.next()));
+    }
 }
