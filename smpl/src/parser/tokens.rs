@@ -370,11 +370,15 @@ impl<'input> Iterator for Tokenizer<'input> {
                 '.' => Some(Ok(SpannedToken::new(Token::Dot,    LocationSpan::span_1(start, 1)))),
                 ';' => Some(Ok(SpannedToken::new(Token::Semi,   LocationSpan::span_1(start, 1)))),
 
-                ':' if self.test_lookahead(is_colon)
-                    => Some(Ok(SpannedToken::new(Token::Colon,  LocationSpan::span_1(start, 1)))),
+                ':' if self.test_lookahead(is_colon) 
+                    => {
+
+                    let (end, _) = self.chars.next().unwrap();
+                    Some(Ok(SpannedToken::new(Token::ColonColon,  LocationSpan::new(start, end))))
+                },
 
                 ':' if self.test_lookahead(is_colon) == false
-                    => Some(Ok(SpannedToken::new(Token::ColonColon,  LocationSpan::span_1(start, 1)))),
+                    => Some(Ok(SpannedToken::new(Token::Colon,  LocationSpan::span_1(start, 1)))),
 
                 '(' => Some(Ok(SpannedToken::new(Token::LParen,  LocationSpan::span_1(start, 1)))),
                 ')' => Some(Ok(SpannedToken::new(Token::RParen,  LocationSpan::span_1(start, 1)))),
