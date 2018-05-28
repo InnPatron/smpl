@@ -4,7 +4,7 @@ use err::Err;
 
 #[cfg(not(test))]
 mod lalr_parser;
-
+mod tokens;
 
 #[cfg(test)]
 pub mod lalr_parser;
