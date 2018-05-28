@@ -444,7 +444,7 @@ impl<'input> Iterator for Tokenizer<'input> {
                 ch if is_op(ch) => Some(self.op(start, ch)),
                 ch if ch.is_whitespace() => continue,
 
-                _ => unimplemented!(),
+                ch => Some(Err(unimplemented!("Unexpected char"))),
             }
         }
 
