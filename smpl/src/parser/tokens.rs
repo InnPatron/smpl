@@ -519,4 +519,25 @@ mod tests {
         assert_eq!(Token::Semi, unwrap(tok.next()));
         assert_eq!(None, tok.next());
     }
+
+    #[test]
+    fn tokenize_struct_decl() {
+        let input = "struct Test { field1: i32, field2: f32 }";
+        let mut tok = Tokenizer::new(input);
+
+        assert_eq!(Token::Struct, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("Test".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::LBrace, unwrap(tok.next()));
+
+        assert_eq!(Token::Identifier("field1".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Colon, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("i32".to_string()), unwrap(tok.next()));
+
+        assert_eq!(Token::Comma, unwrap(tok.next()));
+
+        assert_eq!(Token::Identifier("field2".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Colon, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("f32".to_string()), unwrap(tok.next()));
+
+    }
 }
