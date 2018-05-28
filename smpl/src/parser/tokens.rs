@@ -184,7 +184,8 @@ pub struct SpannedError {
 
 #[derive(Debug, PartialEq)]
 pub enum TokenizerError {
-
+    UnexpectedChar(char),
+    UnexpectedEndOfInput,
 }
 
 struct CharInput<'input> {
