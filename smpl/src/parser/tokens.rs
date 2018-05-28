@@ -730,4 +730,16 @@ A1b2
         assert_eq!(Token::Let, unwrap(tok.next()));
         assert_eq!(None, tok.next());
     }
+
+    #[test]
+    fn tokenize_module_path() {
+        let input = "foo::bar::baz";
+        let mut tok = Tokenizer::new(input);
+
+        assert_eq!(Token::Identifier("foo".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::ColonColon, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("bar".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::ColonColon, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("baz".to_string()), unwrap(tok.next()));
+    }
 }
