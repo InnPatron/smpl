@@ -696,4 +696,21 @@ A1b2
         assert_eq!(Token::IntLiteral(3), unwrap(tok.next()));
 
     }
+
+    #[test]
+    fn tokenize_keywords() {
+        let input = "if struct while fn Fn mod use else elif let";
+        let mut tok = Tokenizer::new(input);
+
+        assert_eq!(Token::If, unwrap(tok.next()));
+        assert_eq!(Token::Struct, unwrap(tok.next()));
+        assert_eq!(Token::While, unwrap(tok.next()));
+        assert_eq!(Token::Fn, unwrap(tok.next()));
+        assert_eq!(Token::FnTypeSignal, unwrap(tok.next()));
+        assert_eq!(Token::Mod, unwrap(tok.next()));
+        assert_eq!(Token::Use, unwrap(tok.next()));
+        assert_eq!(Token::Else, unwrap(tok.next()));
+        assert_eq!(Token::Elif, unwrap(tok.next()));
+        assert_eq!(Token::Let, unwrap(tok.next()));
+    }
 }
