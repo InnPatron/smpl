@@ -70,6 +70,11 @@ pub enum Token {
     Slash,
     Percent,
 
+    Ref,
+
+    LAnd,
+    LOr,
+
     LParen,
     RParen,
     LBrace,
