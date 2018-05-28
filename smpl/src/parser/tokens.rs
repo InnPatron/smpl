@@ -424,6 +424,21 @@ impl<'input> Tokenizer<'input> {
         let i = int.parse::<i64>().unwrap();
         Ok(SpannedToken::new(Token::IntLiteral(i), LocationSpan::new(start, end)))
     }
+
+    fn string_literal(&mut self, start: Location) -> Result<SpannedToken, SpannedError> {
+        let (end, literal) = self.take_until(start, |c| c == '\"');
+        if literal.len() < 2 || literal.chars().rev().next().unwrap() != '\"' {
+            Err(SpannedError {
+                error: TokenizerError::UnexpectedEndOfInput,
+                location: start,
+            })
+        } else {
+            // Remove quotes at literal[0] and literal[literal.len() - 1]
+            // Range is [1, literal.len() - 1)
+            let literal = literal[1..literal.len() - 1].to_string();
+            Ok(SpannedToken::new(Token::StringLiteral(literal), LocationSpan::new(start, end)))
+        }
+    }
 }
 
 impl<'input> Iterator for Tokenizer<'input> {
@@ -468,6 +483,8 @@ impl<'input> Iterator for Tokenizer<'input> {
 
                 '{' => Some(Ok(SpannedToken::new(Token::LBrace,  LocationSpan::span_1(start, 1)))),
                 '}' => Some(Ok(SpannedToken::new(Token::RBrace,  LocationSpan::span_1(start, 1)))),
+
+                '\"' => Some(self.string_literal(start)),
 
                 ch if is_ident_start(ch) => Some(Ok(self.identifier(start))),
                 ch if is_digit(ch) || (ch == '-' && self.test_lookahead(is_digit))
