@@ -288,7 +288,14 @@ impl<'input> Tokenizer<'input> {
             Some(end_of_input) => (end_of_input.0, self.slice(start, end_of_input.0)),
 
             // Loop body did not run, assume 'start' location was the end of the input
-            None => (start, self.slice(start, start)),
+            None => {
+                let mut end = start.clone();
+                end.column += 1;
+                end.byte_index += 1;
+                end.char_index += 1;
+
+                (start, self.slice(start, end))
+            },
 
         }
     }
