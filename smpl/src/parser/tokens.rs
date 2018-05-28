@@ -661,4 +661,32 @@ A1b2
         assert_eq!(Token::Identifier("a1b2".to_string()), unwrap(tok.next()));
         assert_eq!(Token::Identifier("A1b2".to_string()), unwrap(tok.next()));
     }
+
+    #[test]
+    fn tokenize_math_expr() {
+        let input = "2.0 * foo - (bar/3)--100 % 1. + 3";
+        let mut tok = Tokenizer::new(input);
+
+
+        assert_eq!(Token::FloatLiteral(2.0), unwrap(tok.next()));
+        assert_eq!(Token::Star, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("foo".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Minus, unwrap(tok.next()));
+
+        assert_eq!(Token::LParen, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("bar".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Slash, unwrap(tok.next()));
+        assert_eq!(Token::IntLiteral(3), unwrap(tok.next()));
+        assert_eq!(Token::RParen, unwrap(tok.next()));
+        assert_eq!(Token::Minus, unwrap(tok.next()));
+
+        assert_eq!(Token::IntLiteral(-100), unwrap(tok.next()));
+
+        assert_eq!(Token::Percent, unwrap(tok.next()));
+
+        assert_eq!(Token::FloatLiteral(1.0), unwrap(tok.next()));
+        assert_eq!(Token::Plus, unwrap(tok.next()));
+        assert_eq!(Token::IntLiteral(3), unwrap(tok.next()));
+
+    }
 }
