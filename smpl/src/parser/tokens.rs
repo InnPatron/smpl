@@ -269,3 +269,22 @@ impl<'input> Tokenizer<'input> {
         }
     }
 }
+
+impl<'input> Iterator for Tokenizer<'input> {
+    type Item = Result<SpannedToken, SpannedError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some((start, c)) = self.chars.next() {
+            return match c {
+                ',' => Some(Ok(SpannedToken::new(Token::Comma,  LocationSpan::span_1(start, 1)))),
+                '.' => Some(Ok(SpannedToken::new(Token::Dot,    LocationSpan::span_1(start, 1)))),
+                ';' => Some(Ok(SpannedToken::new(Token::Semi,   LocationSpan::span_1(start, 1)))),
+                ':' => Some(Ok(SpannedToken::new(Token::Colon,  LocationSpan::span_1(start, 1)))),
+
+                _ => unimplemented!(),
+            }
+        }
+
+        None
+    }
+}
