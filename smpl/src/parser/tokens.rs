@@ -70,6 +70,13 @@ pub enum Token {
 }
 
 #[derive(Copy, Clone)]
+struct LocationSpan {
+    start: Location,
+    end: Location,
+}
+
+
+#[derive(Copy, Clone)]
 struct Location {
     byte_index: usize,
     char_index: usize,
@@ -139,6 +146,50 @@ impl<'input> Tokenizer<'input> {
         Tokenizer {
             input: input,
             chars: CharInput::new(input),
+        }
+    }
+
+    fn skip_to_end(&mut self) {
+        while let Some(_) = self.chars.next() { }
+    }
+
+    fn test_lookahead<F>(&mut self, mut test: F) -> bool
+        where F: FnMut(char) -> bool {
+        self.chars.peek().map_or(false, |c| test(c.1))
+    }
+
+    fn slice(&self, start: Location, end: Location) -> &'input str {
+        let start = start.byte_index;
+        let end = end.byte_index;
+
+        &self.input[start..end]
+    }
+
+    fn take_while<F>(&mut self, start: Location, mut acceptor: F) -> (Location, &'input str)
+        where F: FnMut(char) -> bool {
+    
+        self.take_until(start, |c| !acceptor(c))
+    }
+
+    fn take_until<F>(&mut self, start: Location, mut terminator: F) -> (Location, &'input str)
+        where F: FnMut(char) -> bool {
+
+        let mut current = None;
+        while let Some((loc, c)) = self.chars.peek() {
+            if terminator(c) {
+                // Return the location to the start of the next rule
+                return (loc, self.slice(start, loc));
+            } else {
+                current = self.chars.next();
+            }
+        }
+
+        match current {
+            Some(end_of_input) => (end_of_input.0, self.slice(start, end_of_input.0)),
+
+            // Loop body did not run, assume 'start' location was the end of the input
+            None => (start, self.slice(start, start)),
+
         }
     }
 }
