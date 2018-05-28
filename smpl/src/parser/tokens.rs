@@ -481,7 +481,7 @@ fn is_ident_start(c: char) -> bool {
 }
 
 fn is_ident_continue(c: char) -> bool {
-    is_ident_start(c)
+    is_ident_start(c) || is_digit(c)
 }
 
 fn is_digit(c: char) -> bool {
