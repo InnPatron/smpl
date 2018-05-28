@@ -12,6 +12,12 @@ pub struct SpannedToken {
     location: LocationSpan,
 }
 
+impl PartialEq for SpannedToken {
+    fn eq(&self, other: &SpannedToken) -> bool {
+        self.token == other.token
+    }
+}
+
 impl SpannedToken {
     pub fn new(token: Token, location: LocationSpan) -> SpannedToken {
         SpannedToken {
