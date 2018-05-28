@@ -60,7 +60,7 @@ pub enum Token {
     Gte,
     Gt,
     Lte,
-    lt,
+    Lt,
 
     Invert,
 
@@ -282,6 +282,68 @@ impl<'input> Tokenizer<'input> {
     fn line_comment(&mut self, start: Location) -> (Location, &'input str) {
         self.take_until(start, |c| c == '\n')
     }
+
+    fn op(&mut self, start: Location, c: char) -> Result<SpannedToken, SpannedError> {
+        match c {
+            '+' => Ok(SpannedToken::new(Token::Plus, LocationSpan::span_1(start, 1))),
+
+            '-' => Ok(SpannedToken::new(Token::Minus, LocationSpan::span_1(start, 1))),
+
+            '*' => Ok(SpannedToken::new(Token::Star, LocationSpan::span_1(start, 1))),
+
+            '/' => Ok(SpannedToken::new(Token::Star, LocationSpan::span_1(start, 1))),
+
+            '%' => Ok(SpannedToken::new(Token::Percent, LocationSpan::span_1(start, 1))),
+
+            '&' => {
+                if self.test_lookahead(|c| c == '&') {
+                    let (end, _) = self.chars.next().ok_or(unimplemented!())?;
+                    Ok(SpannedToken::new(Token::LAnd, LocationSpan::new(start, end)))
+                } else {
+                    Ok(SpannedToken::new(Token::Ref, LocationSpan::span_1(start, 1)))
+                }
+            }
+
+            '=' => {
+                if self.test_lookahead(|c| c == '=') {
+                    let (end, _) = self.chars.next().ok_or(unimplemented!())?;
+                    Ok(SpannedToken::new(Token::Eq, LocationSpan::new(start, end)))
+                } else {
+                    Ok(SpannedToken::new(Token::Assign, LocationSpan::span_1(start, 1)))
+                }
+            }
+
+            '!' =>  {
+                if self.test_lookahead(|c| c == '=') {
+                    let (end, _) = self.chars.next().ok_or(unimplemented!())?;
+                    Ok(SpannedToken::new(Token::NEq, LocationSpan::new(start, end)))
+                } else {
+                    Ok(SpannedToken::new(Token::Invert, LocationSpan::span_1(start, 1)))
+                }
+            }
+
+            '<' => {
+                if self.test_lookahead(|c| c == '=') {
+                    let (end, _) = self.chars.next().ok_or(unimplemented!())?;
+                    Ok(SpannedToken::new(Token::Lte, LocationSpan::new(start, end)))
+                } else {
+                    Ok(SpannedToken::new(Token::Lt, LocationSpan::span_1(start, 1)))
+                }
+            }
+
+            '>' => {
+                if self.test_lookahead(|c| c == '=') {
+                    let (end, _) = self.chars.next().ok_or(unimplemented!())?;
+                    Ok(SpannedToken::new(Token::Gte, LocationSpan::new(start, end)))
+                } else {
+                    Ok(SpannedToken::new(Token::Lt, LocationSpan::span_1(start, 1)))
+                }
+            }
+
+            _ => unreachable!(),
+
+        }
+    }
 }
 
 impl<'input> Iterator for Tokenizer<'input> {
@@ -316,12 +378,7 @@ impl<'input> Iterator for Tokenizer<'input> {
                 '{' => Some(Ok(SpannedToken::new(Token::LBrace,  LocationSpan::span_1(start, 1)))),
                 '}' => Some(Ok(SpannedToken::new(Token::RBrace,  LocationSpan::span_1(start, 1)))),
 
-                '+' => Some(Ok(SpannedToken::new(Token::Plus,   LocationSpan::span_1(start, 1)))),
-                '-' => Some(Ok(SpannedToken::new(Token::Minus,  LocationSpan::span_1(start, 1)))),
-                '*' => Some(Ok(SpannedToken::new(Token::Star,   LocationSpan::span_1(start, 1)))),
-                '/' => Some(Ok(SpannedToken::new(Token::Slash,  LocationSpan::span_1(start, 1)))),
-                '%' => Some(Ok(SpannedToken::new(Token::Percent, LocationSpan::span_1(start, 1)))),
-
+                ch if is_op(ch) => Some(self.op(start, ch)),
                 ch if ch.is_whitespace() => continue,
 
                 _ => unimplemented!(),
@@ -338,4 +395,20 @@ fn is_colon(c: char) -> bool {
 
 fn is_slash(c: char) -> bool {
     c == '/'
+}
+
+fn is_op(c: char) -> bool {
+    c == '+' ||
+    c == '-' ||
+    c == '*' ||
+    c == '/' ||
+    c == '%' ||
+
+    c == '&' ||
+    c == '|' ||
+
+    c == '!' ||
+    c == '=' ||
+    c == '>' ||
+    c == '<'
 }
