@@ -285,7 +285,15 @@ impl<'input> Tokenizer<'input> {
         }
 
         match current {
-            Some(end_of_input) => (end_of_input.0, self.slice(start, end_of_input.0)),
+            Some(last_input) => {
+                // Upperbounds is EXCLUSIVE
+                let mut end = last_input.0.clone();
+                end.column += 1;
+                end.byte_index += 1;
+                end.char_index += 1;
+
+                (start, self.slice(start, end))
+            }
 
             // Loop body did not run, assume 'start' location was the end of the input
             None => {
