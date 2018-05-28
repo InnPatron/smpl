@@ -52,6 +52,8 @@ pub enum Token {
 
     While,
 
+    Let,
+
     Assign,
 
     Eq,
