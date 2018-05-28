@@ -170,8 +170,13 @@ impl Location {
     }
 }
 
-type SpannedError = (TokenizerError, Location);
+#[derive(Debug)]
+pub struct SpannedError {
+    error: TokenizerError,
+    location: Location,
+}
 
+#[derive(Debug)]
 pub enum TokenizerError {
 
 }
