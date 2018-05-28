@@ -766,4 +766,19 @@ A1b2
         assert_eq!(Token::Comma, unwrap(tok.next()));
         assert_eq!(Token::Identifier("baz".to_string()), unwrap(tok.next()));
     }
+
+    #[test]
+    fn tokenize_assignment() {
+        let input = "let foo: bar = baz;";
+        let mut tok = Tokenizer::new(input);
+
+        assert_eq!(Token::Let, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("foo".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Colon, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("bar".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Assign, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("baz".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Semi, unwrap(tok.next()));
+        assert_eq!(None, tok.next());
+    }
 }
