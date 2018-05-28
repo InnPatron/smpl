@@ -1,7 +1,7 @@
 /// Inspired by Gluon, specifically gluon/parser/src/token.rs
 /// https://github.com/gluon-lang/gluon/blob/master/parser/src/token.rs
 
-use std::str::CharIndices;
+use std::str::{CharIndices, FromStr};
 use std::iter::{Iterator, Peekable, Enumerate};
 
 use ascii::AsciiString;
@@ -346,6 +346,28 @@ impl<'input> Tokenizer<'input> {
 
         }
     }
+
+    fn identifier(&mut self, start: Location) -> SpannedToken {
+        let (end, ident) = self.take_while(start, is_ident_continue);
+
+        let token = match ident {
+            "fn" => Token::Fn,
+            "mod" => Token::Mod,
+            "struct" => Token::Struct,
+            "use" => Token::Use,
+            "if" => Token::If,
+            "else" => Token::Else,
+            "elif" => Token::Elif,
+            "while" => Token::While,
+            "let" => Token::Let,
+            "true" => Token::BoolLiteral(true),
+            "false" => Token::BoolLiteral(false),
+
+            str => Token::Identifier(AsciiString::from_str(str).unwrap()),
+        };
+
+        SpannedToken::new(token, LocationSpan::new(start, end))
+    }
 }
 
 impl<'input> Iterator for Tokenizer<'input> {
@@ -391,6 +413,7 @@ impl<'input> Iterator for Tokenizer<'input> {
                 '{' => Some(Ok(SpannedToken::new(Token::LBrace,  LocationSpan::span_1(start, 1)))),
                 '}' => Some(Ok(SpannedToken::new(Token::RBrace,  LocationSpan::span_1(start, 1)))),
 
+                ch if is_ident_start(ch) => Some(Ok(self.identifier(start))),
                 ch if is_op(ch) => Some(self.op(start, ch)),
                 ch if ch.is_whitespace() => continue,
 
@@ -424,4 +447,12 @@ fn is_op(c: char) -> bool {
     c == '=' ||
     c == '>' ||
     c == '<'
+}
+
+fn is_ident_start(c: char) -> bool {
+    c.is_alphabetic() || c == '_'
+}
+
+fn is_ident_continue(c: char) -> bool {
+    is_ident_start(c)
 }
