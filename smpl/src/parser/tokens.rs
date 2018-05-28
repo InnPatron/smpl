@@ -643,4 +643,22 @@ false
 
         assert_eq!(None, tok.next());
     }
+
+    #[test]
+    fn tokenize_idents() {
+        let input =
+"
+_ident
+_123
+abcd
+a1b2
+A1b2
+";
+        let mut tok = Tokenizer::new(input);
+        assert_eq!(Token::Identifier("_ident".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Identifier("_123".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Identifier("abcd".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Identifier("a1b2".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Identifier("A1b2".to_string()), unwrap(tok.next()));
+    }
 }
