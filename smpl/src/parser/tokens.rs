@@ -126,12 +126,12 @@ impl<'input> Iterator for CharInput<'input> {
 }
 
 
-pub struct Tokenizer<'a> {
-    input: &'a str,
-    chars: CharInput<'a>,
+pub struct Tokenizer<'input> {
+    input: &'input str,
+    chars: CharInput<'input>,
 }
 
-impl<'a> Tokenizer<'a> {
+impl<'input> Tokenizer<'input> {
     fn new(input: &str) -> Tokenizer {
         Tokenizer {
             input: input,
