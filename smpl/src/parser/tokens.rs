@@ -1,3 +1,6 @@
+/// Inspired by Gluon, specifically gluon/parser/src/token.rs
+/// https://github.com/gluon-lang/gluon/blob/master/parser/src/token.rs
+
 use std::str::CharIndices;
 use std::iter::{Iterator, Peekable, Enumerate};
 
