@@ -282,7 +282,12 @@ impl<'input> Iterator for Tokenizer<'input> {
                 ',' => Some(Ok(SpannedToken::new(Token::Comma,  LocationSpan::span_1(start, 1)))),
                 '.' => Some(Ok(SpannedToken::new(Token::Dot,    LocationSpan::span_1(start, 1)))),
                 ';' => Some(Ok(SpannedToken::new(Token::Semi,   LocationSpan::span_1(start, 1)))),
-                ':' => Some(Ok(SpannedToken::new(Token::Colon,  LocationSpan::span_1(start, 1)))),
+
+                ':' if self.test_lookahead(is_colon)
+                    => Some(Ok(SpannedToken::new(Token::Colon,  LocationSpan::span_1(start, 1)))),
+
+                ':' if self.test_lookahead(is_colon) == false
+                    => Some(Ok(SpannedToken::new(Token::ColonColon,  LocationSpan::span_1(start, 1)))),
 
                 '(' => Some(Ok(SpannedToken::new(Token::LParen,  LocationSpan::span_1(start, 1)))),
                 ')' => Some(Ok(SpannedToken::new(Token::RParen,  LocationSpan::span_1(start, 1)))),
@@ -307,4 +312,8 @@ impl<'input> Iterator for Tokenizer<'input> {
 
         None
     }
+}
+
+fn is_colon(c: char) -> bool {
+    c == ':'
 }
