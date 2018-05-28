@@ -273,12 +273,25 @@ impl<'input> Tokenizer<'input> {
     }
 }
 
+impl<'input> Tokenizer<'input> {
+    fn line_comment(&mut self, start: Location) -> (Location, &'input str) {
+        self.take_until(start, |c| c == '\n')
+    }
+}
+
 impl<'input> Iterator for Tokenizer<'input> {
     type Item = Result<SpannedToken, SpannedError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some((start, c)) = self.chars.next() {
             return match c {
+                '/' if self.test_lookahead(is_slash)
+                    => {
+                    
+                    self.line_comment(start);
+                    continue;
+                },
+
                 ',' => Some(Ok(SpannedToken::new(Token::Comma,  LocationSpan::span_1(start, 1)))),
                 '.' => Some(Ok(SpannedToken::new(Token::Dot,    LocationSpan::span_1(start, 1)))),
                 ';' => Some(Ok(SpannedToken::new(Token::Semi,   LocationSpan::span_1(start, 1)))),
@@ -316,4 +329,8 @@ impl<'input> Iterator for Tokenizer<'input> {
 
 fn is_colon(c: char) -> bool {
     c == ':'
+}
+
+fn is_slash(c: char) -> bool {
+    c == '/'
 }
