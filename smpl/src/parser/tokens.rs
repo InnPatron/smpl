@@ -1,5 +1,5 @@
-use std::str::Chars;
-use std::iter::{Iterator, Enumerate, Peekable};
+use std::str::CharIndices;
+use std::iter::{Iterator, Peekable, Enumerate};
 
 use ascii::AsciiString;
 use span::Span;
@@ -66,27 +66,62 @@ pub enum Token {
 
 }
 
+#[derive(Clone)]
+struct Location {
+    byte_index: usize,
+    char_index: usize,
+    line: usize,
+    column: usize,
+}
+
+impl Location {
+    fn new(byte_index: usize, char_index: usize, line: usize, column: usize) -> Location {
+        Location {
+            byte_index: byte_index,
+            char_index: char_index,
+            line: line,
+            column: column,
+        }
+    }
+}
+
 struct CharInput<'input> {
-    chars: Peekable<Enumerate<Chars<'input>>>,
+    chars: Peekable<Enumerate<CharIndices<'input>>>,
+    line: usize,
+    column: usize,
 }
 
 impl<'input> CharInput<'input> {
     fn new(input: &str) -> CharInput {
         CharInput {
-            chars: input.chars().enumerate().peekable()
+            chars: input.char_indices().enumerate().peekable(),
+            line: 1,
+            column: 1,
         }
     }
 
-    fn peek(&mut self) -> Option<(usize, char)> {
-        self.chars.peek().map(|(i, c)| (i.clone(), c.clone()))
+    fn peek(&mut self) -> Option<(Location, char)> {
+        let line = self.line;
+        let column = self.column;
+        self.chars.peek().map(|(char_index, (byte_index, c))| {
+            (Location::new(byte_index.clone(), char_index.clone(), line, column), c.clone())
+        })
     }
 }
 
 impl<'input> Iterator for CharInput<'input> {
-    type Item = (usize, char);
+    type Item = (Location, char);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.chars.next()
+        self.chars.next().map(|(char_index, (byte_index, c))| {
+            if c == '\n' {
+                self.line += 1;
+                self.column = 1;
+            } else {
+                self.column += 1;
+            }
+            (Location::new(byte_index, char_index, self.line, self.column), c.clone())
+        })
     }
 }
 
@@ -94,5 +129,13 @@ impl<'input> Iterator for CharInput<'input> {
 pub struct Tokenizer<'a> {
     input: &'a str,
     chars: CharInput<'a>,
-    lookahead: Option<(usize, char)>,
+}
+
+impl<'a> Tokenizer<'a> {
+    fn new(input: &str) -> Tokenizer {
+        Tokenizer {
+            input: input,
+            chars: CharInput::new(input),
+        }
+    }
 }
