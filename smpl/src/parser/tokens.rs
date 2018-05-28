@@ -5,11 +5,26 @@ use std::str::CharIndices;
 use std::iter::{Iterator, Peekable, Enumerate};
 
 use ascii::AsciiString;
+
 use span::Span;
 
 pub struct SpannedToken {
-    pub token: Token,
-    pub span: Span,
+    token: Token,
+    location: LocationSpan,
+}
+
+impl SpannedToken {
+    pub fn to_data(self) -> (LocationSpan, Token) {
+        (self.location, self.token)
+    }
+
+    pub fn token(&self) -> &Token {
+        &self.token
+    }
+
+    pub fn location(&self) -> LocationSpan {
+        self.location
+    }
 }
 
 pub enum Token {
@@ -70,18 +85,50 @@ pub enum Token {
 }
 
 #[derive(Copy, Clone)]
-struct LocationSpan {
+pub struct LocationSpan {
     start: Location,
     end: Location,
 }
 
+impl LocationSpan {
+    pub fn start(&self) -> Location {
+        self.start
+    }
+
+    pub fn end(&self) -> Location {
+        self.end
+    }
+
+    pub fn make_span(&self) -> Span {
+        Span::new(self.start.byte_index(), self.end.byte_index())
+    }
+}
+
 
 #[derive(Copy, Clone)]
-struct Location {
+pub struct Location {
     byte_index: usize,
     char_index: usize,
     line: usize,
     column: usize,
+}
+
+impl Location {
+    pub fn byte_index(&self) -> usize {
+        self.byte_index
+    }
+
+    pub fn char_index(&self) -> usize {
+        self.char_index
+    }
+
+    pub fn line(&self) -> usize {
+        self.line
+    }
+
+    pub fn column(&self) -> usize {
+        self.column
+    }
 }
 
 impl Location {
