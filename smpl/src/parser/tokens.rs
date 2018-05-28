@@ -562,4 +562,17 @@ mod tests {
         assert_eq!(Token::Identifier("f32".to_string()), unwrap(tok.next()));
 
     }
+
+    #[test]
+    fn tokenize_line_comment() {
+        let input = 
+"// Test Bla
+mod hello;";
+        let mut tok = Tokenizer::new(input);
+
+        assert_eq!(Token::Mod, unwrap(tok.next()));
+        assert_eq!(Token::Identifier("hello".to_string()), unwrap(tok.next()));
+        assert_eq!(Token::Semi, unwrap(tok.next()));
+        assert_eq!(None, tok.next());
+    }
 }
