@@ -62,16 +62,13 @@ pub enum Token {
     Lte,
     lt,
 
-    Neg,
     Invert,
 
-    Ref,
-    Deref,
-    
-    Add,
-    Sub,
-    Mul,
-    Div,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
 
     LParen,
     RParen,
