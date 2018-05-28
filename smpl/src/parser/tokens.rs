@@ -312,7 +312,10 @@ impl<'input> Tokenizer<'input> {
 
             '&' => {
                 if self.test_lookahead(|c| c == '&') {
-                    let (end, _) = self.chars.next().ok_or(unimplemented!())?;
+                    let (end, _) = self.chars.next().ok_or(SpannedError {
+                        error: TokenizerError::UnexpectedEndOfInput,
+                        location: start,
+                    })?;
                     Ok(SpannedToken::new(Token::LAnd, LocationSpan::new(start, end)))
                 } else {
                     Ok(SpannedToken::new(Token::Ref, LocationSpan::span_1(start, 1)))
@@ -321,7 +324,10 @@ impl<'input> Tokenizer<'input> {
 
             '=' => {
                 if self.test_lookahead(|c| c == '=') {
-                    let (end, _) = self.chars.next().ok_or(unimplemented!())?;
+                    let (end, _) = self.chars.next().ok_or(SpannedError {
+                        error: TokenizerError::UnexpectedEndOfInput,
+                        location: start,
+                    })?;
                     Ok(SpannedToken::new(Token::Eq, LocationSpan::new(start, end)))
                 } else {
                     Ok(SpannedToken::new(Token::Assign, LocationSpan::span_1(start, 1)))
@@ -330,7 +336,10 @@ impl<'input> Tokenizer<'input> {
 
             '!' =>  {
                 if self.test_lookahead(|c| c == '=') {
-                    let (end, _) = self.chars.next().ok_or(unimplemented!())?;
+                    let (end, _) = self.chars.next().ok_or(SpannedError {
+                        error: TokenizerError::UnexpectedEndOfInput,
+                        location: start,
+                    })?;
                     Ok(SpannedToken::new(Token::NEq, LocationSpan::new(start, end)))
                 } else {
                     Ok(SpannedToken::new(Token::Invert, LocationSpan::span_1(start, 1)))
@@ -339,7 +348,10 @@ impl<'input> Tokenizer<'input> {
 
             '<' => {
                 if self.test_lookahead(|c| c == '=') {
-                    let (end, _) = self.chars.next().ok_or(unimplemented!())?;
+                    let (end, _) = self.chars.next().ok_or(SpannedError {
+                        error: TokenizerError::UnexpectedEndOfInput,
+                        location: start,
+                    })?;
                     Ok(SpannedToken::new(Token::Lte, LocationSpan::new(start, end)))
                 } else {
                     Ok(SpannedToken::new(Token::Lt, LocationSpan::span_1(start, 1)))
@@ -348,7 +360,10 @@ impl<'input> Tokenizer<'input> {
 
             '>' => {
                 if self.test_lookahead(|c| c == '=') {
-                    let (end, _) = self.chars.next().ok_or(unimplemented!())?;
+                    let (end, _) = self.chars.next().ok_or(SpannedError {
+                        error: TokenizerError::UnexpectedEndOfInput,
+                        location: start,
+                    })?;
                     Ok(SpannedToken::new(Token::Gte, LocationSpan::new(start, end)))
                 } else {
                     Ok(SpannedToken::new(Token::Lt, LocationSpan::span_1(start, 1)))
@@ -391,9 +406,12 @@ impl<'input> Tokenizer<'input> {
                 self.chars.next();      // Skip '.'
                 let (end, float) = self.take_while(start, is_digit);
 
-                if let Some((_, ch)) = self.chars.peek() {
+                if let Some((next, ch)) = self.chars.peek() {
                     if is_ident_continue(ch) {
-                        unimplemented!("Invalid numerical literal");
+                        return Err(SpannedError {
+                            error: TokenizerError::UnexpectedChar(ch),
+                            location: next,
+                        })
                     }
                 }
 
@@ -458,7 +476,10 @@ impl<'input> Iterator for Tokenizer<'input> {
                 ch if is_op(ch) => Some(self.op(start, ch)),
                 ch if ch.is_whitespace() => continue,
 
-                ch => Some(Err(unimplemented!("Unexpected char"))),
+                ch => Some(Err(SpannedError {
+                        error: TokenizerError::UnexpectedChar(c),
+                        location: start,
+                })),
             }
         }
 
