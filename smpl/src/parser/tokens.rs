@@ -368,6 +368,30 @@ impl<'input> Tokenizer<'input> {
 
         SpannedToken::new(token, LocationSpan::new(start, end))
     }
+
+    fn numeric_literal(&mut self, start: Location) -> Result<SpannedToken, SpannedError> {
+        let (end, int) = self.take_while(start, is_digit);
+
+        if let Some((loc, ch)) = self.chars.peek() {
+            if ch == '.' {
+                self.chars.next();      // Skip '.'
+                let (end, float) = self.take_while(start, is_digit);
+
+                if let Some((_, ch)) = self.chars.peek() {
+                    if is_ident_continue(ch) {
+                        unimplemented!("Invalid numerical literal");
+                    }
+                }
+
+                let f = float.parse::<f64>().unwrap();
+
+                return Ok(SpannedToken::new(Token::FloatLiteral(f), LocationSpan::new(start, end)));
+            }
+        }
+
+        let i = int.parse::<i64>().unwrap();
+        Ok(SpannedToken::new(Token::IntLiteral(i), LocationSpan::new(start, end)))
+    }
 }
 
 impl<'input> Iterator for Tokenizer<'input> {
@@ -414,6 +438,9 @@ impl<'input> Iterator for Tokenizer<'input> {
                 '}' => Some(Ok(SpannedToken::new(Token::RBrace,  LocationSpan::span_1(start, 1)))),
 
                 ch if is_ident_start(ch) => Some(Ok(self.identifier(start))),
+                ch if is_digit(ch) || (ch == '-' && self.test_lookahead(is_digit))
+                    => Some(self.numeric_literal(start)),
+
                 ch if is_op(ch) => Some(self.op(start, ch)),
                 ch if ch.is_whitespace() => continue,
 
@@ -455,4 +482,8 @@ fn is_ident_start(c: char) -> bool {
 
 fn is_ident_continue(c: char) -> bool {
     is_ident_start(c)
+}
+
+fn is_digit(c: char) -> bool {
+    c.is_digit(10)
 }
