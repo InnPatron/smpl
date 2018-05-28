@@ -4,8 +4,6 @@
 use std::str::{CharIndices, FromStr};
 use std::iter::{Iterator, Peekable, Enumerate};
 
-use ascii::AsciiString;
-
 use span::Span;
 
 pub struct SpannedToken {
@@ -35,7 +33,7 @@ impl SpannedToken {
 }
 
 pub enum Token {
-    Identifier(AsciiString),
+    Identifier(String),
     StringLiteral(String),
     IntLiteral(i64),
     FloatLiteral(f64),
@@ -365,7 +363,7 @@ impl<'input> Tokenizer<'input> {
             "true" => Token::BoolLiteral(true),
             "false" => Token::BoolLiteral(false),
 
-            str => Token::Identifier(AsciiString::from_str(str).unwrap()),
+            str => Token::Identifier(str.to_string()),
         };
 
         SpannedToken::new(token, LocationSpan::new(start, end))
