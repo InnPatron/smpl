@@ -307,7 +307,7 @@ impl<'input> Tokenizer<'input> {
 
             '*' => Ok(SpannedToken::new(Token::Star, LocationSpan::span_1(start, 1))),
 
-            '/' => Ok(SpannedToken::new(Token::Star, LocationSpan::span_1(start, 1))),
+            '/' => Ok(SpannedToken::new(Token::Slash, LocationSpan::span_1(start, 1))),
 
             '%' => Ok(SpannedToken::new(Token::Percent, LocationSpan::span_1(start, 1))),
 
