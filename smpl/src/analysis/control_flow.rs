@@ -686,6 +686,7 @@ mod tests {
 let a: int = 2;
 let b: int = 3;
 }";
+        let input = wrap_input(input);
         let universe = Universe::std();
         let fn_type = FunctionType {
             params: vec![universe.int()],
@@ -758,6 +759,8 @@ if (test) {
     let c: int = 4;
 }
 }";
+        let input = wrap_input(input);
+
         let universe = Universe::std();
         let fn_type = FunctionType {
             params: vec![universe.int()],
@@ -909,6 +912,7 @@ if (test) {
 
     }
 }";
+        let input = wrap_input(input);
         let universe = Universe::std();
         let fn_type = FunctionType {
             params: vec![universe.int()],
@@ -1072,6 +1076,7 @@ if (test) {
         
     }
 }";
+        let input = wrap_input(input);
         let universe = Universe::std();
         let fn_type = FunctionType {
             params: vec![universe.int()],

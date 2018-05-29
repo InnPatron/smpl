@@ -1,12 +1,14 @@
 #[cfg(test)]
 mod parser_tests {
     use std::str::FromStr;
+
     use parser::*;
     use ascii::*;
     use ast::*;
     use span::Span;
 
     use super::*;
+    use parser::tokens::*;
 
     #[test]
     fn parse_programs() {
@@ -82,6 +84,9 @@ init NAME {
 "##;
         let parser = ExprParser::new();
 
+        let init_1 = wrap_input(init_1);
+        let init_2 = wrap_input(init_2);
+
         let init_1 = parser.parse(init_1).unwrap();
         let init_2 = parser.parse(init_2).unwrap();
 
@@ -115,6 +120,7 @@ init NAME {
     #[test]
     fn test_parse_complex_expr() {
         let input = r##"5 != 3 || "something" == false && true"##;
+        let input = wrap_input(input);
         let parser = ExprParser::new();
         let expr = parser.parse(input).unwrap();
 
@@ -197,6 +203,7 @@ init NAME {
     #[test]
     fn test_parse_string() {
         let input = r##""test""##;
+        let input = wrap_input(input);
         let parser = LiteralParser::new();
         let literal = parser.parse(input).unwrap();
         match literal {
@@ -210,6 +217,7 @@ init NAME {
         let parser = LiteralParser::new();
 
         let input = "21";
+        let input = wrap_input(input);
         let literal = parser.parse(input).unwrap();
         match literal {
             Literal::Int(int) => assert_eq!(int, 21),
@@ -217,6 +225,7 @@ init NAME {
         }
 
         let input = "-21";
+        let input = wrap_input(input);
         let literal = parser.parse(input).unwrap();
         match literal {
             Literal::Int(int) => assert_eq!(int, -21),
@@ -224,6 +233,7 @@ init NAME {
         }
 
         let input = "21.0";
+        let input = wrap_input(input);
         let literal = parser.parse(input).unwrap();
         match literal {
             Literal::Float(float) => assert_eq!(float, 21.0),
@@ -231,6 +241,7 @@ init NAME {
         }
 
         let input = "21.";
+        let input = wrap_input(input);
         let literal = parser.parse(input).unwrap();
         match literal {
             Literal::Float(float) => assert_eq!(float, 21.0),
@@ -238,6 +249,7 @@ init NAME {
         }
 
         let input = "-21.";
+        let input = wrap_input(input);
         let literal = parser.parse(input).unwrap();
         match literal {
             Literal::Float(float) => assert_eq!(float, -21.0),
@@ -249,6 +261,7 @@ init NAME {
     fn test_parse_local_var_decl() {
         let parser = ExprStmtParser::new();
         let input = "let a: int = 10;";
+        let input = wrap_input(input);
         let stmt = parser.parse(input).unwrap();
         if let ExprStmt::LocalVarDecl(decl) = stmt {
             let anno = decl.var_type.unwrap();
@@ -260,6 +273,7 @@ init NAME {
     #[test]
     fn test_parse_FnDecl() {
         let input = "fn test_fn(arg: i32, test: float, next: String) { }";
+        let input = wrap_input(input);
         let parser = FnDeclParser::new();
         let func = parser.parse(input).unwrap();
         let func = func.data().clone();
@@ -290,7 +304,9 @@ struct TestStruct {
 
         let parser = StructDeclParser::new();
 
+        let input = wrap_input(input);
         let _struct = parser.parse(input).unwrap();
+        let input2 = wrap_input(input2);
         let _struct2 = parser.parse(input2).unwrap();
 
         let _struct = _struct.data().clone();
@@ -314,6 +330,7 @@ struct TestStruct {
         {
             let parser = MathExprParser::new();
             let input = "1+2";
+            let input = wrap_input(input);
             let e = parser.parse(input).unwrap();
             let root = {
                 let _1 = int!(1 => BoxExpr);
@@ -327,6 +344,7 @@ struct TestStruct {
         {
             let parser = MathExprParser::new();
             let input = "1.+2";
+            let input = wrap_input(input);
             let e = parser.parse(input).unwrap();
             let root = {
                 let _1 = Box::new(Expr::Literal(AstNode::new(Literal::Float(1.0), Span::new(0, 0))));
@@ -343,6 +361,7 @@ struct TestStruct {
         {
             let parser = MathExprParser::new();
             let input = "1 + 2 * 5";
+            let input = wrap_input(input);
             let e = parser.parse(input).unwrap();
             let root = {
                 let _1 = int!(1 => BoxExpr);
@@ -359,6 +378,7 @@ struct TestStruct {
         {
             let parser = MathExprParser::new();
             let input = "5 * (1 + 2)";
+            let input = wrap_input(input);
             let e = parser.parse(input).unwrap();
             let root = {
                 let _1 = int!(1 => BoxExpr);
@@ -376,6 +396,7 @@ struct TestStruct {
         {
             let parser = MathExprParser::new();
             let input = "5 % 5 * 10 - 321 / 8";
+            let input = wrap_input(input);
             let e = parser.parse(input).unwrap();
 
             let root = {
@@ -401,6 +422,7 @@ struct TestStruct {
         {
             let parser = TruthExprParser::new();
             let input = "true && true || false";
+            let input = wrap_input(input);
             let e = parser.parse(input).unwrap();
             
             let root = {
@@ -418,6 +440,7 @@ struct TestStruct {
         {
             let parser = TruthExprParser::new();
             let input = "1 + 5 == 2 && 3 != 4";
+            let input = wrap_input(input);
             let e = parser.parse(input).unwrap();
 
             let root = {
@@ -441,6 +464,7 @@ struct TestStruct {
         {
             let parser = TruthExprParser::new();
             let input = "(1 + 5) * 6 == 2 && 3 != 4";
+            let input = wrap_input(input);
             let e = parser.parse(input).unwrap();
 
             let root = {
@@ -467,6 +491,7 @@ struct TestStruct {
     #[test]
     fn parse_float_expr() {
         let input = "1.5";
+        let input = wrap_input(input);
         let parser = ExprParser::new();
         parser.parse(input).unwrap();
     }
