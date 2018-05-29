@@ -210,16 +210,27 @@ struct CharInput<'input> {
     lookahead: Option<(Location, char)>,
     line: usize,
     column: usize,
+    end_of_input: Location,
 }
 
 impl<'input> CharInput<'input> {
     fn new(input: &str) -> CharInput {
+        let last = if input.len() == 0 {
+            0
+        } else {
+            input.char_indices().rev().next().unwrap().0
+        };
         CharInput {
             chars: input.char_indices().enumerate().peekable(),
             line: 1,
             column: 1,
             lookahead: None,
+            end_of_input: Location::new(last, last, 1, 1),
         }
+    }
+
+    fn end_of_input(&self) -> Location {
+        self.end_of_input
     }
 
     fn peek(&self) -> Option<(Location, char)> {
@@ -235,8 +246,12 @@ impl<'input> Iterator for CharInput<'input> {
             if c == '\n' {
                 self.line += 1;
                 self.column = 1;
+
+                self.end_of_input.line += 1;
+                self.end_of_input.column = 1;
             } else {
                 self.column += 1;
+                self.end_of_input.column += 1;
             }
             (Location::new(byte_index, char_index, self.line, self.column), c.clone())
         });
