@@ -55,9 +55,11 @@ pub enum Token {
     Builtin,
     Unchecked,
 
+    Init,
+
     Continue,
     Break,
-
+    Return,
 
     If,
     Else,
@@ -415,6 +417,8 @@ impl<'input> Tokenizer<'input> {
             "UNCHECKED" => Token::Unchecked,
             "continue" => Token::Continue,
             "break" => Token::Break,
+            "return" => Token::Return,
+            "init" => Token::Init,
             "true" => Token::BoolLiteral(true),
             "false" => Token::BoolLiteral(false),
 
