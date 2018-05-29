@@ -1,4 +1,81 @@
+use ast::Module;
+use parser::parse_module;
+
 use code_gen::interpreter::*;
+
+pub const MOD_MATH: &'static str = "math";
+
+pub const MATH_SIN: &'static str = "sin";
+pub const MATH_COS: &'static str = "cos";
+pub const MATH_TAN: &'static str = "tan";
+
+pub const MATH_ASIN: &'static str = "asin";
+pub const MATH_ACOS: &'static str = "acos";
+pub const MATH_ATAN: &'static str = "atan";
+pub const MATH_ATAN2: &'static str = "atan2";
+
+pub const MATH_TO_RADIANS: &'static str = "to_radians";
+pub const MATH_TO_DEGREES: &'static str = "to_degrees";
+
+pub const MATH_FPOWF: &'static str = "fpowf";
+pub const MATH_FPOWI: &'static str = "fpowi";
+pub const MATH_IPOW: &'static str = "ipow";
+
+pub const MATH_FLOOR: &'static str = "floor";
+pub const MATH_CEIL: &'static str = "ceil";
+pub const MATH_ROUND: &'static str = "round";
+
+
+pub const MATH_DECLARATION: &'static str =
+"
+mod math;
+
+builtin fn sin(r: f32) -> f32;
+builtin fn cos(r: f32) -> f32;
+builtin fn tan(r: f32) -> f32;
+
+builtin fn asin(r: f32) -> f32;
+builtin fn acos(r: f32) -> f32;
+builtin fn atan(r: f32) -> f32;
+builtin fn atan2(r: f32, other: f32) -> f32;
+
+builtin fn to_radians(degrees: f32) -> f32;
+builtin fn to_degrees(radians: f32) -> f32;
+
+builtin fn fpowf(base: f32, power: f32) -> f32;
+builtin fn fpowi(base: f32, power: i32) -> f32;
+builtin fn ipow(base: i32, power: i32) -> i32;
+
+builtin fn floor(f: f32) -> f32;
+builtin fn ceil(f: f32) -> f32;
+builtin fn round(f: f32) -> f32;
+";
+
+pub fn include(modules: &mut Vec<Module>) {
+    modules.push(parse_module(MATH_DECLARATION).unwrap());
+}
+
+pub fn add(vm: &mut VM) {
+    vm.insert_builtin(MOD_MATH, MATH_SIN, Box::new(Sin));
+    vm.insert_builtin(MOD_MATH, MATH_COS, Box::new(Cos));
+    vm.insert_builtin(MOD_MATH, MATH_TAN, Box::new(Tan));
+
+    vm.insert_builtin(MOD_MATH, MATH_ASIN, Box::new(Asin));
+    vm.insert_builtin(MOD_MATH, MATH_ACOS, Box::new(Acos));
+    vm.insert_builtin(MOD_MATH, MATH_ATAN, Box::new(Atan));
+    vm.insert_builtin(MOD_MATH, MATH_ATAN2, Box::new(Atan2));
+
+    vm.insert_builtin(MOD_MATH, MATH_TO_RADIANS, Box::new(ToRadians));
+    vm.insert_builtin(MOD_MATH, MATH_TO_DEGREES, Box::new(ToDegrees));
+
+    vm.insert_builtin(MOD_MATH, MATH_FPOWF, Box::new(FPowF));
+    vm.insert_builtin(MOD_MATH, MATH_FPOWI, Box::new(FPowI));
+    vm.insert_builtin(MOD_MATH, MATH_IPOW, Box::new(IPow));
+
+    vm.insert_builtin(MOD_MATH, MATH_FLOOR, Box::new(Floor));
+    vm.insert_builtin(MOD_MATH, MATH_CEIL, Box::new(Ceil));
+    vm.insert_builtin(MOD_MATH, MATH_ROUND, Box::new(Round));
+}
 
 /// In radians
 pub struct Sin;
