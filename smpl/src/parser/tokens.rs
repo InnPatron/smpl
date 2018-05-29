@@ -818,4 +818,12 @@ A1b2
         assert_eq!(Token::Semi, unwrap(tok.next()));
         assert_eq!(None, tok.next());
     }
+
+    #[test]
+    fn tokenize_single_float() {
+        let input = "21.";
+        let mut tok = Tokenizer::new(input);
+
+        assert_eq!(Token::FloatLiteral(21.0), unwrap(tok.next()));
+    }
 }
