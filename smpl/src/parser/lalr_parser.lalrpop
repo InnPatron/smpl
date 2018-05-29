@@ -2,7 +2,7 @@ use std::str::FromStr;
 use ast::*;
 use ascii::*;
 use span::Span;
-use super::tokens;
+use super::tokens::*;
 
 grammar;
 
@@ -460,33 +460,24 @@ FnCallArgs: Vec<Expr> = {
 };
 
 pub Literal: Literal = {
-	<number: Number> => {
-		if number.contains(".") {
-			Literal::Float(number.parse::<f64>().unwrap())
-		} else {
-			Literal::Int(number.parse::<i64>().unwrap())
-		}
-	},
-	<string: r##"".*""##>  => {
+	<number: Number> => unimplemented!(),
+	<string: "string_literal">  => {
 		let mut string = AsciiString::from_str(string).unwrap();
-		string.remove(0);
-		string.pop();
 		Literal::String(string)
 	},
-	"true" => Literal::Bool(true),
-	"false" => Literal::Bool(false), 
+
+	<boolean: "bool_literal"> => unimplemented!(),
 
 };
 
-Number: String = {
-	<number: r"[-]?[0-9]+[\.[0-9]*]?"> => number.to_string(),
+Number: Literal = {
+	<int: "int_literal"> => unimplemented!(),
+	<float: "float_literal"> => unimplemented!(),
 };
 
 Ident: AstNode<Ident> = {
-	<l: @L> <ident: r"[A-Za-z_][_A-Za-z0-9]*"> <r: @R> => { 
-		AstNode::new(Ident(AsciiString::from_str(ident).unwrap()), 
-						Span::new(l, r))
-	}
+	<l: @L> <ident: "identifier"> <r: @R> => unimplemented!(),
+	
 };
 
 Path: Path = {
