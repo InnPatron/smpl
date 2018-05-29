@@ -7,7 +7,7 @@ use super::tokens::*;
 grammar;
 
 extern {
-	type Location = Location;
+	type Location = usize;
 	type Error = SpannedError;
 
 	enum Token {
