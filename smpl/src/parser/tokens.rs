@@ -202,6 +202,7 @@ pub enum TokenizerError {
     UnexpectedChar(char),
     UnexpectedEndOfInput,
     UnterminatedStringLiteral,
+    IncompleteToken(Token),
 }
 
 struct CharInput<'input> {
