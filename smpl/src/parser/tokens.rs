@@ -354,6 +354,21 @@ impl<'input> Tokenizer<'input> {
                 }
             }
 
+            '|' => {
+                if self.test_lookahead(|c| c == '|') {
+                    let (end, _) = self.chars.next().ok_or(SpannedError {
+                        error: TokenizerError::UnexpectedEndOfInput,
+                        location: start,
+                    })?;
+                    Ok(SpannedToken::new(Token::LOr, LocationSpan::new(start, end)))
+                } else {
+                    Err(SpannedError {
+                        error: TokenizerError::IncompleteToken(Token::LOr),
+                        location: start
+                    })
+                }
+            }
+
             '=' => {
                 if self.test_lookahead(|c| c == '=') {
                     let (end, _) = self.chars.next().ok_or(SpannedError {
