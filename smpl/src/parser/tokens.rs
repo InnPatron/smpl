@@ -257,7 +257,7 @@ pub struct Tokenizer<'input> {
 }
 
 impl<'input> Tokenizer<'input> {
-    fn new(input: &str) -> Tokenizer {
+    pub fn new(input: &str) -> Tokenizer {
         Tokenizer {
             input: input,
             chars: CharInput::new(input),
