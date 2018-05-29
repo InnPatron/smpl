@@ -4,6 +4,7 @@ mod parser_tests {
     use parser::*;
     use ascii::*;
     use ast::*;
+    use span::Span;
 
     #[test]
     fn parse_programs() {
@@ -310,6 +311,18 @@ struct TestStruct {
                 parent
             };
         }
+
+        {
+            let input = "1.+2";
+            let e = parse_MathExpr(input).unwrap();
+            let root = {
+                let _1 = Box::new(Expr::Literal(AstNode::new(Literal::Float(1.0), Span::new(0, 0))));
+                let _2 = int!(2 => BoxExpr);
+
+                let parent = bin_expr!((_1, BinOp::Add, _2) => Expr);
+                parent
+            };
+        }
     }
 
     #[test]
@@ -430,5 +443,11 @@ struct TestStruct {
 
             assert_eq!(e, root);
         }
+    }
+
+    #[test]
+    fn parse_float_expr() {
+        let input = "1.5";
+        parse_Expr(input).unwrap();
     }
 }

@@ -1,62 +1,3 @@
-/// --------------SMPL Grammar----------------
-///
-///
-/// module -> mod_decl? decl_stmt+
-///	mod_decl -> "mod" ident;
-/// decl_stmt -> fn_decl | struct_decl | use_decl
-///
-///	use_decl -> "use" ident ";"
-///
-/// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" type_annotation]? block
-/// param_list -> param ["," param]*
-/// param -> ident ":" type_annotation
-///
-///
-/// struct_decl -> "struct" ident "{" struct_field_list "}"
-/// struct_field_list -> struct_field "," struct_field_list
-///		      -> struct_field ","?
-/// struct_field -> ident ":" type_annotation
-///
-///
-/// block -> "{" [stmt]*  "}"
-/// stmt -> expr ";" | expr_stmt
-///
-///
-/// expr_stmt -> if_stmt | while_stmt | local_var_decl | assignment
-/// if_stmt -> "if" expr block
-/// while_stmt -> "while" expr block
-/// local_var_decl -> "let" ident ":" type_annotation "=" expr ";"
-/// assignment -> path "=" expr ";"
-///
-///
-/// expr -> truth_expr
-///
-/// truth_expr -> truth_expr ["&&" | "||"] strict_eq_expr | strict_eq_expr
-/// strict_eq_expr -> strict_eq_expr ["==" | "!="] relative_cmp_expr | relative_cmp_expr
-/// relative_cmp_expr -> math_expr [">" | ">=" | "<" | "<="] math_expr | math_expr
-///
-/// math_expr -> math_expr ["+" | "-"] factor | factor
-/// factor -> factor ["*" | "/" | "%"] uni_expr | uni_expr
-///
-/// uni_expr -> ["-" | "!" | "&" | "*"] uni_expr | expr_leaf
-///
-/// expr_leaf -> "(" expr ")"| literal | fn_call | path | struct_init
-///
-/// struct_init -> "init" type_path "{" struct_field_init_list "}"
-/// struct_field_init_list -> struct_field_init "," struct_field_init_list
-///		      -> struct_field_init ","?
-/// struct_field_init -> ident ":" expr 
-/// 
-/// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "[[:ASCII:]]"
-///
-///
-/// fn_call -> ModulePath "(" fn_call_args ")"
-/// fn_call_args -> expr ["," expr]*
-///
-/// ident -> [a-zA-Z_] [a-zA-Z0-9_]*
-/// path -> ident ["." ident]*
-/// type_path -> ident ["." ident]*
-
 use std::str::FromStr;
 use ast::*;
 use ascii::*;
@@ -64,15 +5,12 @@ use span::Span;
 
 grammar;
 
-/// module -> mod_decl? decl_stmt+
-/// mod_decl -> "mod" ident ";"
 pub Module: Module = {
 	<mod_decl: ("mod" Ident ";")?> <decl: DeclStmt+> => {
 		Module(mod_decl.map(|(_, ident, _)| ident), decl)
 	}
 };
 
-/// decl_stmt -> fn_decl | struct_decl | use_decl
 DeclStmt: DeclStmt = {
 	<f: FnDecl> => DeclStmt::Function(f),
 	<s: StructDecl> => DeclStmt::Struct(s),
@@ -84,7 +22,6 @@ UseDecl: AstNode<UseDecl> = {
 	<l: @L> "use" <i: Ident> ";" <r: @R> => AstNode::new(UseDecl(i), Span::new(l, r)),
 };
 
-/// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" type_annotation]? block
 pub BuiltinFnDecl: AstNode<BuiltinFunction> = {
 	<l: @L> "builtin" "fn" <name: Ident> "(" <params: BuiltinFnParams> ")" <return_type: ("->" TypeAnnotation)?> ";" <r: @R> => {
 		AstNode::new(BuiltinFunction {
@@ -100,7 +37,6 @@ BuiltinFnParams: BuiltinFnParams = {
 	<params: FnParameterList?> => BuiltinFnParams::Checked(params),
 };
 
-/// fn_decl -> "fn" ident "(" [param_list]? ")" ["->" type_annotation]? block
 pub FnDecl: AstNode<Function> = {
 	<l: @L> "fn" <name: Ident> "(" <params: FnParameterList?> ")" <return_type: ("->" TypeAnnotation)?> <b: Block> <r: @R> => {
 		AstNode::new(Function {
@@ -112,7 +48,6 @@ pub FnDecl: AstNode<Function> = {
 	}
 };
 
-/// param_list -> param ["," param]*
 FnParameterList: Vec<AstNode<FnParameter>> = {
 	<first: FnParameter> <tail: ("," <FnParameter>)*> => {
 		let mut v = vec![first];
@@ -121,7 +56,6 @@ FnParameterList: Vec<AstNode<FnParameter>> = {
 	}
 };
 
-/// param -> ident ":" type_annotation
 FnParameter: AstNode<FnParameter> = {
 	<l: @L> <name: Ident> ":"  <param_type: TypeAnnotation> <r: @R> => {
 		AstNode::new(FnParameter {
@@ -131,7 +65,6 @@ FnParameter: AstNode<FnParameter> = {
 	}
 };
 
-/// struct_decl -> "struct" ident "{" struct_field_list "}"
 pub StructDecl: AstNode<Struct> = {
 	<l: @L> "struct" <name: Ident> "{" <fields: StructFieldList?>"}" <r: @R> => {
 		AstNode::new(Struct {
@@ -141,10 +74,6 @@ pub StructDecl: AstNode<Struct> = {
 	}
 };
 
-/// struct_decl -> "struct" ident "{" struct_field_list "}"
-/// struct_field_list -> struct_field "," struct_field_list
-///		      -> struct_field ","?
-/// struct_field -> ident ":" path
 StructFieldList: Vec<StructField> = {
 	<first: StructField> "," <tail: StructFieldList> => {
 		let mut v = vec![first];
@@ -157,7 +86,6 @@ StructFieldList: Vec<StructField> = {
 	}
 };
 
-/// struct_field -> ident ":" type_annotation
 StructField: StructField = {
 	<name: Ident> ":" <field_type: TypeAnnotation> => {
 		StructField {
@@ -167,20 +95,17 @@ StructField: StructField = {
 	}
 };
 
-/// stmt -> expr ";" | expr_stmt
 pub Stmt: Stmt = {
 	<l: @L> <e: Expr> ";" <r: @R> => Stmt::Expr(AstNode::new(e, Span::new(l, r))),
 	<l: @L> <e: ExprStmt> <r: @R> => Stmt::ExprStmt(AstNode::new(e, Span::new(l, r))),
 };
 
-/// block -> "{" [stmt]*  "}"
 Block: AstNode<Block> = {
 	<l: @L> <ll: @L> "{" <rr: @R> <s: Stmt*> <lll: @L> "}" <rrr: @R> <r: @R> => {
 		AstNode::new(Block(s, Span::new(ll, rr), Span::new(lll, rrr)), Span::new(l, r))
 	}
 };
 
-/// expr_stmt -> if_stmt | while_stmt | local_var_decl | assignment
 pub ExprStmt: ExprStmt = {
 	<if_stmt: IfStmt> => ExprStmt::If(if_stmt),
 	<while_stmt: WhileStmt> => ExprStmt::While(while_stmt),
@@ -191,12 +116,10 @@ pub ExprStmt: ExprStmt = {
 	<l: @L> "break;" <r: @R> => ExprStmt::Break(Span::new(l, r)),
 };
 
-/// return -> "return" expr ";"
 ReturnStmt: Option<Expr> = {
 	"return" <e: Expr?> ";" => e,
 };
 
-/// local_var_decl -> "let" ident ":" type_annotation  "=" expr ";"
 LocalVarDecl: LocalVarDecl = {
 	"let" <name: Ident> <anno: (":" TypeAnnotation)?> "=" <e: Expr> ";" => {
 		LocalVarDecl {
@@ -207,17 +130,22 @@ LocalVarDecl: LocalVarDecl = {
 	},
 };
 
-/// assignment -> path "=" expr ";"
 Assignment: Assignment = {
 	<ll: @L> <l: @L> <name: Path> <r: @R> "=" <e: Expr> ";" <rr: @R> => {
 		Assignment {
 			name: AstNode::new(name, Span::new(l, r)),
 			value: e,
 		}
+	},
+
+	<ll: @L> <l: @L> <seg: PathSegment> <r: @R> "=" <e: Expr> ";" <rr: @R> => {
+		Assignment {
+			name: AstNode::new(Path(vec![seg]), Span::new(l, r)),
+			value: e,
+		}
 	}
 };
 
-/// if_stmt -> "if" branch ["elif" branch]* ["else" block]?
 IfStmt: If = {
 	"if" <initial_branch: Branch> <elifs: ("elif" Branch)*> <default_block: ("else" Block)?> => {
 		let mut branches = Vec::new();
@@ -232,7 +160,6 @@ IfStmt: If = {
 	},
 };
 
-/// branch -> expr block
 Branch: Branch = {
 	<l: @L> <conditional: Expr> <r: @R> <block: Block> => {
 		Branch {
@@ -242,7 +169,6 @@ Branch: Branch = {
 	}
 };
 
-/// while_stmt -> "while" expr block
 WhileStmt: While = {
 	"while" <l: @L> <conditional: Expr> <r: @R> <block: Block> => {
 		While {
@@ -252,12 +178,10 @@ WhileStmt: While = {
 	},
 };
 
-/// expr -> truth_expr
 pub Expr: Expr = {	
 	<c: TruthExpr> => c,
 };
 
-/// truth_expr -> truth_expr ["&&" | "||"] strict_eq_expr | strict_eq_expr
 pub TruthExpr: Expr = {
 	<l: @L> <lhs: TruthExpr> <op: TruthOp> <rhs: StrictEqExpr> <r: @R> => {
 		Expr::Bin(AstNode::new(BinExpr {
@@ -270,7 +194,6 @@ pub TruthExpr: Expr = {
 	<StrictEqExpr>,
 };
 
-/// strict_eq_expr -> strict_eq_expr ["==" | "!="] relative_cmp_expr | relative_cmp_expr
 StrictEqExpr: Expr = {
 	<l: @L> <lhs: StrictEqExpr> <op: StrictEqOp> <rhs: RelativeCmpBranch> <r: @R> => {
 		Expr::Bin(AstNode::new(BinExpr {
@@ -283,7 +206,6 @@ StrictEqExpr: Expr = {
 	<RelativeCmpBranch>,
 };
 
-/// relative_cmp_expr -> math_expr [">" | ">=" | "<" | "<="] math_expr | math_expr
 RelativeCmpBranch: Expr = {
 	<l: @L> <lhs: MathExpr> <op: RelativeEqOp> <rhs: MathExpr> <r: @R> => {
 		Expr::Bin(AstNode::new(BinExpr {
@@ -313,7 +235,6 @@ StrictEqOp: BinOp = {
 	"!=" => BinOp::InEq,
 };
 
-/// math_expr -> math_expr ["+" | "-"] factor | factor
 pub MathExpr: Expr = {
 	<l: @L> <lhs: MathExpr> <op: AddOp> <rhs: Factor> <r: @R> => {
 		Expr::Bin(AstNode::new(BinExpr {
@@ -331,7 +252,6 @@ AddOp: BinOp = {
 	"-" => BinOp::Sub,
 };
 
-/// factor -> factor ["*" | "/" | "%"] uni_expr | uni_expr
 Factor: Expr = {
 	<l: @L> <lhs: Factor> <op: FactorOp> <rhs: UniExpr> <r: @R> => {
 		Expr::Bin(AstNode::new(BinExpr {
@@ -351,7 +271,6 @@ FactorOp: BinOp = {
 };
 
 
-/// uni_expr -> ["-" | "!" | "&" | "*"] uni_expr | expr_leaf
 UniExpr: Expr = {
 	<l: @L> <op: UniOp> <u: UniExpr> <r: @R> => Expr::Uni(AstNode::new(UniExpr { op: op, expr: Box::new(u) }, Span::new(l, r))),
 	<ExprLeaf>
@@ -364,7 +283,6 @@ UniOp: UniOp = {
 	"*" => UniOp::Deref,
 };
 
-/// expr_leaf -> "(" expr ")"| literal | fn_call | path | struct_init
 ExprLeaf: Expr = {
 	<ExprPath>,
 	<l: @L> <i: Indexing> <r: @R> => Expr::Indexing(AstNode::new(i, Span::new(l, r))),
@@ -373,24 +291,14 @@ ExprLeaf: Expr = {
 };
 
 ExprPath: Expr = {
-	<l: @L> <path: Path> <r: @R> => {
-		let mut path = path;
-		if path.0.len() == 1 {
-			let segment = path.0.pop().unwrap();
-			match segment {
-				PathSegment::Ident(i) => Expr::Binding(i),
-				PathSegment::Indexing(i, e) => {
-					let i = Indexing {
-						array: Box::new(Expr::Binding(i)),
-						indexer: e
-					};
-					Expr::Indexing(AstNode::new(i, Span::new(l, r)))
-				}
-			}
-		} else {
-			Expr::FieldAccess(AstNode::new(path, Span::new(l, r)))
-		}
-	},
+	<l: @L> <path: Path> <r: @R> => Expr::FieldAccess(AstNode::new(path, Span::new(l, r))),
+
+	<i: Ident> => Expr::Binding(i),
+
+	<l: @L> <i: Ident> "[" <e: Expr> "]" <r: @R> => Expr::Indexing(AstNode::new(Indexing {
+		array: Box::new(Expr::Binding(i)),
+		indexer: Box::new(e),
+	}, Span::new(l, r))),
 
 	<l: @L> <p: ModulePath> <r: @R> => Expr::ModAccess(AstNode::new(p, Span::new(l, r))),
 };
@@ -433,7 +341,6 @@ ArrayInitList: Vec<Expr> = {
 	<e: Expr> ","? => vec![e],
 };
 
-/// struct_init -> "init" type_path "{" struct_field_init_list "}"
 StructInit: StructInit = {
 	"init" <struct_name: ModuleBinding> "{" <init: StructFieldInitList?> "}" => {
 		StructInit {
@@ -443,9 +350,6 @@ StructInit: StructInit = {
 	}
 };
 
-/// struct_field_init_list -> struct_field_init "," struct_field_init_list
-///		      -> struct_field_init ","?
-/// struct_field_init -> ident ":" expr 
 StructFieldInitList: Vec<(AstNode<Ident>, Box<Expr>)> = {
 	<first: StructFieldInit> "," <tail: StructFieldInitList> => {
 		let mut v = vec![first];
@@ -462,7 +366,6 @@ StructFieldInit: (AstNode<Ident>, Box<Expr>) = {
 	<name: Ident> ":" <init: Expr> => (name, Box::new(init)),
 };
 
-/// fn_call -> ModulePath "(" fn_call_args ")"
 FnCall: FnCall = {
 	<path: ModuleBinding> "(" <args: FnCallArgs?> ")" => {
 		let mut path = path;
@@ -473,7 +376,6 @@ FnCall: FnCall = {
 	}
 };
 
-/// fn_call_args -> expr ["," expr]*
 FnCallArgs: Vec<Expr> = {
 	<first: Expr> <tail: ("," <Expr>)*> => {
 		let mut v = vec![first];
@@ -482,7 +384,6 @@ FnCallArgs: Vec<Expr> = {
 	}
 };
 
-/// literal -> "true" | "false" | [0-9]+[.[0.9]+]? | "[[:ASCII:]]"
 pub Literal: Literal = {
 	<number: Number> => {
 		if number.contains(".") {
@@ -506,7 +407,6 @@ Number: String = {
 	<number: r"[-]?[0-9]+[.[0-9]*]?"> => number.to_string(),
 };
 
-/// ident -> [a-zA-Z_] [a-zA-Z0-9_]*
 Ident: AstNode<Ident> = {
 	<l: @L> <ident: r"[A-Za-z_][_A-Za-z0-9]*"> <r: @R> => { 
 		AstNode::new(Ident(AsciiString::from_str(ident).unwrap()), 
@@ -514,19 +414,12 @@ Ident: AstNode<Ident> = {
 	}
 };
 
-/// path -> ident ["." ident]*
 Path: Path = {
-	<p: PathSegmentList> => Path(p),
-};
-
-PathSegmentList: Vec<PathSegment> = {
-	<first: PathSegment> "." <tail: PathSegmentList> => {
-		let mut p = tail;
-		p.insert(0, first);
-		p
-	},
-
-	<segment: PathSegment> => vec![segment],
+	<first: PathSegment> <tail: ("." <PathSegment>)+> => {
+		let mut v = vec![first];
+		v.extend(tail);
+		Path(v)
+	}
 };
 
 PathSegment: PathSegment = {
@@ -539,7 +432,6 @@ ModuleBinding: ModulePath = {
 	<ModulePath>,
 };
 
-/// type_path -> ident ["." ident]*
 ModulePath: ModulePath = {
 	<first: Ident> <v:("::" <Ident>)+> => {
 		let mut p = Vec::new();
