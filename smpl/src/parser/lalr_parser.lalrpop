@@ -475,7 +475,9 @@ Number: Literal = {
 };
 
 Ident: AstNode<Ident> = {
-	<l: @L> <ident: "identifier"> <r: @R> => unimplemented!(),
+	<l: @L> <ident: "identifier"> <r: @R> => {
+		AstNode::new(Ident(AsciiString::from_str(&ident).unwrap()), Span::new(l, r))
+	}
 	
 };
 
