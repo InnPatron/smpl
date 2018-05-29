@@ -401,7 +401,7 @@ impl<'input> Tokenizer<'input> {
                 }
             }
 
-            _ => unreachable!(),
+            ch => unreachable!("Missing handler for {}", ch),
 
         }
     }
