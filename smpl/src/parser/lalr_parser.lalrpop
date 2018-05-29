@@ -11,11 +11,11 @@ extern {
 	type Error = SpannedError;
 
 	enum Token {
-		"identifier" => Token::Identifier(String),
-		"string_literal" => Token::StringLiteral(String),
-		"int_literal" => Token::IntLiteral(i64),
-		"float_literal" => Token::FloatLiteral(f64),
-		"bool_literal" => Token::BoolLiteral(bool),
+		"identifier" => Token::Identifier(<String>),
+		"string_literal" => Token::StringLiteral(<String>),
+		"int_literal" => Token::IntLiteral(<i64>),
+		"float_literal" => Token::FloatLiteral(<f64>),
+		"bool_literal" => Token::BoolLiteral(<bool>),
 
 		"Fn" => Token::FnTypeSignal,
 		"fn" => Token::Fn,
