@@ -400,9 +400,8 @@ Indexing: Indexing = {
 ArrayInit: ArrayInit = {
 	"[" <a: ArrayInitList> "]" => ArrayInit::InitList(a),
 
-	"[" <e: Expr> ";" <n: Number> "]" => {
-		let array_size = n.parse::<u64>().unwrap();
-		ArrayInit::Value(Box::new(e), array_size)
+	"[" <e: Expr> ";" <array_size: "int_literal"> "]" => {
+		ArrayInit::Value(Box::new(e), array_size as u64)
 	}
 };
 
@@ -532,8 +531,7 @@ FunctionTypeAnnotationParameterList: Vec<AstNode<TypeAnnotation>> = {
 };
 
 ArrayType: TypeAnnotation = {
-	"[" <t: TypeAnnotation> ";" <number: Number> "]" => {
-		let number = number.parse::<u64>().unwrap();
-		TypeAnnotation::Array(Box::new(t), number)
+	"[" <t: TypeAnnotation> ";" <number: "int_literal"> "]" => {
+		TypeAnnotation::Array(Box::new(t), number as u64)
 	}
 };
