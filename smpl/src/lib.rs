@@ -4,6 +4,7 @@ extern crate petgraph;
 extern crate lalrpop_util;
 #[macro_use]
 extern crate irmatch;
+extern crate strfmt;
 
 mod feature;
 mod err;
