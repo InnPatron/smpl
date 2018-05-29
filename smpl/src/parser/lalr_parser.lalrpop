@@ -465,7 +465,7 @@ pub Literal: Literal = {
 		Literal::String(string)
 	},
 
-	<boolean: "bool_literal"> => unimplemented!(),
+	<boolean: "bool_literal"> => Literal::Bool(boolean),
 
 };
 
