@@ -2,8 +2,83 @@ use std::str::FromStr;
 use ast::*;
 use ascii::*;
 use span::Span;
+use super::tokens;
 
 grammar;
+
+extern {
+	type Location = Location;
+	type Error = SpannedErr;
+
+	enum Token {
+		"identifier" => Token::Identifier(String),
+		"string_literal" => Token::StringLiteral(String),
+		"int_literal" => Token::IntLiteral(i64),
+		"float_literal" => Token::FloatLiteral(f64),
+		"bool_literal" => Token::BoolLiteral(bool),
+
+		"Fn" => Token::FnTypeSignal,
+		"fn" => Token::Fn,
+		"struct" => Token::Struct,
+		"mod" => Token::Mod,
+		"use" => Token::Use,
+		"builtin" => Token::Builtin,
+		"UNCHECKED" => Token::Unchecked,
+
+		"init" => Token::Init,
+
+		"continue" => Token::Continue,
+		"break" => Token::Break,
+		"return" => Token::Return,
+
+		"if" => Token::If,
+		"else" => Token::Else,
+		"elif" => Token::Elif,
+
+		"while" => Token::While,
+
+		"let" => Token::Let,
+
+		"=" => Token::Assign,
+
+		"==" => Token::Eq,
+		"!=" => Token::NEq,
+
+		">=" => Token::Gte,
+		">" => Token::Gt,
+		"<=" => Token::Lte,
+		"<" => Token::Lt,
+
+		"!" => Token::Invert,
+
+		"+" => Token::Plus,
+		"-" => Token::Minus,
+		"*" => Token::Star,
+		"/" => Token::Slash,
+		"%" => Token::Percent,
+
+		"&" => Token::Ref,
+
+		"&&" => Token::LAnd,
+		"||" => Token::LOr,
+
+		"(" => Token::LParen,
+		")" => Token::RParen,
+		"{" => Token::LBrace,
+		"}" => Token::RBrace,
+		"[" => Token::LBracket,
+		"]" => Token::RBracket,
+
+		"," => Token::Comma,
+		"." => Token::Dot,
+
+		"->" => Token::Arrow,
+
+		":" => Token::Colon,
+		"::" => Token::ColonColon,
+		";" => Token::Semi,
+	}
+}
 
 pub Module: Module = {
 	<mod_decl: ("mod" Ident ";")?> <decl: DeclStmt+> => {
