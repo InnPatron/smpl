@@ -229,7 +229,7 @@ impl<'input> CharInput<'input> {
             line: 1,
             column: 0,
             lookahead: lookahead,
-            end_of_input: Location::new(last, last, 1, 0),
+            end_of_input: Location::new(last + 1, last, 1, 0),
         }
     }
 
@@ -330,14 +330,10 @@ impl<'input> Tokenizer<'input> {
                 (start, self.slice(start, end))
             }
 
-            // Loop body did not run, assume 'start' location was the end of the input
             None => {
-                let mut end = start.clone();
-                end.column += 1;
-                end.byte_index += 1;
-                end.char_index += 1;
-
-                (start, self.slice(start, end))
+                // Loop body did not run
+                // Slice until the end of input
+                (start, self.slice(start, self.chars.end_of_input()))
             },
 
         }
