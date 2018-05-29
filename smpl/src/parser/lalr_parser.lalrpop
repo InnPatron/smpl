@@ -459,9 +459,9 @@ FnCallArgs: Vec<Expr> = {
 };
 
 pub Literal: Literal = {
-	<number: Number> => unimplemented!(),
+	<Number>,
 	<string: "string_literal">  => {
-		let mut string = AsciiString::from_str(string).unwrap();
+		let mut string = AsciiString::from_str(&string).unwrap();
 		Literal::String(string)
 	},
 
@@ -470,8 +470,8 @@ pub Literal: Literal = {
 };
 
 Number: Literal = {
-	<int: "int_literal"> => unimplemented!(),
-	<float: "float_literal"> => unimplemented!(),
+	<int: "int_literal"> => Literal::Int(int),
+	<float: "float_literal"> => Literal::Float(float),
 };
 
 Ident: AstNode<Ident> = {
