@@ -3,6 +3,7 @@
 
 use std::str::{CharIndices, FromStr};
 use std::iter::{Iterator, Peekable, Enumerate};
+use std::default::Default;
 
 use span::Span;
 
@@ -181,6 +182,12 @@ impl Location {
             line: line,
             column: column,
         }
+    }
+}
+
+impl Default for Location {
+    fn default() -> Location {
+        Location::new(0, 0, 1, 1)
     }
 }
 
