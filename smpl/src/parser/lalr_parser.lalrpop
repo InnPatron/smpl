@@ -112,8 +112,8 @@ pub ExprStmt: ExprStmt = {
 	<local_var_decl: LocalVarDecl> => ExprStmt::LocalVarDecl(local_var_decl),
 	<assignment: Assignment> => ExprStmt::Assignment(assignment),
 	<l: @L> <return_stmt: ReturnStmt> <r: @R> => ExprStmt::Return(Span::new(l, r), return_stmt),
-	<l: @L> "continue;" <r: @R> => ExprStmt::Continue(Span::new(l, r)),
-	<l: @L> "break;" <r: @R> => ExprStmt::Break(Span::new(l, r)),
+	<l: @L> "continue" ";" <r: @R> => ExprStmt::Continue(Span::new(l, r)),
+	<l: @L> "break" ";" <r: @R> => ExprStmt::Break(Span::new(l, r)),
 };
 
 ReturnStmt: Option<Expr> = {
