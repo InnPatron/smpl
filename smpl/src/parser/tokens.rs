@@ -220,12 +220,16 @@ impl<'input> CharInput<'input> {
         } else {
             input.char_indices().rev().next().unwrap().0
         };
+        let mut chars = input.char_indices().enumerate().peekable();
+        let lookahead = chars.peek().map(|(char_index, (byte_index, c))| {
+            (Location::new(byte_index.clone(), char_index.clone(), 1, 2), c.clone())
+        });
         CharInput {
-            chars: input.char_indices().enumerate().peekable(),
+            chars: chars,
             line: 1,
-            column: 1,
-            lookahead: None,
-            end_of_input: Location::new(last, last, 1, 1),
+            column: 0,
+            lookahead: lookahead,
+            end_of_input: Location::new(last, last, 1, 0),
         }
     }
 
