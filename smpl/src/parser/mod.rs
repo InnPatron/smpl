@@ -16,7 +16,12 @@ mod parser_tests;
 
 
 pub fn parse_module(input: &str) -> Result<Module, Err>{
-    let mut tokenizer = tokens::Tokenizer::new(input);
+    let mut tokenizer = tokens::Tokenizer::new(input).map(|result| {
+        result.map(|spanned| {
+            let (span, tok) = spanned.to_data();
+            (span.start().byte_index(), tok, span.end().byte_index())
+        })
+    });
     let parser = lalr_parser::ModuleParser::new();
     parser.parse(tokenizer).map_err(|e| Err::ParseErr(format!("{:?}", e)))
 }
