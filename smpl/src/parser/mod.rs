@@ -16,32 +16,7 @@ mod parser_tests;
 
 
 pub fn parse_module(input: &str) -> Result<Module, Err>{
-    let input = prune_input(input);
+    let mut tokenizer = tokens::Tokenizer::new(input);
     let parser = lalr_parser::ModuleParser::new();
-    parser.parse(&input).map_err(|e| Err::ParseErr(format!("{:?}", e)))
-}
-
-fn prune_input(input: &str) -> String {
-    let mut result = String::with_capacity(input.len());
-
-    let mut ignore = false;
-    let mut chars = input.chars().peekable();
-    while let Some(c) = chars.next() {
-        if ignore == false {
-            if c == '/' {
-                match chars.peek() {
-                    Some(&'/') => ignore = true,
-                    _ => (),
-                }
-            }
-        } else if c == '\n' {
-            ignore = false;
-        } 
-
-        if ignore == false {
-            result.push(c);
-        }
-    }
-
-    result
+    parser.parse(tokenizer).map_err(|e| Err::ParseErr(format!("{:?}", e)))
 }
