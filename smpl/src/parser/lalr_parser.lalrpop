@@ -8,7 +8,7 @@ grammar;
 
 extern {
 	type Location = Location;
-	type Error = SpannedErr;
+	type Error = SpannedError;
 
 	enum Token {
 		"identifier" => Token::Identifier(String),
