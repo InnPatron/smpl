@@ -4,7 +4,7 @@ use err::Err;
 
 #[cfg(not(test))]
 mod lalr_parser;
-
+mod tokens;
 
 #[cfg(test)]
 pub mod lalr_parser;
@@ -16,31 +16,23 @@ mod parser_tests;
 
 
 pub fn parse_module(input: &str) -> Result<Module, Err>{
-    let input = prune_input(input);
-    lalr_parser::parse_Module(&input).map_err(|e| Err::ParseErr(format!("{:?}", e)))
+    let mut tokenizer = tokens::Tokenizer::new(input).map(|result| {
+        result.map(|spanned| {
+            let (span, tok) = spanned.to_data();
+            (span.start().byte_index(), tok, span.end().byte_index())
+        })
+    });
+    let parser = lalr_parser::ModuleParser::new();
+    parser.parse(tokenizer).map_err(|e| Err::ParseErr(format!("{:?}", e)))
 }
 
-fn prune_input(input: &str) -> String {
-    let mut result = String::with_capacity(input.len());
-
-    let mut ignore = false;
-    let mut chars = input.chars().peekable();
-    while let Some(c) = chars.next() {
-        if ignore == false {
-            if c == '/' {
-                match chars.peek() {
-                    Some(&'/') => ignore = true,
-                    _ => (),
-                }
-            }
-        } else if c == '\n' {
-            ignore = false;
-        } 
-
-        if ignore == false {
-            result.push(c);
-        }
-    }
-
-    result
+#[cfg(test)]
+pub fn wrap_input<'a>(input: &'a str) -> Box< Iterator<Item=Result<(usize, tokens::Token, usize), tokens::SpannedError>> +'a> {
+    Box::new(tokens::Tokenizer::new(input).map(|result| {
+            result.map(|spanned| {
+                let (span, tok) = spanned.to_data();
+                (span.start().byte_index(), tok, span.end().byte_index())
+            })
+        })
+    )
 }

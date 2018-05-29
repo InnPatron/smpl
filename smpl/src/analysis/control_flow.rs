@@ -686,12 +686,14 @@ mod tests {
 let a: int = 2;
 let b: int = 3;
 }";
+        let input = wrap_input(input);
         let universe = Universe::std();
         let fn_type = FunctionType {
             params: vec![universe.int()],
             return_type: universe.unit(),
         };
-        let fn_def = parse_FnDecl(input).unwrap();
+        let parser = FnDeclParser::new();
+        let fn_def = parser.parse(input).unwrap();
         let fn_def = fn_def.data();
         let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
@@ -757,12 +759,15 @@ if (test) {
     let c: int = 4;
 }
 }";
+        let input = wrap_input(input);
+
         let universe = Universe::std();
         let fn_type = FunctionType {
             params: vec![universe.int()],
             return_type: universe.unit(),
         };
-        let fn_def = parse_FnDecl(input).unwrap();
+        let parser = FnDeclParser::new();
+        let fn_def = parser.parse(input).unwrap();
         let fn_def = fn_def.data();
         let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
@@ -907,12 +912,14 @@ if (test) {
 
     }
 }";
+        let input = wrap_input(input);
         let universe = Universe::std();
         let fn_type = FunctionType {
             params: vec![universe.int()],
             return_type: universe.unit(),
         };
-        let fn_def = parse_FnDecl(input).unwrap();
+        let parser = FnDeclParser::new();
+        let fn_def = parser.parse(input).unwrap();
         let fn_def = fn_def.data();
         let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
@@ -1069,12 +1076,14 @@ if (test) {
         
     }
 }";
+        let input = wrap_input(input);
         let universe = Universe::std();
         let fn_type = FunctionType {
             params: vec![universe.int()],
             return_type: universe.unit(),
         };
-        let fn_def = parse_FnDecl(input).unwrap();
+        let parser = FnDeclParser::new();
+        let fn_def = parser.parse(input).unwrap();
         let fn_def = fn_def.data();
         let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
 
