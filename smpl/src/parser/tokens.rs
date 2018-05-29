@@ -52,6 +52,9 @@ pub enum Token {
     Struct,
     Mod,
     Use,
+    Builtin,
+    Unchecked,
+
 
     If,
     Else,
@@ -405,6 +408,8 @@ impl<'input> Tokenizer<'input> {
             "elif" => Token::Elif,
             "while" => Token::While,
             "let" => Token::Let,
+            "builtin" => Token::Builtin,
+            "UNCHECKED" => Token::Unchecked,
             "true" => Token::BoolLiteral(true),
             "false" => Token::BoolLiteral(false),
 
