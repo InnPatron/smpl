@@ -1031,4 +1031,40 @@ fn recurse(i: i32) -> i32 {
 
         assert_eq!(Value::Int(3), result);
     }
+
+    #[test]
+    fn interpreter_mutually_recursive_fn_call() {
+        let mod1 =
+"
+mod mod1;
+
+fn recurse_a(i: i32) -> i32 {
+    if (i == 0) {
+        return 5;
+    } else {
+        return recurse_b(i - 1);
+    }
+}
+
+fn recurse_b(i: i32) -> i32 {
+    if (i == 0) {
+        return -5;
+    } else {
+        return recurse_a(i - 1);
+    }
+}
+";
+
+        let modules = vec![parse_module(mod1).unwrap()];
+
+        let program = check_program(modules).unwrap();
+
+        let mut vm = VM::new(program);
+
+        let fn_handle = vm.query_module("mod1", "recurse_a").unwrap().unwrap();
+
+        let result = vm.eval_fn_args(fn_handle, vec![Value::Int(1)]);
+
+        assert_eq!(Value::Int(-5), result);    
+    }
 }

@@ -1090,4 +1090,31 @@ fn recurse(i: i32) -> i32 {
         let mod1 = parse_module(mod1).unwrap();
         check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn mutually_recursive_check() {
+        let mod1 =
+"
+mod mod1;
+
+fn recurse_a(i: i32) -> i32 {
+    if (i == 0) {
+        return 5;
+    } else {
+        return recurse_b(i - 1);
+    }
+}
+
+fn recurse_b(i: i32) -> i32 {
+    if (i == 0) {
+        return -5;
+    } else {
+        return recurse_a(i - 1);
+    }
+}
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
 }
