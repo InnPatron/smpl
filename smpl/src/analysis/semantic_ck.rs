@@ -1071,4 +1071,23 @@ fn main() {
         let mod1 = parse_module(mod1).unwrap();
         check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn recursive_check() {
+        let mod1 =
+"
+mod mod1;
+
+fn recurse(i: i32) -> i32 {
+    if (i == 0) {
+        return 0;
+    } else {
+        return recurse(i - 1);
+    }
+}
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
 }
