@@ -32,7 +32,7 @@ struct ReservedType(TypeId, AstNode<Struct>);
 struct ReservedFn(FnId, TypeId, AstNode<AstFunction>);
 struct ReservedBuiltinFn(FnId, TypeId, AstNode<AstBuiltinFunction>);
 
-pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) {
+pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(), Err> {
     let raw_data = raw_mod_data(program, modules);
 
     let mut mapped_raw = HashMap::new();
@@ -52,7 +52,9 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) {
         raw_map: mapped_raw
     };
 
-    map_usings(&raw_data, &mut raw_program);
+    map_usings(&raw_data, &mut raw_program)?;
+
+    Ok(())
 }
 
 fn map_usings(raw_modules: &HashMap<ModuleId, RawModData>, raw_prog: &mut RawProgram) -> Result<(), Err> {
