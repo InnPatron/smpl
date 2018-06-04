@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::cell::Cell;
 use std::rc::Rc;
 
-use err::Err;
+use err::{TypeErr, Err};
 use ast::{ModulePath as AstModulePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule, BuiltinFunction as AstBuiltinFunction, BuiltinFnParams};
 use ast::{ AstNode, Ident, UseDecl};
 
@@ -54,6 +54,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
 
     map_usings(&raw_data, &mut raw_program)?;
 
+    let mut type_roots = Vec::new();
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_type) in raw_mod.reserved_structs.iter() {
             let type_id = reserved_type.0;
@@ -63,8 +64,53 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
 
             program.universe_mut().insert_type(type_id, SmplType::Struct(struct_type));
 
+            type_roots.push(type_id);
+
             let field_ordering = FieldOrdering::new(type_id, field_ordering);
             program.metadata_mut().insert_field_ordering(type_id, field_ordering);
+        }
+    }
+
+    for root in type_roots.into_iter() {
+        cyclic_type_check(program, root)?;
+    }
+
+    Ok(())
+}
+
+fn cyclic_type_check(program: &Program, root_id: TypeId) -> Result<(), Err> {
+    let struct_type = program.universe().get_type(root_id);
+    let struct_type = irmatch!(*struct_type; SmplType::Struct(ref s) => s);
+
+    let mut visited_structs = HashSet::new();
+    let mut to_visit = Vec::new();
+    
+    to_visit.push(root_id);
+
+    loop {
+        let mut depth = to_visit;
+        to_visit = Vec::new();
+        for type_id in depth.into_iter() {
+            if visited_structs.contains(&type_id) {
+                return Err(TypeErr::CyclicType(root_id).into());
+            }
+
+            match *program.universe().get_type(type_id) {
+                SmplType::Struct(ref struct_type) => {
+                    to_visit.extend(struct_type.fields.iter().map(|(_, type_id)| type_id.clone()));
+                    visited_structs.insert(type_id);
+                }
+
+                SmplType::Array(ref array_type) => {
+                    to_visit.push(array_type.base_type);
+                }
+
+                _ => continue,
+            }
+        }
+
+        if to_visit.len() == 0 {
+            break;
         }
     }
 
