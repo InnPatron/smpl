@@ -18,6 +18,7 @@ use feature::*;
 
 struct RawProgram<'a> {
     scopes: HashMap<ModuleId, ScopedData>,
+    dependencies: HashMap<ModuleId, Vec<ModuleId>>,
     raw_map: HashMap<&'a Ident, ModuleId>,
 }
 
@@ -51,7 +52,8 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
 
     let mut raw_program = RawProgram {
         scopes: scopes,
-        raw_map: mapped_raw
+        raw_map: mapped_raw,
+        dependencies: HashMap::new(),
     };
 
     map_usings(&raw_data, &mut raw_program)?;
@@ -281,10 +283,12 @@ fn generate_struct_type(program: &mut Program, scope: &ScopedData, struct_def: &
 
 fn map_usings(raw_modules: &HashMap<ModuleId, RawModData>, raw_prog: &mut RawProgram) -> Result<(), Err> {
     for (id, raw_mod) in raw_modules {
+        let mut dependencies = Vec::new();
         for use_decl in raw_mod.uses.iter() {
             let import_name = use_decl.data().0.data();
             let import_id = raw_prog.raw_map.get(import_name).ok_or(Err::UnresolvedUses(vec![use_decl.clone()]))?;
 
+            dependencies.push(import_id.clone());
             // Get imported module's types and functions
             let (all_types, all_fns) = {
                 let imported_scope = raw_prog.scopes.get(import_id).unwrap();
@@ -324,6 +328,8 @@ fn map_usings(raw_modules: &HashMap<ModuleId, RawModData>, raw_prog: &mut RawPro
                 current_module_scope.insert_fn(path, imported);
             }
         }
+
+        raw_prog.dependencies.insert(id.clone(), dependencies);
     }
 
     Ok(())
