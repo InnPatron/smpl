@@ -29,6 +29,32 @@ struct ReservedBuiltinFn(FnId, TypeId, AstNode<AstBuiltinFunction>);
 
 pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) {
     let raw_data = raw_mod_data(program, modules);
+
+    let mut mapped_raw = HashMap::new();
+    let mut scopes = HashMap::new();
+
+    // Map reserved data
+    for raw in raw_data.iter() {
+        let mut scope = program.universe().std_scope();
+        map_internal_data(&mut scope, raw);
+
+        mapped_raw.insert(raw.name.data(), raw.id.clone());
+        scopes.insert(raw.id.clone(), scope);
+    }
+}
+
+fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
+    for (ident, r) in raw.reserved_structs.iter() {
+        scope.insert_type(r.1.data().name.data().clone().into(), r.0.clone());
+    }
+
+    for (ident, r) in raw.reserved_fns.iter() {
+        scope.insert_fn(r.2.data().name.data().clone().into(), r.0.clone());
+    }
+
+    for (ident, r) in raw.reserved_builtins.iter() {
+        scope.insert_fn(r.2.data().name.data().clone().into(), r.0.clone());
+    }
 }
 
 fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> Vec<RawModData> {
