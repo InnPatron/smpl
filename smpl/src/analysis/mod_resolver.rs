@@ -34,12 +34,12 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) {
     let mut scopes = HashMap::new();
 
     // Map reserved data
-    for raw in raw_data.iter() {
+    for (mod_id, raw) in raw_data.iter() {
         let mut scope = program.universe().std_scope();
         map_internal_data(&mut scope, raw);
 
-        mapped_raw.insert(raw.name.data(), raw.id.clone());
-        scopes.insert(raw.id.clone(), scope);
+        mapped_raw.insert(raw.name.data(), mod_id);
+        scopes.insert(mod_id, scope);
     }
 }
 
@@ -57,9 +57,9 @@ fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
     }
 }
 
-fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> Vec<RawModData> {
+fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> HashMap<ModuleId, RawModData> {
     let universe = program.universe_mut();
-    let mut mod_list = Vec::new();
+    let mut mod_map = HashMap::new();
     for module in modules {
         let mut struct_reserve = HashMap::new();
         let mut fn_reserve = HashMap::new();
@@ -102,8 +102,8 @@ fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> Vec<RawModDat
             uses: uses
         };
 
-        mod_list.push(raw);
+        mod_map.insert(raw.id.clone(), raw);
     }
 
-    mod_list
+    mod_map
 }
