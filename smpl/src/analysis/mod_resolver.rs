@@ -54,7 +54,51 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
 
     map_usings(&raw_data, &mut raw_program)?;
 
+    for (mod_id, raw_mod) in raw_data.iter() {
+        for (_, reserved_type) in raw_mod.reserved_structs.iter() {
+            let type_id = reserved_type.0;
+            let (struct_type, field_ordering) = generate_struct_type(program, 
+                                                               raw_program.scopes.get(mod_id).unwrap(), 
+                                                               reserved_type.1.data())?;
+
+            program.universe_mut().insert_type(type_id, SmplType::Struct(struct_type));
+
+            let field_ordering = FieldOrdering::new(type_id, field_ordering);
+            program.metadata_mut().insert_field_ordering(type_id, field_ordering);
+        }
+    }
+
     Ok(())
+}
+
+fn generate_struct_type(program: &mut Program, scope: &ScopedData, struct_def: &Struct) -> Result<(StructType, Vec<FieldId>), Err> {
+    let (universe, metadata, features) = program.analysis_context();
+
+    let mut fields = HashMap::new();
+    let mut field_map = HashMap::new();
+    let mut order = Vec::new();
+    if let Some(ref body) = struct_def.body.0 {
+        for field in body.iter() {
+            let f_id = universe.new_field_id();
+            let f_name = field.name.data().clone();
+            let f_type_path = &field.field_type;
+            let path_data = f_type_path.data();
+            let field_type = scope.type_id(universe, path_data.into())?;
+            fields.insert(f_id, field_type);
+            field_map.insert(f_name, f_id);
+            order.push(f_id);
+
+            field_type_scanner(universe, features, field_type);
+        }
+    } 
+
+    let struct_t = StructType {
+        name: struct_def.name.data().clone(),
+        fields: fields,
+        field_map: field_map,
+    };
+
+    Ok((struct_t, order))
 }
 
 fn map_usings(raw_modules: &HashMap<ModuleId, RawModData>, raw_prog: &mut RawProgram) -> Result<(), Err> {
