@@ -16,10 +16,10 @@ use super::fn_analyzer::analyze_fn;
 
 use feature::*;
 
-struct RawProgram<'a> {
+struct RawProgram {
     scopes: HashMap<ModuleId, ScopedData>,
     dependencies: HashMap<ModuleId, Vec<ModuleId>>,
-    raw_map: HashMap<&'a Ident, ModuleId>,
+    raw_map: HashMap<Ident, ModuleId>,
 }
 
 struct RawModData {
@@ -36,7 +36,7 @@ struct ReservedFn(FnId, TypeId, AstNode<AstFunction>);
 struct ReservedBuiltinFn(FnId, TypeId, AstNode<AstBuiltinFunction>);
 
 pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(), Err> {
-    let raw_data = raw_mod_data(program, modules);
+    let mut raw_data = raw_mod_data(program, modules);
 
     let mut mapped_raw = HashMap::new();
     let mut scopes = HashMap::new();
@@ -46,7 +46,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
         let mut scope = program.universe().std_scope();
         map_internal_data(&mut scope, raw);
 
-        mapped_raw.insert(raw.name.data(), mod_id.clone());
+        mapped_raw.insert(raw.name.data().clone(), mod_id.clone());
         scopes.insert(mod_id.clone(), scope);
     }
 
@@ -112,6 +112,24 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
             let fn_id = reserved_fn.0;
             analyze_fn(program, raw_program.scopes.get(mod_id).unwrap(), fn_id, mod_id.clone())?;
         }
+    }
+
+    for (name, mod_id) in raw_program.raw_map.into_iter() {
+        let module_data = raw_data.remove(&mod_id).unwrap();
+
+        let owned_structs = module_data.reserved_structs.into_iter()
+            .map(|(_, r)| r.0).collect::<Vec<_>>();
+        let owned_fns = module_data.reserved_fns.into_iter()
+            .map(|(_, r)| r.0).chain(module_data.reserved_builtins.into_iter()
+                                     .map(|(_, r)| r.0)).collect::<Vec<_>>();
+
+        let module_scope = raw_program.scopes.remove(&mod_id).unwrap();
+
+        let dependencies = raw_program.dependencies.remove(&mod_id).unwrap();
+
+        let module = Module::new(module_scope, owned_structs, owned_fns, dependencies, mod_id);
+
+        program.universe_mut().map_module(mod_id, name, module);
     }
 
     Ok(())
