@@ -105,6 +105,13 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
         cyclic_type_check(program, root)?;
     }
 
+    for (mod_id, raw_mod) in raw_data.iter() {
+        for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
+            let fn_id = reserved_fn.0;
+            analyze_fn(program, raw_program.scopes.get(mod_id).unwrap(), fn_id, mod_id.clone())?;
+        }
+    }
+
     Ok(())
 }
 
