@@ -36,8 +36,8 @@ mod tests {
 "mod basic_test_semantic_analysis;
 
 struct Test {
-    field_1: i32,
-    field_2: f32,
+    field_1: int,
+    field_2: float,
     field_3: String,
     field_4: bool
 }
@@ -76,8 +76,8 @@ fn main() {
         let input = 
 "mod call_fn_success;
 
-fn arg_usage(a1: i32, a2: bool) {
-	let b1: i32 = a1;
+fn arg_usage(a1: int, a2: bool) {
+	let b1: int = a1;
 	let b2: bool = a2;
 }
 
@@ -133,10 +133,10 @@ fn test() {
         if false {
 
         } else {
-            let a: i32 = 100;
+            let a: int = 100;
         }
 
-        let b: i32 = a;
+        let b: int = a;
     }
 }";
 
@@ -160,21 +160,21 @@ fn test() {
         let input_0 =
 "mod missing_return_0;
 
-fn test() -> i32 {
+fn test() -> int {
     
 }";
 
         let input_1 = 
 "mod missing_return_1;
 
-fn test() -> i32 {
-    let a: i32 = 5;
+fn test() -> int {
+    let a: int = 5;
 }";
 
         let input_2 = 
 "mod missing_return_2;
 
-fn test() -> i32 {
+fn test() -> int {
     if true {
         return 0;
     }
@@ -183,7 +183,7 @@ fn test() -> i32 {
         let input_3 =
 "mod missing_return_3;
 
-fn test() -> i32 {
+fn test() -> int {
     if true {
 
 
@@ -195,7 +195,7 @@ fn test() -> i32 {
         let input_4 =
 "mod missing_return_4;
 
-fn test() -> i32 {
+fn test() -> int {
     if true {
         return 0;
     } else {
@@ -206,7 +206,7 @@ fn test() -> i32 {
         let input_5 =
 "mod missing_return_5;
         
-fn test() -> i32 {
+fn test() -> int {
     if true {
         if true {
 
@@ -222,7 +222,7 @@ fn test() -> i32 {
 
 "mod missing_return_6;
 
-fn test() -> i32 {
+fn test() -> int {
     if true {
         return 0;
     } else {
@@ -262,15 +262,15 @@ fn test() -> i32 {
         let input_0 =
 "mod all_required_returns_0;
 
-fn test() -> i32 {
+fn test() -> int {
     return 0;
 }";
 
         let input_1 = 
 "mod all_required_returns_1;
         
-fn test() -> i32 {
-    let a: i32 = 5;
+fn test() -> int {
+    let a: int = 5;
 
     return 0;
 }";
@@ -278,7 +278,7 @@ fn test() -> i32 {
         let input_2 = 
 "mod all_required_returns_2;
 
-fn test() -> i32 {
+fn test() -> int {
     if true {
         return 0;
     }
@@ -289,7 +289,7 @@ fn test() -> i32 {
         let input_3 =
 "mod all_required_returns_3;
 
-fn test() -> i32 {
+fn test() -> int {
     if true {
         return 0;
     } else {
@@ -300,7 +300,7 @@ fn test() -> i32 {
         let input_4 =
 "mod all_required_returns_4;
 
-fn test() -> i32 {
+fn test() -> int {
     if true {
         return 0;
     } else {
@@ -311,7 +311,7 @@ fn test() -> i32 {
         let input_5 =
 "mod all_required_returns_5;
 
-fn test() -> i32 {
+fn test() -> int {
     if true {
         if true {
             return 0;
@@ -326,7 +326,7 @@ fn test() -> i32 {
         let input_6 =
 "mod all_required_returns_6;
 
-fn test() -> i32 {
+fn test() -> int {
     if true {
         return 0;
     } else {
@@ -373,7 +373,7 @@ struct A {
 }
 
 struct B{
-    field: i32,
+    field: int,
 }";
 
         let program = parse_module(input).unwrap();
@@ -399,7 +399,7 @@ fn test() {
 "mod mod2;
 
 struct B {
-    field: i32,
+    field: int,
 }
 
 fn test() {
@@ -419,8 +419,8 @@ fn test() {
 
 
 fn test() {
-    let a: [i32; 100] = [ 10; 100 ];
-    let b: [i32; 3] = [ 1, 2, 3 ];
+    let a: [int; 100] = [ 10; 100 ];
+    let b: [int; 3] = [ 1, 2, 3 ];
 }
 
 ";
@@ -435,7 +435,7 @@ fn test() {
 "mod mod1;
 
 fn test() {
-    let a: [i32; 2] = [100, false];
+    let a: [int; 2] = [100, false];
 }
 ";
 
@@ -463,7 +463,7 @@ fn test() {
 "mod mod1;
 
 fn test() {
-    let a: [i32; 3] = [100, 100];
+    let a: [int; 3] = [100, 100];
 }
 ";
 
@@ -492,12 +492,12 @@ fn test() {
 mod mod1;
 
 fn test() {
-    let a: [i32; 4] = [0, 1, 2, 3];
+    let a: [int; 4] = [0, 1, 2, 3];
 
-    let i1: i32 = a[0];
-    let i2: i32 = a[1];
-    let i3: i32 = a[2];
-    let i4: i32 = a[3];
+    let i1: int = a[0];
+    let i2: int = a[1];
+    let i3: int = a[2];
+    let i4: int = a[3];
 }
 ";
 
@@ -512,7 +512,7 @@ fn test() {
 mod mod1;
 
 struct T {
-    t: [i32; 4]
+    t: [int; 4]
 }
 
 
@@ -534,11 +534,11 @@ fn test() {
 "
 mod mod1;
 
-fn bar(a: i32) -> i32 {
+fn bar(a: int) -> int {
     return a + 5;
 }
 
-fn apply(f: Fn(i32) -> i32, in: i32) -> i32 {
+fn apply(f: Fn(int) -> int, in: int) -> int {
     return f(in);
 }
 
@@ -557,7 +557,7 @@ fn foo() {
 "
 mod mod2;
 
-fn foo() -> i32 {
+fn foo() -> int {
     return 5;
 }
 ";
@@ -568,11 +568,11 @@ mod mod1;
 use mod2;
 
 fn b() {
-    let i: i32 = mod2::foo();
+    let i: int = mod2::foo();
 }
 
 fn main() {
-    let a: Fn() -> i32 = mod2::foo;
+    let a: Fn() -> int = mod2::foo;
 }
 ";
 
@@ -588,16 +588,16 @@ fn main() {
 mod mod1;
 
 struct T {
-    f: Fn(i32),
+    f: Fn(int),
 }
 
-fn b(a: i32) {
+fn b(a: int) {
 
 }
 
 fn main() {
     let t: T = init T {f: b};
-    let f: Fn(i32) = t.f;
+    let f: Fn(int) = t.f;
     f(5);
 }
 ";
@@ -613,7 +613,7 @@ fn main() {
 mod mod1;
 
 struct T {
-    i: i32
+    i: int
 }
 
 builtin fn test_function(t: T) -> bool;
@@ -634,7 +634,7 @@ fn main() {
 mod mod1;
 
 struct T {
-    i: i32
+    i: int
 }
 
 builtin fn test_function(UNCHECKED) -> bool;
@@ -707,10 +707,10 @@ fn main() {
 mod mod1;
 
 struct T {
-    i: i32
+    i: int
 }
 
-fn test_function(t: T) -> i32 {
+fn test_function(t: T) -> int {
     return t.i;
 }
 
@@ -729,7 +729,7 @@ fn main() {
 "
 mod mod1;
 
-fn recurse(i: i32) -> i32 {
+fn recurse(i: int) -> int {
     if (i == 0) {
         return 0;
     } else {
@@ -748,7 +748,7 @@ fn recurse(i: i32) -> i32 {
 "
 mod mod1;
 
-fn recurse_a(i: i32) -> i32 {
+fn recurse_a(i: int) -> int {
     if (i == 0) {
         return 5;
     } else {
@@ -756,7 +756,7 @@ fn recurse_a(i: i32) -> i32 {
     }
 }
 
-fn recurse_b(i: i32) -> i32 {
+fn recurse_b(i: int) -> int {
     if (i == 0) {
         return -5;
     } else {

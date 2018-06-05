@@ -30,25 +30,25 @@ pub const MATH_DECLARATION: &'static str =
 "
 mod math;
 
-builtin fn sin(r: f32) -> f32;
-builtin fn cos(r: f32) -> f32;
-builtin fn tan(r: f32) -> f32;
+builtin fn sin(r: float) -> float;
+builtin fn cos(r: float) -> float;
+builtin fn tan(r: float) -> float;
 
-builtin fn asin(r: f32) -> f32;
-builtin fn acos(r: f32) -> f32;
-builtin fn atan(r: f32) -> f32;
-builtin fn atan2(r: f32, other: f32) -> f32;
+builtin fn asin(r: float) -> float;
+builtin fn acos(r: float) -> float;
+builtin fn atan(r: float) -> float;
+builtin fn atan2(r: float, other: float) -> float;
 
-builtin fn to_radians(degrees: f32) -> f32;
-builtin fn to_degrees(radians: f32) -> f32;
+builtin fn to_radians(degrees: float) -> float;
+builtin fn to_degrees(radians: float) -> float;
 
-builtin fn fpowf(base: f32, power: f32) -> f32;
-builtin fn fpowi(base: f32, power: i32) -> f32;
-builtin fn ipow(base: i32, power: i32) -> i32;
+builtin fn fpowf(base: float, power: float) -> float;
+builtin fn fpowi(base: float, power: int) -> float;
+builtin fn ipow(base: int, power: int) -> int;
 
-builtin fn floor(f: f32) -> f32;
-builtin fn ceil(f: f32) -> f32;
-builtin fn round(f: f32) -> f32;
+builtin fn floor(f: float) -> float;
+builtin fn ceil(f: float) -> float;
+builtin fn round(f: float) -> float;
 ";
 
 pub fn include(modules: &mut Vec<Module>) {

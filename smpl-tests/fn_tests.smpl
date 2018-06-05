@@ -1,7 +1,7 @@
-fn arg_usage(a1: i32, a2: bool) {
+fn arg_usage(a1: int, a2: bool) {
 	let name: String = "arg_usage";
 
-	let b1: i32 = a1;
+	let b1: int = a1;
 	let b2: bool = a2;
 }
 

@@ -18,8 +18,8 @@ fn while_data() {
 	let name: String = "while_data";
 
 	while true {
-		let test: i32 = 100;
-		let test2: i32 = 500;
+		let test: int = 100;
+		let test2: int = 500;
 	}
 }
 
@@ -27,8 +27,8 @@ fn while_sequence() {
 	let name: String = "while_sequence";
 	
 	while true {
-		let test: i32 = 100;
-		let test2: i32 = test;
+		let test: int = 100;
+		let test2: int = test;
 	}
 
 	while true {
@@ -41,7 +41,7 @@ fn while_embedded() {
 
 	while true {
 		while true {
-			let test: i32 = 100;
+			let test: int = 100;
 		}
 
 		let foo: String = "foo";

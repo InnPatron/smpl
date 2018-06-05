@@ -33,12 +33,12 @@ mod vec_{item_type};
 struct Vec_{item_type} {{ }}
 
 builtin fn new() -> Vec_{item_type};
-builtin fn len(v: Vec_{item_type}) -> i32;
+builtin fn len(v: Vec_{item_type}) -> int;
 builtin fn contains(v: Vec_{item_type}, val: {item_type_mod}{item_type}) -> bool;
 builtin fn push(v: Vec_{item_type}, val: {item_type_mod}{item_type}) -> Vec_{item_type};
-builtin fn insert(v: Vec_{item_type}, i: i32, val: {item_type_mod}{item_type}) -> Vec_{item_type};
-builtin fn get(v: Vec_{item_type}, i: i32) -> {item_type_mod}{item_type};
-builtin fn remove(v: Vec_{item_type}, i: i32) -> Vec_{item_type};
+builtin fn insert(v: Vec_{item_type}, i: int, val: {item_type_mod}{item_type}) -> Vec_{item_type};
+builtin fn get(v: Vec_{item_type}, i: int) -> {item_type_mod}{item_type};
+builtin fn remove(v: Vec_{item_type}, i: int) -> Vec_{item_type};
 ";
 
 pub fn include(modules: &mut Vec<Module>, item_type_mod: Option<&str>, item_type: &str) {
@@ -257,17 +257,17 @@ mod tests {
         let mod1 =
 "
 mod mod1;
-use vec_i32;
+use vec_int;
 
 fn vec_new() {
-    let v = vec_i32::new();
+    let v = vec_int::new();
 }
 ";
         let mut modules = vec![parse_module(mod1).unwrap()];
-        include(&mut modules, None, "i32");
+        include(&mut modules, None, "int");
 
         let mut vm = VM::new(modules).unwrap();
-        add(&mut vm, "i32");
+        add(&mut vm, "int");
 
         let fn_handle = vm.query_module("mod1", "vec_new").unwrap().unwrap();
 
@@ -281,21 +281,21 @@ fn vec_new() {
         let mod1 =
 "
 mod mod1;
-use vec_i32;
+use vec_int;
 
-fn test() -> i32 {
-    let v = vec_i32::new();
-    v = vec_i32::push(v, 123);
-    v = vec_i32::push(v, 456);
+fn test() -> int {
+    let v = vec_int::new();
+    v = vec_int::push(v, 123);
+    v = vec_int::push(v, 456);
     
-    return vec_i32::len(v);
+    return vec_int::len(v);
 }
 ";
         let mut modules = vec![parse_module(mod1).unwrap()];
-        include(&mut modules, None, "i32");
+        include(&mut modules, None, "int");
 
         let mut vm = VM::new(modules).unwrap();
-        add(&mut vm, "i32");
+        add(&mut vm, "int");
 
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -309,24 +309,24 @@ fn test() -> i32 {
         let mod1 =
 "
 mod mod1;
-use vec_i32;
+use vec_int;
 
-fn test() -> i32 {
-    let v = vec_i32::new();
-    v = vec_i32::push(v, 123);
-    v = vec_i32::push(v, 456);
+fn test() -> int {
+    let v = vec_int::new();
+    v = vec_int::push(v, 123);
+    v = vec_int::push(v, 456);
     
-    let a = vec_i32::get(v, 0);
-    let b = vec_i32::get(v, 1);
+    let a = vec_int::get(v, 0);
+    let b = vec_int::get(v, 1);
 
     return a * b;
 }
 ";
         let mut modules = vec![parse_module(mod1).unwrap()];
-        include(&mut modules, None, "i32");
+        include(&mut modules, None, "int");
 
         let mut vm = VM::new(modules).unwrap();
-        add(&mut vm, "i32");
+        add(&mut vm, "int");
 
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -340,24 +340,24 @@ fn test() -> i32 {
         let mod1 =
 "
 mod mod1;
-use vec_i32;
+use vec_int;
 
-fn test() -> i32 {
-    let v = vec_i32::new();
-    v = vec_i32::push(v, 123);
-    v = vec_i32::push(v, 456);
-    v = vec_i32::push(v, 789);
+fn test() -> int {
+    let v = vec_int::new();
+    v = vec_int::push(v, 123);
+    v = vec_int::push(v, 456);
+    v = vec_int::push(v, 789);
     
-    v = vec_i32::remove(v, 1);
+    v = vec_int::remove(v, 1);
 
-    return vec_i32::get(v, 1);
+    return vec_int::get(v, 1);
 }
 ";
         let mut modules = vec![parse_module(mod1).unwrap()];
-        include(&mut modules, None, "i32");
+        include(&mut modules, None, "int");
 
         let mut vm = VM::new(modules).unwrap();
-        add(&mut vm, "i32");
+        add(&mut vm, "int");
 
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -371,25 +371,25 @@ fn test() -> i32 {
         let mod1 =
 "
 mod mod1;
-use vec_i32;
+use vec_int;
 
-fn test() -> i32 {
-    let v = vec_i32::new();
-    v = vec_i32::push(v, 123);
-    v = vec_i32::push(v, 456);
+fn test() -> int {
+    let v = vec_int::new();
+    v = vec_int::push(v, 123);
+    v = vec_int::push(v, 456);
 
-    v = vec_i32::insert(v, 0, 1337);
+    v = vec_int::insert(v, 0, 1337);
     
-    let a = vec_i32::get(v, 0);
+    let a = vec_int::get(v, 0);
 
     return a;
 }
 ";
         let mut modules = vec![parse_module(mod1).unwrap()];
-        include(&mut modules, None, "i32");
+        include(&mut modules, None, "int");
 
         let mut vm = VM::new(modules).unwrap();
-        add(&mut vm, "i32");
+        add(&mut vm, "int");
 
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -403,39 +403,39 @@ fn test() -> i32 {
         let mod1 =
 "
 mod mod1;
-use vec_i32;
+use vec_int;
 
 fn test() -> bool {
-    let v = vec_i32::new();
-    v = vec_i32::push(v, 1);
-    v = vec_i32::push(v, 2);
-    v = vec_i32::push(v, 3);
-    v = vec_i32::push(v, 4);
-    v = vec_i32::push(v, 5);
-    v = vec_i32::push(v, 6);
-    v = vec_i32::push(v, 7);
+    let v = vec_int::new();
+    v = vec_int::push(v, 1);
+    v = vec_int::push(v, 2);
+    v = vec_int::push(v, 3);
+    v = vec_int::push(v, 4);
+    v = vec_int::push(v, 5);
+    v = vec_int::push(v, 6);
+    v = vec_int::push(v, 7);
 
-    return vec_i32::contains(v, 5);
+    return vec_int::contains(v, 5);
 }
 
 fn test2() -> bool {
-    let v = vec_i32::new();
-    v = vec_i32::push(v, 1);
-    v = vec_i32::push(v, 2);
-    v = vec_i32::push(v, 3);
-    v = vec_i32::push(v, 4);
-    v = vec_i32::push(v, 5);
-    v = vec_i32::push(v, 6);
-    v = vec_i32::push(v, 7);
+    let v = vec_int::new();
+    v = vec_int::push(v, 1);
+    v = vec_int::push(v, 2);
+    v = vec_int::push(v, 3);
+    v = vec_int::push(v, 4);
+    v = vec_int::push(v, 5);
+    v = vec_int::push(v, 6);
+    v = vec_int::push(v, 7);
 
-    return vec_i32::contains(v, 20);
+    return vec_int::contains(v, 20);
 }
 ";
         let mut modules = vec![parse_module(mod1).unwrap()];
-        include(&mut modules, None, "i32");
+        include(&mut modules, None, "int");
 
         let mut vm = VM::new(modules).unwrap();
-        add(&mut vm, "i32");
+        add(&mut vm, "int");
 
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 

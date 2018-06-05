@@ -765,7 +765,7 @@ mod tests {
         let mod1 =
 "mod mod1;
 
-fn test(a: i32, b: i32) -> i32 {
+fn test(a: int, b: int) -> int {
     return a + b;
 }";
 
@@ -786,10 +786,10 @@ fn test(a: i32, b: i32) -> i32 {
 "mod mod1;
 
 struct T {
-    f: i32
+    f: int
 }
 
-fn test(a: i32, b: i32) -> T {
+fn test(a: int, b: int) -> T {
     return init T { f: a + b };
 }";
 
@@ -812,9 +812,9 @@ fn test(a: i32, b: i32) -> T {
         let mod1 =
 "mod mod1;
 
-builtin fn add(a: i32, b: i32) -> i32;
+builtin fn add(a: int, b: int) -> int;
 
-fn test(a: i32, b: i32) -> i32 {
+fn test(a: int, b: int) -> int {
     return add(a, b);
 }";
 
@@ -835,9 +835,9 @@ fn test(a: i32, b: i32) -> i32 {
         let mod1 =
 "mod mod1;
 
-builtin fn sum(UNCHECKED) -> i32;
+builtin fn sum(UNCHECKED) -> int;
 
-fn test(a: i32, b: i32) -> i32 {
+fn test(a: int, b: int) -> int {
     return sum(a, b, 100, 2);
 }";
 
@@ -859,9 +859,9 @@ fn test(a: i32, b: i32) -> i32 {
         let mod1 =
 "mod mod1;
 
-builtin fn add(a: i32, b: i32) -> i32;
+builtin fn add(a: int, b: int) -> int;
 
-fn test(a: i32, b: i32) -> i32 {
+fn test(a: int, b: int) -> int {
     return add(a, b);
 }";
 
@@ -870,7 +870,7 @@ fn test(a: i32, b: i32) -> i32 {
 
 use mod1;
 
-fn test2() -> i32 {
+fn test2() -> int {
     return mod1::add(1, 2);
 }
 ";
@@ -893,10 +893,10 @@ fn test2() -> i32 {
 "mod mod1;
 
 struct T {
-    f: i32
+    f: int
 }
 
-fn test() -> i32 {
+fn test() -> int {
     let t: T = init T { f: 1335 };
 
     t.f = t.f + 1;
@@ -922,8 +922,8 @@ fn test() -> i32 {
         let mod1 =
 "mod mod1;
 
-fn test() -> i32 {
-    let t: [i32; 5] = [1, 2, 3, 4, 5];
+fn test() -> int {
+    let t: [int; 5] = [1, 2, 3, 4, 5];
 
     return t[0] + t[1] + t[2] + t[3] + t[4];
 }
@@ -946,12 +946,12 @@ fn test() -> i32 {
         let mod1 =
 "mod mod1;
 
-fn test2(a: i32) -> i32 {
+fn test2(a: int) -> int {
     return a * 2;
 }
 
-fn test() -> i32 {
-    let func: Fn(i32) -> i32 = test2;
+fn test() -> int {
+    let func: Fn(int) -> int = test2;
 
     return func(210);
 }
@@ -974,11 +974,11 @@ fn test() -> i32 {
         let mod1 =
 "mod mod1;
 
-fn test2(a: i32) -> i32 {
+fn test2(a: int) -> int {
     return a * 2;
 }
 
-fn test() -> i32 {
+fn test() -> int {
     let func = test2;
 
     return func(210);
@@ -1003,7 +1003,7 @@ fn test() -> i32 {
 "
 mod mod1;
 
-fn recurse(i: i32) -> i32 {
+fn recurse(i: int) -> int {
     if (i == 0) {
         return 0;
     } else {
@@ -1028,7 +1028,7 @@ fn recurse(i: i32) -> i32 {
 "
 mod mod1;
 
-fn recurse_a(i: i32) -> i32 {
+fn recurse_a(i: int) -> int {
     if (i == 0) {
         return 5;
     } else {
@@ -1036,7 +1036,7 @@ fn recurse_a(i: i32) -> i32 {
     }
 }
 
-fn recurse_b(i: i32) -> i32 {
+fn recurse_b(i: int) -> int {
     if (i == 0) {
         return -5;
     } else {
@@ -1063,7 +1063,7 @@ fn recurse_b(i: i32) -> i32 {
 mod mod1;
 use math;
 
-fn test_floor() -> f32 {
+fn test_floor() -> float {
     let f = math::floor(1.5);
     return f;
 }
