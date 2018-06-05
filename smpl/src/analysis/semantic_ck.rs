@@ -768,4 +768,35 @@ fn recurse_b(i: i32) -> i32 {
         let mod1 = parse_module(mod1).unwrap();
         check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn cyclic_type() {
+        let mod1 =
+"
+mod mod1;
+
+struct TypeA {
+    f1: TypeB
+}
+
+struct TypeB {
+    f1: TypeA
+}
+";
+
+        let mod1 = parse_module(mod1).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!(),
+            Err(e) => match e {
+                Err::TypeErr(e) => {
+                    match e {
+                        TypeErr::CyclicType(_) => (),
+                        _ => panic!(),
+                    }
+                }
+
+                U => panic!(),
+            }
+        }
+    }
 }
