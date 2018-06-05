@@ -37,7 +37,7 @@ mod tests {
 
 struct Test {
     field_1: int,
-    field_2: f32,
+    field_2: float,
     field_3: String,
     field_4: bool
 }

@@ -1063,7 +1063,7 @@ fn recurse_b(i: int) -> int {
 mod mod1;
 use math;
 
-fn test_floor() -> f32 {
+fn test_floor() -> float {
     let f = math::floor(1.5);
     return f;
 }
