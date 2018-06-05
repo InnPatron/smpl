@@ -33,6 +33,7 @@ impl From<ControlFlowErr> for Err {
 
 #[derive(Clone, Debug)]
 pub enum TypeErr {
+    CyclicType(TypeId),
     LhsRhsInEq(TypeId, TypeId, Span),
     InEqFnReturn {
         expr: TypeId,
