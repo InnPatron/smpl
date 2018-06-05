@@ -12,12 +12,15 @@ use petgraph::visit::EdgeRef;
 
 use feature::*;
 
-use ast::{Ident, BinOp, UniOp};
+use ast::{Module, Ident, BinOp, UniOp};
+
+use err::Err;
 
 use analysis::*;
 use analysis::smpl_type::*;
 use analysis::metadata::*;
 
+use super::loader;
 use super::vm_i::*;
 use super::value::Value;
 
@@ -27,11 +30,17 @@ pub struct VM {
 }
 
 impl VM {
-    pub fn new(program: Program) -> VM {
-        VM {
+    pub fn new(user_modules: Vec<Module>) -> Result<VM, Err> {
+        let modules = loader::include(user_modules);
+        let program = check_program(modules)?;
+        let mut vm = VM {
             program: program,
             builtins: HashMap::new(),
-        }
+        };
+
+        loader::load(&mut vm);
+
+        Ok(vm)
     }
 
     pub fn eval_fn(&self, handle: FnHandle) -> Value {
@@ -762,9 +771,7 @@ fn test(a: i32, b: i32) -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let vm = VM::new(program);
+        let vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -788,9 +795,7 @@ fn test(a: i32, b: i32) -> T {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let vm = VM::new(program);
+        let vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -815,9 +820,7 @@ fn test(a: i32, b: i32) -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
         vm.insert_builtin("mod1", "add", Box::new(Add));
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
@@ -840,9 +843,8 @@ fn test(a: i32, b: i32) -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
 
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
         vm.insert_builtin("mod1", "sum", Box::new(VarArgSum));
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
@@ -875,9 +877,7 @@ fn test2() -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap(), parse_module(mod2).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
         vm.insert_builtin("mod1", "add", Box::new(Add));
         
         let fn_handle = vm.query_module("mod2", "test2").unwrap().unwrap();
@@ -908,9 +908,7 @@ fn test() -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -934,9 +932,7 @@ fn test() -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -964,9 +960,7 @@ fn test() -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -994,9 +988,7 @@ fn test() -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -1021,9 +1013,7 @@ fn recurse(i: i32) -> i32 {
 ";
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
 
         let fn_handle = vm.query_module("mod1", "recurse").unwrap().unwrap();
 
@@ -1057,14 +1047,35 @@ fn recurse_b(i: i32) -> i32 {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let program = check_program(modules).unwrap();
-
-        let mut vm = VM::new(program);
+        let mut vm = VM::new(modules).unwrap();
 
         let fn_handle = vm.query_module("mod1", "recurse_a").unwrap().unwrap();
 
         let result = vm.eval_fn_args(fn_handle, vec![Value::Int(1)]);
 
         assert_eq!(Value::Int(-5), result);    
+    }
+
+    #[test]
+    fn interpreter_loaded_builtin() {
+        let mod1 =
+"
+mod mod1;
+use math;
+
+fn test_floor() -> f32 {
+    let f = math::floor(1.5);
+    return f;
+}
+";
+        let modules = vec![parse_module(mod1).unwrap()];
+
+        let mut vm = VM::new(modules).unwrap();
+
+        let fn_handle = vm.query_module("mod1", "test_floor").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Float(1.0), result);
     }
 }
