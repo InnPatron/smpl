@@ -30,3 +30,4 @@ pub use analysis::check_program;
 
 
 pub use self::code_gen::RustBackend;
+pub use self::code_gen::interpreter;

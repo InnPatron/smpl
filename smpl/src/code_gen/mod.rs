@@ -1,5 +1,5 @@
 mod rust_gen;
-mod interpreter;
+pub mod interpreter;
 
 pub use self::rust_gen::RustBackend;
 
