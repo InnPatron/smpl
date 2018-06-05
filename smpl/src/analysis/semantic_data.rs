@@ -4,8 +4,6 @@ use std::rc::Rc;
 use std::slice::Iter;
 use std::fmt;
 
-use ascii::AsciiString;
-
 use err::Err;
 use ast::*;
 use ast::{Module as AstModule, Function as AstFunction, ModulePath as AstModulePath, BuiltinFunction as AstBuiltinFunction};
@@ -773,7 +771,7 @@ impl fmt::Display for ModulePath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let buffer = self.0
             .iter()
-            .fold(AsciiString::new(), |mut buffer, ref item| {
+            .fold(String::new(), |mut buffer, ref item| {
                 buffer.push_str(&item.0);
                 buffer
             });

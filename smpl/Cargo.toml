@@ -14,7 +14,6 @@ lalrpop = "0.15.2"
 
 [dependencies]
 itertools = "0.6.3"
-ascii = "0.8.6"
 lalrpop-util = "0.15.2"
 regex = "0.2.1"
 petgraph = "0.4.9"

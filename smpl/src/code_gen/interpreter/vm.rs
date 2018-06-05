@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::str::FromStr;
-
-use ascii::AsciiString;
 
 use petgraph::graph;
 use petgraph::graph::NodeIndex;
@@ -66,8 +63,8 @@ impl VM {
     pub fn insert_builtin(&mut self, module_str: &str, name_str: &str, builtin: Box<BuiltInFn>) 
         -> Result<Option<Box<BuiltInFn>>, String> {
 
-        let module = Ident(AsciiString::from_str(module_str).map_err(|_| "Invalid module name")?);
-        let name = Ident(AsciiString::from_str(name_str).map_err(|_| "Invalid name")?);
+        let module = Ident(module_str.to_string());
+        let name = Ident(name_str.to_string());
         let mod_id = self.program.universe().module_id(&module);
 
         match mod_id {
@@ -90,8 +87,8 @@ impl VM {
     }
 
     pub fn query_module(&self, module: &str, name: &str) -> Result<Option<FnHandle>, String> {
-        let module = Ident(AsciiString::from_str(module).map_err(|_| "Invalid module name")?);
-        let name = Ident(AsciiString::from_str(name).map_err(|_| "Invalid name")?);
+        let module = Ident(module.to_string());
+        let name = Ident(name.to_string());
         let mod_id = self.program.universe().module_id(&module);
 
         match mod_id {
