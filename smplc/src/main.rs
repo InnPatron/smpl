@@ -1,16 +1,12 @@
 #[macro_use]
 extern crate clap;
 extern crate smpl;
-extern crate ascii;
 
 use clap::App;
 
-use std::str::FromStr;
 use std::fs::{File, OpenOptions};
 use std::path::Path;
 use std::io::{Read, Write};
-
-use ascii::AsciiString;
 
 fn main() {
     let yaml = load_yaml!("cli.yaml");
@@ -144,8 +140,7 @@ fn rust_gen(input: Vec<(&str, &str)>) -> Result<Vec<u8>, String> {
         let mut module = parse_module(code).map_err(|err| format!("{:?}", err))?;
     
         if module.name().is_none() {
-            module.set_name(AsciiString::from_str(file_name)
-                                        .map_err(|_| format!("Unable to use file name {} as module name. Only ASCII strings.", file_name))?);
+            module.set_name(file_name);
         }
 
         modules.push(module);

@@ -7,4 +7,3 @@ workspace = ".."
 [dependencies]
 smpl = { path = "../smpl/" }
 clap = { version = "2.29.1", features = ["yaml"]}
-ascii = "0.8.6"
