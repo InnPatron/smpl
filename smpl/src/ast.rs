@@ -61,8 +61,10 @@ impl Module {
         }
     }
 
-    pub fn set_name(&mut self, name: &str) {
-        self.0 = Some(AstNode::new(Ident(name.to_string()), Span::new(0, 0)));
+    pub fn name_if_none(&mut self, name: &str) {
+        if self.0.is_none() {
+            self.0 = Some(AstNode::new(Ident(name.to_string()), Span::new(0, 0)));
+        }
     }
 }
 
