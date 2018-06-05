@@ -16,7 +16,7 @@ use super::smpl_type::*;
 use super::control_flow::CFG;
 
 pub const UNIT_TYPE: &'static str = "Unit";
-pub const INT_TYPE: &'static str = "i32";
+pub const INT_TYPE: &'static str = "int";
 pub const FLOAT_TYPE: &'static str = "f32";
 pub const STRING_TYPE: &'static str = "String";
 pub const BOOL_TYPE: &'static str = "bool";

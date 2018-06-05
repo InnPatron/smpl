@@ -43,8 +43,8 @@ builtin fn to_radians(degrees: f32) -> f32;
 builtin fn to_degrees(radians: f32) -> f32;
 
 builtin fn fpowf(base: f32, power: f32) -> f32;
-builtin fn fpowi(base: f32, power: i32) -> f32;
-builtin fn ipow(base: i32, power: i32) -> i32;
+builtin fn fpowi(base: f32, power: int) -> f32;
+builtin fn ipow(base: int, power: int) -> int;
 
 builtin fn floor(f: f32) -> f32;
 builtin fn ceil(f: f32) -> f32;

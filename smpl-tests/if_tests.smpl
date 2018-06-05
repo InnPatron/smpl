@@ -53,7 +53,7 @@ fn embedded_if() {
 
 
 		} else {
-			let a: i32 = 10;
+			let a: int = 10;
 		}
 	}
 }
