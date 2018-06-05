@@ -72,6 +72,8 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
 
             let field_ordering = FieldOrdering::new(type_id, field_ordering);
             program.metadata_mut().insert_field_ordering(type_id, field_ordering);
+
+           
         }
 
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
@@ -105,6 +107,12 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
 
     for root in type_roots.into_iter() {
         cyclic_type_check(program, root)?;
+        let struct_type = program.universe().get_type(root);
+        let struct_type = irmatch!(*struct_type; SmplType::Struct(ref s) => s);
+        for field_type in struct_type.fields.iter().map(|(_, type_id)| type_id.clone()) {
+            let (universe, _, features) = program.analysis_context();
+            field_type_scanner(universe, features, field_type);
+        }
     }
 
     for (mod_id, raw_mod) in raw_data.iter() {
@@ -285,8 +293,6 @@ fn generate_struct_type(program: &mut Program, scope: &ScopedData, struct_def: &
             fields.insert(f_id, field_type);
             field_map.insert(f_name, f_id);
             order.push(f_id);
-
-            field_type_scanner(universe, features, field_type);
         }
     } 
 
