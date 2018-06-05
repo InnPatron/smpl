@@ -15,6 +15,12 @@ use super::metadata::Metadata;
 use super::smpl_type::*;
 use super::control_flow::CFG;
 
+pub const UNIT_TYPE: &'static str = "Unit";
+pub const INT_TYPE: &'static str = "i32";
+pub const FLOAT_TYPE: &'static str = "f32";
+pub const STRING_TYPE: &'static str = "String";
+pub const BOOL_TYPE: &'static str = "bool";
+
 pub struct Program {
     universe: Universe,
     metadata: Metadata,
@@ -81,11 +87,11 @@ impl Universe {
 
     pub fn std() -> Universe {
 
-        let unit = (TypeId(0), internal_module_path!("Unit"), SmplType::Unit);
-        let int = (TypeId(1), internal_module_path!("i32"), SmplType::Int);
-        let float = (TypeId(2), internal_module_path!("f32"), SmplType::Float);
-        let string = (TypeId(3), internal_module_path!("String"), SmplType::String);
-        let boolean = (TypeId(4), internal_module_path!("bool"), SmplType::Bool);
+        let unit = (TypeId(0), internal_module_path!(UNIT_TYPE), SmplType::Unit);
+        let int = (TypeId(1), internal_module_path!(INT_TYPE), SmplType::Int);
+        let float = (TypeId(2), internal_module_path!(FLOAT_TYPE), SmplType::Float);
+        let string = (TypeId(3), internal_module_path!(STRING_TYPE), SmplType::String);
+        let boolean = (TypeId(4), internal_module_path!(BOOL_TYPE), SmplType::Bool);
 
         let type_map = vec![
             unit.clone(),
