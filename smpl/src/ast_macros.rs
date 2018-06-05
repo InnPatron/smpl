@@ -27,8 +27,7 @@ macro_rules! boolean {
 macro_rules! string {
     ($val: expr) => {{
         use ast::Literal;
-        use ascii::AsciiString;
-        Literal::String(AsciiString::from_str($val).unwrap())
+        Literal::String($val.to_string())
     }};
 
     ($val: expr => Expr) => {{
@@ -62,9 +61,7 @@ macro_rules! int {
 macro_rules! ident {
     ($ident: expr) => {{
         use ast::Ident;
-        use ascii::*;
-        use std::str::FromStr;
-        Ident(AsciiString::from_str($ident).unwrap())
+        Ident($ident.to_string())
     }};
 
     ($ident: expr => Expr) => {{

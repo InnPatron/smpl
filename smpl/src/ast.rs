@@ -1,9 +1,6 @@
-use std::str::FromStr;
 use std::fmt;
 use std::slice::Iter;
 use std::borrow::Borrow;
-
-use ascii::AsciiString;
 
 use span::Span;
 
@@ -64,8 +61,8 @@ impl Module {
         }
     }
 
-    pub fn set_name(&mut self, name: AsciiString) {
-        self.0 = Some(AstNode::new(Ident(name), Span::new(0, 0)));
+    pub fn set_name(&mut self, name: &str) {
+        self.0 = Some(AstNode::new(Ident(name.to_string()), Span::new(0, 0)));
     }
 }
 
@@ -275,7 +272,7 @@ pub enum UniOp {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
-    String(AsciiString),
+    String(String),
     Int(i64),
     Float(f64),
     Bool(bool),
@@ -291,7 +288,7 @@ impl PartialEq for Block {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Ident(pub AsciiString);
+pub struct Ident(pub String);
 
 impl Ident {
     pub fn as_str(&self) -> &str {
@@ -301,14 +298,7 @@ impl Ident {
 
 impl Ident {
     pub fn new(str: &str) -> Ident {
-        Ident(AsciiString::from_str(str).unwrap())
-    }
-
-    pub fn try_new(str: &str) -> Option<Ident> {
-        match AsciiString::from_str(str) {
-            Ok(str) => Some(Ident(str)),
-            Err(..) => None
-        }
+        Ident(str.to_string())
     }
 }
 
@@ -372,7 +362,7 @@ impl fmt::Display for ModulePath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let buffer = self.0
             .iter()
-            .fold(AsciiString::new(), |mut buffer, ref item| {
+            .fold(String::new(), |mut buffer, ref item| {
                 buffer.push_str(&item.data().0);
                 buffer
             });

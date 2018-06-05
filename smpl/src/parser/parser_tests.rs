@@ -1,9 +1,6 @@
 #[cfg(test)]
 mod parser_tests {
-    use std::str::FromStr;
-
     use parser::*;
-    use ascii::*;
     use ast::*;
     use span::Span;
 

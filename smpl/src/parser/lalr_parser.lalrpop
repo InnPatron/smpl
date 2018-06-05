@@ -1,6 +1,5 @@
 use std::str::FromStr;
 use ast::*;
-use ascii::*;
 use span::Span;
 use super::tokens::*;
 
@@ -461,7 +460,6 @@ FnCallArgs: Vec<Expr> = {
 pub Literal: Literal = {
 	<Number>,
 	<string: "string_literal">  => {
-		let mut string = AsciiString::from_str(&string).unwrap();
 		Literal::String(string)
 	},
 
@@ -476,7 +474,7 @@ Number: Literal = {
 
 Ident: AstNode<Ident> = {
 	<l: @L> <ident: "identifier"> <r: @R> => {
-		AstNode::new(Ident(AsciiString::from_str(&ident).unwrap()), Span::new(l, r))
+		AstNode::new(Ident(ident), Span::new(l, r))
 	}
 	
 };

@@ -1,4 +1,3 @@
-extern crate ascii;
 extern crate itertools;
 extern crate petgraph;
 extern crate lalrpop_util;
