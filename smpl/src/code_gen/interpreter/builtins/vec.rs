@@ -245,3 +245,207 @@ impl BuiltInFn for Remove {
         Value::Struct(vec_struct)
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use super::super::*;
+
+    #[test]
+    fn interpreter_vec_new() {
+        let mod1 =
+"
+mod mod1;
+use vec_i32;
+
+fn vec_new() {
+    let v = vec_i32::new();
+}
+";
+        let mut modules = vec![parse_module(mod1).unwrap()];
+        include(&mut modules, None, "i32");
+
+        let mut vm = VM::new(modules).unwrap();
+        add(&mut vm, "i32");
+
+        let fn_handle = vm.query_module("mod1", "vec_new").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Unit, result);
+    }
+
+    #[test]
+    fn interpreter_vec_push() {
+        let mod1 =
+"
+mod mod1;
+use vec_i32;
+
+fn test() -> i32 {
+    let v = vec_i32::new();
+    v = vec_i32::push(v, 123);
+    v = vec_i32::push(v, 456);
+    
+    return vec_i32::len(v);
+}
+";
+        let mut modules = vec![parse_module(mod1).unwrap()];
+        include(&mut modules, None, "i32");
+
+        let mut vm = VM::new(modules).unwrap();
+        add(&mut vm, "i32");
+
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Int(2), result);
+    }
+
+    #[test]
+    fn interpreter_vec_get() {
+        let mod1 =
+"
+mod mod1;
+use vec_i32;
+
+fn test() -> i32 {
+    let v = vec_i32::new();
+    v = vec_i32::push(v, 123);
+    v = vec_i32::push(v, 456);
+    
+    let a = vec_i32::get(v, 0);
+    let b = vec_i32::get(v, 1);
+
+    return a * b;
+}
+";
+        let mut modules = vec![parse_module(mod1).unwrap()];
+        include(&mut modules, None, "i32");
+
+        let mut vm = VM::new(modules).unwrap();
+        add(&mut vm, "i32");
+
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Int(123 * 456), result);
+    }
+
+    #[test]
+    fn interpreter_vec_remove() {
+        let mod1 =
+"
+mod mod1;
+use vec_i32;
+
+fn test() -> i32 {
+    let v = vec_i32::new();
+    v = vec_i32::push(v, 123);
+    v = vec_i32::push(v, 456);
+    v = vec_i32::push(v, 789);
+    
+    v = vec_i32::remove(v, 1);
+
+    return vec_i32::get(v, 1);
+}
+";
+        let mut modules = vec![parse_module(mod1).unwrap()];
+        include(&mut modules, None, "i32");
+
+        let mut vm = VM::new(modules).unwrap();
+        add(&mut vm, "i32");
+
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Int(789), result);
+    }
+
+    #[test]
+    fn interpreter_vec_insert() {
+        let mod1 =
+"
+mod mod1;
+use vec_i32;
+
+fn test() -> i32 {
+    let v = vec_i32::new();
+    v = vec_i32::push(v, 123);
+    v = vec_i32::push(v, 456);
+
+    v = vec_i32::insert(v, 0, 1337);
+    
+    let a = vec_i32::get(v, 0);
+
+    return a;
+}
+";
+        let mut modules = vec![parse_module(mod1).unwrap()];
+        include(&mut modules, None, "i32");
+
+        let mut vm = VM::new(modules).unwrap();
+        add(&mut vm, "i32");
+
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Int(1337), result);
+    }
+
+    #[test]
+    fn interpreter_vec_contains() {
+        let mod1 =
+"
+mod mod1;
+use vec_i32;
+
+fn test() -> bool {
+    let v = vec_i32::new();
+    v = vec_i32::push(v, 1);
+    v = vec_i32::push(v, 2);
+    v = vec_i32::push(v, 3);
+    v = vec_i32::push(v, 4);
+    v = vec_i32::push(v, 5);
+    v = vec_i32::push(v, 6);
+    v = vec_i32::push(v, 7);
+
+    return vec_i32::contains(v, 5);
+}
+
+fn test2() -> bool {
+    let v = vec_i32::new();
+    v = vec_i32::push(v, 1);
+    v = vec_i32::push(v, 2);
+    v = vec_i32::push(v, 3);
+    v = vec_i32::push(v, 4);
+    v = vec_i32::push(v, 5);
+    v = vec_i32::push(v, 6);
+    v = vec_i32::push(v, 7);
+
+    return vec_i32::contains(v, 20);
+}
+";
+        let mut modules = vec![parse_module(mod1).unwrap()];
+        include(&mut modules, None, "i32");
+
+        let mut vm = VM::new(modules).unwrap();
+        add(&mut vm, "i32");
+
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Bool(true), result);
+
+        let fn_handle = vm.query_module("mod1", "test2").unwrap().unwrap();
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Bool(false), result);
+    }
+}
