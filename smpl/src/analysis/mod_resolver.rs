@@ -144,9 +144,6 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
 }
 
 fn cyclic_type_check(program: &Program, root_id: TypeId) -> Result<(), Err> {
-    let struct_type = program.universe().get_type(root_id);
-    let struct_type = irmatch!(*struct_type; SmplType::Struct(ref s) => s);
-
     let mut visited_structs = HashSet::new();
     let mut to_visit = Vec::new();
     
@@ -156,13 +153,21 @@ fn cyclic_type_check(program: &Program, root_id: TypeId) -> Result<(), Err> {
         let mut depth = to_visit;
         to_visit = Vec::new();
         for type_id in depth.into_iter() {
+
             if visited_structs.contains(&type_id) {
                 return Err(TypeErr::CyclicType(root_id).into());
             }
 
             match *program.universe().get_type(type_id) {
                 SmplType::Struct(ref struct_type) => {
-                    to_visit.extend(struct_type.fields.iter().map(|(_, type_id)| type_id.clone()));
+                    // Remove fields with duplicate types 
+                    let set: HashSet<_> = struct_type.fields
+                        .iter()
+                        .map(|(_, type_id)| type_id.clone())
+                        .collect();
+
+                    to_visit = set.into_iter().collect();
+
                     visited_structs.insert(type_id);
                 }
 

@@ -799,4 +799,22 @@ struct TypeB {
             }
         }
     }
+
+    #[test]
+    fn cyclic_type_ck_empty_types() {
+        let mod1 =
+"
+mod mod1;
+
+struct Foo {
+    f1: Data,
+    f2: Data,
+    f3: Data,
+}
+
+struct Data { }
+";
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
 }
