@@ -9,14 +9,7 @@ pub const ERR_PANIC: &'static str = "panic";
 pub const ERR_PANIC_MSG: &'static str = "panic_msg";
 pub const ERR_ASSERT: &'static str = "assert";
 
-pub const ERR_DECLARATION: &'static str =
-"
-mod err;
-
-builtin fn panic();
-builtin fn panic_msg(msg: String);
-builtin fn assert(a: bool);
-";
+pub const ERR_DECLARATION: &'static str = include_str!("err.smpl");
 
 pub fn include(modules: &mut Vec<Module>) {
     modules.push(parse_module(ERR_DECLARATION).unwrap());

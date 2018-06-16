@@ -15,19 +15,7 @@ pub const CONVERT_IS_INT: &'static str = "is_int";
 pub const CONVERT_STRING_TO_FLOAT: &'static str = "string_to_float";
 pub const CONVERT_STRING_TO_INT: &'static str = "string_to_int";
 
-pub const CONVERT_DECLARATION: &'static str =
-"
-mod convert;
-
-builtin fn int_to_float(i: int) -> float;
-builtin fn float_to_int(f: float) -> int;
-
-builtin fn is_float(s: String) -> bool;
-builtin fn is_int(s: String) -> bool;
-
-builtin fn string_to_float(s: String) -> float;
-builtin fn string_to_int(s: String) -> int;
-";
+pub const CONVERT_DECLARATION: &'static str = include_str!("convert.smpl");
 
 pub fn include(modules: &mut Vec<Module>) {
     modules.push(parse_module(CONVERT_DECLARATION).unwrap());

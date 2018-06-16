@@ -25,21 +25,7 @@ const VEC_FMT_ITEM_TYPE: &'static str = "item_type";
 const VEC_FMT_ITEM_TYPE_MOD: &'static str = "item_type_mod";
 const VEC_FMT_ITEM_USE: &'static str = "item_mod_use";
 
-const VEC_DECLARATION: &'static str =
-"
-mod vec_{item_type};
-
-{item_mod_use}
-struct Vec_{item_type} {{ }}
-
-builtin fn new() -> Vec_{item_type};
-builtin fn len(v: Vec_{item_type}) -> int;
-builtin fn contains(v: Vec_{item_type}, val: {item_type_mod}{item_type}) -> bool;
-builtin fn push(v: Vec_{item_type}, val: {item_type_mod}{item_type}) -> Vec_{item_type};
-builtin fn insert(v: Vec_{item_type}, i: int, val: {item_type_mod}{item_type}) -> Vec_{item_type};
-builtin fn get(v: Vec_{item_type}, i: int) -> {item_type_mod}{item_type};
-builtin fn remove(v: Vec_{item_type}, i: int) -> Vec_{item_type};
-";
+const VEC_DECLARATION: &'static str = include_str!("vec.smpl");
 
 pub fn include(modules: &mut Vec<Module>, item_type_mod: Option<&str>, item_type: &str) {
     

@@ -7,13 +7,7 @@ pub const MOD_LOG: &'static str = "log";
 pub const LOG_PRINT: &'static str = "print";
 pub const LOG_PRINTLN: &'static str = "println";
 
-pub const LOG_DECLARATION: &'static str =
-"
-mod log;
-
-builtin fn print(UNCHECKED);
-builtin fn println(UNCHECKED);
-";
+pub const LOG_DECLARATION: &'static str = include_str!("log.smpl");
 
 pub fn include(modules: &mut Vec<Module>) {
     modules.push(parse_module(LOG_DECLARATION).unwrap());
