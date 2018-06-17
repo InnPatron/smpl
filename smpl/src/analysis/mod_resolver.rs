@@ -224,7 +224,7 @@ fn generate_fn_type(program: &mut Program, scope: &ScopedData, fn_id: FnId, fn_d
     };
 
     Ok(FunctionType {
-        params: params,
+        params: ParamType::Checked(params),
         return_type: ret_type,
     })
 }
@@ -259,11 +259,11 @@ fn generate_builtin_fn_type(program: &mut Program, scope: &ScopedData, fn_id: Fn
 
                     metadata.insert_function_param_ids(fn_id, param_metadata);
 
-                    typed_params
+                    ParamType::Checked(typed_params)
                 }
                 None => {
                     metadata.insert_function_param_ids(fn_id, Vec::with_capacity(0));
-                    Vec::with_capacity(0)
+                    ParamType::Checked(Vec::with_capacity(0))
                 }
             }
         }
@@ -271,7 +271,8 @@ fn generate_builtin_fn_type(program: &mut Program, scope: &ScopedData, fn_id: Fn
         BuiltinFnParams::Unchecked => {
             metadata.insert_unchecked_builtin_params(fn_id);
             features.add_feature(UNCHECKED_BUILTIN_FN_PARAMS);
-            Vec::with_capacity(0)
+
+            ParamType::Unchecked
         }
 
     };

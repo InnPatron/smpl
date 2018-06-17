@@ -48,6 +48,12 @@ impl StructType {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FunctionType {
-    pub params: Vec<TypeId>,
+    pub params: ParamType,
     pub return_type: TypeId,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ParamType {
+    Unchecked,
+    Checked(Vec<TypeId>),
 }

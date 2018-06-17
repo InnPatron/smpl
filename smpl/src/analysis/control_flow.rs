@@ -689,7 +689,7 @@ let b: int = 3;
         let input = wrap_input(input);
         let universe = Universe::std();
         let fn_type = FunctionType {
-            params: vec![universe.int()],
+            params: ParamType::Checked(vec![universe.int()]),
             return_type: universe.unit(),
         };
         let parser = FnDeclParser::new();
@@ -763,7 +763,7 @@ if (test) {
 
         let universe = Universe::std();
         let fn_type = FunctionType {
-            params: vec![universe.int()],
+            params: ParamType::Checked(vec![universe.int()]),
             return_type: universe.unit(),
         };
         let parser = FnDeclParser::new();
@@ -915,7 +915,7 @@ if (test) {
         let input = wrap_input(input);
         let universe = Universe::std();
         let fn_type = FunctionType {
-            params: vec![universe.int()],
+            params: ParamType::Checked(vec![universe.int()]),
             return_type: universe.unit(),
         };
         let parser = FnDeclParser::new();
@@ -1079,7 +1079,7 @@ if (test) {
         let input = wrap_input(input);
         let universe = Universe::std();
         let fn_type = FunctionType {
-            params: vec![universe.int()],
+            params: ParamType::Checked(vec![universe.int()]),
             return_type: universe.unit(),
         };
         let parser = FnDeclParser::new();

@@ -79,16 +79,22 @@ pub fn analyze_fn(
     let mut param_types = Vec::new();
 
     // Add parameters to the current scope.
-    for (param_type_id, meta) in func_type.params.iter()
-        .zip(analyzer.metadata.function_param_ids(fn_id).iter()) {
-        let v_id = meta.var_id();
-        let p_name = meta.name();
-        let param_type_id = *param_type_id;
-        analyzer
-            .current_scope
-            .insert_var(p_name.clone(), v_id, param_type_id);
+    match func_type.params {
+        ParamType::Checked(ref params) => {
+            for (param_type_id, meta) in params.iter()
+                .zip(analyzer.metadata.function_param_ids(fn_id).iter()) {
+                let v_id = meta.var_id();
+                let p_name = meta.name();
+                let param_type_id = *param_type_id;
+                analyzer
+                    .current_scope
+                    .insert_var(p_name.clone(), v_id, param_type_id);
 
-        param_types.push((v_id, param_type_id));
+                param_types.push((v_id, param_type_id));
+            }
+        }
+
+        ParamType::Unchecked => (),
     }
 
     // Restrain lifetime of traverser to move analyzer.locals
@@ -561,7 +567,6 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
 
                 Value::FnCall(ref fn_call) => {
                     // Search for the function
-                    let mut skip_param_check = false;
                     let fn_type_id = if fn_call.path().0.len() == 1 {
                         let binding = self.current_scope.binding_info(fn_call.path()
                                                                       .0.get(0).unwrap().data());
@@ -569,7 +574,6 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                             match binding.unwrap() {
                                 BindingInfo::Fn(fn_id) => {
                                     fn_call.set_id(fn_id);
-                                    skip_param_check = self.metadata.is_builtin_params_unchecked(fn_id);
                                     if self.metadata.is_builtin(fn_id)  {
                                         let func = self.universe.get_builtin_fn(fn_id);
                                         Some(func.type_id())
@@ -617,61 +621,67 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                     // Check args and parameters align
                     if let SmplType::Function(ref fn_type) = *fn_type {
                         tmp_type = fn_type.return_type;
-                        if skip_param_check == false {
-                            let arg_type_ids = fn_call.args().map(|ref vec| {
-                                vec.iter()
-                                    .map(|ref tmp_id| {
-                                        let tmp = expr.get_tmp(*tmp_id.data());
-                                        let tmp_value = tmp.value();
-                                        let tmp_value_type_id = tmp_value.type_id().unwrap();
-                                        tmp_id.set_type_id(tmp_value_type_id);
-                                        tmp_value_type_id
-                                    })
-                                    .collect::<Vec<_>>()
-                            });
 
-                            match arg_type_ids {
-                                Some(arg_type_ids) => {
-                                    if fn_type.params.len() != arg_type_ids.len() {
-                                        return Err(TypeErr::Arity {
-                                            fn_type: fn_type_id,
-                                            found_args: arg_type_ids.len(),
-                                            expected_param: fn_type.params.len(),
-                                            span: tmp.span(),
-                                        }.into());
+                        let arg_type_ids = fn_call.args().map(|ref vec| {
+                            vec.iter()
+                                .map(|ref tmp_id| {
+                                    let tmp = expr.get_tmp(*tmp_id.data());
+                                    let tmp_value = tmp.value();
+                                    let tmp_value_type_id = tmp_value.type_id().unwrap();
+                                    tmp_id.set_type_id(tmp_value_type_id);
+                                    tmp_value_type_id
+                                })
+                                .collect::<Vec<_>>()
+                        });
+
+                        match fn_type.params {
+                            ParamType::Checked(ref params) => {
+                                match arg_type_ids {
+                                    Some(arg_type_ids) => {
+                                        if params.len() != arg_type_ids.len() {
+                                            return Err(TypeErr::Arity {
+                                                fn_type: fn_type_id,
+                                                found_args: arg_type_ids.len(),
+                                                expected_param: params.len(),
+                                                span: tmp.span(),
+                                            }.into());
+                                        }
+
+                                        let fn_param_type_ids = params.iter();
+
+                                        for (index, (arg, param)) in
+                                            arg_type_ids.iter().zip(fn_param_type_ids).enumerate()
+                                        {
+                                            let arg_type = self.universe.get_type(*arg);
+                                            let param_type = self.universe.get_type(*param);
+                                            if arg_type != param_type {
+                                                return Err(TypeErr::ArgMismatch {
+                                                    fn_type_id: fn_type_id,
+                                                    index: index,
+                                                    arg: *arg,
+                                                    param: param.clone(),
+                                                    span: tmp.span(),
+                                                }.into());
+                                            }
+                                        }
                                     }
 
-                                    let fn_param_type_ids = fn_type.params.iter();
-
-                                    for (index, (arg, param)) in
-                                        arg_type_ids.iter().zip(fn_param_type_ids).enumerate()
-                                    {
-                                        let arg_type = self.universe.get_type(*arg);
-                                        let param_type = self.universe.get_type(*param);
-                                        if arg_type != param_type {
-                                            return Err(TypeErr::ArgMismatch {
-                                                fn_type_id: fn_type_id,
-                                                index: index,
-                                                arg: *arg,
-                                                param: param.clone(),
+                                    None => {
+                                        if params.len() != 0 {
+                                            return Err(TypeErr::Arity {
+                                                fn_type: fn_type_id,
+                                                found_args: 0,
+                                                expected_param: params.len(),
                                                 span: tmp.span(),
                                             }.into());
                                         }
                                     }
                                 }
-
-                                None => {
-                                    if fn_type.params.len() != 0 {
-                                        return Err(TypeErr::Arity {
-                                            fn_type: fn_type_id,
-                                            found_args: 0,
-                                            expected_param: fn_type.params.len(),
-                                            span: tmp.span(),
-                                        }.into());
-                                    }
-                                }
                             }
+
+                            ParamType::Unchecked => (),         // Do not check args
                         }
+
                     } else {
                         panic!( "{} was mapped to {}, which is not SmplType::Function but {:?}",
                             fn_type_id, fn_type_id, fn_type

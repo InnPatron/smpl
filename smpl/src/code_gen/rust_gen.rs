@@ -147,7 +147,9 @@ impl<'a> RustModGen<'a> {
                 return_type_id = fn_type.return_type;
 
                 // Gather parameters
-                for (param_type_id, param_var_id) in fn_type.params.iter()
+                // TODO: Support UNCHECKED functions
+                let params = irmatch!(&fn_type.params; ParamType::Checked(ref params) => params);
+                for (param_type_id, param_var_id) in params.iter()
                     .zip(self.metadata.function_param_ids(fn_id).iter()) {
                     let param_type = RustGenFmt::type_id(*param_type_id);
                     let param_type = RustGenFmt::rustify_type(param_type);
