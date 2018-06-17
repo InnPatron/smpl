@@ -26,7 +26,7 @@ impl fmt::Display for Value {
             Value::Int(i) => write!(f, "{}", i),
             Value::Float(flt) => write!(f, "{}", flt),
             Value::Bool(b) => write!(f, "{}", b),
-            Value::String(ref s) => write!(f, "\"{}\"", s),
+            Value::String(ref s) => write!(f, "{}", s),
             Value::Array(ref a) => {
                 write!(f, "[ ")?;
                 for value in a {
