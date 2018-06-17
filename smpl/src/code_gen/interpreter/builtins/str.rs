@@ -197,4 +197,28 @@ mod tests {
                                      );
         assert_eq!(Value::String("LOUD NOISES".to_string()), result);
     }
+
+    #[test]
+    fn interpreter_str_intermodule_to_string() {
+        let mod1 =
+"
+mod mod1;
+
+use str;
+
+fn test() -> String {
+    return str::to_string(\"Cannot \", \" touch\", \" this!?\");
+}
+";
+        let mut modules = vec![parse_module(mod1).unwrap()];
+        include(&mut modules);
+
+        let mut vm = VM::new(modules).unwrap();
+        add(&mut vm);
+
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+        assert_eq!(Value::String("Cannot touch this!?".to_string()), result);
+    }
 }
