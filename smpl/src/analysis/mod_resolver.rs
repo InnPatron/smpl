@@ -59,6 +59,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
     map_usings(&raw_data, &mut raw_program)?;
 
     let mut type_roots = Vec::new();
+    // Map ALL structs into the universe before generating functions
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_type) in raw_mod.reserved_structs.iter() {
             let type_id = reserved_type.0;
@@ -75,7 +76,9 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
 
            
         }
+    }
 
+    for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;
             let type_id = reserved_fn.1;
