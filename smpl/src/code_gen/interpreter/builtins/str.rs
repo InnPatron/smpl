@@ -207,7 +207,7 @@ mod mod1;
 use str;
 
 fn test() -> String {
-    return str::to_string(\"Cannot \", \" touch\", \" this!?\");
+    return str::to_string(\"Cannot\", \" touch\", \" this!?\");
 }
 ";
         let mut modules = vec![parse_module(mod1).unwrap()];
