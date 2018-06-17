@@ -51,6 +51,7 @@ impl<T> AstNode<T> where T: ::std::fmt::Debug {
     }
 }
 
+#[derive(Clone)]
 pub struct Module(pub Option<AstNode<Ident>>, pub Vec<DeclStmt>);
 
 impl Module {
@@ -68,6 +69,7 @@ impl Module {
     }
 }
 
+#[derive(Clone)]
 pub enum DeclStmt {
     Use(AstNode<UseDecl>),
     Struct(AstNode<Struct>),
