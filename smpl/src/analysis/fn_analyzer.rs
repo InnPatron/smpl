@@ -166,7 +166,7 @@ fn resolve_bin_op(
     let rh_type = universe.get_type(rhs);
 
     match *op {
-        Add | Sub | Mul | Div | Mod | GreaterEq | LesserEq | Greater | Lesser => {
+        Add | Sub | Mul | Div | Mod => {
             match (&*lh_type, &*rh_type) {
                 (&SmplType::Int, &SmplType::Int) => Ok(universe.int()),
                 (&SmplType::Float, &SmplType::Float) => Ok(universe.float()),
@@ -190,6 +190,21 @@ fn resolve_bin_op(
                 rhs: rhs,
                 span: span,
             }.into()),
+        },
+
+        GreaterEq | LesserEq | Greater | Lesser => {
+            match (&*lh_type, &*rh_type) {
+                (&SmplType::Int, &SmplType::Int) => Ok(universe.boolean()),
+                (&SmplType::Float, &SmplType::Float) => Ok(universe.boolean()),
+
+                _ => Err(TypeErr::BinOp {
+                    op: op.clone(),
+                    expected: vec![universe.int(), universe.float()],
+                    lhs: lhs,
+                    rhs: rhs,
+                    span: span,
+                }.into()),
+            }
         },
 
         Eq | InEq => {
