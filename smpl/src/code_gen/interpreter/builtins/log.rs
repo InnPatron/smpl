@@ -20,7 +20,7 @@ pub fn add(vm: &mut VM) {
 
 pub struct Print;
 
-impl BuiltInFn for Print {
+impl BuiltinFn for Print {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let args = args.expect("Print() expects at least one argument");
 
@@ -34,7 +34,7 @@ impl BuiltInFn for Print {
 
 pub struct Println;
 
-impl BuiltInFn for Println {
+impl BuiltinFn for Println {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
 
         if let Some(args) = args {

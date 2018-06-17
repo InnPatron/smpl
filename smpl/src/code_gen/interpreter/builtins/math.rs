@@ -57,7 +57,7 @@ pub fn add(vm: &mut VM) {
 /// In radians
 pub struct Sin;
 
-impl BuiltInFn for Sin {
+impl BuiltinFn for Sin {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let v = args.remove(0);
@@ -72,7 +72,7 @@ impl BuiltInFn for Sin {
 /// In radians
 pub struct Cos;
 
-impl BuiltInFn for Cos {
+impl BuiltinFn for Cos {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let v = args.remove(0);
@@ -87,7 +87,7 @@ impl BuiltInFn for Cos {
 /// In radians
 pub struct Tan;
 
-impl BuiltInFn for Tan {
+impl BuiltinFn for Tan {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let v = args.remove(0);
@@ -102,7 +102,7 @@ impl BuiltInFn for Tan {
 /// In radians
 pub struct Asin;
 
-impl BuiltInFn for Asin {
+impl BuiltinFn for Asin {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let v = args.remove(0);
@@ -117,7 +117,7 @@ impl BuiltInFn for Asin {
 /// In radians
 pub struct Acos;
 
-impl BuiltInFn for Acos {
+impl BuiltinFn for Acos {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let v = args.remove(0);
@@ -132,7 +132,7 @@ impl BuiltInFn for Acos {
 /// In radians
 pub struct Atan;
 
-impl BuiltInFn for Atan {
+impl BuiltinFn for Atan {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let v = args.remove(0);
@@ -147,7 +147,7 @@ impl BuiltInFn for Atan {
 /// In radians
 pub struct Atan2;
 
-impl BuiltInFn for Atan2 {
+impl BuiltinFn for Atan2 {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let args = args.unwrap();
         let v = args.get(0).unwrap().clone();
@@ -162,7 +162,7 @@ impl BuiltInFn for Atan2 {
 
 pub struct ToRadians;
 
-impl BuiltInFn for ToRadians {
+impl BuiltinFn for ToRadians {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let v = args.remove(0);
@@ -176,7 +176,7 @@ impl BuiltInFn for ToRadians {
 
 pub struct ToDegrees;
 
-impl BuiltInFn for ToDegrees {
+impl BuiltinFn for ToDegrees {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let v = args.remove(0);
@@ -190,7 +190,7 @@ impl BuiltInFn for ToDegrees {
 
 pub struct FPowF;
 
-impl BuiltInFn for FPowF {
+impl BuiltinFn for FPowF {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let args = args.unwrap();
         let b = args.get(0).unwrap().clone();
@@ -205,7 +205,7 @@ impl BuiltInFn for FPowF {
 
 pub struct FPowI;
 
-impl BuiltInFn for FPowI {
+impl BuiltinFn for FPowI {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let args = args.unwrap();
         let b = args.get(0).unwrap().clone();
@@ -220,7 +220,7 @@ impl BuiltInFn for FPowI {
 
 pub struct IPow;
 
-impl BuiltInFn for IPow {
+impl BuiltinFn for IPow {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let args = args.unwrap();
         let b = args.get(0).unwrap().clone();
@@ -235,7 +235,7 @@ impl BuiltInFn for IPow {
 
 pub struct Floor;
 
-impl BuiltInFn for Floor {
+impl BuiltinFn for Floor {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let v = args.remove(0);
@@ -249,7 +249,7 @@ impl BuiltInFn for Floor {
 
 pub struct Ceil;
 
-impl BuiltInFn for Ceil {
+impl BuiltinFn for Ceil {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let v = args.remove(0);
@@ -263,7 +263,7 @@ impl BuiltInFn for Ceil {
 
 pub struct Round;
 
-impl BuiltInFn for Round {
+impl BuiltinFn for Round {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let v = args.remove(0);

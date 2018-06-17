@@ -65,7 +65,7 @@ pub fn add(vm: &mut VM, item_type: &str) {
 
 pub struct New;
 
-impl BuiltInFn for New {
+impl BuiltinFn for New {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut vec = Struct::new();
         vec.set_field(VEC_DATA_KEY.to_string(), Value::Array(Vec::new()));
@@ -77,7 +77,7 @@ impl BuiltInFn for New {
 
 pub struct Len;
 
-impl BuiltInFn for Len {
+impl BuiltinFn for Len {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let vec_struct = args.pop().unwrap();
@@ -91,7 +91,7 @@ impl BuiltInFn for Len {
 
 pub struct Contains;
 
-impl BuiltInFn for Contains {
+impl BuiltinFn for Contains {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
 
@@ -119,7 +119,7 @@ impl BuiltInFn for Contains {
 
 pub struct Insert;
 
-impl BuiltInFn for Insert {
+impl BuiltinFn for Insert {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
 
@@ -151,7 +151,7 @@ impl BuiltInFn for Insert {
 
 pub struct Push;
 
-impl BuiltInFn for Push {
+impl BuiltinFn for Push {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
 
@@ -181,7 +181,7 @@ impl BuiltInFn for Push {
 
 pub struct Get;
 
-impl BuiltInFn for Get {
+impl BuiltinFn for Get {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
 
@@ -202,7 +202,7 @@ impl BuiltInFn for Get {
 
 pub struct Remove;
 
-impl BuiltInFn for Remove {
+impl BuiltinFn for Remove {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
 

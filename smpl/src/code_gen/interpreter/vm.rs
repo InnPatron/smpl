@@ -23,7 +23,7 @@ use super::value::Value;
 
 pub struct VM {
     program: Program,
-    builtins: HashMap<FnId, Box<BuiltInFn>>,
+    builtins: HashMap<FnId, Box<BuiltinFn>>,
 }
 
 impl VM {
@@ -60,8 +60,8 @@ impl VM {
         }
     }
 
-    pub fn insert_builtin(&mut self, module_str: &str, name_str: &str, builtin: Box<BuiltInFn>) 
-        -> Result<Option<Box<BuiltInFn>>, String> {
+    pub fn insert_builtin(&mut self, module_str: &str, name_str: &str, builtin: Box<BuiltinFn>) 
+        -> Result<Option<Box<BuiltinFn>>, String> {
 
         let module = Ident(module_str.to_string());
         let name = Ident(name_str.to_string());
@@ -727,7 +727,7 @@ mod tests {
 
     struct Add;
     
-    impl BuiltInFn for Add {
+    impl BuiltinFn for Add {
         fn execute(&self, args: Option<Vec<Value>>) -> Value {
             let args = args.unwrap();
             let lhs = args.get(0).unwrap();
@@ -742,7 +742,7 @@ mod tests {
 
     struct VarArgSum;
 
-    impl BuiltInFn for VarArgSum {
+    impl BuiltinFn for VarArgSum {
         fn execute(&self, args: Option<Vec<Value>>) -> Value {
             let args = args.unwrap();
 

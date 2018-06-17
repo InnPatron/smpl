@@ -23,7 +23,7 @@ pub fn add(vm: &mut VM) {
 
 pub struct Panic;
 
-impl BuiltInFn for Panic {
+impl BuiltinFn for Panic {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         panic!();
     }
@@ -31,7 +31,7 @@ impl BuiltInFn for Panic {
 
 pub struct PanicMsg;
 
-impl BuiltInFn for PanicMsg {
+impl BuiltinFn for PanicMsg {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let a = args.remove(0);
@@ -45,7 +45,7 @@ impl BuiltInFn for PanicMsg {
 
 pub struct Assert;
 
-impl BuiltInFn for Assert {
+impl BuiltinFn for Assert {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let a = args.remove(0);

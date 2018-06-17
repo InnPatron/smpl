@@ -2,7 +2,7 @@ use analysis::{FieldId, FnId, TypeId};
 
 use super::value::Value;
 
-pub trait BuiltInFn {
+pub trait BuiltinFn {
     fn execute(&self, args: Option<Vec<Value>>) -> Value;
 }
 

@@ -34,7 +34,7 @@ pub fn add(vm: &mut VM) {
 
 pub struct IntToFloat;
 
-impl BuiltInFn for IntToFloat {
+impl BuiltinFn for IntToFloat {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
 
@@ -48,7 +48,7 @@ impl BuiltInFn for IntToFloat {
 
 pub struct FloatToInt;
 
-impl BuiltInFn for FloatToInt {
+impl BuiltinFn for FloatToInt {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
 
@@ -62,7 +62,7 @@ impl BuiltInFn for FloatToInt {
 
 pub struct IsFloat;
 
-impl BuiltInFn for IsFloat {
+impl BuiltinFn for IsFloat {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let a = args.remove(0);
@@ -76,7 +76,7 @@ impl BuiltInFn for IsFloat {
 
 pub struct IsInt;
 
-impl BuiltInFn for IsInt {
+impl BuiltinFn for IsInt {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let a = args.remove(0);
@@ -90,7 +90,7 @@ impl BuiltInFn for IsInt {
 
 pub struct StringToFloat;
 
-impl BuiltInFn for StringToFloat {
+impl BuiltinFn for StringToFloat {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let a = args.remove(0);
@@ -108,7 +108,7 @@ impl BuiltInFn for StringToFloat {
 
 pub struct StringToInt;
 
-impl BuiltInFn for StringToInt {
+impl BuiltinFn for StringToInt {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
         let a = args.remove(0);

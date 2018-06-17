@@ -27,7 +27,7 @@ pub fn add(vm: &mut VM) {
 
 struct Len;
 
-impl BuiltInFn for Len {
+impl BuiltinFn for Len {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
 
@@ -40,7 +40,7 @@ impl BuiltInFn for Len {
 
 struct ToString;
 
-impl BuiltInFn for ToString {
+impl BuiltinFn for ToString {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.expect("str::to_string() expected 1+ args");
 
@@ -56,7 +56,7 @@ impl BuiltInFn for ToString {
 
 struct Append;
 
-impl BuiltInFn for Append {
+impl BuiltinFn for Append {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
 
@@ -74,7 +74,7 @@ impl BuiltInFn for Append {
 
 struct ToLower;
 
-impl BuiltInFn for ToLower {
+impl BuiltinFn for ToLower {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
 
@@ -87,7 +87,7 @@ impl BuiltInFn for ToLower {
 
 struct ToUpper;
 
-impl BuiltInFn for ToUpper {
+impl BuiltinFn for ToUpper {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
         let mut args = args.unwrap();
 
