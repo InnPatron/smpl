@@ -343,7 +343,7 @@ impl TypeConstructor {
     pub fn construct_fn_type(universe: &Universe, params: Vec<TypeId>, return_t: TypeId) -> TypeId {
 
         let ft = FunctionType {
-            params: params,
+            params: ParamType::Checked(params),
             return_type: return_t,
         };
 
