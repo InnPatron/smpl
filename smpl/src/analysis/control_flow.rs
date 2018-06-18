@@ -700,8 +700,8 @@ let b: int = 3;
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
         {
-            assert_eq!(*cfg.graph.node_weight(cfg.start).unwrap(), Node::Start);
-            assert_eq!(*cfg.graph.node_weight(cfg.end).unwrap(), Node::End);
+            irmatch!(*cfg.graph.node_weight(cfg.start).unwrap(); Node::Start => ());
+            irmatch!(*cfg.graph.node_weight(cfg.end).unwrap(); Node::End => ());
             // start -> enter_scope -> var decl -> var decl -> implicit return -> exit_scope -> end
             assert_eq!(cfg.graph.node_count(), 7);
 
@@ -774,8 +774,8 @@ if (test) {
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
         {
-            assert_eq!(*cfg.graph.node_weight(cfg.start).unwrap(), Node::Start);
-            assert_eq!(*cfg.graph.node_weight(cfg.end).unwrap(), Node::End);
+            irmatch!(*cfg.graph.node_weight(cfg.start).unwrap(); Node::Start => ());
+            irmatch!(*cfg.graph.node_weight(cfg.end).unwrap(); Node::End => ());
 
             // start -> enter_scope -> branch_split -> condition
             //      -[true]> {
@@ -1065,7 +1065,7 @@ if (test) {
             }
 
             let end = exit_neighbors.next().unwrap();
-            assert_eq!(*node_w!(cfg, end), Node::End);
+            irmatch!(*node_w!(cfg, end); Node::End => ());
         }
     }
 
