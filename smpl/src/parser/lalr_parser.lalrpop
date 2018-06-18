@@ -384,6 +384,18 @@ Primary: Expr = {
 	<l: @L> <a: ArrayInit> <r: @R> => Expr::ArrayInit(AstNode::new(a, Span::new(l, r))),
 
 	<l: @L> <struct_init: StructInit> <r: @R> => Expr::StructInit(AstNode::new(struct_init, Span::new(l, r))),
+
+	<l: @L> <a_fn: AnonymousFn> <r: @R> => Expr::AnonymousFn(AstNode::new(a_fn, Span::new(l, r))),
+};
+
+AnonymousFn: AnonymousFn = {
+	"fn" "(" <params: FnParameterList?> ")" <return_type: ("->" TypeAnnotation)?> <b: Block> => {
+		AnonymousFn {
+			params: params,
+			return_type: return_type.map(|r| r.1),
+			body: b,
+		}
+	}
 };
 
 Indexing: Indexing = {

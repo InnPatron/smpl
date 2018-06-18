@@ -206,6 +206,14 @@ pub enum Expr {
     ArrayInit(AstNode<ArrayInit>),
     Indexing(AstNode<Indexing>),
     ModAccess(AstNode<ModulePath>),
+    AnonymousFn(AstNode<AnonymousFn>),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct AnonymousFn {
+    pub params: Option<Vec<AstNode<FnParameter>>>,
+    pub return_type: Option<AstNode<TypeAnnotation>>,
+    pub body: AstNode<Block>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
