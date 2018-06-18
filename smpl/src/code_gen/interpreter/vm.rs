@@ -948,7 +948,7 @@ fn test2(a: int) -> int {
 }
 
 fn test() -> int {
-    let func: Fn(int) -> int = test2;
+    let func: fn(int) -> int = test2;
 
     return func(210);
 }

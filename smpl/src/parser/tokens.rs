@@ -48,7 +48,6 @@ pub enum Token {
     FloatLiteral(f64),
     BoolLiteral(bool),
 
-    FnTypeSignal,
     Fn,
     Struct,
     Mod,
@@ -441,7 +440,6 @@ impl<'input> Tokenizer<'input> {
         let (end, ident) = self.take_while(start, is_ident_continue);
 
         let token = match ident {
-            "Fn" => Token::FnTypeSignal,
             "fn" => Token::Fn,
             "mod" => Token::Mod,
             "struct" => Token::Struct,
@@ -759,14 +757,13 @@ A1b2
 
     #[test]
     fn tokenize_keywords() {
-        let input = "if struct while fn Fn mod use else elif let";
+        let input = "if struct while fn mod use else elif let";
         let mut tok = Tokenizer::new(input);
 
         assert_eq!(Token::If, unwrap(tok.next()));
         assert_eq!(Token::Struct, unwrap(tok.next()));
         assert_eq!(Token::While, unwrap(tok.next()));
         assert_eq!(Token::Fn, unwrap(tok.next()));
-        assert_eq!(Token::FnTypeSignal, unwrap(tok.next()));
         assert_eq!(Token::Mod, unwrap(tok.next()));
         assert_eq!(Token::Use, unwrap(tok.next()));
         assert_eq!(Token::Else, unwrap(tok.next()));

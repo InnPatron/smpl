@@ -16,7 +16,6 @@ extern {
 		"float_literal" => Token::FloatLiteral(<f64>),
 		"bool_literal" => Token::BoolLiteral(<bool>),
 
-		"Fn" => Token::FnTypeSignal,
 		"fn" => Token::Fn,
 		"struct" => Token::Struct,
 		"mod" => Token::Mod,
@@ -513,7 +512,7 @@ TypeAnnotation: AstNode<TypeAnnotation> = {
 };
 
 FunctionTypeAnnotation: TypeAnnotation = {
-	"Fn" "(" <p: FunctionTypeAnnotationParameterList?> ")" <r: ("->" TypeAnnotation)?> => {
+	"fn" "(" <p: FunctionTypeAnnotationParameterList?> ")" <r: ("->" TypeAnnotation)?> => {
 		TypeAnnotation::FnType(p, r.map(|(_, t)| Box::new(t)))
 	}
 };
