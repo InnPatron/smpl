@@ -35,8 +35,8 @@ impl Program {
         }
     }
 
-    pub fn analysis_context<'a>(&'a mut self) -> (&'a Universe, &'a mut Metadata, &'a mut PresentFeatures) {
-        (&self.universe, &mut self.metadata, &mut self.features)
+    pub fn analysis_context<'a>(&'a mut self) -> (&'a mut Universe, &'a mut Metadata, &'a mut PresentFeatures) {
+        (&mut self.universe, &mut self.metadata, &mut self.features)
     }
 
     pub fn universe(&self) -> &Universe {
@@ -68,7 +68,7 @@ impl Program {
 pub struct Universe {
     type_constructor: TypeConstructor,
     types: HashMap<TypeId, Rc<SmplType>>,
-    fn_map: HashMap<FnId, Function>,
+    fn_map: HashMap<FnId, Rc<Function>>,
     builtin_fn_map: HashMap<FnId, BuiltinFunction>,
     module_map: HashMap<ModuleId, Module>,
     module_name: HashMap<Ident, ModuleId>,
@@ -172,10 +172,10 @@ impl Universe {
 
         let function = Function {
             fn_type: type_id,
-            cfg: cfg,
+            cfg: Rc::new(cfg),
         };
 
-        if self.fn_map.insert(fn_id, function).is_some() {
+        if self.fn_map.insert(fn_id, Rc::new(function)).is_some() {
             panic!("Attempting to override Function with FnId {} in the Universe", fn_id.0);
         }
     }
@@ -208,8 +208,8 @@ impl Universe {
         }
     }
 
-    pub fn get_fn(&self, id: FnId) -> &Function {
-        self.fn_map.get(&id).unwrap()
+    pub fn get_fn(&self, id: FnId) -> Rc<Function> {
+        self.fn_map.get(&id).unwrap().clone()
     }
 
     pub fn get_builtin_fn(&self, id: FnId) -> &BuiltinFunction {
@@ -263,8 +263,8 @@ impl Universe {
             .collect()
     }
 
-    pub fn all_fns(&self) -> Vec<(FnId, &Function)> {
-        self.fn_map.iter().map(|(id, f)| (id.clone(), f)).collect()
+    pub fn all_fns(&self) -> Vec<(FnId, Rc<Function>)> {
+        self.fn_map.iter().map(|(id, f)| (id.clone(), f.clone())).collect()
     }
 
     pub fn all_modules(&self) -> Vec<(&Ident, &ModuleId)> {
@@ -542,7 +542,7 @@ impl BuiltinFunction {
 #[derive(Clone, Debug)]
 pub struct Function {
     fn_type: TypeId,
-    cfg: CFG,
+    cfg: Rc<CFG>,
 }
 
 impl Function {
@@ -550,8 +550,8 @@ impl Function {
         self.fn_type
     }
 
-    pub fn cfg(&self) -> &CFG {
-        &self.cfg
+    pub fn cfg(&self) -> Rc<CFG> {
+        self.cfg.clone()
     }
 }
 

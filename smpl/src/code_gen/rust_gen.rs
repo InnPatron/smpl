@@ -184,7 +184,7 @@ impl<'a> RustModGen<'a> {
             let mut fn_gen = RustFnGen::new(universe, &cfg);
 
             {
-                let traverser = Traverser::new(cfg, &mut fn_gen);
+                let traverser = Traverser::new(&*cfg, &mut fn_gen);
                 traverser.traverse();
             }
 
@@ -587,6 +587,8 @@ impl<'a> RustFnGen<'a> {
             }
 
             Value::ModAccess(_) => panic!(),
+
+            Value::AnonymousFn(ref a_fn) => panic!(),
         }
 
         self.output.emit_line("};");

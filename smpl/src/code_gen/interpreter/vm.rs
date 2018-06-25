@@ -165,7 +165,7 @@ impl Env {
 
 struct FnEnv<'a> {
     vm: &'a VM,
-    graph: &'a CFG,
+    func: Rc<Function>,
     env: Env,
     loop_heads: HashMap<LoopId, NodeIndex>,
     loop_result: HashMap<LoopId, bool>,
@@ -194,7 +194,7 @@ impl<'a> FnEnv<'a> {
 
         FnEnv {
             vm: vm,
-            graph: f.cfg(),
+            func: f,
             env: env,
             loop_heads: HashMap::new(),
             loop_result: HashMap::new(),
@@ -204,7 +204,7 @@ impl<'a> FnEnv<'a> {
     }
 
     fn eval(&mut self) -> Value {
-        let mut next_node = Some(self.graph.start());
+        let mut next_node = Some(self.func.cfg().start());
 
         while let Some(next) = next_node {
             match self.eval_node(next).unwrap() {
@@ -229,7 +229,7 @@ impl<'a> FnEnv<'a> {
     }
 
     fn eval_node(&mut self, current: NodeIndex) -> Result<NodeEval, ()> {
-        match *self.graph.node_weight(current) {
+        match *self.func.cfg().node_weight(current) {
             Node::End => {
                 self.previous_is_loop_head = false;
                 Ok(NodeEval::Return(Value::Unit))
@@ -237,17 +237,17 @@ impl<'a> FnEnv<'a> {
 
             Node::Start => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(self.graph.next(current)))
+                Ok(NodeEval::Next(self.func.cfg().next(current)))
             }
 
             Node::BranchSplit(_) => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(self.graph.next(current)))
+                Ok(NodeEval::Next(self.func.cfg().next(current)))
             }
 
             Node::BranchMerge(_) => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(self.graph.next(current)))
+                Ok(NodeEval::Next(self.func.cfg().next(current)))
             }
 
             Node::LoopHead(ref data) => {
@@ -256,7 +256,7 @@ impl<'a> FnEnv<'a> {
                 self.loop_stack.push(data.loop_id);
                 self.loop_heads.insert(data.loop_id, current);
 
-                Ok(NodeEval::Next(self.graph.next(current)))
+                Ok(NodeEval::Next(self.func.cfg().next(current)))
             }
 
             Node::LoopFoot(_) => {
@@ -268,9 +268,10 @@ impl<'a> FnEnv<'a> {
                 if loop_result {
                     return Ok(NodeEval::Next(self.get_loop_head(loop_id)));
                 } else {
-                    let neighbors = neighbors!(self.graph, current);
+                    let cfg = self.func.cfg();
+                    let neighbors = neighbors!(&*cfg, current);
                     for n in neighbors {
-                        match *node_w!(self.graph, n) {
+                        match *node_w!(self.func.cfg(), n) {
                             Node::LoopHead(_) => continue,
                             _ => return Ok(NodeEval::Next(n)),
                         }
@@ -289,9 +290,10 @@ impl<'a> FnEnv<'a> {
             Node::Break(_) => {
                 self.previous_is_loop_head = false;
 
-                let neighbors = neighbors!(self.graph, current);
+                let cfg = self.func.cfg();
+                let neighbors = neighbors!(&*cfg, current);
                 for n in neighbors {
-                    match *node_w!(self.graph, current) {
+                    match *node_w!(self.func.cfg(), current) {
                         Node::LoopFoot(_) => return Ok(NodeEval::Next(n)),
                         _ => continue,
                     }
@@ -302,19 +304,19 @@ impl<'a> FnEnv<'a> {
 
             Node::EnterScope => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(self.graph.next(current)))
+                Ok(NodeEval::Next(self.func.cfg().next(current)))
             }
 
             Node::ExitScope => {
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(self.graph.next(current)))
+                Ok(NodeEval::Next(self.func.cfg().next(current)))
             }
 
             Node::LocalVarDecl(ref data) => {
                 self.previous_is_loop_head = false;
                 let value = Expr::eval_expr(self.vm, &self.env, data.decl.init_expr());
                 self.env.map_var(data.decl.var_id(), value);
-                Ok(NodeEval::Next(self.graph.next(current)))
+                Ok(NodeEval::Next(self.func.cfg().next(current)))
             }
 
             Node::Assignment(ref data) => {
@@ -366,13 +368,13 @@ impl<'a> FnEnv<'a> {
                 let mut borrow = value.borrow_mut();
                 *borrow = result;
 
-                Ok(NodeEval::Next(self.graph.next(current)))
+                Ok(NodeEval::Next(self.func.cfg().next(current)))
             }
 
             Node::Expr(ref data) => {
                 self.previous_is_loop_head = false;
                 Expr::eval_expr(self.vm, &self.env, &data.expr);
-                Ok(NodeEval::Next(self.graph.next(current)))
+                Ok(NodeEval::Next(self.func.cfg().next(current)))
             }
 
             Node::Return(ref data) => {
@@ -387,7 +389,7 @@ impl<'a> FnEnv<'a> {
             Node::Condition(ref data) => {
                 let value = Expr::eval_expr(self.vm, &self.env, &data.expr);
                 let value = irmatch!(value; Value::Bool(b) => b);
-                let (t_b, f_b) = self.graph.after_condition(current);
+                let (t_b, f_b) = self.func.cfg().after_condition(current);
                 let next = if value {
                     t_b
                 } else {
@@ -402,7 +404,7 @@ impl<'a> FnEnv<'a> {
 
 
                 self.previous_is_loop_head = false;
-                Ok(NodeEval::Next(self.graph.next(next)))
+                Ok(NodeEval::Next(self.func.cfg().next(next)))
             }
         }
     }
@@ -659,6 +661,8 @@ mod Expr {
                 let fn_id = access.fn_id().unwrap();
                 Value::Function(fn_id.into())
             }
+
+            AbstractValue::AnonymousFn(ref a_fn) => unimplemented!(),
         }
     }
 

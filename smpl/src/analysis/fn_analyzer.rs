@@ -19,10 +19,8 @@ use super::typed_ast::*;
 use super::semantic_data::{VarId, FnId, ScopedData, TypeId, Universe, TypeConstructor, ModuleId, Program, BindingInfo};
 
 
-struct FnAnalyzer<'a, 'b, 'c> {
-    universe: &'a Universe,
-    metadata: &'b mut Metadata,
-    features: &'c mut PresentFeatures,
+struct FnAnalyzer<'a> {
+    program: &'a mut Program,
     fn_return_type: Rc<SmplType>,
     fn_return_type_id: TypeId,
     current_scope: ScopedData,
@@ -60,14 +58,8 @@ pub fn analyze_fn(
         ref t @ _ => panic!("{} not mapped to a function but a {:?}", fn_id, t),
     }
 
-    let (u, m, f) = program.analysis_context();
-
-    let cfg = u.get_fn(fn_id).cfg();
-
     let mut analyzer = FnAnalyzer {
-        universe: u,
-        metadata: m,
-        features: f,
+        program: program,
         fn_return_type: fn_return_type,
         fn_return_type_id: fn_return_type_id,
         current_scope: global_scope.clone(),
@@ -82,7 +74,7 @@ pub fn analyze_fn(
     match func_type.params {
         ParamType::Checked(ref params) => {
             for (param_type_id, meta) in params.iter()
-                .zip(analyzer.metadata.function_param_ids(fn_id).iter()) {
+                .zip(analyzer.program.metadata().function_param_ids(fn_id).iter()) {
                 let v_id = meta.var_id();
                 let p_name = meta.name();
                 let param_type_id = *param_type_id;
@@ -97,19 +89,22 @@ pub fn analyze_fn(
         ParamType::Unchecked => (),
     }
 
+    let func = analyzer.program.universe().get_fn(fn_id);
+    let cfg = func.cfg();
+
     // Restrain lifetime of traverser to move analyzer.locals
     {
-        let traverser = Traverser::new(cfg, &mut analyzer);
+        let traverser = Traverser::new(&*cfg, &mut analyzer);
 
         traverser.traverse()?;
     }
 
-    analyzer.metadata.insert_fn_layout(fn_id, FnLayout::new(
+    analyzer.program.metadata_mut().insert_fn_layout(fn_id, FnLayout::new(
             analyzer.locals, 
             param_types,
             fn_return_type_id));
 
-    return_trace(cfg)
+    return_trace(&*cfg)
 }
 
 // TODO: maybe add reverse traverser?
@@ -258,7 +253,7 @@ fn resolve_uni_op(
     }
 }
 
-impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
+impl<'a> FnAnalyzer<'a> {
 
     fn resolve_field_access(
         &mut self,
@@ -283,7 +278,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
 
         if let Some(e) = path.root_indexing_expr() {
             let indexing_type_id = self.resolve_expr(e)?;
-            let indexing_type = self.universe.get_type(indexing_type_id);
+            let indexing_type = self.program.universe().get_type(indexing_type_id);
 
             match *indexing_type {
                 SmplType::Int => (),
@@ -294,7 +289,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                     }.into());
                 }
             }
-            let var_type = self.universe.get_type(var_type_id);
+            let var_type = self.program.universe().get_type(var_type_id);
             match *var_type {
                 SmplType::Array(ref a) => {
                     current_type_id = a.base_type;
@@ -311,7 +306,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
         path.set_root_var(root_var_id);
         path.set_root_var_type(root_var_type_id);
 
-        current_type = self.universe.get_type(current_type_id);
+        current_type = self.program.universe().get_type(current_type_id);
 
         for (index, field) in path_iter.enumerate() {
             match *current_type {
@@ -339,13 +334,13 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                             })?;
 
                             let field_type_id = struct_type.field_type(field_id).unwrap();
-                            let field_type = self.universe.get_type(field_type_id);
+                            let field_type = self.program.universe().get_type(field_type_id);
 
                             field.set_field_id(field_id);
                             field.set_field_type(field_type_id);
 
                             let indexing_type_id = self.resolve_expr(indexing)?;
-                            let indexing_type = self.universe.get_type(indexing_type_id);
+                            let indexing_type = self.program.universe().get_type(indexing_type_id);
 
                             match *indexing_type {
                                 SmplType::Int => (),
@@ -385,7 +380,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                 }
             }
 
-            current_type = self.universe.get_type(current_type_id);
+            current_type = self.program.universe().get_type(current_type_id);
         }
 
         let accessed_field_type_id = current_type_id;
@@ -404,18 +399,18 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                 Value::Literal(ref literal) => {
                     use ast::Literal;
                     match *literal {
-                        Literal::Int(_) => tmp_type = self.universe.int(),
-                        Literal::Float(_) => tmp_type = self.universe.float(),
-                        Literal::String(_) => tmp_type = self.universe.string(),
-                        Literal::Bool(_) => tmp_type = self.universe.boolean(),
+                        Literal::Int(_) => tmp_type = self.program.universe().int(),
+                        Literal::Float(_) => tmp_type = self.program.universe().float(),
+                        Literal::String(_) => tmp_type = self.program.universe().string(),
+                        Literal::Bool(_) => tmp_type = self.program.universe().boolean(),
                     }
                 }
 
                 Value::StructInit(ref init) => {
                     // Get type info
                     let type_name = init.type_name();
-                    let unknown_type_id = self.current_scope.type_id(self.universe, type_name.into())?;
-                    let unknown_type = self.universe.get_type(unknown_type_id);
+                    let unknown_type_id = self.current_scope.type_id(self.program.universe(), type_name.into())?;
+                    let unknown_type = self.program.universe().get_type(unknown_type_id);
 
                     // Check if type is a struct.
                     let struct_type_id = unknown_type_id;
@@ -432,7 +427,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                     }
 
                     init.set_struct_type(struct_type_id);
-                    if let Err(unknown_fields) = init.set_field_init(self.universe) {
+                    if let Err(unknown_fields) = init.set_field_init(self.program.universe()) {
                          // TODO: Allow for multiple errors
                         /*let ident = struct_type.get_ident(id);
                                 return Err(TypeErr::UnknownField {
@@ -485,8 +480,8 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                 typed_tmp_id.set_type_id(tmp_type_id);
 
                                 // Expression type the same as the field type?
-                                if self.universe.get_type(tmp_type_id)
-                                    != self.universe.get_type(field_type_id)
+                                if self.program.universe().get_type(tmp_type_id)
+                                    != self.program.universe().get_type(field_type_id)
                                 {
                                     return Err(TypeErr::UnexpectedType {
                                         found: tmp_type_id,
@@ -527,13 +522,13 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                         }
 
                         BindingInfo::Fn(fn_id) => {
-                            self.features.add_feature(FUNCTION_VALUE);
+                            self.program.features_mut().add_feature(FUNCTION_VALUE);
 
-                            if(self.metadata.is_builtin_params_unchecked(fn_id)) {
+                            if(self.program.metadata_mut().is_builtin_params_unchecked(fn_id)) {
                                 return Err(Err::UncheckedFunctionBinding(var.ident().clone()));
                             }
 
-                            let f = self.universe.get_fn(fn_id);
+                            let f = self.program.universe().get_fn(fn_id);
                             let fn_type_id = f.type_id();
 
                             var.set_id(fn_id);
@@ -556,13 +551,13 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                     lhs.set_type_id(lhs_type_id);
                     rhs.set_type_id(rhs_type_id);
 
-                    tmp_type = resolve_bin_op(self.universe, op, lhs_type_id, rhs_type_id, tmp.span())?;
+                    tmp_type = resolve_bin_op(self.program.universe(), op, lhs_type_id, rhs_type_id, tmp.span())?;
                 }
 
                 Value::UniExpr(ref op, ref uni_e) => {
                     let tmp_type_id = expr.get_tmp(*uni_e.data()).value().type_id().unwrap();
 
-                    tmp_type = resolve_uni_op(self.universe, op, tmp_type_id, tmp.span())?;
+                    tmp_type = resolve_uni_op(self.program.universe(), op, tmp_type_id, tmp.span())?;
                 }
 
                 Value::FnCall(ref fn_call) => {
@@ -574,11 +569,11 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                             match binding.unwrap() {
                                 BindingInfo::Fn(fn_id) => {
                                     fn_call.set_id(fn_id);
-                                    if self.metadata.is_builtin(fn_id)  {
-                                        let func = self.universe.get_builtin_fn(fn_id);
+                                    if self.program.metadata_mut().is_builtin(fn_id)  {
+                                        let func = self.program.universe().get_builtin_fn(fn_id);
                                         Some(func.type_id())
                                     } else {
-                                        let func = self.universe.get_fn(fn_id);
+                                        let func = self.program.universe().get_fn(fn_id);
                                         Some(func.type_id())
                                     }
                                 }
@@ -586,8 +581,8 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                     // Function call on a local variable / parameter
                                     // Should be a functino type
                                     fn_call.set_id(v_id);
-                                    self.features.add_feature(FUNCTION_VALUE);
-                                    let v_type = self.universe.get_type(v_type_id);
+                                    self.program.features_mut().add_feature(FUNCTION_VALUE);
+                                    let v_type = self.program.universe().get_type(v_type_id);
                                     match *v_type {
                                         SmplType::Function(_) => Some(v_type_id),
                                         _ => unimplemented!(),
@@ -606,17 +601,17 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                         None => {
                             let fn_id = self.current_scope.get_fn(fn_call.path())?;
                             fn_call.set_id(fn_id);
-                            if self.metadata.is_builtin(fn_id) {
-                                let func = self.universe.get_builtin_fn(fn_id);
+                            if self.program.metadata_mut().is_builtin(fn_id) {
+                                let func = self.program.universe().get_builtin_fn(fn_id);
                                 func.type_id()
                             } else {
-                                let func = self.universe.get_fn(fn_id);
+                                let func = self.program.universe().get_fn(fn_id);
                                 func.type_id()
                             }
                         }
                     };
 
-                    let fn_type = self.universe.get_type(fn_type_id);
+                    let fn_type = self.program.universe().get_type(fn_type_id);
                     
                     // Check args and parameters align
                     if let SmplType::Function(ref fn_type) = *fn_type {
@@ -652,8 +647,8 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                         for (index, (arg, param)) in
                                             arg_type_ids.iter().zip(fn_param_type_ids).enumerate()
                                         {
-                                            let arg_type = self.universe.get_type(*arg);
-                                            let param_type = self.universe.get_type(*param);
+                                            let arg_type = self.program.universe().get_type(*arg);
+                                            let param_type = self.program.universe().get_type(*param);
                                             if arg_type != param_type {
                                                 return Err(TypeErr::ArgMismatch {
                                                     fn_type_id: fn_type_id,
@@ -690,7 +685,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                 }
 
                 Value::ArrayInit(ref init) => {
-                    self.features.add_feature(STATIC_ARRAY);
+                    self.program.features_mut().add_feature(STATIC_ARRAY);
                     match *init {
                         ArrayInit::List(ref vec) => {
                             let size = vec.len() as u64;
@@ -706,14 +701,14 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                             let mut expected_element_type_id = None;
 
                             for (i, (element_type_id, span)) in element_type_ids.enumerate() {
-                                let current_element_type = self.universe.get_type(element_type_id);
+                                let current_element_type = self.program.universe().get_type(element_type_id);
 
                                 if expected_element_type_id.is_none() {
                                     expected_element_type_id = Some(element_type_id);
                                     continue;
                                 }
 
-                                let expected_element_type = self.universe.get_type(
+                                let expected_element_type = self.program.universe().get_type(
                                     expected_element_type_id.unwrap());
 
                                 if expected_element_type != current_element_type {
@@ -726,10 +721,10 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                                 }
                             }
 
-                            let array_type = TypeConstructor::construct_array_type(self.universe,
+                            let array_type = TypeConstructor::construct_array_type(self.program.universe(),
                                                                                    expected_element_type_id.unwrap(),
                                                                                    size);
-                            self.metadata.insert_array_type(self.module_id, array_type);
+                            self.program.metadata_mut().insert_array_type(self.module_id, array_type);
                             tmp_type = array_type;
                         },
 
@@ -741,10 +736,10 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
 
                             let element_type_id = tmp_type_id;
 
-                            let array_type = TypeConstructor::construct_array_type(self.universe,
+                            let array_type = TypeConstructor::construct_array_type(self.program.universe(),
                                                                                    element_type_id,
                                                                                    size);
-                            self.metadata.insert_array_type(self.module_id, array_type);
+                            self.program.metadata_mut().insert_array_type(self.module_id, array_type);
                             tmp_type = array_type;
                         },
                     }
@@ -760,7 +755,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                         let tmp_type_id = tmp_value.type_id().unwrap();
                         indexing.array.set_type_id(tmp_type_id);
 
-                        let tmp_type = self.universe.get_type(tmp_type_id);
+                        let tmp_type = self.program.universe().get_type(tmp_type_id);
 
                         match *tmp_type {
                             SmplType::Array(ref at) => {
@@ -783,7 +778,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
                         let tmp_type_id = tmp_value.type_id().unwrap();
                         indexing.indexer.set_type_id(tmp_type_id);
 
-                        let tmp_type = self.universe.get_type(tmp_type_id);
+                        let tmp_type = self.program.universe().get_type(tmp_type_id);
 
                         match *tmp_type {
                             SmplType::Int => (),
@@ -801,14 +796,16 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
 
                 Value::ModAccess(ref access) => {
                     let fn_id = self.current_scope.get_fn(&access.path())?;
-                    let func = self.universe.get_fn(fn_id);
+                    let func = self.program.universe().get_fn(fn_id);
 
                     let fn_type_id = func.type_id();
 
                     tmp_type = fn_type_id;
 
-                    self.features.add_feature(MOD_ACCESS);
+                    self.program.features_mut().add_feature(MOD_ACCESS);
                 }
+
+                Value::AnonymousFn(ref a_fn) => unimplemented!(),
             }
 
             tmp.value().set_type_id(tmp_type);
@@ -819,7 +816,7 @@ impl<'a, 'b, 'c> FnAnalyzer<'a, 'b, 'c> {
     }
 }
 
-impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
+impl<'a> Passenger<Err> for FnAnalyzer<'a> {
     fn start(&mut self, _id: NodeIndex) -> Result<(), Err> {
         Ok(())
     }
@@ -873,13 +870,13 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
         let var_id = var_decl.var_id();
         let var_type_annotation = var_decl.type_annotation();
         let var_type_id = match var_type_annotation {
-            Some(type_annotation) => self.current_scope.type_id(self.universe, type_annotation.into())?,
+            Some(type_annotation) => self.current_scope.type_id(self.program.universe(), type_annotation.into())?,
 
             None => expr_type_id,
         };
 
-        let var_type = self.universe.get_type(var_type_id);
-        let expr_type = self.universe.get_type(expr_type_id);
+        let var_type = self.program.universe().get_type(var_type_id);
+        let expr_type = self.program.universe().get_type(expr_type_id);
 
         var_decl.set_type_id(var_type_id);
 
@@ -904,8 +901,8 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
 
         let expr_type_id = self.resolve_expr(assignment.value())?;
 
-        let assignee_type = self.universe.get_type(assignee_type_id);
-        let expr_type = self.universe.get_type(expr_type_id);
+        let assignee_type = self.program.universe().get_type(assignee_type_id);
+        let expr_type = self.program.universe().get_type(expr_type_id);
 
         let assignment_span = Span::combine(assignment.access_span(), assignment.value().span());
 
@@ -926,10 +923,10 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
         let expr_type_id = match expr {
             Some(ref expr) => self.resolve_expr(expr)?,
 
-            None => self.universe.unit(),
+            None => self.program.universe().unit(),
         };
 
-        if self.universe.get_type(expr_type_id) != self.fn_return_type {
+        if self.program.universe().get_type(expr_type_id) != self.fn_return_type {
             return Err(TypeErr::InEqFnReturn {
                 expr: expr_type_id,
                 fn_return: self.fn_return_type_id,
@@ -944,10 +941,10 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
         let condition = &condition.expr;
         let expr_type_id = self.resolve_expr(condition)?;
 
-        if *self.universe.get_type(expr_type_id) != SmplType::Bool {
+        if *self.program.universe().get_type(expr_type_id) != SmplType::Bool {
             return Err(TypeErr::UnexpectedType {
                 found: expr_type_id,
-                expected: self.universe.boolean(),
+                expected: self.program.universe().boolean(),
                 span: condition.span(),
             }.into());
         }
@@ -969,10 +966,10 @@ impl<'a, 'b, 'c> Passenger<Err> for FnAnalyzer<'a, 'b, 'c> {
         let condition = &condition.expr;
         let expr_type_id = self.resolve_expr(condition)?;
 
-        if *self.universe.get_type(expr_type_id) != SmplType::Bool {
+        if *self.program.universe().get_type(expr_type_id) != SmplType::Bool {
             return Err(TypeErr::UnexpectedType {
                 found: expr_type_id,
-                expected: self.universe.boolean(),
+                expected: self.program.universe().boolean(),
                 span: condition.span(),
             }.into());
         }
