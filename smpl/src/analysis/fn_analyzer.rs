@@ -10,7 +10,7 @@ use span::Span;
 
 use super::metadata::{Metadata, FnLayout};
 
-
+use super::fn_type_generator::*;
 use super::smpl_type::*;
 use super::linear_cfg_traversal::*;
 use super::control_flow::CFG;
@@ -805,7 +805,36 @@ impl<'a> FnAnalyzer<'a> {
                     self.program.features_mut().add_feature(MOD_ACCESS);
                 }
 
-                Value::AnonymousFn(ref a_fn) => unimplemented!(),
+                Value::AnonymousFn(ref a_fn) => {
+                    let type_id = self.program.universe().new_type_id();
+                    let fn_id = self.program.universe().new_fn_id();
+                    let func = a_fn.a_fn();
+
+                    let fn_type = generate_anonymous_fn_type(self.program, 
+                                                             &self.current_scope,
+                                                             fn_id,
+                                                             func)?;
+
+                    let cfg = CFG::generate(self.program.universe(), 
+                                            func.body.clone(),
+                                            &fn_type)?;
+
+                    a_fn.set_fn_id(fn_id);
+                    
+                    self.program.universe_mut().insert_fn(fn_id, type_id, fn_type, cfg);
+
+                    // Since anonymous functions are ALWAYS inside another function
+                    // Assume the global scope is at the bottom of the scope stack
+                    analyze_fn(self.program, 
+                               self.scope_stack.get(0).unwrap(),
+                               fn_id,
+                               self.module_id)?;
+
+
+                    tmp_type = type_id;
+
+                    self.program.features_mut().add_feature(ANONYMOUS_FN);
+                }
             }
 
             tmp.value().set_type_id(tmp_type);
