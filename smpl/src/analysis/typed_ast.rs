@@ -257,6 +257,7 @@ pub enum Value {
     ArrayInit(self::ArrayInit),
     Indexing(Indexing),
     ModAccess(self::ModAccess),
+    AnonymousFn(self::AnonymousFn),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -642,5 +643,36 @@ impl Field {
             Some(ref t) => t.set_type_id(id),
             None => panic!("No field"),
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct AnonymousFn {
+    a_fn: ast::AnonymousFn,
+    fn_id: Cell<Option<FnId>>,
+}
+
+impl AnonymousFn {
+    pub fn new(a_fn: ast::AnonymousFn) -> AnonymousFn {
+        AnonymousFn {
+            a_fn: a_fn,
+            fn_id: Cell::new(None)
+        }
+    }
+
+    pub fn a_fn(&self) -> &ast::AnonymousFn {
+        &self.a_fn
+    }
+
+    pub fn fn_id(&self) -> FnId {
+        self.fn_id.get().unwrap()
+    }
+
+    pub fn set_fn_id(&self, fn_id: FnId) {
+        if self.fn_id.get().is_some() {
+            panic!("Attempting to overwrite an anonymous function's FnId");
+        }
+
+        self.fn_id.set(Some(fn_id));
     }
 }
