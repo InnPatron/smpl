@@ -85,7 +85,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
             let type_id = reserved_fn.1;
             let fn_decl = reserved_fn.2.data();
             let fn_type = generate_fn_type(program, raw_program.scopes.get(mod_id).unwrap(), fn_id, reserved_fn.2.data())?;
-            let cfg = CFG::generate(program.universe(), fn_decl.clone(), &fn_type)?;
+            let cfg = CFG::generate(program.universe(), fn_decl.body.clone(), &fn_type)?;
 
             program.universe_mut().insert_fn(fn_id, type_id, fn_type, cfg);
             program.metadata_mut().insert_module_fn(mod_id.clone(), fn_decl.name.data().clone(), fn_id);

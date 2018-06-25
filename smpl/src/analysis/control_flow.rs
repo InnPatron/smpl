@@ -346,7 +346,7 @@ impl CFG {
     ///
     pub fn generate(
         universe: &Universe,
-        fn_def: ast::Function,
+        body: ast::AstNode<ast::Block>,
         fn_type: &FunctionType,
     ) -> Result<Self, ControlFlowErr> {
         let mut cfg = {
@@ -367,7 +367,7 @@ impl CFG {
 
         append_node!(cfg, head, previous, Node::EnterScope);
     
-        let (body, _) = fn_def.body.to_data();
+        let (body, _) = body.to_data();
         let instructions = body.0;
         let fn_graph = CFG::get_branch(universe, &mut cfg, instructions, None)?;
 
