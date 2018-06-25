@@ -662,7 +662,10 @@ mod Expr {
                 Value::Function(fn_id.into())
             }
 
-            AbstractValue::AnonymousFn(ref a_fn) => unimplemented!(),
+            AbstractValue::AnonymousFn(ref a_fn) => {
+                let fn_id = a_fn.fn_id();
+                Value::Function(fn_id.into())
+            }
         }
     }
 
