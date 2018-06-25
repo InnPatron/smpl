@@ -32,6 +32,7 @@ impl RustBackend {
         denied.push(FeatureReasoning::with_feature(FUNCTION_VALUE));
         denied.push(FeatureReasoning::with_feature(BUILTIN_FN));
         denied.push(FeatureReasoning::with_feature(UNCHECKED_BUILTIN_FN_PARAMS));
+        denied.push(FeatureReasoning::with_feature(ANONYMOUS_FN));
 
         FeatureInfo::new(required, denied)
     }
