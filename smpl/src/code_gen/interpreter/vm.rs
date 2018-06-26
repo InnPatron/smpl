@@ -2,20 +2,14 @@ use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use petgraph::graph;
 use petgraph::graph::NodeIndex;
 use petgraph::Direction;
-use petgraph::visit::EdgeRef;
 
-use feature::*;
-
-use ast::{Module, Ident, BinOp, UniOp};
+use ast::{Module, Ident};
 
 use err::Err;
 
 use analysis::*;
-use analysis::smpl_type::*;
-use analysis::metadata::*;
 
 use super::loader;
 use super::vm_i::*;
@@ -413,8 +407,8 @@ impl<'a> FnEnv<'a> {
 mod Expr {
     use std::ops::{Add, Sub, Div, Mul, BitAnd, BitOr, Neg, Not};
 
-    use ast::{Literal, BinOp, UniOp};
-    use analysis::{Program, Expr, Tmp, Value as AbstractValue, BindingId, ArrayInit, PathSegment};
+    use ast::Literal;
+    use analysis::{Expr, Tmp, Value as AbstractValue, BindingId, ArrayInit, PathSegment};
     use analysis::smpl_type::SmplType;
     use super::*;
     use super::super::value::*;
@@ -729,7 +723,6 @@ mod Expr {
 #[cfg(test)]
 mod tests {
     use parser::parse_module;
-    use analysis::check_program;
     use code_gen::interpreter::*;
 
     struct Add;

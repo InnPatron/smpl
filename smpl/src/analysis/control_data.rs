@@ -1,8 +1,7 @@
 use span::Span;
 
-use super::expr_flow;
 use super::typed_ast;
-use super::semantic_data::{BranchingId, LoopId, Universe};
+use super::semantic_data::{BranchingId, LoopId};
 
 
 #[derive(Clone, Debug)]

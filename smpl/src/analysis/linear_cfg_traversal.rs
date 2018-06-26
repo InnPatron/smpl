@@ -1,12 +1,7 @@
 use petgraph::graph::NodeIndex;
-use petgraph::Direction;
-use petgraph::visit::EdgeRef;
-
-use span::Span;
 
 use super::control_flow::*;
 use super::control_data::*;
-use super::typed_ast::*;
 
 pub trait Passenger<E> {
     fn start(&mut self, id: NodeIndex) -> Result<(), E>;

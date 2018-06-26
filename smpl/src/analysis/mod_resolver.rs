@@ -1,10 +1,18 @@
 use std::collections::{HashMap, HashSet};
-use std::cell::Cell;
-use std::rc::Rc;
 
 use err::{TypeErr, Err};
-use ast::{ModulePath as AstModulePath, Path, DeclStmt, Struct, Function as AstFunction, Module as AstModule, BuiltinFunction as AstBuiltinFunction, BuiltinFnParams};
-use ast::{ AstNode, Ident, UseDecl};
+use ast::{
+    DeclStmt, 
+    Struct, 
+    Function as AstFunction, 
+    Module as AstModule
+};
+use ast::{ 
+    AstNode,
+    Ident, 
+    UseDecl,
+    BuiltinFunction as AstBuiltinFunction,
+};
 
 use super::feature_checkers::*;
 use super::metadata::*;

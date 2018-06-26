@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use ast::*;
 use span::Span;
 use super::tokens::*;

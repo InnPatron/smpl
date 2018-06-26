@@ -3,9 +3,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::fmt;
 
-use analysis::{FieldId, FnId};
-use analysis::smpl_type::*;
-
 use super::vm_i::FnHandle;
 
 #[derive(Debug, Clone, PartialEq)]

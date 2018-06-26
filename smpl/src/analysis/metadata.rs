@@ -1,9 +1,15 @@
 use std::collections::{HashMap, HashSet};
-use std::collections::hash_map::Iter;
 
 use ast::Ident;
 use err::Err;
-use analysis::semantic_data::{VarId, TypeId, ModuleId, FnId, FieldId, Universe, Program};
+use analysis::semantic_data::{
+    VarId, 
+    TypeId, 
+    ModuleId, 
+    FnId, 
+    FieldId, 
+    Program
+};
 
 #[derive(Clone, Debug)]
 pub struct Metadata {

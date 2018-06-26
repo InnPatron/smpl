@@ -1,4 +1,4 @@
-use analysis::{FnId, TypeId};
+use analysis::TypeId;
 use span::Span;
 use ast::*;
 

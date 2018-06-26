@@ -1,4 +1,3 @@
-use lalrpop_util::ParseError;
 use super::ast::Module;
 use err::Err;
 

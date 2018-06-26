@@ -8,7 +8,7 @@ use err::*;
 
 use span::Span;
 
-use super::metadata::{Metadata, FnLayout};
+use super::metadata::FnLayout;
 
 use super::fn_type_generator::*;
 use super::smpl_type::*;

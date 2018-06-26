@@ -5,7 +5,6 @@ use ast::Module as AstModule;
 
 use super::metadata::*;
 use super::semantic_data::*;
-use super::semantic_data::Module;
 use super::mod_resolver;
 
 pub fn check_program(modules: Vec<AstModule>) -> Result<Program, Err> {
@@ -69,7 +68,6 @@ fn main() {
 
     #[test]
     fn call_fn_success() {
-        use super::super::control_flow::*;
         use super::super::typed_ast::*;
         use analysis::*;
 

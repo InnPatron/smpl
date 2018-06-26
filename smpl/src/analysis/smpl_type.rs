@@ -1,7 +1,6 @@
 use std::collections::HashMap;
-use std::cell::Cell;
 
-use analysis::{TypeId, VarId, FieldId};
+use analysis::{TypeId, FieldId};
 use ast::Ident;
 
 #[derive(Clone, Debug, PartialEq)]

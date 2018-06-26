@@ -236,7 +236,6 @@ impl BuiltinFn for Remove {
 mod tests {
 
     use super::*;
-    use super::super::*;
 
     #[test]
     fn interpreter_vec_new() {

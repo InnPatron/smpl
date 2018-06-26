@@ -1,15 +1,10 @@
-use std::collections::HashMap;
-use std::fmt::Write;
-
 use code_gen::StringEmitter;
 
 use petgraph::graph::NodeIndex;
 
 use feature::*;
 
-use span::Span;
-
-use ast::{Ident, BinOp, UniOp};
+use ast::Ident;
 
 use analysis::*;
 use analysis::smpl_type::*;

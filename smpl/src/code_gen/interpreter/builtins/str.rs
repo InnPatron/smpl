@@ -101,7 +101,6 @@ impl BuiltinFn for ToUpper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::*;
 
     #[test]
     fn interpreter_str_len() {

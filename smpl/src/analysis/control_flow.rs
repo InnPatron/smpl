@@ -10,7 +10,7 @@ use span::Span;
 use super::smpl_type::{FunctionType, SmplType};
 use super::expr_flow;
 use super::typed_ast;
-use super::semantic_data::{BranchingId, LoopId, Universe};
+use super::semantic_data::{LoopId, Universe};
 
 use super::control_data::*;
 

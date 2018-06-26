@@ -4,9 +4,6 @@ mod parser_tests {
     use ast::*;
     use span::Span;
 
-    use super::*;
-    use parser::tokens::*;
-
     #[test]
     fn parse_programs() {
         {

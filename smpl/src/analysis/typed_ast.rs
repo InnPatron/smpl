@@ -10,7 +10,6 @@ pub use ast::UniOp;
 pub use ast::Literal;
 use ast;
 
-use super::control_flow::CFG;
 use super::smpl_type::*;
 use super::semantic_data::*;
 use super::expr_flow;
