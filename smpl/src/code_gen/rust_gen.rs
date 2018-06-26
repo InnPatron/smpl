@@ -563,7 +563,6 @@ impl<'a> RustFnGen<'a> {
                 let indexer_tmp_id = *indexing.indexer.data();
 
                 self.output.emit_line("{");
-                let mut string_buffer = String::new();
                 self.output.emit_line(&format!(
                         "let _borrow_{} = {};",
                         RustGenFmt::tmp_id(array_tmp_id),
@@ -584,7 +583,7 @@ impl<'a> RustFnGen<'a> {
 
             Value::ModAccess(_) => panic!(),
 
-            Value::AnonymousFn(ref a_fn) => panic!(),
+            Value::AnonymousFn(_) => panic!(),
         }
 
         self.output.emit_line("};");

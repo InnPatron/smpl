@@ -862,19 +862,19 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn loop_head(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), Err> {
+    fn loop_head(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), Err> {
         Ok(())
     }
 
-    fn loop_foot(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), Err> {
+    fn loop_foot(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), Err> {
         Ok(())
     }
 
-    fn cont(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), Err> {
+    fn cont(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), Err> {
         Ok(())
     }
 
-    fn br(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), Err> {
+    fn br(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), Err> {
         Ok(())
     }
 

@@ -66,7 +66,7 @@ pub fn add(vm: &mut VM, item_type: &str) {
 pub struct New;
 
 impl BuiltinFn for New {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, _args: Option<Vec<Value>>) -> Value {
         let mut vec = Struct::new();
         vec.set_field(VEC_DATA_KEY.to_string(), Value::Array(Vec::new()));
         vec.set_field(VEC_LEN_KEY.to_string(), Value::Int(0));

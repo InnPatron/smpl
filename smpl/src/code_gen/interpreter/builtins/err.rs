@@ -24,7 +24,7 @@ pub fn add(vm: &mut VM) {
 pub struct Panic;
 
 impl BuiltinFn for Panic {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, _args: Option<Vec<Value>>) -> Value {
         panic!();
     }
 }

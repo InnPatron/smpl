@@ -793,7 +793,7 @@ struct TypeB {
                     }
                 }
 
-                U => panic!(),
+                _ => panic!(),
             }
         }
     }

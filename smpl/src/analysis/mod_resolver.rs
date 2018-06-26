@@ -200,7 +200,7 @@ fn cyclic_type_check(program: &Program, root_id: TypeId) -> Result<(), Err> {
 }
 
 fn generate_struct_type(program: &mut Program, scope: &ScopedData, struct_def: &Struct) -> Result<(StructType, Vec<FieldId>), Err> {
-    let (universe, metadata, features) = program.analysis_context();
+    let (universe, _metadata, _features) = program.analysis_context();
 
     let mut fields = HashMap::new();
     let mut field_map = HashMap::new();
@@ -282,15 +282,15 @@ fn map_usings(raw_modules: &HashMap<ModuleId, RawModData>, raw_prog: &mut RawPro
 }
 
 fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
-    for (ident, r) in raw.reserved_structs.iter() {
+    for (_ident, r) in raw.reserved_structs.iter() {
         scope.insert_type(r.1.data().name.data().clone().into(), r.0.clone());
     }
 
-    for (ident, r) in raw.reserved_fns.iter() {
+    for (_ident, r) in raw.reserved_fns.iter() {
         scope.insert_fn(r.2.data().name.data().clone().into(), r.0.clone());
     }
 
-    for (ident, r) in raw.reserved_builtins.iter() {
+    for (_ident, r) in raw.reserved_builtins.iter() {
         scope.insert_fn(r.2.data().name.data().clone().into(), r.0.clone());
     }
 }

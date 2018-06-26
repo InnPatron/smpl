@@ -427,7 +427,7 @@ mod Expr {
         last.unwrap()
     }
 
-    fn eval_tmp(vm: &VM, host_env: &Env, expr_env: &Env, expr: &Expr, tmp: &Tmp) -> Value {
+    fn eval_tmp(vm: &VM, host_env: &Env, expr_env: &Env, _expr: &Expr, tmp: &Tmp) -> Value {
         match *tmp.value().data() {
             AbstractValue::Literal(ref literal) => {
                 match *literal {
@@ -582,7 +582,7 @@ mod Expr {
                 }
             }
 
-            AbstractValue::UniExpr(ref op, ref t) => {
+            AbstractValue::UniExpr(ref _op, ref t) => {
                 let t_id = t.data().clone();
                 let t_v = expr_env.get_tmp(t_id).unwrap();
 

@@ -467,7 +467,7 @@ impl<'input> Tokenizer<'input> {
     fn numeric_literal(&mut self, start: Location) -> Result<SpannedToken, SpannedError> {
         let (end, int) = self.take_while(start, is_digit);
 
-        if let Some((loc, ch)) = self.chars.peek() {
+        if let Some((_loc, ch)) = self.chars.peek() {
             if ch == '.' {
                 self.chars.next();      // Skip '.'
                 let (end, float) = self.take_while(start, is_digit);
@@ -561,7 +561,7 @@ impl<'input> Iterator for Tokenizer<'input> {
                 ch if is_op(ch) => Some(self.op(start, ch)),
                 ch if ch.is_whitespace() => continue,
 
-                ch => Some(Err(SpannedError {
+                _ch => Some(Err(SpannedError {
                         error: TokenizerError::UnexpectedChar(c),
                         location: start,
                 })),

@@ -325,8 +325,8 @@ struct TestStruct {
             let parser = MathExprParser::new();
             let input = "1+2";
             let input = wrap_input(input);
-            let e = parser.parse(input).unwrap();
-            let root = {
+            let _e = parser.parse(input).unwrap();
+            let _root = {
                 let _1 = int!(1 => BoxExpr);
                 let _2 = int!(2 => BoxExpr);
 
@@ -339,8 +339,8 @@ struct TestStruct {
             let parser = MathExprParser::new();
             let input = "1.+2";
             let input = wrap_input(input);
-            let e = parser.parse(input).unwrap();
-            let root = {
+            let _e = parser.parse(input).unwrap();
+            let _root = {
                 let _1 = Box::new(Expr::Literal(AstNode::new(Literal::Float(1.0), Span::new(0, 0))));
                 let _2 = int!(2 => BoxExpr);
 

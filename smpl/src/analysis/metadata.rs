@@ -100,7 +100,7 @@ impl Metadata {
         use ast::{AstNode, ModulePath};
         use span::Span;
 
-        let (u, m, f) = program.analysis_context();
+        let (u, m, _f) = program.analysis_context();
         let universe = u;
 
         for (_, mod_id) in universe.all_modules().into_iter() {
