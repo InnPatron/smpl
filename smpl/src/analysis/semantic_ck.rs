@@ -817,4 +817,61 @@ struct Data { }
         let mod1 = parse_module(mod1).unwrap();
         check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    #[should_panic]
+    fn anonymous_fn_invalid() {
+        let mod1 =
+"mod mod1;
+
+fn test() {
+    let func = fn (foo: int) -> int {
+        return true;
+    };
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
+    
+    #[test]
+    fn anonymous_fn_call() {
+        let mod1 =
+"
+mod mod1;
+
+fn test() -> int {
+    let func = fn (foo: int) -> int {
+        return foo + 5;
+    };
+
+    return func(10);
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn anonymous_fn_arg() {
+        let mod1 =
+"
+mod mod1;
+
+fn test2(func: fn(int) -> int) -> int {
+    return func(10);
+}
+
+fn test() -> int {
+    let func = fn (foo: int) -> int {
+        return foo + 5;
+    };
+
+    return test2(func);
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
+
 }

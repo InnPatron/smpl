@@ -1082,4 +1082,57 @@ fn test_floor() -> float {
 
         assert_eq!(Value::Float(1.0), result);
     }
+
+    #[test]
+    fn interpreter_anonymous_fn_call() {
+        let mod1 =
+"
+mod mod1;
+
+fn test() -> int {
+    let func = fn (foo: int) -> int {
+        return foo + 5;
+    };
+
+    return func(10);
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        
+        let mut vm = VM::new(vec![mod1]).unwrap();
+
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Int(15), result);
+    }
+
+    #[test]
+    fn interpreter_anonymous_fn_arg() {
+        let mod1 =
+"mod mod1;
+
+fn test2(func: fn(int) -> int) -> int {
+    return func(10);
+}
+
+fn test() -> int {
+    let func = fn (foo: int) -> int {
+        return foo + 5;
+    };
+
+    return test2(func);
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        
+        let mut vm = VM::new(vec![mod1]).unwrap();
+
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Int(15), result);
+    }
 }
