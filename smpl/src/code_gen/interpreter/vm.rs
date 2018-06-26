@@ -2,20 +2,14 @@ use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use petgraph::graph;
 use petgraph::graph::NodeIndex;
 use petgraph::Direction;
-use petgraph::visit::EdgeRef;
 
-use feature::*;
-
-use ast::{Module, Ident, BinOp, UniOp};
+use ast::{Module, Ident};
 
 use err::Err;
 
 use analysis::*;
-use analysis::smpl_type::*;
-use analysis::metadata::*;
 
 use super::loader;
 use super::vm_i::*;
@@ -413,8 +407,8 @@ impl<'a> FnEnv<'a> {
 mod Expr {
     use std::ops::{Add, Sub, Div, Mul, BitAnd, BitOr, Neg, Not};
 
-    use ast::{Literal, BinOp, UniOp};
-    use analysis::{Program, Expr, Tmp, Value as AbstractValue, BindingId, ArrayInit, PathSegment};
+    use ast::Literal;
+    use analysis::{Expr, Tmp, Value as AbstractValue, BindingId, ArrayInit, PathSegment};
     use analysis::smpl_type::SmplType;
     use super::*;
     use super::super::value::*;
@@ -433,7 +427,7 @@ mod Expr {
         last.unwrap()
     }
 
-    fn eval_tmp(vm: &VM, host_env: &Env, expr_env: &Env, expr: &Expr, tmp: &Tmp) -> Value {
+    fn eval_tmp(vm: &VM, host_env: &Env, expr_env: &Env, _expr: &Expr, tmp: &Tmp) -> Value {
         match *tmp.value().data() {
             AbstractValue::Literal(ref literal) => {
                 match *literal {
@@ -588,7 +582,7 @@ mod Expr {
                 }
             }
 
-            AbstractValue::UniExpr(ref op, ref t) => {
+            AbstractValue::UniExpr(ref _op, ref t) => {
                 let t_id = t.data().clone();
                 let t_v = expr_env.get_tmp(t_id).unwrap();
 
@@ -729,7 +723,6 @@ mod Expr {
 #[cfg(test)]
 mod tests {
     use parser::parse_module;
-    use analysis::check_program;
     use code_gen::interpreter::*;
 
     struct Add;
@@ -825,7 +818,7 @@ fn test(a: int, b: int) -> int {
         let modules = vec![parse_module(mod1).unwrap()];
 
         let mut vm = VM::new(modules).unwrap();
-        vm.insert_builtin("mod1", "add", Box::new(Add));
+        vm.insert_builtin("mod1", "add", Box::new(Add)).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -849,7 +842,7 @@ fn test(a: int, b: int) -> int {
 
 
         let mut vm = VM::new(modules).unwrap();
-        vm.insert_builtin("mod1", "sum", Box::new(VarArgSum));
+        vm.insert_builtin("mod1", "sum", Box::new(VarArgSum)).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -882,7 +875,7 @@ fn test2() -> int {
         let modules = vec![parse_module(mod1).unwrap(), parse_module(mod2).unwrap()];
 
         let mut vm = VM::new(modules).unwrap();
-        vm.insert_builtin("mod1", "add", Box::new(Add));
+        vm.insert_builtin("mod1", "add", Box::new(Add)).unwrap();
         
         let fn_handle = vm.query_module("mod2", "test2").unwrap().unwrap();
 
@@ -912,7 +905,7 @@ fn test() -> int {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let mut vm = VM::new(modules).unwrap();
+        let vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -936,7 +929,7 @@ fn test() -> int {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let mut vm = VM::new(modules).unwrap();
+        let vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -964,7 +957,7 @@ fn test() -> int {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let mut vm = VM::new(modules).unwrap();
+        let vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -992,7 +985,7 @@ fn test() -> int {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let mut vm = VM::new(modules).unwrap();
+        let vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -1017,7 +1010,7 @@ fn recurse(i: int) -> int {
 ";
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let mut vm = VM::new(modules).unwrap();
+        let vm = VM::new(modules).unwrap();
 
         let fn_handle = vm.query_module("mod1", "recurse").unwrap().unwrap();
 
@@ -1051,7 +1044,7 @@ fn recurse_b(i: int) -> int {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let mut vm = VM::new(modules).unwrap();
+        let vm = VM::new(modules).unwrap();
 
         let fn_handle = vm.query_module("mod1", "recurse_a").unwrap().unwrap();
 
@@ -1074,7 +1067,7 @@ fn test_floor() -> float {
 ";
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let mut vm = VM::new(modules).unwrap();
+        let vm = VM::new(modules).unwrap();
 
         let fn_handle = vm.query_module("mod1", "test_floor").unwrap().unwrap();
 
@@ -1099,7 +1092,7 @@ fn test() -> int {
 
         let mod1 = parse_module(mod1).unwrap();
         
-        let mut vm = VM::new(vec![mod1]).unwrap();
+        let vm = VM::new(vec![mod1]).unwrap();
 
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -1127,7 +1120,7 @@ fn test() -> int {
 
         let mod1 = parse_module(mod1).unwrap();
         
-        let mut vm = VM::new(vec![mod1]).unwrap();
+        let vm = VM::new(vec![mod1]).unwrap();
 
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 

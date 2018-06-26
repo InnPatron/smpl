@@ -4,7 +4,7 @@ use super::typed_ast::Binding as TypedBinding;
 
 use span::Span;
 
-use ast::{AstNode, Expr as AstExpr, Literal, ArrayInit as AstArrayInit};
+use ast::{Expr as AstExpr, ArrayInit as AstArrayInit};
 
 pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();

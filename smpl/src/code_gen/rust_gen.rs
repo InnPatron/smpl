@@ -1,15 +1,10 @@
-use std::collections::HashMap;
-use std::fmt::Write;
-
 use code_gen::StringEmitter;
 
 use petgraph::graph::NodeIndex;
 
 use feature::*;
 
-use span::Span;
-
-use ast::{Ident, BinOp, UniOp};
+use ast::Ident;
 
 use analysis::*;
 use analysis::smpl_type::*;
@@ -186,7 +181,7 @@ impl<'a> RustModGen<'a> {
 
             {
                 let traverser = Traverser::new(&*cfg, &mut fn_gen);
-                traverser.traverse();
+                traverser.traverse().unwrap();
             }
 
             let fn_string = fn_gen.function();
@@ -568,7 +563,6 @@ impl<'a> RustFnGen<'a> {
                 let indexer_tmp_id = *indexing.indexer.data();
 
                 self.output.emit_line("{");
-                let mut string_buffer = String::new();
                 self.output.emit_line(&format!(
                         "let _borrow_{} = {};",
                         RustGenFmt::tmp_id(array_tmp_id),
@@ -589,7 +583,7 @@ impl<'a> RustFnGen<'a> {
 
             Value::ModAccess(_) => panic!(),
 
-            Value::AnonymousFn(ref a_fn) => panic!(),
+            Value::AnonymousFn(_) => panic!(),
         }
 
         self.output.emit_line("};");

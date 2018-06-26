@@ -1,9 +1,15 @@
 use std::collections::{HashMap, HashSet};
-use std::collections::hash_map::Iter;
 
 use ast::Ident;
 use err::Err;
-use analysis::semantic_data::{VarId, TypeId, ModuleId, FnId, FieldId, Universe, Program};
+use analysis::semantic_data::{
+    VarId, 
+    TypeId, 
+    ModuleId, 
+    FnId, 
+    FieldId, 
+    Program
+};
 
 #[derive(Clone, Debug)]
 pub struct Metadata {
@@ -73,7 +79,7 @@ impl Metadata {
 
     pub fn insert_array_type(&mut self, mod_id: ModuleId, type_id: TypeId) {
         if self.array_types.contains_key(&mod_id) {
-            let mut v = self.array_types.get_mut(&mod_id).unwrap();
+            let v = self.array_types.get_mut(&mod_id).unwrap();
             v.push(type_id);
         } else {
             self.array_types.insert(mod_id, vec![type_id]);
@@ -94,7 +100,7 @@ impl Metadata {
         use ast::{AstNode, ModulePath};
         use span::Span;
 
-        let (u, m, f) = program.analysis_context();
+        let (u, m, _f) = program.analysis_context();
         let universe = u;
 
         for (_, mod_id) in universe.all_modules().into_iter() {

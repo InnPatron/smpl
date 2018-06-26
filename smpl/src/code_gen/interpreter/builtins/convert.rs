@@ -22,14 +22,14 @@ pub fn include(modules: &mut Vec<Module>) {
 }
 
 pub fn add(vm: &mut VM) {
-    vm.insert_builtin(MOD_CONVERT, CONVERT_INT_TO_FLOAT, Box::new(IntToFloat));
-    vm.insert_builtin(MOD_CONVERT, CONVERT_FLOAT_TO_INT, Box::new(FloatToInt));
+    vm.insert_builtin(MOD_CONVERT, CONVERT_INT_TO_FLOAT, Box::new(IntToFloat)).unwrap();
+    vm.insert_builtin(MOD_CONVERT, CONVERT_FLOAT_TO_INT, Box::new(FloatToInt)).unwrap();
 
-    vm.insert_builtin(MOD_CONVERT, CONVERT_IS_FLOAT, Box::new(IsFloat));
-    vm.insert_builtin(MOD_CONVERT, CONVERT_IS_INT, Box::new(IsInt));
+    vm.insert_builtin(MOD_CONVERT, CONVERT_IS_FLOAT, Box::new(IsFloat)).unwrap();
+    vm.insert_builtin(MOD_CONVERT, CONVERT_IS_INT, Box::new(IsInt)).unwrap();
 
-    vm.insert_builtin(MOD_CONVERT, CONVERT_STRING_TO_FLOAT, Box::new(StringToFloat));
-    vm.insert_builtin(MOD_CONVERT, CONVERT_STRING_TO_INT, Box::new(StringToInt));
+    vm.insert_builtin(MOD_CONVERT, CONVERT_STRING_TO_FLOAT, Box::new(StringToFloat)).unwrap();
+    vm.insert_builtin(MOD_CONVERT, CONVERT_STRING_TO_INT, Box::new(StringToInt)).unwrap();
 }
 
 pub struct IntToFloat;

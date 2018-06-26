@@ -8,7 +8,7 @@ use err::*;
 
 use span::Span;
 
-use super::metadata::{Metadata, FnLayout};
+use super::metadata::FnLayout;
 
 use super::fn_type_generator::*;
 use super::smpl_type::*;
@@ -262,7 +262,7 @@ impl<'a> FnAnalyzer<'a> {
     ) -> Result<TypeId, Err> {
 
         let path = field_access.path();
-        let mut path_iter = path.path().iter();
+        let path_iter = path.path().iter();
 
         let root_var_id;
         let root_var_type_id;
@@ -524,7 +524,7 @@ impl<'a> FnAnalyzer<'a> {
                         BindingInfo::Fn(fn_id) => {
                             self.program.features_mut().add_feature(FUNCTION_VALUE);
 
-                            if(self.program.metadata_mut().is_builtin_params_unchecked(fn_id)) {
+                            if self.program.metadata_mut().is_builtin_params_unchecked(fn_id) {
                                 return Err(Err::UncheckedFunctionBinding(var.ident().clone()));
                             }
 
@@ -862,19 +862,19 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn loop_head(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), Err> {
+    fn loop_head(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), Err> {
         Ok(())
     }
 
-    fn loop_foot(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), Err> {
+    fn loop_foot(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), Err> {
         Ok(())
     }
 
-    fn cont(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), Err> {
+    fn cont(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), Err> {
         Ok(())
     }
 
-    fn br(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), Err> {
+    fn br(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), Err> {
         Ok(())
     }
 

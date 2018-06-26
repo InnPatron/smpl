@@ -1,4 +1,3 @@
-use lalrpop_util::ParseError;
 use super::ast::Module;
 use err::Err;
 
@@ -16,7 +15,7 @@ mod parser_tests;
 
 
 pub fn parse_module(input: &str) -> Result<Module, Err>{
-    let mut tokenizer = tokens::Tokenizer::new(input).map(|result| {
+    let tokenizer = tokens::Tokenizer::new(input).map(|result| {
         result.map(|spanned| {
             let (span, tok) = spanned.to_data();
             (span.start().byte_index(), tok, span.end().byte_index())

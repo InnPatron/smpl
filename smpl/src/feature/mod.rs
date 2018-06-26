@@ -1,7 +1,6 @@
 mod feature_list;
 
 use std::collections::HashSet;
-use std::collections::hash_set::Iter;
 
 pub use self::feature_list::*;
 

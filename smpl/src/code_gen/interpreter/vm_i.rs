@@ -1,4 +1,4 @@
-use analysis::{FieldId, FnId, TypeId};
+use analysis::{FnId, TypeId};
 
 use super::value::Value;
 

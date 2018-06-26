@@ -18,11 +18,11 @@ pub fn include(modules: &mut Vec<Module>) {
 }
 
 pub fn add(vm: &mut VM) {
-    vm.insert_builtin(MOD_STRING, STRING_LEN, Box::new(Len));
-    vm.insert_builtin(MOD_STRING, STRING_TO_STRING, Box::new(ToString));
-    vm.insert_builtin(MOD_STRING, STRING_APPEND, Box::new(Append));
-    vm.insert_builtin(MOD_STRING, STRING_TO_LOWER, Box::new(ToLower));
-    vm.insert_builtin(MOD_STRING, STRING_TO_UPPER, Box::new(ToUpper));
+    vm.insert_builtin(MOD_STRING, STRING_LEN, Box::new(Len)).unwrap();
+    vm.insert_builtin(MOD_STRING, STRING_TO_STRING, Box::new(ToString)).unwrap();
+    vm.insert_builtin(MOD_STRING, STRING_APPEND, Box::new(Append)).unwrap();
+    vm.insert_builtin(MOD_STRING, STRING_TO_LOWER, Box::new(ToLower)).unwrap();
+    vm.insert_builtin(MOD_STRING, STRING_TO_UPPER, Box::new(ToUpper)).unwrap();
 }
 
 struct Len;
@@ -42,7 +42,7 @@ struct ToString;
 
 impl BuiltinFn for ToString {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.expect("str::to_string() expected 1+ args");
+        let args = args.expect("str::to_string() expected 1+ args");
 
         let mut s = String::new();
 
@@ -101,7 +101,6 @@ impl BuiltinFn for ToUpper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::*;
 
     #[test]
     fn interpreter_str_len() {

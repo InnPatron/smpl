@@ -54,19 +54,19 @@ pub fn add(vm: &mut VM, item_type: &str) {
 
     let mod_name = strfmt(MOD_VEC, &vars).unwrap();
 
-    vm.insert_builtin(&mod_name, VEC_NEW, Box::new(New));
-    vm.insert_builtin(&mod_name, VEC_LEN, Box::new(Len));
-    vm.insert_builtin(&mod_name, VEC_CONTAINS, Box::new(Contains));
-    vm.insert_builtin(&mod_name, VEC_PUSH, Box::new(Push));
-    vm.insert_builtin(&mod_name, VEC_INSERT, Box::new(Insert));
-    vm.insert_builtin(&mod_name, VEC_GET, Box::new(Get));
-    vm.insert_builtin(&mod_name, VEC_REMOVE, Box::new(Remove));
+    vm.insert_builtin(&mod_name, VEC_NEW, Box::new(New)).unwrap();
+    vm.insert_builtin(&mod_name, VEC_LEN, Box::new(Len)).unwrap();
+    vm.insert_builtin(&mod_name, VEC_CONTAINS, Box::new(Contains)).unwrap();
+    vm.insert_builtin(&mod_name, VEC_PUSH, Box::new(Push)).unwrap();
+    vm.insert_builtin(&mod_name, VEC_INSERT, Box::new(Insert)).unwrap();
+    vm.insert_builtin(&mod_name, VEC_GET, Box::new(Get)).unwrap();
+    vm.insert_builtin(&mod_name, VEC_REMOVE, Box::new(Remove)).unwrap();
 }
 
 pub struct New;
 
 impl BuiltinFn for New {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, _args: Option<Vec<Value>>) -> Value {
         let mut vec = Struct::new();
         vec.set_field(VEC_DATA_KEY.to_string(), Value::Array(Vec::new()));
         vec.set_field(VEC_LEN_KEY.to_string(), Value::Int(0));
@@ -134,14 +134,14 @@ impl BuiltinFn for Insert {
             let data = vec_struct.ref_field(VEC_DATA_KEY).unwrap();
             
             let mut borrow = data.borrow_mut();
-            let mut data = irmatch!(*borrow; Value::Array(ref mut a) => a);
+            let data = irmatch!(*borrow; Value::Array(ref mut a) => a);
             data.insert(index as usize, Rc::new(RefCell::new(to_insert)));
         }
 
         {
             let len = vec_struct.ref_field(VEC_LEN_KEY).unwrap();
             let mut borrow = len.borrow_mut();
-            let mut len = irmatch!(*borrow; Value::Int(ref mut i) => i);
+            let len = irmatch!(*borrow; Value::Int(ref mut i) => i);
             *len += 1;
         }
 
@@ -164,14 +164,14 @@ impl BuiltinFn for Push {
             let data = vec_struct.ref_field(VEC_DATA_KEY).unwrap();
             
             let mut borrow = data.borrow_mut();
-            let mut data = irmatch!(*borrow; Value::Array(ref mut a) => a);
+            let data = irmatch!(*borrow; Value::Array(ref mut a) => a);
             data.push(Rc::new(RefCell::new(to_insert)));
         }
 
         {
             let len = vec_struct.ref_field(VEC_LEN_KEY).unwrap();
             let mut borrow = len.borrow_mut();
-            let mut len = irmatch!(*borrow; Value::Int(ref mut i) => i);
+            let len = irmatch!(*borrow; Value::Int(ref mut i) => i);
             *len += 1;
         }
 
@@ -215,7 +215,7 @@ impl BuiltinFn for Remove {
         {
             let data = vec_struct.ref_field(VEC_DATA_KEY).unwrap();
             let mut borrow = data.borrow_mut();
-            let mut data = irmatch!(*borrow; Value::Array(ref mut a) => a);
+            let data = irmatch!(*borrow; Value::Array(ref mut a) => a);
 
             data.remove(index);
         }
@@ -223,7 +223,7 @@ impl BuiltinFn for Remove {
         {
             let len = vec_struct.ref_field(VEC_LEN_KEY).unwrap();
             let mut borrow = len.borrow_mut();
-            let mut len = irmatch!(*borrow; Value::Int(ref mut i) => i);
+            let len = irmatch!(*borrow; Value::Int(ref mut i) => i);
             *len -= 1;
         }
 
@@ -236,7 +236,6 @@ impl BuiltinFn for Remove {
 mod tests {
 
     use super::*;
-    use super::super::*;
 
     #[test]
     fn interpreter_vec_new() {

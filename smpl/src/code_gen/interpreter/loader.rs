@@ -2,8 +2,6 @@ use super::builtins::*;
 use super::vm::VM;
 
 use ast::Module;
-use err::Err;
-use parser::parse_module;
 
 pub fn include(mut modules: Vec<Module>) -> Vec<Module> {
     log::include(&mut modules);

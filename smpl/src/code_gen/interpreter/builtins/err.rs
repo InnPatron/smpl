@@ -16,15 +16,15 @@ pub fn include(modules: &mut Vec<Module>) {
 }
 
 pub fn add(vm: &mut VM) {
-    vm.insert_builtin(MOD_ERR, ERR_PANIC, Box::new(Panic));
-    vm.insert_builtin(MOD_ERR, ERR_PANIC_MSG, Box::new(PanicMsg));
-    vm.insert_builtin(MOD_ERR, ERR_ASSERT, Box::new(Assert));
+    vm.insert_builtin(MOD_ERR, ERR_PANIC, Box::new(Panic)).unwrap();
+    vm.insert_builtin(MOD_ERR, ERR_PANIC_MSG, Box::new(PanicMsg)).unwrap();
+    vm.insert_builtin(MOD_ERR, ERR_ASSERT, Box::new(Assert)).unwrap();
 }
 
 pub struct Panic;
 
 impl BuiltinFn for Panic {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, _args: Option<Vec<Value>>) -> Value {
         panic!();
     }
 }

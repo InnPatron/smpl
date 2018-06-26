@@ -2,7 +2,6 @@ use err::*;
 use feature::*;
 use ast::{ 
     Function as AstFunction, 
-    Module as AstModule, 
     BuiltinFunction as AstBuiltinFunction, 
     BuiltinFnParams,
     AnonymousFn as AstAnonymousFn,
