@@ -1,4 +1,5 @@
 pub mod smpl_type;
+mod fn_type_generator;
 mod feature_checkers;
 mod semantic_ck;
 mod semantic_data;
@@ -16,6 +17,6 @@ pub use self::semantic_ck::check_program;
 pub use self::typed_ast::*;
 pub use self::semantic_data::*;
 pub use self::linear_cfg_traversal::{Traverser, Passenger};
-pub use self::semantic_data::{Program, Module};
+pub use self::semantic_data::{Program, Module, Function};
 pub use self::control_flow::CFG;
 pub use self::control_data::*;

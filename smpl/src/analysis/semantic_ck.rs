@@ -538,7 +538,7 @@ fn bar(a: int) -> int {
     return a + 5;
 }
 
-fn apply(f: Fn(int) -> int, in: int) -> int {
+fn apply(f: fn(int) -> int, in: int) -> int {
     return f(in);
 }
 
@@ -572,7 +572,7 @@ fn b() {
 }
 
 fn main() {
-    let a: Fn() -> int = mod2::foo;
+    let a: fn() -> int = mod2::foo;
 }
 ";
 
@@ -588,7 +588,7 @@ fn main() {
 mod mod1;
 
 struct T {
-    f: Fn(int),
+    f: fn(int),
 }
 
 fn b(a: int) {
@@ -597,7 +597,7 @@ fn b(a: int) {
 
 fn main() {
     let t: T = init T {f: b};
-    let f: Fn(int) = t.f;
+    let f: fn(int) = t.f;
     f(5);
 }
 ";
@@ -679,7 +679,7 @@ fn main() {
 mod mod1;
 
 struct T {
-    i: Fn() -> bool,
+    i: fn() -> bool,
 }
 
 builtin fn test_function(UNCHECKED) -> bool;
@@ -817,4 +817,61 @@ struct Data { }
         let mod1 = parse_module(mod1).unwrap();
         check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    #[should_panic]
+    fn anonymous_fn_invalid() {
+        let mod1 =
+"mod mod1;
+
+fn test() {
+    let func = fn (foo: int) -> int {
+        return true;
+    };
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
+    
+    #[test]
+    fn anonymous_fn_call() {
+        let mod1 =
+"
+mod mod1;
+
+fn test() -> int {
+    let func = fn (foo: int) -> int {
+        return foo + 5;
+    };
+
+    return func(10);
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn anonymous_fn_arg() {
+        let mod1 =
+"
+mod mod1;
+
+fn test2(func: fn(int) -> int) -> int {
+    return func(10);
+}
+
+fn test() -> int {
+    let func = fn (foo: int) -> int {
+        return foo + 5;
+    };
+
+    return test2(func);
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
+
 }

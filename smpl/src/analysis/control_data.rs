@@ -5,7 +5,7 @@ use super::typed_ast;
 use super::semantic_data::{BranchingId, LoopId, Universe};
 
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum Node {
     Start,
     End,
@@ -30,7 +30,7 @@ pub enum Node {
     Continue(LoopData),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum Edge {
     Normal,
     True,
@@ -38,7 +38,7 @@ pub enum Edge {
     BackEdge,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct BranchingData {
     pub branch_id: BranchingId,
 }
@@ -59,12 +59,6 @@ impl PartialEq for ExprData {
 pub struct AssignmentData {
     pub assignment: typed_ast::Assignment,
     pub span: Span,
-}
-
-impl PartialEq for AssignmentData {
-    fn eq(&self, other: &Self) -> bool {
-        self.assignment == other.assignment
-    }
 }
 
 #[derive(Debug, Clone)]

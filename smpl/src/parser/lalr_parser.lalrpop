@@ -16,7 +16,6 @@ extern {
 		"float_literal" => Token::FloatLiteral(<f64>),
 		"bool_literal" => Token::BoolLiteral(<bool>),
 
-		"Fn" => Token::FnTypeSignal,
 		"fn" => Token::Fn,
 		"struct" => Token::Struct,
 		"mod" => Token::Mod,
@@ -385,6 +384,18 @@ Primary: Expr = {
 	<l: @L> <a: ArrayInit> <r: @R> => Expr::ArrayInit(AstNode::new(a, Span::new(l, r))),
 
 	<l: @L> <struct_init: StructInit> <r: @R> => Expr::StructInit(AstNode::new(struct_init, Span::new(l, r))),
+
+	<l: @L> <a_fn: AnonymousFn> <r: @R> => Expr::AnonymousFn(AstNode::new(a_fn, Span::new(l, r))),
+};
+
+AnonymousFn: AnonymousFn = {
+	"fn" "(" <params: FnParameterList?> ")" <return_type: ("->" TypeAnnotation)?> <b: Block> => {
+		AnonymousFn {
+			params: params,
+			return_type: return_type.map(|r| r.1),
+			body: b,
+		}
+	}
 };
 
 Indexing: Indexing = {
@@ -513,7 +524,7 @@ TypeAnnotation: AstNode<TypeAnnotation> = {
 };
 
 FunctionTypeAnnotation: TypeAnnotation = {
-	"Fn" "(" <p: FunctionTypeAnnotationParameterList?> ")" <r: ("->" TypeAnnotation)?> => {
+	"fn" "(" <p: FunctionTypeAnnotationParameterList?> ")" <r: ("->" TypeAnnotation)?> => {
 		TypeAnnotation::FnType(p, r.map(|(_, t)| Box::new(t)))
 	}
 };

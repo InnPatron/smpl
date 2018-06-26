@@ -346,7 +346,7 @@ impl CFG {
     ///
     pub fn generate(
         universe: &Universe,
-        fn_def: ast::Function,
+        body: ast::AstNode<ast::Block>,
         fn_type: &FunctionType,
     ) -> Result<Self, ControlFlowErr> {
         let mut cfg = {
@@ -367,7 +367,7 @@ impl CFG {
 
         append_node!(cfg, head, previous, Node::EnterScope);
     
-        let (body, _) = fn_def.body.to_data();
+        let (body, _) = body.to_data();
         let instructions = body.0;
         let fn_graph = CFG::get_branch(universe, &mut cfg, instructions, None)?;
 
@@ -695,13 +695,13 @@ let b: int = 3;
         let parser = FnDeclParser::new();
         let fn_def = parser.parse(input).unwrap();
         let fn_def = fn_def.data();
-        let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
+        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
         {
-            assert_eq!(*cfg.graph.node_weight(cfg.start).unwrap(), Node::Start);
-            assert_eq!(*cfg.graph.node_weight(cfg.end).unwrap(), Node::End);
+            irmatch!(*cfg.graph.node_weight(cfg.start).unwrap(); Node::Start => ());
+            irmatch!(*cfg.graph.node_weight(cfg.end).unwrap(); Node::End => ());
             // start -> enter_scope -> var decl -> var decl -> implicit return -> exit_scope -> end
             assert_eq!(cfg.graph.node_count(), 7);
 
@@ -769,13 +769,13 @@ if (test) {
         let parser = FnDeclParser::new();
         let fn_def = parser.parse(input).unwrap();
         let fn_def = fn_def.data();
-        let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
+        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
         {
-            assert_eq!(*cfg.graph.node_weight(cfg.start).unwrap(), Node::Start);
-            assert_eq!(*cfg.graph.node_weight(cfg.end).unwrap(), Node::End);
+            irmatch!(*cfg.graph.node_weight(cfg.start).unwrap(); Node::Start => ());
+            irmatch!(*cfg.graph.node_weight(cfg.end).unwrap(); Node::End => ());
 
             // start -> enter_scope -> branch_split -> condition
             //      -[true]> {
@@ -921,7 +921,7 @@ if (test) {
         let parser = FnDeclParser::new();
         let fn_def = parser.parse(input).unwrap();
         let fn_def = fn_def.data();
-        let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
+        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -1065,7 +1065,7 @@ if (test) {
             }
 
             let end = exit_neighbors.next().unwrap();
-            assert_eq!(*node_w!(cfg, end), Node::End);
+            irmatch!(*node_w!(cfg, end); Node::End => ());
         }
     }
 
@@ -1085,7 +1085,7 @@ if (test) {
         let parser = FnDeclParser::new();
         let fn_def = parser.parse(input).unwrap();
         let fn_def = fn_def.data();
-        let cfg = CFG::generate(&universe, fn_def.clone(), &fn_type).unwrap();
+        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 

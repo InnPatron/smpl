@@ -32,6 +32,7 @@ impl RustBackend {
         denied.push(FeatureReasoning::with_feature(FUNCTION_VALUE));
         denied.push(FeatureReasoning::with_feature(BUILTIN_FN));
         denied.push(FeatureReasoning::with_feature(UNCHECKED_BUILTIN_FN_PARAMS));
+        denied.push(FeatureReasoning::with_feature(ANONYMOUS_FN));
 
         FeatureInfo::new(required, denied)
     }
@@ -184,7 +185,7 @@ impl<'a> RustModGen<'a> {
             let mut fn_gen = RustFnGen::new(universe, &cfg);
 
             {
-                let traverser = Traverser::new(cfg, &mut fn_gen);
+                let traverser = Traverser::new(&*cfg, &mut fn_gen);
                 traverser.traverse();
             }
 
@@ -587,6 +588,8 @@ impl<'a> RustFnGen<'a> {
             }
 
             Value::ModAccess(_) => panic!(),
+
+            Value::AnonymousFn(ref a_fn) => panic!(),
         }
 
         self.output.emit_line("};");

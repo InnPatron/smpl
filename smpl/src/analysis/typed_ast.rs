@@ -10,17 +10,18 @@ pub use ast::UniOp;
 pub use ast::Literal;
 use ast;
 
+use super::control_flow::CFG;
 use super::smpl_type::*;
 use super::semantic_data::*;
 use super::expr_flow;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
+#[derive(Debug, Clone)]
+pub struct Typed<T> where T: ::std::fmt::Debug + Clone {
     data: T,
     data_type: Cell<Option<TypeId>>
 }
 
-impl<T> Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
+impl<T> Typed<T> where T: ::std::fmt::Debug + Clone {
 
     pub fn data(&self) -> &T {
         &self.data
@@ -54,18 +55,18 @@ impl<T> Typed<T> where T: ::std::fmt::Debug + Clone + PartialEq {
     }
 }
 
+impl<T> PartialEq<Typed<T>> for Typed<T> where T: PartialEq + Clone + ::std::fmt::Debug {
+    fn eq(&self, other: &Typed<T>) -> bool {
+        self.data == other.data && self.data_type == other.data_type
+    }
+}
+
 
 #[derive(Debug, Clone)]
 pub struct Assignment {
     field_access: FieldAccess,
     access_span: Span,
     value: self::Expr,
-}
-
-impl PartialEq for Assignment {
-    fn eq(&self, other: &Assignment) -> bool {
-        self.field_access == other.field_access && self.value == other.value
-    }
 }
 
 impl Assignment {
@@ -226,7 +227,7 @@ pub struct Tmp {
 
 impl PartialEq for Tmp {
     fn eq(&self, other: &Tmp) -> bool {
-        self.id == other.id && self.value == other.value
+        self.id == other.id
     }
 }
 
@@ -244,7 +245,7 @@ impl Tmp {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Value {
     Literal(ast::Literal),
     Binding(self::Binding),
@@ -256,6 +257,7 @@ pub enum Value {
     ArrayInit(self::ArrayInit),
     Indexing(Indexing),
     ModAccess(self::ModAccess),
+    AnonymousFn(self::AnonymousFn),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -289,19 +291,19 @@ impl ModAccess {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Indexing {
     pub array: Typed<TmpId>,
     pub indexer: Typed<TmpId>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum ArrayInit {
     List(Vec<Typed<TmpId>>),
     Value(Typed<TmpId>, u64),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct StructInit {
     struct_type_name: ast::ModulePath,
     field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>,
@@ -388,7 +390,7 @@ impl StructInit {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct FieldAccess {
     raw_path: ast::Path,
     path: self::Path,
@@ -425,7 +427,7 @@ impl FieldAccess {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Binding {
     ident: ast::AstNode<ast::Ident>,
     binding_id: Cell<Option<BindingId>>,
@@ -458,7 +460,7 @@ impl Binding {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct FnCall {
     path: ast::ModulePath,
     args: Option<Vec<Typed<TmpId>>>,
@@ -495,7 +497,7 @@ impl FnCall {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Path {
     root_name: ast::AstNode<ast::Ident>,
     root_indexing: Option<self::Expr>,
@@ -580,14 +582,14 @@ impl self::Path {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum PathSegment {
     Ident(Field),
     Indexing(Field, self::Expr),
 }
 
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Field {
     name: ast::AstNode<ast::Ident>,
     field_id: RefCell<Option<Typed<FieldId>>>
@@ -641,5 +643,36 @@ impl Field {
             Some(ref t) => t.set_type_id(id),
             None => panic!("No field"),
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct AnonymousFn {
+    a_fn: ast::AnonymousFn,
+    fn_id: Cell<Option<FnId>>,
+}
+
+impl AnonymousFn {
+    pub fn new(a_fn: ast::AnonymousFn) -> AnonymousFn {
+        AnonymousFn {
+            a_fn: a_fn,
+            fn_id: Cell::new(None)
+        }
+    }
+
+    pub fn a_fn(&self) -> &ast::AnonymousFn {
+        &self.a_fn
+    }
+
+    pub fn fn_id(&self) -> FnId {
+        self.fn_id.get().unwrap()
+    }
+
+    pub fn set_fn_id(&self, fn_id: FnId) {
+        if self.fn_id.get().is_some() {
+            panic!("Attempting to overwrite an anonymous function's FnId");
+        }
+
+        self.fn_id.set(Some(fn_id));
     }
 }
