@@ -2,14 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use ast::Ident;
 use err::Err;
-use analysis::semantic_data::{
-    VarId, 
-    TypeId, 
-    ModuleId, 
-    FnId, 
-    FieldId, 
-    Program
-};
+use analysis::semantic_data::{FieldId, FnId, ModuleId, Program, TypeId, VarId};
 
 #[derive(Clone, Debug)]
 pub struct Metadata {
@@ -26,7 +19,6 @@ pub struct Metadata {
 }
 
 impl Metadata {
-
     pub fn new() -> Metadata {
         Metadata {
             fn_param_ids: HashMap::new(),
@@ -89,7 +81,7 @@ impl Metadata {
     pub fn insert_function_param_ids(&mut self, fn_id: FnId, params: Vec<FunctionParameter>) {
         if self.fn_param_ids.insert(fn_id, params).is_some() {
             panic!();
-        } 
+        }
     }
 
     pub fn function_param_ids(&self, fn_id: FnId) -> &[FunctionParameter] {
@@ -105,7 +97,9 @@ impl Metadata {
 
         for (_, mod_id) in universe.all_modules().into_iter() {
             let module = universe.get_module(*mod_id);
-            if let Ok(id) = module.module_scope().get_fn(&ModulePath(vec![AstNode::new(ident!["main"], Span::new(0, 0))])) {
+            if let Ok(id) = module.module_scope().get_fn(&ModulePath(vec![
+                AstNode::new(ident!["main"], Span::new(0, 0)),
+            ])) {
                 if m.main.is_none() {
                     m.main = Some((id, *mod_id))
                 } else {
@@ -143,7 +137,11 @@ pub struct FnLayout {
 }
 
 impl FnLayout {
-    pub fn new(locals: Vec<(VarId, TypeId)>, params: Vec<(VarId, TypeId)>, ret_ty: TypeId) -> FnLayout {
+    pub fn new(
+        locals: Vec<(VarId, TypeId)>,
+        params: Vec<(VarId, TypeId)>,
+        ret_ty: TypeId,
+    ) -> FnLayout {
         FnLayout {
             locals: locals,
             params: params,
@@ -191,10 +189,7 @@ pub struct FunctionParameter {
 
 impl FunctionParameter {
     pub fn new(name: Ident, id: VarId) -> FunctionParameter {
-        FunctionParameter {
-            id: id,
-            name: name
-        }
+        FunctionParameter { id: id, name: name }
     }
 
     pub fn var_id(&self) -> VarId {

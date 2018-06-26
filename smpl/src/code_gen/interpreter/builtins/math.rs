@@ -25,7 +25,6 @@ pub const MATH_FLOOR: &'static str = "floor";
 pub const MATH_CEIL: &'static str = "ceil";
 pub const MATH_ROUND: &'static str = "round";
 
-
 pub const MATH_DECLARATION: &'static str = include_str!("math.smpl");
 
 pub fn include(modules: &mut Vec<Module>) {
@@ -33,25 +32,40 @@ pub fn include(modules: &mut Vec<Module>) {
 }
 
 pub fn add(vm: &mut VM) {
-    vm.insert_builtin(MOD_MATH, MATH_SIN, Box::new(Sin)).unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_COS, Box::new(Cos)).unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_TAN, Box::new(Tan)).unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_SIN, Box::new(Sin))
+        .unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_COS, Box::new(Cos))
+        .unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_TAN, Box::new(Tan))
+        .unwrap();
 
-    vm.insert_builtin(MOD_MATH, MATH_ASIN, Box::new(Asin)).unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_ACOS, Box::new(Acos)).unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_ATAN, Box::new(Atan)).unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_ATAN2, Box::new(Atan2)).unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_ASIN, Box::new(Asin))
+        .unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_ACOS, Box::new(Acos))
+        .unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_ATAN, Box::new(Atan))
+        .unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_ATAN2, Box::new(Atan2))
+        .unwrap();
 
-    vm.insert_builtin(MOD_MATH, MATH_TO_RADIANS, Box::new(ToRadians)).unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_TO_DEGREES, Box::new(ToDegrees)).unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_TO_RADIANS, Box::new(ToRadians))
+        .unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_TO_DEGREES, Box::new(ToDegrees))
+        .unwrap();
 
-    vm.insert_builtin(MOD_MATH, MATH_FPOWF, Box::new(FPowF)).unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_FPOWI, Box::new(FPowI)).unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_IPOW, Box::new(IPow)).unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_FPOWF, Box::new(FPowF))
+        .unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_FPOWI, Box::new(FPowI))
+        .unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_IPOW, Box::new(IPow))
+        .unwrap();
 
-    vm.insert_builtin(MOD_MATH, MATH_FLOOR, Box::new(Floor)).unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_CEIL, Box::new(Ceil)).unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_ROUND, Box::new(Round)).unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_FLOOR, Box::new(Floor))
+        .unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_CEIL, Box::new(Ceil))
+        .unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_ROUND, Box::new(Round))
+        .unwrap();
 }
 
 /// In radians

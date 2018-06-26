@@ -1,4 +1,4 @@
-use std::cell::{RefCell, Cell};
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::slice::Iter;
 use std::iter::Iterator;
@@ -15,13 +15,18 @@ use super::semantic_data::*;
 use super::expr_flow;
 
 #[derive(Debug, Clone)]
-pub struct Typed<T> where T: ::std::fmt::Debug + Clone {
+pub struct Typed<T>
+where
+    T: ::std::fmt::Debug + Clone,
+{
     data: T,
-    data_type: Cell<Option<TypeId>>
+    data_type: Cell<Option<TypeId>>,
 }
 
-impl<T> Typed<T> where T: ::std::fmt::Debug + Clone {
-
+impl<T> Typed<T>
+where
+    T: ::std::fmt::Debug + Clone,
+{
     pub fn data(&self) -> &T {
         &self.data
     }
@@ -29,7 +34,7 @@ impl<T> Typed<T> where T: ::std::fmt::Debug + Clone {
     pub fn untyped(data: T) -> Typed<T> {
         Typed {
             data: data,
-            data_type: Cell::new(None) 
+            data_type: Cell::new(None),
         }
     }
 
@@ -54,12 +59,14 @@ impl<T> Typed<T> where T: ::std::fmt::Debug + Clone {
     }
 }
 
-impl<T> PartialEq<Typed<T>> for Typed<T> where T: PartialEq + Clone + ::std::fmt::Debug {
+impl<T> PartialEq<Typed<T>> for Typed<T>
+where
+    T: PartialEq + Clone + ::std::fmt::Debug,
+{
     fn eq(&self, other: &Typed<T>) -> bool {
         self.data == other.data && self.data_type == other.data_type
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct Assignment {
@@ -103,8 +110,9 @@ pub struct LocalVarDecl {
 
 impl PartialEq for LocalVarDecl {
     fn eq(&self, other: &LocalVarDecl) -> bool {
-        self.var_type == other.var_type && self.var_name == other.var_name && self.var_init == other.var_init &&
-            self.type_id == other.type_id && self.var_id == other.var_id
+        self.var_type == other.var_type && self.var_name == other.var_name
+            && self.var_init == other.var_init && self.type_id == other.type_id
+            && self.var_id == other.var_id
     }
 }
 
@@ -134,7 +142,10 @@ impl LocalVarDecl {
 
     pub fn set_type_id(&self, id: TypeId) {
         if self.type_id.get().is_some() {
-            panic!("Attempting to override {} for local variable declarration {:?}", id, self);
+            panic!(
+                "Attempting to override {} for local variable declarration {:?}",
+                id, self
+            );
         } else {
             self.type_id.set(Some(id));
         }
@@ -167,7 +178,6 @@ impl PartialEq for Expr {
 }
 
 impl Expr {
-
     pub fn new() -> Expr {
         Expr {
             map: HashMap::new(),
@@ -177,7 +187,9 @@ impl Expr {
     }
 
     pub fn get_tmp(&self, id: TmpId) -> &Tmp {
-        self.map.get(&id).expect("Given ID should always be valid if taken from the correct Expr")
+        self.map
+            .get(&id)
+            .expect("Given ID should always be valid if taken from the correct Expr")
     }
 
     pub fn execution_order(&self) -> Iter<TmpId> {
@@ -269,7 +281,7 @@ impl ModAccess {
     pub fn new(path: ast::ModulePath) -> ModAccess {
         ModAccess {
             path: path,
-            id: Cell::new(None)
+            id: Cell::new(None),
         }
     }
 
@@ -311,7 +323,10 @@ pub struct StructInit {
 }
 
 impl StructInit {
-    pub fn new(struct_type_name: ast::ModulePath, field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>) -> StructInit {
+    pub fn new(
+        struct_type_name: ast::ModulePath,
+        field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>,
+    ) -> StructInit {
         StructInit {
             struct_type_name: struct_type_name,
             struct_type: Cell::new(None),
@@ -326,30 +341,29 @@ impl StructInit {
 
     pub fn set_struct_type(&self, id: TypeId) {
         if self.struct_type.get().is_some() {
-            panic!("Attempting to overwrite {} of the struct init with {}", self.struct_type.get().unwrap(), id);
+            panic!(
+                "Attempting to overwrite {} of the struct init with {}",
+                self.struct_type.get().unwrap(),
+                id
+            );
         } else {
             self.struct_type.set(Some(id));
         }
     }
 
     pub fn field_init(&self) -> Option<Vec<(FieldId, Typed<TmpId>)>> {
-        self.mapped_field_init.borrow()
-            .clone()
+        self.mapped_field_init.borrow().clone()
     }
 
-    pub fn init_order<'a>(&'a self) -> Option<impl Iterator<Item=&'a ast::Ident>> {
+    pub fn init_order<'a>(&'a self) -> Option<impl Iterator<Item = &'a ast::Ident>> {
         match self.field_init {
-            Some(ref vec) => {
-                Some(vec.iter().map(|(ref ident, _)| ident))
-            }
+            Some(ref vec) => Some(vec.iter().map(|(ref ident, _)| ident)),
 
             None => None,
         }
     }
 
-    pub fn set_field_init(&self, universe: &Universe) 
-        -> Result<(), Vec<ast::Ident>> {
-        
+    pub fn set_field_init(&self, universe: &Universe) -> Result<(), Vec<ast::Ident>> {
         let t = universe.get_type(self.struct_type.get().unwrap());
         let t = match *t {
             SmplType::Struct(ref t) => t,
@@ -415,7 +429,10 @@ impl FieldAccess {
 
     pub fn set_field_type_id(&self, id: TypeId) {
         if self.field_type_id.get().is_some() {
-            panic!("Attempting to override {} for local variable declarration {:?}", id, self);
+            panic!(
+                "Attempting to override {} for local variable declarration {:?}",
+                id, self
+            );
         } else {
             self.field_type_id.set(Some(id));
         }
@@ -444,11 +461,17 @@ impl Binding {
         self.ident.data()
     }
 
-    pub fn set_id<T>(&self, id: T) where T: Into<BindingId> + ::std::fmt::Debug {
+    pub fn set_id<T>(&self, id: T)
+    where
+        T: Into<BindingId> + ::std::fmt::Debug,
+    {
         if self.binding_id.get().is_some() {
-            panic!("Attempting to overwrite {:?} of the Ident {:?} with {:?}", 
-                   self.binding_id.get().unwrap(), 
-                   self.ident, id);
+            panic!(
+                "Attempting to overwrite {:?} of the Ident {:?} with {:?}",
+                self.binding_id.get().unwrap(),
+                self.ident,
+                id
+            );
         } else {
             self.binding_id.set(Some(id.into()));
         }
@@ -483,9 +506,16 @@ impl FnCall {
         self.args.as_ref()
     }
 
-    pub fn set_id<T>(&self, id: T) where T: ::std::fmt::Debug + Into<BindingId> {
+    pub fn set_id<T>(&self, id: T)
+    where
+        T: ::std::fmt::Debug + Into<BindingId>,
+    {
         if self.fn_nomer.get().is_some() {
-            panic!("Attempting to overwrite {:#?} of the FnCall {:?}", self.fn_nomer.get().unwrap(), self.path);
+            panic!(
+                "Attempting to overwrite {:#?} of the FnCall {:?}",
+                self.fn_nomer.get().unwrap(),
+                self.path
+            );
         } else {
             self.fn_nomer.set(Some(id.into()));
         }
@@ -514,20 +544,20 @@ impl self::Path {
             ast::PathSegment::Indexing(i, e) => (i, Some(expr_flow::flatten(universe, *e))),
         };
 
-        let path = path_iter.map(|ps| {
-            match ps {
+        let path = path_iter
+            .map(|ps| match ps {
                 ast::PathSegment::Ident(i) => self::PathSegment::Ident(Field::new(i)),
                 ast::PathSegment::Indexing(i, e) => {
                     self::PathSegment::Indexing(Field::new(i), expr_flow::flatten(universe, *e))
                 }
-            }
-        }).collect();
+            })
+            .collect();
 
         self::Path {
             root_name: name,
             root_indexing: indexing,
             root_var: RefCell::new(None),
-            path: path
+            path: path,
         }
     }
 
@@ -544,7 +574,7 @@ impl self::Path {
 
         match *r {
             Some(ref typed_var_id) => *typed_var_id.data(),
-            None => panic!("No root var")
+            None => panic!("No root var"),
         }
     }
 
@@ -553,7 +583,7 @@ impl self::Path {
 
         match *r {
             Some(ref typed_var_id) => typed_var_id.type_id().unwrap(),
-            None => panic!("No root var")
+            None => panic!("No root var"),
         }
     }
 
@@ -587,15 +617,13 @@ pub enum PathSegment {
     Indexing(Field, self::Expr),
 }
 
-
 #[derive(Debug, Clone)]
 pub struct Field {
     name: ast::AstNode<ast::Ident>,
-    field_id: RefCell<Option<Typed<FieldId>>>
+    field_id: RefCell<Option<Typed<FieldId>>>,
 }
 
 impl Field {
-
     pub fn new(name: ast::AstNode<ast::Ident>) -> Field {
         Field {
             name: name,
@@ -612,7 +640,7 @@ impl Field {
 
         match *f {
             Some(ref typed_field_id) => *typed_field_id.data(),
-            None => panic!("No field")
+            None => panic!("No field"),
         }
     }
 
@@ -621,7 +649,7 @@ impl Field {
 
         match *f {
             Some(ref typed_field_id) => typed_field_id.type_id().unwrap(),
-            None => panic!("No field")
+            None => panic!("No field"),
         }
     }
 
@@ -655,7 +683,7 @@ impl AnonymousFn {
     pub fn new(a_fn: ast::AnonymousFn) -> AnonymousFn {
         AnonymousFn {
             a_fn: a_fn,
-            fn_id: Cell::new(None)
+            fn_id: Cell::new(None),
         }
     }
 

@@ -23,11 +23,7 @@ fn main() {
         let mut file = match File::open(path.clone()) {
             Ok(file) => files.push(file),
             Err(err) => {
-                eprintln!(
-                    "Cannot open input file ({}):\n{}",
-                    path.display(),
-                    err
-                );
+                eprintln!("Cannot open input file ({}):\n{}", path.display(), err);
                 return;
             }
         };
@@ -63,8 +59,7 @@ fn main() {
         output_path.push("output");
         output_path.set_extension("rs");
     }
-    
-    
+
     let mut output_file = {
         let open_result = OpenOptions::new()
             .write(true)
@@ -92,14 +87,15 @@ fn main() {
             None => {
                 eprintln!(
                     "Path to file {} is not a valid UTF8 String",
-                    file_path.display());
+                    file_path.display()
+                );
                 return;
             }
         };
 
         input.push((file_name, code.as_str()));
     }
-           
+
     let result = match backend {
         Backend::Rust => rust_gen(input),
     };
@@ -136,19 +132,16 @@ fn rust_gen(input: Vec<(&str, &str)>) -> Result<Vec<u8>, String> {
 
     let mut modules = Vec::new();
     for (file_name, code) in input {
-
         let mut module = parse_module(code).map_err(|err| format!("{:?}", err))?;
-    
+
         module.name_if_none(file_name);
 
         modules.push(module);
     }
-    
+
     let program = check_program(modules).map_err(|err| format!("{:?}", err))?;
 
-    let program = RustBackend::new()
-        .wrap_mod()
-        .generate(&program);
+    let program = RustBackend::new().wrap_mod().generate(&program);
 
     let program = match program {
         Ok(p) => p,

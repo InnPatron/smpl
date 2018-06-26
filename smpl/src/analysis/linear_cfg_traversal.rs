@@ -180,7 +180,9 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     }
 
                     if found_foot == false {
-                        panic!("Traversed the rest of the graph but did not find a Node::LoopFoot.");
+                        panic!(
+                            "Traversed the rest of the graph but did not find a Node::LoopFoot."
+                        );
                     }
 
                     match *self.graph.node_weight(false_path) {
@@ -204,7 +206,8 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     for _ in 0..self.node_count {
                         match *self.graph.node_weight(current_node) {
                             Node::BranchMerge(ref branch_data) => {
-                                self.passenger.branch_end_true_path(current_node, branch_data)?;
+                                self.passenger
+                                    .branch_end_true_path(current_node, branch_data)?;
                                 merge = Some(current_node);
                                 break;
                             }
@@ -230,7 +233,8 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     for _ in 0..self.node_count {
                         match *self.graph.node_weight(current_node) {
                             Node::BranchMerge(ref branch_data) => {
-                                self.passenger.branch_end_false_path(current_node, branch_data)?;
+                                self.passenger
+                                    .branch_end_false_path(current_node, branch_data)?;
                                 merge = Some(current_node);
                                 break;
                             }

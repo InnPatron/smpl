@@ -16,8 +16,8 @@ use super::linear_cfg_traversal::*;
 use super::control_flow::CFG;
 use super::control_data::*;
 use super::typed_ast::*;
-use super::semantic_data::{VarId, FnId, ScopedData, TypeId, Universe, TypeConstructor, ModuleId, Program, BindingInfo};
-
+use super::semantic_data::{BindingInfo, FnId, ModuleId, Program, ScopedData, TypeConstructor,
+                           TypeId, Universe, VarId};
 
 struct FnAnalyzer<'a> {
     program: &'a mut Program,
@@ -47,7 +47,6 @@ pub fn analyze_fn(
 
     let func_type;
 
-
     match *unknown_type {
         SmplType::Function(ref fn_type) => {
             fn_return_type = program.universe().get_type(fn_type.return_type.clone());
@@ -72,19 +71,19 @@ pub fn analyze_fn(
 
     // Add parameters to the current scope.
     match func_type.params {
-        ParamType::Checked(ref params) => {
-            for (param_type_id, meta) in params.iter()
-                .zip(analyzer.program.metadata().function_param_ids(fn_id).iter()) {
-                let v_id = meta.var_id();
-                let p_name = meta.name();
-                let param_type_id = *param_type_id;
-                analyzer
-                    .current_scope
-                    .insert_var(p_name.clone(), v_id, param_type_id);
+        ParamType::Checked(ref params) => for (param_type_id, meta) in params
+            .iter()
+            .zip(analyzer.program.metadata().function_param_ids(fn_id).iter())
+        {
+            let v_id = meta.var_id();
+            let p_name = meta.name();
+            let param_type_id = *param_type_id;
+            analyzer
+                .current_scope
+                .insert_var(p_name.clone(), v_id, param_type_id);
 
-                param_types.push((v_id, param_type_id));
-            }
-        }
+            param_types.push((v_id, param_type_id));
+        },
 
         ParamType::Unchecked => (),
     }
@@ -99,17 +98,16 @@ pub fn analyze_fn(
         traverser.traverse()?;
     }
 
-    analyzer.program.metadata_mut().insert_fn_layout(fn_id, FnLayout::new(
-            analyzer.locals, 
-            param_types,
-            fn_return_type_id));
+    analyzer.program.metadata_mut().insert_fn_layout(
+        fn_id,
+        FnLayout::new(analyzer.locals, param_types, fn_return_type_id),
+    );
 
     return_trace(&*cfg)
 }
 
 // TODO: maybe add reverse traverser?
 fn return_trace(cfg: &CFG) -> Result<(), Err> {
-
     let end = cfg.end();
     let scope_exit = cfg.previous(end);
 
@@ -142,7 +140,7 @@ fn return_trace(cfg: &CFG) -> Result<(), Err> {
 
 fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, Err> {
     use super::control_data::Node;
- 
+
     match *cfg.node_weight(id) {
         Node::Return(..) => Ok(None),
 
@@ -167,20 +165,18 @@ fn resolve_bin_op(
     let rh_type = universe.get_type(rhs);
 
     match *op {
-        Add | Sub | Mul | Div | Mod => {
-            match (&*lh_type, &*rh_type) {
-                (&SmplType::Int, &SmplType::Int) => Ok(universe.int()),
-                (&SmplType::Float, &SmplType::Float) => Ok(universe.float()),
+        Add | Sub | Mul | Div | Mod => match (&*lh_type, &*rh_type) {
+            (&SmplType::Int, &SmplType::Int) => Ok(universe.int()),
+            (&SmplType::Float, &SmplType::Float) => Ok(universe.float()),
 
-                _ => Err(TypeErr::BinOp {
-                    op: op.clone(),
-                    expected: vec![universe.int(), universe.float()],
-                    lhs: lhs,
-                    rhs: rhs,
-                    span: span,
-                }.into()),
-            }
-        }
+            _ => Err(TypeErr::BinOp {
+                op: op.clone(),
+                expected: vec![universe.int(), universe.float()],
+                lhs: lhs,
+                rhs: rhs,
+                span: span,
+            }.into()),
+        },
 
         LogicalAnd | LogicalOr => match (&*lh_type, &*rh_type) {
             (&SmplType::Bool, &SmplType::Bool) => Ok(universe.boolean()),
@@ -193,19 +189,17 @@ fn resolve_bin_op(
             }.into()),
         },
 
-        GreaterEq | LesserEq | Greater | Lesser => {
-            match (&*lh_type, &*rh_type) {
-                (&SmplType::Int, &SmplType::Int) => Ok(universe.boolean()),
-                (&SmplType::Float, &SmplType::Float) => Ok(universe.boolean()),
+        GreaterEq | LesserEq | Greater | Lesser => match (&*lh_type, &*rh_type) {
+            (&SmplType::Int, &SmplType::Int) => Ok(universe.boolean()),
+            (&SmplType::Float, &SmplType::Float) => Ok(universe.boolean()),
 
-                _ => Err(TypeErr::BinOp {
-                    op: op.clone(),
-                    expected: vec![universe.int(), universe.float()],
-                    lhs: lhs,
-                    rhs: rhs,
-                    span: span,
-                }.into()),
-            }
+            _ => Err(TypeErr::BinOp {
+                op: op.clone(),
+                expected: vec![universe.int(), universe.float()],
+                lhs: lhs,
+                rhs: rhs,
+                span: span,
+            }.into()),
         },
 
         Eq | InEq => {
@@ -254,13 +248,11 @@ fn resolve_uni_op(
 }
 
 impl<'a> FnAnalyzer<'a> {
-
     fn resolve_field_access(
         &mut self,
         field_access: &FieldAccess,
-        span: Span
+        span: Span,
     ) -> Result<TypeId, Err> {
-
         let path = field_access.path();
         let path_iter = path.path().iter();
 
@@ -283,7 +275,7 @@ impl<'a> FnAnalyzer<'a> {
             match *indexing_type {
                 SmplType::Int => (),
                 _ => {
-                    return Err(TypeErr::InvalidIndex { 
+                    return Err(TypeErr::InvalidIndex {
                         found: indexing_type_id,
                         span: e.span(),
                     }.into());
@@ -295,9 +287,9 @@ impl<'a> FnAnalyzer<'a> {
                     current_type_id = a.base_type;
                 }
                 _ => {
-                    return Err(TypeErr::NotAnArray { 
+                    return Err(TypeErr::NotAnArray {
                         found: var_type_id,
-                        span: e.span()
+                        span: e.span(),
                     }.into());
                 }
             }
@@ -310,64 +302,62 @@ impl<'a> FnAnalyzer<'a> {
 
         for (index, field) in path_iter.enumerate() {
             match *current_type {
-                SmplType::Struct(ref struct_type) => {
-                    match *field {
-                        PathSegment::Ident(ref field) => {
-                            let name = field.name();
-                            let field_id = struct_type.field_id(name).ok_or(TypeErr::UnknownField {
-                                name: name.clone(),
-                                struct_type: current_type_id,
-                                span: span,
-                            })?;
-                            current_type_id = struct_type.field_type(field_id).unwrap();
+                SmplType::Struct(ref struct_type) => match *field {
+                    PathSegment::Ident(ref field) => {
+                        let name = field.name();
+                        let field_id = struct_type.field_id(name).ok_or(TypeErr::UnknownField {
+                            name: name.clone(),
+                            struct_type: current_type_id,
+                            span: span,
+                        })?;
+                        current_type_id = struct_type.field_type(field_id).unwrap();
 
-                            field.set_field_id(field_id);
-                            field.set_field_type(current_type_id);
+                        field.set_field_id(field_id);
+                        field.set_field_type(current_type_id);
+                    }
+
+                    PathSegment::Indexing(ref field, ref indexing) => {
+                        let name = field.name();
+                        let field_id = struct_type.field_id(name).ok_or(TypeErr::UnknownField {
+                            name: name.clone(),
+                            struct_type: current_type_id,
+                            span: span,
+                        })?;
+
+                        let field_type_id = struct_type.field_type(field_id).unwrap();
+                        let field_type = self.program.universe().get_type(field_type_id);
+
+                        field.set_field_id(field_id);
+                        field.set_field_type(field_type_id);
+
+                        let indexing_type_id = self.resolve_expr(indexing)?;
+                        let indexing_type = self.program.universe().get_type(indexing_type_id);
+
+                        match *indexing_type {
+                            SmplType::Int => (),
+
+                            _ => {
+                                return Err(TypeErr::InvalidIndex {
+                                    found: indexing_type_id,
+                                    span: indexing.span(),
+                                }.into());
+                            }
                         }
 
-                        PathSegment::Indexing(ref field, ref indexing) => {
-                            let name = field.name();
-                            let field_id = struct_type.field_id(name).ok_or(TypeErr::UnknownField {
-                                name: name.clone(),
-                                struct_type: current_type_id,
-                                span: span,
-                            })?;
-
-                            let field_type_id = struct_type.field_type(field_id).unwrap();
-                            let field_type = self.program.universe().get_type(field_type_id);
-
-                            field.set_field_id(field_id);
-                            field.set_field_type(field_type_id);
-
-                            let indexing_type_id = self.resolve_expr(indexing)?;
-                            let indexing_type = self.program.universe().get_type(indexing_type_id);
-
-                            match *indexing_type {
-                                SmplType::Int => (),
-
-                                _ => {
-                                    return Err(TypeErr::InvalidIndex { 
-                                        found: indexing_type_id,
-                                        span: indexing.span(),
-                                    }.into());
-                                },
+                        match *field_type {
+                            SmplType::Array(ref a) => {
+                                current_type_id = a.base_type;
                             }
-                            
-                            match *field_type {
-                                SmplType::Array(ref a) => {
-                                    current_type_id = a.base_type;
-                                }
 
-                                _ => {
-                                    return Err(TypeErr::NotAnArray { 
-                                        found: field_type_id,
-                                        span: span,
-                                    }.into());
-                                },
+                            _ => {
+                                return Err(TypeErr::NotAnArray {
+                                    found: field_type_id,
+                                    span: span,
+                                }.into());
                             }
                         }
                     }
-                }
+                },
 
                 _ => {
                     return Err(TypeErr::FieldAccessOnNonStruct {
@@ -409,7 +399,8 @@ impl<'a> FnAnalyzer<'a> {
                 Value::StructInit(ref init) => {
                     // Get type info
                     let type_name = init.type_name();
-                    let unknown_type_id = self.current_scope.type_id(self.program.universe(), type_name.into())?;
+                    let unknown_type_id = self.current_scope
+                        .type_id(self.program.universe(), type_name.into())?;
                     let unknown_type = self.program.universe().get_type(unknown_type_id);
 
                     // Check if type is a struct.
@@ -428,7 +419,7 @@ impl<'a> FnAnalyzer<'a> {
 
                     init.set_struct_type(struct_type_id);
                     if let Err(unknown_fields) = init.set_field_init(self.program.universe()) {
-                         // TODO: Allow for multiple errors
+                        // TODO: Allow for multiple errors
                         /*let ident = struct_type.get_ident(id);
                                 return Err(TypeErr::UnknownField {
                                     name: ident.clone(),
@@ -444,10 +435,8 @@ impl<'a> FnAnalyzer<'a> {
                         }.into());
                     }
 
-                    
                     match init.field_init() {
                         Some(init_list) => {
-
                             if init_list.len() != struct_type.fields.len() {
                                 // Missing fields -> struct is not fully initialized
                                 return Err(TypeErr::StructNotFullyInitialized {
@@ -462,10 +451,7 @@ impl<'a> FnAnalyzer<'a> {
                                         struct_type
                                             .field_map
                                             .iter()
-                                            .filter(|&(_, ref id)| {
-                                                
-                                                !inits.contains(id)
-                                            })
+                                            .filter(|&(_, ref id)| !inits.contains(id))
                                             .map(|(ident, _)| ident.clone())
                                             .collect::<Vec<_>>()
                                     },
@@ -509,33 +495,34 @@ impl<'a> FnAnalyzer<'a> {
                                 }.into());
                             }
                         }
-                    } 
+                    }
 
                     tmp_type = struct_type_id;
                 }
 
-                Value::Binding(ref var) => {
-                    match self.current_scope.binding_info(var.ident())? {
-                        BindingInfo::Var(var_id, type_id) => {
-                            var.set_id(var_id);
-                            tmp_type = type_id;
-                        }
-
-                        BindingInfo::Fn(fn_id) => {
-                            self.program.features_mut().add_feature(FUNCTION_VALUE);
-
-                            if self.program.metadata_mut().is_builtin_params_unchecked(fn_id) {
-                                return Err(Err::UncheckedFunctionBinding(var.ident().clone()));
-                            }
-
-                            let f = self.program.universe().get_fn(fn_id);
-                            let fn_type_id = f.type_id();
-
-                            var.set_id(fn_id);
-                            tmp_type = fn_type_id;
-                        }
+                Value::Binding(ref var) => match self.current_scope.binding_info(var.ident())? {
+                    BindingInfo::Var(var_id, type_id) => {
+                        var.set_id(var_id);
+                        tmp_type = type_id;
                     }
-                }
+
+                    BindingInfo::Fn(fn_id) => {
+                        self.program.features_mut().add_feature(FUNCTION_VALUE);
+
+                        if self.program
+                            .metadata_mut()
+                            .is_builtin_params_unchecked(fn_id)
+                        {
+                            return Err(Err::UncheckedFunctionBinding(var.ident().clone()));
+                        }
+
+                        let f = self.program.universe().get_fn(fn_id);
+                        let fn_type_id = f.type_id();
+
+                        var.set_id(fn_id);
+                        tmp_type = fn_type_id;
+                    }
+                },
 
                 Value::FieldAccess(ref field_access) => {
                     let accessed_field_type_id =
@@ -551,25 +538,32 @@ impl<'a> FnAnalyzer<'a> {
                     lhs.set_type_id(lhs_type_id);
                     rhs.set_type_id(rhs_type_id);
 
-                    tmp_type = resolve_bin_op(self.program.universe(), op, lhs_type_id, rhs_type_id, tmp.span())?;
+                    tmp_type = resolve_bin_op(
+                        self.program.universe(),
+                        op,
+                        lhs_type_id,
+                        rhs_type_id,
+                        tmp.span(),
+                    )?;
                 }
 
                 Value::UniExpr(ref op, ref uni_e) => {
                     let tmp_type_id = expr.get_tmp(*uni_e.data()).value().type_id().unwrap();
 
-                    tmp_type = resolve_uni_op(self.program.universe(), op, tmp_type_id, tmp.span())?;
+                    tmp_type =
+                        resolve_uni_op(self.program.universe(), op, tmp_type_id, tmp.span())?;
                 }
 
                 Value::FnCall(ref fn_call) => {
                     // Search for the function
                     let fn_type_id = if fn_call.path().0.len() == 1 {
-                        let binding = self.current_scope.binding_info(fn_call.path()
-                                                                      .0.get(0).unwrap().data());
+                        let binding = self.current_scope
+                            .binding_info(fn_call.path().0.get(0).unwrap().data());
                         if binding.is_ok() {
                             match binding.unwrap() {
                                 BindingInfo::Fn(fn_id) => {
                                     fn_call.set_id(fn_id);
-                                    if self.program.metadata_mut().is_builtin(fn_id)  {
+                                    if self.program.metadata_mut().is_builtin(fn_id) {
                                         let func = self.program.universe().get_builtin_fn(fn_id);
                                         Some(func.type_id())
                                     } else {
@@ -587,10 +581,10 @@ impl<'a> FnAnalyzer<'a> {
                                         SmplType::Function(_) => Some(v_type_id),
                                         _ => unimplemented!(),
                                     }
-                                },
+                                }
                             }
                         } else {
-                            None 
+                            None
                         }
                     } else {
                         None
@@ -612,7 +606,7 @@ impl<'a> FnAnalyzer<'a> {
                     };
 
                     let fn_type = self.program.universe().get_type(fn_type_id);
-                    
+
                     // Check args and parameters align
                     if let SmplType::Function(ref fn_type) = *fn_type {
                         tmp_type = fn_type.return_type;
@@ -630,55 +624,55 @@ impl<'a> FnAnalyzer<'a> {
                         });
 
                         match fn_type.params {
-                            ParamType::Checked(ref params) => {
-                                match arg_type_ids {
-                                    Some(arg_type_ids) => {
-                                        if params.len() != arg_type_ids.len() {
-                                            return Err(TypeErr::Arity {
-                                                fn_type: fn_type_id,
-                                                found_args: arg_type_ids.len(),
-                                                expected_param: params.len(),
-                                                span: tmp.span(),
-                                            }.into());
-                                        }
+                            ParamType::Checked(ref params) => match arg_type_ids {
+                                Some(arg_type_ids) => {
+                                    if params.len() != arg_type_ids.len() {
+                                        return Err(TypeErr::Arity {
+                                            fn_type: fn_type_id,
+                                            found_args: arg_type_ids.len(),
+                                            expected_param: params.len(),
+                                            span: tmp.span(),
+                                        }.into());
+                                    }
 
-                                        let fn_param_type_ids = params.iter();
+                                    let fn_param_type_ids = params.iter();
 
-                                        for (index, (arg, param)) in
-                                            arg_type_ids.iter().zip(fn_param_type_ids).enumerate()
-                                        {
-                                            let arg_type = self.program.universe().get_type(*arg);
-                                            let param_type = self.program.universe().get_type(*param);
-                                            if arg_type != param_type {
-                                                return Err(TypeErr::ArgMismatch {
+                                    for (index, (arg, param)) in
+                                        arg_type_ids.iter().zip(fn_param_type_ids).enumerate()
+                                    {
+                                        let arg_type = self.program.universe().get_type(*arg);
+                                        let param_type = self.program.universe().get_type(*param);
+                                        if arg_type != param_type {
+                                            return Err(
+                                                TypeErr::ArgMismatch {
                                                     fn_type_id: fn_type_id,
                                                     index: index,
                                                     arg: *arg,
                                                     param: param.clone(),
                                                     span: tmp.span(),
-                                                }.into());
-                                            }
-                                        }
-                                    }
-
-                                    None => {
-                                        if params.len() != 0 {
-                                            return Err(TypeErr::Arity {
-                                                fn_type: fn_type_id,
-                                                found_args: 0,
-                                                expected_param: params.len(),
-                                                span: tmp.span(),
-                                            }.into());
+                                                }.into(),
+                                            );
                                         }
                                     }
                                 }
-                            }
 
-                            ParamType::Unchecked => (),         // Do not check args
+                                None => {
+                                    if params.len() != 0 {
+                                        return Err(TypeErr::Arity {
+                                            fn_type: fn_type_id,
+                                            found_args: 0,
+                                            expected_param: params.len(),
+                                            span: tmp.span(),
+                                        }.into());
+                                    }
+                                }
+                            },
+
+                            ParamType::Unchecked => (), // Do not check args
                         }
-
                     } else {
-                        panic!( "{} was mapped to {}, which is not SmplType::Function but {:?}",
+                        panic!(
+                            "{} was mapped to {}, which is not SmplType::Function but {:?}",
                             fn_type_id, fn_type_id, fn_type
                         );
                     }
@@ -689,27 +683,28 @@ impl<'a> FnAnalyzer<'a> {
                     match *init {
                         ArrayInit::List(ref vec) => {
                             let size = vec.len() as u64;
-                            let element_type_ids = vec.iter()
-                                .map(|ref tmp_id| {
-                                    let tmp = expr.get_tmp(*tmp_id.data());
-                                    let tmp_value = tmp.value();
-                                    let tmp_value_type_id = tmp_value.type_id().unwrap();
-                                    tmp_id.set_type_id(tmp_value_type_id);
-                                    (tmp_value_type_id, tmp.span())
-                                });
+                            let element_type_ids = vec.iter().map(|ref tmp_id| {
+                                let tmp = expr.get_tmp(*tmp_id.data());
+                                let tmp_value = tmp.value();
+                                let tmp_value_type_id = tmp_value.type_id().unwrap();
+                                tmp_id.set_type_id(tmp_value_type_id);
+                                (tmp_value_type_id, tmp.span())
+                            });
 
                             let mut expected_element_type_id = None;
 
                             for (i, (element_type_id, span)) in element_type_ids.enumerate() {
-                                let current_element_type = self.program.universe().get_type(element_type_id);
+                                let current_element_type =
+                                    self.program.universe().get_type(element_type_id);
 
                                 if expected_element_type_id.is_none() {
                                     expected_element_type_id = Some(element_type_id);
                                     continue;
                                 }
 
-                                let expected_element_type = self.program.universe().get_type(
-                                    expected_element_type_id.unwrap());
+                                let expected_element_type = self.program
+                                    .universe()
+                                    .get_type(expected_element_type_id.unwrap());
 
                                 if expected_element_type != current_element_type {
                                     return Err(TypeErr::HeterogenousArray {
@@ -721,12 +716,16 @@ impl<'a> FnAnalyzer<'a> {
                                 }
                             }
 
-                            let array_type = TypeConstructor::construct_array_type(self.program.universe(),
-                                                                                   expected_element_type_id.unwrap(),
-                                                                                   size);
-                            self.program.metadata_mut().insert_array_type(self.module_id, array_type);
+                            let array_type = TypeConstructor::construct_array_type(
+                                self.program.universe(),
+                                expected_element_type_id.unwrap(),
+                                size,
+                            );
+                            self.program
+                                .metadata_mut()
+                                .insert_array_type(self.module_id, array_type);
                             tmp_type = array_type;
-                        },
+                        }
 
                         ArrayInit::Value(ref val, size) => {
                             let tmp_val = expr.get_tmp(*val.data());
@@ -736,15 +735,18 @@ impl<'a> FnAnalyzer<'a> {
 
                             let element_type_id = tmp_type_id;
 
-                            let array_type = TypeConstructor::construct_array_type(self.program.universe(),
-                                                                                   element_type_id,
-                                                                                   size);
-                            self.program.metadata_mut().insert_array_type(self.module_id, array_type);
+                            let array_type = TypeConstructor::construct_array_type(
+                                self.program.universe(),
+                                element_type_id,
+                                size,
+                            );
+                            self.program
+                                .metadata_mut()
+                                .insert_array_type(self.module_id, array_type);
                             tmp_type = array_type;
-                        },
+                        }
                     }
                 }
-
 
                 Value::Indexing(ref indexing) => {
                     let element_type;
@@ -760,10 +762,10 @@ impl<'a> FnAnalyzer<'a> {
                         match *tmp_type {
                             SmplType::Array(ref at) => {
                                 element_type = at.base_type;
-                            },
+                            }
 
                             _ => {
-                                return Err(TypeErr::NotAnArray { 
+                                return Err(TypeErr::NotAnArray {
                                     found: tmp_type_id,
                                     span: tmp.span(),
                                 }.into());
@@ -783,7 +785,7 @@ impl<'a> FnAnalyzer<'a> {
                         match *tmp_type {
                             SmplType::Int => (),
                             _ => {
-                                return Err(TypeErr::InvalidIndex { 
+                                return Err(TypeErr::InvalidIndex {
                                     found: tmp_type_id,
                                     span: tmp.span(),
                                 }.into());
@@ -810,26 +812,25 @@ impl<'a> FnAnalyzer<'a> {
                     let fn_id = self.program.universe().new_fn_id();
                     let func = a_fn.a_fn();
 
-                    let fn_type = generate_anonymous_fn_type(self.program, 
-                                                             &self.current_scope,
-                                                             fn_id,
-                                                             func)?;
+                    let fn_type =
+                        generate_anonymous_fn_type(self.program, &self.current_scope, fn_id, func)?;
 
-                    let cfg = CFG::generate(self.program.universe(), 
-                                            func.body.clone(),
-                                            &fn_type)?;
+                    let cfg = CFG::generate(self.program.universe(), func.body.clone(), &fn_type)?;
 
                     a_fn.set_fn_id(fn_id);
-                    
-                    self.program.universe_mut().insert_fn(fn_id, type_id, fn_type, cfg);
+
+                    self.program
+                        .universe_mut()
+                        .insert_fn(fn_id, type_id, fn_type, cfg);
 
                     // Since anonymous functions are ALWAYS inside another function
                     // Assume the global scope is at the bottom of the scope stack
-                    analyze_fn(self.program, 
-                               self.scope_stack.get(0).unwrap(),
-                               fn_id,
-                               self.module_id)?;
-
+                    analyze_fn(
+                        self.program,
+                        self.scope_stack.get(0).unwrap(),
+                        fn_id,
+                        self.module_id,
+                    )?;
 
                     tmp_type = type_id;
 
@@ -899,7 +900,8 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         let var_id = var_decl.var_id();
         let var_type_annotation = var_decl.type_annotation();
         let var_type_id = match var_type_annotation {
-            Some(type_annotation) => self.current_scope.type_id(self.program.universe(), type_annotation.into())?,
+            Some(type_annotation) => self.current_scope
+                .type_id(self.program.universe(), type_annotation.into())?,
 
             None => expr_type_id,
         };
@@ -914,7 +916,7 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         } else {
             return Err(TypeErr::LhsRhsInEq(var_type_id, expr_type_id, var_decl.span()).into());
         }
-        
+
         // Local variable types metadata
         self.locals.push((var_id, var_type_id));
 
@@ -925,8 +927,7 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         let assignment = &assignment.assignment;
         let assignee = assignment.assignee();
 
-        let assignee_type_id =
-            self.resolve_field_access(assignee, assignment.access_span())?;
+        let assignee_type_id = self.resolve_field_access(assignee, assignment.access_span())?;
 
         let expr_type_id = self.resolve_expr(assignment.value())?;
 

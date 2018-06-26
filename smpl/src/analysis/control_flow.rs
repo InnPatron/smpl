@@ -65,7 +65,6 @@ macro_rules! append_node_index {
     };
 }
 
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct BranchData {
     head: Option<graph::NodeIndex>,
@@ -281,11 +280,12 @@ impl CFG {
 
     pub fn before_branch_merge(&self, id: graph::NodeIndex) -> Vec<graph::NodeIndex> {
         match *self.node_weight(id) {
-            Node::BranchMerge(_) => {
-                self.neighbors_in(id).collect()
-            }
+            Node::BranchMerge(_) => self.neighbors_in(id).collect(),
 
-            ref n @ _ => panic!("CFG::before_branch_merge() only works with Node::BranchMerge. Found {:?}", n),
+            ref n @ _ => panic!(
+                "CFG::before_branch_merge() only works with Node::BranchMerge. Found {:?}",
+                n
+            ),
         }
     }
 
@@ -303,7 +303,7 @@ impl CFG {
                             } else {
                                 found_loop_break = true;
                             }
-                        },
+                        }
                         _ => return n,
                     }
                 }
@@ -311,7 +311,10 @@ impl CFG {
                 unreachable!();
             }
 
-            ref n @ _ => panic!("CFG::before_loop_foot() only works with Node::LoopFoot. Found {:?}", n),
+            ref n @ _ => panic!(
+                "CFG::before_loop_foot() only works with Node::LoopFoot. Found {:?}",
+                n
+            ),
         }
     }
 
@@ -333,11 +336,12 @@ impl CFG {
                 unreachable!();
             }
 
-            ref n @ _ => panic!("CFG::before_loop_head() only works with Node::LoopHead. Found {:?}", n),
+            ref n @ _ => panic!(
+                "CFG::before_loop_head() only works with Node::LoopHead. Found {:?}",
+                n
+            ),
         }
     }
-
-
 
     #[allow(unused_assignments)]
     ///
@@ -366,7 +370,7 @@ impl CFG {
         let mut head = previous;
 
         append_node!(cfg, head, previous, Node::EnterScope);
-    
+
         let (body, _) = body.to_data();
         let instructions = body.0;
         let fn_graph = CFG::get_branch(universe, &mut cfg, instructions, None)?;
@@ -381,10 +385,15 @@ impl CFG {
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
         if *universe.get_type(fn_type.return_type) == SmplType::Unit {
             // TODO: Figure out how to get last line of function
-            append_node!(cfg, head, previous, Node::Return(ReturnData {
-                expr: None,
-                span: Span::new(0, 0),
-            }));
+            append_node!(
+                cfg,
+                head,
+                previous,
+                Node::Return(ReturnData {
+                    expr: None,
+                    span: Span::new(0, 0),
+                })
+            );
         }
 
         append_node!(cfg, head, previous, Node::ExitScope);
@@ -416,14 +425,17 @@ impl CFG {
                     // All if statements begin and and with Node::BranchSplit and Node::BranchMerge
                     ExprStmt::If(if_data) => {
                         let id = universe.new_branching_id();
-                        append_node!(cfg, head, previous, Node::BranchSplit(BranchingData {
-                            branch_id: id,
-                        }), Edge::Normal);
+                        append_node!(
+                            cfg,
+                            head,
+                            previous,
+                            Node::BranchSplit(BranchingData { branch_id: id }),
+                            Edge::Normal
+                        );
 
                         // All branches come back together at a Node::BranchMerge
-                        let merge_node = cfg.graph.add_node(Node::BranchMerge(BranchingData {
-                            branch_id: id,
-                        }));
+                        let merge_node = cfg.graph
+                            .add_node(Node::BranchMerge(BranchingData { branch_id: id }));
 
                         let mut previous_condition = None;
 
@@ -437,7 +449,7 @@ impl CFG {
                                 let expr = expr_flow::flatten(universe, conditional);
                                 cfg.graph.add_node(Node::Condition(ExprData {
                                     expr: expr,
-                                     span: con_span,
+                                    span: con_span,
                                 }))
                             };
 

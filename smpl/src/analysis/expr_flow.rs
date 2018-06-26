@@ -4,7 +4,7 @@ use super::typed_ast::Binding as TypedBinding;
 
 use span::Span;
 
-use ast::{Expr as AstExpr, ArrayInit as AstArrayInit};
+use ast::{ArrayInit as AstArrayInit, Expr as AstExpr};
 
 pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
@@ -21,17 +21,23 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
             let (bin, span) = bin.to_data();
             let (lhs, _) = flatten_expr(universe, scope, *bin.lhs);
             let (rhs, _) = flatten_expr(universe, scope, *bin.rhs);
-            (scope.map_tmp(
-                universe,
-                Value::BinExpr(bin.op, Typed::untyped(lhs), Typed::untyped(rhs)),
-                span
-            ), span)
+            (
+                scope.map_tmp(
+                    universe,
+                    Value::BinExpr(bin.op, Typed::untyped(lhs), Typed::untyped(rhs)),
+                    span,
+                ),
+                span,
+            )
         }
 
         AstExpr::Uni(uni) => {
             let (uni, span) = uni.to_data();
             let expr = flatten_expr(universe, scope, *uni.expr).0;
-            (scope.map_tmp(universe, Value::UniExpr(uni.op, Typed::untyped(expr)), span), span)
+            (
+                scope.map_tmp(universe, Value::UniExpr(uni.op, Typed::untyped(expr)), span),
+                span,
+            )
         }
 
         AstExpr::Literal(literal) => {
@@ -51,21 +57,34 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
                     })
                     .collect::<Vec<_>>()
             });
-            (scope.map_tmp(
-                universe,
-                Value::StructInit(StructInit::new(struct_name, field_init)),
-                span
-            ), span)
+            (
+                scope.map_tmp(
+                    universe,
+                    Value::StructInit(StructInit::new(struct_name, field_init)),
+                    span,
+                ),
+                span,
+            )
         }
 
         AstExpr::Binding(ident) => {
             let span = ident.span();
-            (scope.map_tmp(universe, Value::Binding(TypedBinding::new(ident)), span), span)
+            (
+                scope.map_tmp(universe, Value::Binding(TypedBinding::new(ident)), span),
+                span,
+            )
         }
 
         AstExpr::FieldAccess(path) => {
             let (path, span) = path.to_data();
-            (scope.map_tmp(universe, Value::FieldAccess(FieldAccess::new(universe, path)), span), span)
+            (
+                scope.map_tmp(
+                    universe,
+                    Value::FieldAccess(FieldAccess::new(universe, path)),
+                    span,
+                ),
+                span,
+            )
         }
 
         AstExpr::FnCall(fn_call) => {
@@ -87,10 +106,8 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
             match init {
                 AstArrayInit::InitList(vec) => {
                     let list = vec.into_iter()
-                        .map(|element| {
-                            Typed::untyped(flatten_expr(universe, scope, element).0)
-                        })
-                    .collect();
+                        .map(|element| Typed::untyped(flatten_expr(universe, scope, element).0))
+                        .collect();
 
                     let init = ArrayInit::List(list);
 
@@ -118,17 +135,26 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
                 indexer: indexer,
             };
 
-            (scope.map_tmp(universe, Value::Indexing(indexing), span), span)
+            (
+                scope.map_tmp(universe, Value::Indexing(indexing), span),
+                span,
+            )
         }
 
         AstExpr::ModAccess(path) => {
             let (path, span) = path.to_data();
-            (scope.map_tmp(universe, Value::ModAccess(ModAccess::new(path)), span), span)
+            (
+                scope.map_tmp(universe, Value::ModAccess(ModAccess::new(path)), span),
+                span,
+            )
         }
 
         AstExpr::AnonymousFn(a_fn) => {
             let (a_fn, span) = a_fn.to_data();
-            (scope.map_tmp(universe, Value::AnonymousFn(AnonymousFn::new(a_fn)), span), span)
+            (
+                scope.map_tmp(universe, Value::AnonymousFn(AnonymousFn::new(a_fn)), span),
+                span,
+            )
         }
     }
 }

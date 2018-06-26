@@ -12,7 +12,7 @@ impl StringEmitter {
     pub fn new() -> StringEmitter {
         StringEmitter {
             output: String::new(),
-            shift: 0
+            shift: 0,
         }
     }
 

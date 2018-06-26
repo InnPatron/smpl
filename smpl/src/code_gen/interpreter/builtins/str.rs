@@ -18,11 +18,16 @@ pub fn include(modules: &mut Vec<Module>) {
 }
 
 pub fn add(vm: &mut VM) {
-    vm.insert_builtin(MOD_STRING, STRING_LEN, Box::new(Len)).unwrap();
-    vm.insert_builtin(MOD_STRING, STRING_TO_STRING, Box::new(ToString)).unwrap();
-    vm.insert_builtin(MOD_STRING, STRING_APPEND, Box::new(Append)).unwrap();
-    vm.insert_builtin(MOD_STRING, STRING_TO_LOWER, Box::new(ToLower)).unwrap();
-    vm.insert_builtin(MOD_STRING, STRING_TO_UPPER, Box::new(ToUpper)).unwrap();
+    vm.insert_builtin(MOD_STRING, STRING_LEN, Box::new(Len))
+        .unwrap();
+    vm.insert_builtin(MOD_STRING, STRING_TO_STRING, Box::new(ToString))
+        .unwrap();
+    vm.insert_builtin(MOD_STRING, STRING_APPEND, Box::new(Append))
+        .unwrap();
+    vm.insert_builtin(MOD_STRING, STRING_TO_LOWER, Box::new(ToLower))
+        .unwrap();
+    vm.insert_builtin(MOD_STRING, STRING_TO_UPPER, Box::new(ToUpper))
+        .unwrap();
 }
 
 struct Len;
@@ -65,7 +70,7 @@ impl BuiltinFn for Append {
 
         let base = args.pop().unwrap();
         let mut base = irmatch!(base; Value::String(s) => s);
-        
+
         base.push_str(&to_append);
 
         Value::String(base)
@@ -130,15 +135,18 @@ mod tests {
         let mut vm = VM::new(modules).unwrap();
         add(&mut vm);
 
-        let fn_handle = vm.query_module(MOD_STRING, STRING_TO_STRING).unwrap().unwrap();
+        let fn_handle = vm.query_module(MOD_STRING, STRING_TO_STRING)
+            .unwrap()
+            .unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, 
-                                     vec![
-                                        Value::String("I am ".to_string()),
-                                        Value::Int(1337),
-                                        Value::String("!".to_string()),
-                                     ]
-                                     );
+        let result = vm.eval_fn_args(
+            fn_handle,
+            vec![
+                Value::String("I am ".to_string()),
+                Value::Int(1337),
+                Value::String("!".to_string()),
+            ],
+        );
         assert_eq!(Value::String("I am 1337!".to_string()), result);
     }
 
@@ -152,12 +160,13 @@ mod tests {
 
         let fn_handle = vm.query_module(MOD_STRING, STRING_APPEND).unwrap().unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, 
-                                     vec![
-                                        Value::String("I'll ".to_string()),
-                                        Value::String("be back.".to_string()),
-                                     ]
-                                     );
+        let result = vm.eval_fn_args(
+            fn_handle,
+            vec![
+                Value::String("I'll ".to_string()),
+                Value::String("be back.".to_string()),
+            ],
+        );
         assert_eq!(Value::String("I'll be back.".to_string()), result);
     }
 
@@ -169,13 +178,11 @@ mod tests {
         let mut vm = VM::new(modules).unwrap();
         add(&mut vm);
 
-        let fn_handle = vm.query_module(MOD_STRING, STRING_TO_LOWER).unwrap().unwrap();
+        let fn_handle = vm.query_module(MOD_STRING, STRING_TO_LOWER)
+            .unwrap()
+            .unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, 
-                                     vec![
-                                        Value::String("LOUD NOISES".to_string()),
-                                     ]
-                                     );
+        let result = vm.eval_fn_args(fn_handle, vec![Value::String("LOUD NOISES".to_string())]);
         assert_eq!(Value::String("loud noises".to_string()), result);
     }
 
@@ -187,13 +194,11 @@ mod tests {
         let mut vm = VM::new(modules).unwrap();
         add(&mut vm);
 
-        let fn_handle = vm.query_module(MOD_STRING, STRING_TO_UPPER).unwrap().unwrap();
+        let fn_handle = vm.query_module(MOD_STRING, STRING_TO_UPPER)
+            .unwrap()
+            .unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, 
-                                     vec![
-                                        Value::String("loud noises".to_string()),
-                                     ]
-                                     );
+        let result = vm.eval_fn_args(fn_handle, vec![Value::String("loud noises".to_string())]);
         assert_eq!(Value::String("LOUD NOISES".to_string()), result);
     }
 

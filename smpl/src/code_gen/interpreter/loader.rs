@@ -9,7 +9,7 @@ pub fn include(mut modules: Vec<Module>) -> Vec<Module> {
     math::include(&mut modules);
     err::include(&mut modules);
     str::include(&mut modules);
-    
+
     modules
 }
 

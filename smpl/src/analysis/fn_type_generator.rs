@@ -1,11 +1,7 @@
 use err::*;
 use feature::*;
-use ast::{ 
-    Function as AstFunction, 
-    BuiltinFunction as AstBuiltinFunction, 
-    BuiltinFnParams,
-    AnonymousFn as AstAnonymousFn,
-};
+use ast::{AnonymousFn as AstAnonymousFn, BuiltinFnParams, BuiltinFunction as AstBuiltinFunction,
+          Function as AstFunction};
 
 use super::*;
 use super::smpl_type::*;
@@ -13,9 +9,12 @@ use super::metadata::*;
 use super::feature_checkers::*;
 
 // TODO: Merge with generate_fn_type()
-pub fn generate_anonymous_fn_type(program: &mut Program, scope: &ScopedData, 
-                        fn_id: FnId, fn_def: &AstAnonymousFn) -> Result<FunctionType, Err> {
-
+pub fn generate_anonymous_fn_type(
+    program: &mut Program,
+    scope: &ScopedData,
+    fn_id: FnId,
+    fn_def: &AstAnonymousFn,
+) -> Result<FunctionType, Err> {
     let (universe, metadata, features) = program.analysis_context();
     let ret_type = match fn_def.return_type {
         Some(ref path) => {
@@ -36,7 +35,10 @@ pub fn generate_anonymous_fn_type(program: &mut Program, scope: &ScopedData,
                 let type_path = param.param_type.data();
                 let type_id = scope.type_id(universe, type_path.into())?;
                 typed_params.push(type_id);
-                param_metadata.push(FunctionParameter::new(param.name.data().clone(), universe.new_var_id()));
+                param_metadata.push(FunctionParameter::new(
+                    param.name.data().clone(),
+                    universe.new_var_id(),
+                ));
 
                 fn_sig_type_scanner(universe, features, type_id);
             }
@@ -57,9 +59,12 @@ pub fn generate_anonymous_fn_type(program: &mut Program, scope: &ScopedData,
     })
 }
 
-pub fn generate_fn_type(program: &mut Program, scope: &ScopedData, 
-                        fn_id: FnId, fn_def: &AstFunction) -> Result<FunctionType, Err> {
-
+pub fn generate_fn_type(
+    program: &mut Program,
+    scope: &ScopedData,
+    fn_id: FnId,
+    fn_def: &AstFunction,
+) -> Result<FunctionType, Err> {
     let (universe, metadata, features) = program.analysis_context();
     let ret_type = match fn_def.return_type {
         Some(ref path) => {
@@ -80,7 +85,10 @@ pub fn generate_fn_type(program: &mut Program, scope: &ScopedData,
                 let type_path = param.param_type.data();
                 let type_id = scope.type_id(universe, type_path.into())?;
                 typed_params.push(type_id);
-                param_metadata.push(FunctionParameter::new(param.name.data().clone(), universe.new_var_id()));
+                param_metadata.push(FunctionParameter::new(
+                    param.name.data().clone(),
+                    universe.new_var_id(),
+                ));
 
                 fn_sig_type_scanner(universe, features, type_id);
             }
@@ -101,9 +109,12 @@ pub fn generate_fn_type(program: &mut Program, scope: &ScopedData,
     })
 }
 
-pub fn generate_builtin_fn_type(program: &mut Program, scope: &ScopedData, 
-                                fn_id: FnId, fn_def: &AstBuiltinFunction) -> Result<FunctionType, Err> {
-
+pub fn generate_builtin_fn_type(
+    program: &mut Program,
+    scope: &ScopedData,
+    fn_id: FnId,
+    fn_def: &AstBuiltinFunction,
+) -> Result<FunctionType, Err> {
     let (universe, metadata, features) = program.analysis_context();
     let ret_type = match fn_def.return_type {
         Some(ref path) => {
@@ -116,31 +127,32 @@ pub fn generate_builtin_fn_type(program: &mut Program, scope: &ScopedData,
     };
 
     let params = match fn_def.params {
-        BuiltinFnParams::Checked(ref params) => {
-            match *params {
-                Some(ref params) => {
-                    let mut typed_params = Vec::new();
-                    let mut param_metadata = Vec::new();
-                    for p in params.iter() {
-                        let param = p.data();
-                        let type_path = param.param_type.data();
-                        let type_id = scope.type_id(universe, type_path.into())?;
-                        typed_params.push(type_id);
-                        param_metadata.push(FunctionParameter::new(param.name.data().clone(), universe.new_var_id()));
+        BuiltinFnParams::Checked(ref params) => match *params {
+            Some(ref params) => {
+                let mut typed_params = Vec::new();
+                let mut param_metadata = Vec::new();
+                for p in params.iter() {
+                    let param = p.data();
+                    let type_path = param.param_type.data();
+                    let type_id = scope.type_id(universe, type_path.into())?;
+                    typed_params.push(type_id);
+                    param_metadata.push(FunctionParameter::new(
+                        param.name.data().clone(),
+                        universe.new_var_id(),
+                    ));
 
-                        fn_sig_type_scanner(universe, features, type_id);
-                    }
-
-                    metadata.insert_function_param_ids(fn_id, param_metadata);
-
-                    ParamType::Checked(typed_params)
+                    fn_sig_type_scanner(universe, features, type_id);
                 }
-                None => {
-                    metadata.insert_function_param_ids(fn_id, Vec::with_capacity(0));
-                    ParamType::Checked(Vec::with_capacity(0))
-                }
+
+                metadata.insert_function_param_ids(fn_id, param_metadata);
+
+                ParamType::Checked(typed_params)
             }
-        }
+            None => {
+                metadata.insert_function_param_ids(fn_id, Vec::with_capacity(0));
+                ParamType::Checked(Vec::with_capacity(0))
+            }
+        },
 
         BuiltinFnParams::Unchecked => {
             metadata.insert_unchecked_builtin_params(fn_id);
@@ -148,7 +160,6 @@ pub fn generate_builtin_fn_type(program: &mut Program, scope: &ScopedData,
 
             ParamType::Unchecked
         }
-
     };
 
     Ok(FunctionType {

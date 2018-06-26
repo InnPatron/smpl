@@ -18,7 +18,6 @@ pub struct RustBackend {
 }
 
 impl RustBackend {
-
     fn features() -> FeatureInfo {
         let mut required = Vec::new();
         let mut denied = Vec::new();
@@ -52,14 +51,15 @@ impl RustBackend {
     }
 
     pub fn generate(mut self, program: &Program) -> Result<RustBackend, FeatureErr> {
-
         self.feature_info.check(program.features())?;
 
         self.main = program.metadata().main().map(|(fn_id, mod_id)| {
             if self.mod_wrap {
-                format!("fn main() {{ {}::{}(); }}\n\n", 
-                        RustGenFmt::mod_id(mod_id),
-                        RustGenFmt::fn_id(fn_id))
+                format!(
+                    "fn main() {{ {}::{}(); }}\n\n",
+                    RustGenFmt::mod_id(mod_id),
+                    RustGenFmt::fn_id(fn_id)
+                )
             } else {
                 format!("fn main() {{ {}(); }}\n\n", RustGenFmt::fn_id(fn_id))
             }
@@ -69,7 +69,8 @@ impl RustBackend {
             let mut gen = RustModGen::new(program.metadata(), *id);
 
             if self.mod_wrap {
-                gen.output.emit_line(&format!("mod {} {{", RustGenFmt::mod_id(*id)));
+                gen.output
+                    .emit_line(&format!("mod {} {{", RustGenFmt::mod_id(*id)));
                 gen.output.shift_right();
             }
 
@@ -80,7 +81,8 @@ impl RustBackend {
                 gen.output.emit_line("}");
             }
 
-            self.mods.push((ident.clone(), id.clone(), gen.module().to_string()));
+            self.mods
+                .push((ident.clone(), id.clone(), gen.module().to_string()));
         }
 
         Ok(self)
@@ -113,7 +115,8 @@ impl<'a> RustModGen<'a> {
     fn emit_mod(&mut self, universe: &Universe, module: &Module) {
         self.prelude(universe, module);
 
-        self.output.emit_line("//#### START STRUCT DEFINITIONS ####");
+        self.output
+            .emit_line("//#### START STRUCT DEFINITIONS ####");
 
         // Emit struct definitions
         for id in module.owned_types() {
@@ -127,7 +130,8 @@ impl<'a> RustModGen<'a> {
 
         self.output.emit_line("//#### END  STRUCT DEFINITIONS ####");
         self.output.line_pad();
-        self.output.emit_line("//#### START FUNCTION DEFINITIONS ####");
+        self.output
+            .emit_line("//#### START FUNCTION DEFINITIONS ####");
 
         // Emit function definitions
         for fn_id in module.owned_fns() {
@@ -145,8 +149,10 @@ impl<'a> RustModGen<'a> {
                 // Gather parameters
                 // TODO: Support UNCHECKED functions
                 let params = irmatch!(&fn_type.params; ParamType::Checked(ref params) => params);
-                for (param_type_id, param_var_id) in params.iter()
-                    .zip(self.metadata.function_param_ids(fn_id).iter()) {
+                for (param_type_id, param_var_id) in params
+                    .iter()
+                    .zip(self.metadata.function_param_ids(fn_id).iter())
+                {
                     let param_type = RustGenFmt::type_id(*param_type_id);
                     let param_type = RustGenFmt::rustify_type(param_type);
 
@@ -189,7 +195,8 @@ impl<'a> RustModGen<'a> {
 
             self.output.line_pad();
         }
-        self.output.emit_line("//#### END FUNCTION DEFINITIONS ####");
+        self.output
+            .emit_line("//#### END FUNCTION DEFINITIONS ####");
     }
 
     fn prelude(&mut self, universe: &Universe, module: &Module) {
@@ -199,7 +206,8 @@ impl<'a> RustModGen<'a> {
 
         // Import other SMPL modules
         for d in module.dependencies() {
-            self.output.emit_line(&format!("use {}::*;", RustGenFmt::mod_id(*d)));
+            self.output
+                .emit_line(&format!("use {}::*;", RustGenFmt::mod_id(*d)));
         }
         self.output.line_pad();
 
@@ -233,14 +241,14 @@ impl<'a> RustModGen<'a> {
                 match *universe.get_type(*t) {
                     SmplType::Array(ref a) => {
                         self.output.emit_line(&format!(
-                                "type {} = [{}; {}];",
-                                RustGenFmt::type_id(*t),
-                                RustGenFmt::rustify_type(RustGenFmt::type_id(a.base_type)),
-                                a.size
-                                ));
+                            "type {} = [{}; {}];",
+                            RustGenFmt::type_id(*t),
+                            RustGenFmt::rustify_type(RustGenFmt::type_id(a.base_type)),
+                            a.size
+                        ));
                     }
 
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 }
             }
         }
@@ -262,7 +270,8 @@ impl<'a> RustModGen<'a> {
         for &(ref id, ref string_type) in fields.iter() {
             let name = RustGenFmt::field_id(*id);
             let field_type = RustGenFmt::rustify_type(string_type.to_string());
-            self.output.emit_line(&format!("pub {}: {},", name, field_type));
+            self.output
+                .emit_line(&format!("pub {}: {},", name, field_type));
         }
         self.output.shift_left();
         self.output.emit_line("}");
@@ -270,9 +279,11 @@ impl<'a> RustModGen<'a> {
         self.output.line_pad();
 
         // Emit Clone impl
-        self.output.emit_line(&format!("impl Clone for {} {{", name));
+        self.output
+            .emit_line(&format!("impl Clone for {} {{", name));
         self.output.shift_right();
-        self.output.emit_line(&format!("fn clone(&self) -> Self {{"));
+        self.output
+            .emit_line(&format!("fn clone(&self) -> Self {{"));
 
         self.output.shift_right();
         self.output.emit_line(&format!("{} {{", name));
@@ -291,7 +302,8 @@ impl<'a> RustModGen<'a> {
         self.output.emit_line("}");
 
         // Emit Default impl
-        self.output.emit_line(&format!("impl Default for {} {{", name));
+        self.output
+            .emit_line(&format!("impl Default for {} {{", name));
         self.output.shift_right();
         self.output.emit_line(&format!("fn default() -> Self {{"));
 
@@ -325,7 +337,7 @@ impl<'a> RustFnGen<'a> {
         RustFnGen {
             output: StringEmitter::new(),
             cfg: cfg,
-            universe: universe
+            universe: universe,
         }
     }
 
@@ -336,12 +348,12 @@ impl<'a> RustFnGen<'a> {
 
 // Code generation
 impl<'a> RustFnGen<'a> {
-
     fn emit_condition(&mut self, e: &Expr) {
         self.output.emit_line("if {");
         self.output.shift_right();
         let expr = self.emit_expr(e);
-        self.output.emit_line(&format!("{} }}", RustGenFmt::tmp_id(expr)));
+        self.output
+            .emit_line(&format!("{} }}", RustGenFmt::tmp_id(expr)));
         self.output.shift_left();
     }
 
@@ -380,7 +392,8 @@ impl<'a> RustFnGen<'a> {
 
             Value::Binding(ref var) => {
                 let value = match var.get_id()
-                    .expect("If the program passed semantic analysis, all IDs should be filled in.") {
+                    .expect("If the program passed semantic analysis, all IDs should be filled in.")
+                {
                     BindingId::Fn(id) => RustGenFmt::fn_id(id),
                     BindingId::Var(id) => RustGenFmt::var_id(id),
                 };
@@ -389,16 +402,17 @@ impl<'a> RustFnGen<'a> {
             }
 
             Value::FieldAccess(ref access) => {
-
                 self.output.emit_line("{");
 
                 let path = access.path();
                 let root_var_id = path.root_var_id();
                 let root_var = RustGenFmt::var_id(root_var_id);
 
-                self.output.emit_line(&format!("let _borrow_{} = {};",
-                                          root_var,
-                                          RustGenFmt::borrow_ref(root_var.clone())));
+                self.output.emit_line(&format!(
+                    "let _borrow_{} = {};",
+                    root_var,
+                    RustGenFmt::borrow_ref(root_var.clone())
+                ));
                 let mut previous_borrow = root_var;
 
                 if let Some(e) = path.root_indexing_expr() {
@@ -407,9 +421,8 @@ impl<'a> RustFnGen<'a> {
 
                     self.output.emit_line(&format!(
                         "let _borrow_{} = _borrow{}[{}].borrow();",
-                        tmp,
-                        previous_borrow,
-                        tmp));
+                        tmp, previous_borrow, tmp
+                    ));
                     previous_borrow = tmp;
                 }
 
@@ -418,14 +431,15 @@ impl<'a> RustFnGen<'a> {
                         PathSegment::Ident(ref f) => {
                             // Borrow field
                             let stringified_field = RustGenFmt::field_id(f.field_id());
-                            let borrow = RustGenFmt::borrow_ref(format!("_borrow_{}.{}", 
-								   previous_borrow, 
-								   stringified_field));
+                            let borrow = RustGenFmt::borrow_ref(format!(
+                                "_borrow_{}.{}",
+                                previous_borrow, stringified_field
+                            ));
 
                             self.output.emit_line(&format!(
-                                    "let _borrow_{} = {};",
-                                    stringified_field,
-                                    borrow));
+                                "let _borrow_{} = {};",
+                                stringified_field, borrow
+                            ));
 
                             previous_borrow = stringified_field;
                         }
@@ -433,23 +447,23 @@ impl<'a> RustFnGen<'a> {
                         PathSegment::Indexing(ref f, ref e) => {
                             // Borrow field
                             let stringified_field = RustGenFmt::field_id(f.field_id());
-                            let borrow = RustGenFmt::borrow_ref(format!("_borrow_{}.{}", 
-								   previous_borrow, 
-								   stringified_field));
+                            let borrow = RustGenFmt::borrow_ref(format!(
+                                "_borrow_{}.{}",
+                                previous_borrow, stringified_field
+                            ));
 
                             self.output.emit_line(&format!(
-                                    "let _borrow_{} = {};",
-                                    stringified_field,
-                                    borrow));
+                                "let _borrow_{} = {};",
+                                stringified_field, borrow
+                            ));
 
                             let tmp = RustFnGen::emit_expr(self, e);
                             let tmp = RustGenFmt::tmp_id(tmp);
 
                             self.output.emit_line(&format!(
-                                     "let _borrow_{} = _borrow_{}[{}].borrow();",
-                                     tmp,
-                                     stringified_field,
-                                     tmp));
+                                "let _borrow_{} = _borrow_{}[{}].borrow();",
+                                tmp, stringified_field, tmp
+                            ));
 
                             previous_borrow = tmp;
                         }
@@ -461,22 +475,23 @@ impl<'a> RustFnGen<'a> {
 
                 self.output.emit_line(&value);
                 self.output.emit_line("}");
-
             }
 
             Value::BinExpr(ref op, ref lhs, ref rhs) => {
                 self.output.emit_line(&format!(
-                        "{} {} {}",
-                        RustGenFmt::tmp_id(*lhs.data()),
-                        RustGenFmt::bin_op(op),
-                        RustGenFmt::tmp_id(*rhs.data())));
+                    "{} {} {}",
+                    RustGenFmt::tmp_id(*lhs.data()),
+                    RustGenFmt::bin_op(op),
+                    RustGenFmt::tmp_id(*rhs.data())
+                ));
             }
 
             Value::UniExpr(ref op, ref tmp) => {
                 self.output.emit_line(&format!(
                     "{}{}",
                     RustGenFmt::uni_op(op),
-                    RustGenFmt::tmp_id(*tmp.data())));
+                    RustGenFmt::tmp_id(*tmp.data())
+                ));
             }
 
             Value::FnCall(ref fn_call) => {
@@ -495,10 +510,12 @@ impl<'a> RustFnGen<'a> {
 
                 match binding_id {
                     BindingId::Var(..) => unreachable!(),
-                    BindingId::Fn(fn_id) =>  {
-                        self.output.emit_line(&format!("{}({})", 
-                                               RustGenFmt::fn_id(fn_id), 
-                                               arg_string));
+                    BindingId::Fn(fn_id) => {
+                        self.output.emit_line(&format!(
+                            "{}({})",
+                            RustGenFmt::fn_id(fn_id),
+                            arg_string
+                        ));
                     }
                 }
             }
@@ -508,22 +525,22 @@ impl<'a> RustFnGen<'a> {
 
                 let mut field_init = String::new();
                 match struct_init.field_init() {
-                    Some(init_list) => {
-                        for (ref field, ref typed_tmp) in init_list {
-                            field_init.push_str(&format!(
-                                "{}: {},",
-                                RustGenFmt::field_id(*field),
-                                RustGenFmt::new_value(RustGenFmt::tmp_id(*typed_tmp.data())),
-                            ));
-                        }
-                    }
+                    Some(init_list) => for (ref field, ref typed_tmp) in init_list {
+                        field_init.push_str(&format!(
+                            "{}: {},",
+                            RustGenFmt::field_id(*field),
+                            RustGenFmt::new_value(RustGenFmt::tmp_id(*typed_tmp.data())),
+                        ));
+                    },
 
                     None => (),
                 }
 
-                self.output.emit_line(&format!("{} {{ {} }}", 
-                                               RustGenFmt::type_id(struct_id), 
-                                               field_init));
+                self.output.emit_line(&format!(
+                    "{} {{ {} }}",
+                    RustGenFmt::type_id(struct_id),
+                    field_init
+                ));
             }
 
             Value::ArrayInit(ref a) => {
@@ -556,7 +573,7 @@ impl<'a> RustFnGen<'a> {
                 };
 
                 self.output.emit_line(&t);
-            },
+            }
 
             Value::Indexing(ref indexing) => {
                 let array_tmp_id = *indexing.array.data();
@@ -564,18 +581,21 @@ impl<'a> RustFnGen<'a> {
 
                 self.output.emit_line("{");
                 self.output.emit_line(&format!(
-                        "let _borrow_{} = {};",
-                        RustGenFmt::tmp_id(array_tmp_id),
-                        RustGenFmt::tmp_id(array_tmp_id)));
+                    "let _borrow_{} = {};",
+                    RustGenFmt::tmp_id(array_tmp_id),
+                    RustGenFmt::tmp_id(array_tmp_id)
+                ));
 
                 self.output.emit_line(&format!(
-                        "let _borrow_{} = _borrow_{}[{}].borrow();",
-                        RustGenFmt::tmp_id(indexer_tmp_id),
-                        RustGenFmt::tmp_id(array_tmp_id),
-                        RustGenFmt::tmp_id(indexer_tmp_id)));
+                    "let _borrow_{} = _borrow_{}[{}].borrow();",
+                    RustGenFmt::tmp_id(indexer_tmp_id),
+                    RustGenFmt::tmp_id(array_tmp_id),
+                    RustGenFmt::tmp_id(indexer_tmp_id)
+                ));
                 let value = RustGenFmt::clone_value(format!(
-                        "_borrow_{}", 
-                        RustGenFmt::tmp_id(indexer_tmp_id)));
+                    "_borrow_{}",
+                    RustGenFmt::tmp_id(indexer_tmp_id)
+                ));
                 self.output.emit_line(&value);
 
                 self.output.emit_line("}");
@@ -668,13 +688,14 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
         let var_type = RustGenFmt::rustify_type(var_type);
 
-        self.output.emit_line(&format!("let mut {}: {} = {};", name, var_type, expr));
+        self.output
+            .emit_line(&format!("let mut {}: {} = {};", name, var_type, expr));
         self.output.line_pad();
 
         Ok(())
     }
 
-    fn assignment(&mut self, _id: NodeIndex, assignment: &AssignmentData) -> Result<(), ()> { 
+    fn assignment(&mut self, _id: NodeIndex, assignment: &AssignmentData) -> Result<(), ()> {
         let assignment = &assignment.assignment;
         let path = assignment.assignee().path();
         let root_var_id = path.root_var_id();
@@ -686,10 +707,10 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         let expr = self.emit_expr(assignment.value());
 
         self.output.emit_line(&format!(
-                "let mut _borrow_{} = {};",
-                root_var,
-                RustGenFmt::borrow_ref_mut(root_var.clone())
-                ));
+            "let mut _borrow_{} = {};",
+            root_var,
+            RustGenFmt::borrow_ref_mut(root_var.clone())
+        ));
 
         let mut previous_borrow = root_var;
 
@@ -698,10 +719,9 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
             let tmp = RustGenFmt::tmp_id(tmp);
 
             self.output.emit_line(&format!(
-                     "let mut _borrow_{} = _borrow_{}[{}].borrow_mut();",
-                     tmp,
-                     previous_borrow,
-                     tmp));
+                "let mut _borrow_{} = _borrow_{}[{}].borrow_mut();",
+                tmp, previous_borrow, tmp
+            ));
 
             previous_borrow = tmp;
         }
@@ -711,14 +731,15 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
                 PathSegment::Ident(ref f) => {
                     // Borrow field
                     let stringified_field = RustGenFmt::field_id(f.field_id());
-                    let borrow = RustGenFmt::borrow_ref_mut(format!("_borrow_{}.{}", 
-                           previous_borrow, 
-                           stringified_field));
+                    let borrow = RustGenFmt::borrow_ref_mut(format!(
+                        "_borrow_{}.{}",
+                        previous_borrow, stringified_field
+                    ));
 
                     self.output.emit_line(&format!(
-                             "let mut _borrow_{} = {};",
-                             stringified_field,
-                             borrow));
+                        "let mut _borrow_{} = {};",
+                        stringified_field, borrow
+                    ));
 
                     previous_borrow = stringified_field;
                 }
@@ -726,23 +747,23 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
                 PathSegment::Indexing(ref f, ref e) => {
                     // Borrow field
                     let stringified_field = RustGenFmt::field_id(f.field_id());
-                    let borrow = RustGenFmt::borrow_ref(format!("_borrow_{}.{}", 
-                           previous_borrow, 
-                           stringified_field));
+                    let borrow = RustGenFmt::borrow_ref(format!(
+                        "_borrow_{}.{}",
+                        previous_borrow, stringified_field
+                    ));
 
                     self.output.emit_line(&format!(
-                             "let mut _borrow_{} = {};",
-                             stringified_field,
-                             borrow));
+                        "let mut _borrow_{} = {};",
+                        stringified_field, borrow
+                    ));
 
                     let tmp = self.emit_expr(e);
                     let tmp = RustGenFmt::tmp_id(tmp);
 
                     self.output.emit_line(&format!(
-                             "let mut _borrow_{} = _borrow_{}[{}].borrow_mut();",
-                             tmp,
-                             stringified_field,
-                             tmp));
+                        "let mut _borrow_{} = _borrow_{}[{}].borrow_mut();",
+                        tmp, stringified_field, tmp
+                    ));
 
                     previous_borrow = tmp;
                 }
@@ -776,7 +797,8 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         match expr {
             Some(ref expr) => {
                 let expr = self.emit_expr(expr);
-                self.output.emit_line(&format!("return {};", RustGenFmt::tmp_id(expr)));
+                self.output
+                    .emit_line(&format!("return {};", RustGenFmt::tmp_id(expr)));
             }
 
             None => self.output.emit_line("return;"),

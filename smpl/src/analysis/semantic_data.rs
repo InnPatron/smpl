@@ -1,12 +1,13 @@
 use std::collections::HashMap;
-use std::cell::{RefCell, Cell};
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::slice::Iter;
 use std::fmt;
 
 use err::Err;
 use ast::*;
-use ast::{Module as AstModule, Function as AstFunction, ModulePath as AstModulePath, BuiltinFunction as AstBuiltinFunction};
+use ast::{BuiltinFunction as AstBuiltinFunction, Function as AstFunction, Module as AstModule,
+          ModulePath as AstModulePath};
 use feature::PresentFeatures;
 
 use super::metadata::Metadata;
@@ -26,16 +27,17 @@ pub struct Program {
 }
 
 impl Program {
-
     pub fn new(universe: Universe, metadata: Metadata, features: PresentFeatures) -> Program {
         Program {
             universe: universe,
             metadata: metadata,
-            features: features, 
+            features: features,
         }
     }
 
-    pub fn analysis_context<'a>(&'a mut self) -> (&'a mut Universe, &'a mut Metadata, &'a mut PresentFeatures) {
+    pub fn analysis_context<'a>(
+        &'a mut self,
+    ) -> (&'a mut Universe, &'a mut Metadata, &'a mut PresentFeatures) {
         (&mut self.universe, &mut self.metadata, &mut self.features)
     }
 
@@ -82,13 +84,19 @@ pub struct Universe {
 }
 
 impl Universe {
-
     pub fn std() -> Universe {
-
         let unit = (TypeId(0), internal_module_path!(UNIT_TYPE), SmplType::Unit);
         let int = (TypeId(1), internal_module_path!(INT_TYPE), SmplType::Int);
-        let float = (TypeId(2), internal_module_path!(FLOAT_TYPE), SmplType::Float);
-        let string = (TypeId(3), internal_module_path!(STRING_TYPE), SmplType::String);
+        let float = (
+            TypeId(2),
+            internal_module_path!(FLOAT_TYPE),
+            SmplType::Float,
+        );
+        let string = (
+            TypeId(3),
+            internal_module_path!(STRING_TYPE),
+            SmplType::String,
+        );
         let boolean = (TypeId(4), internal_module_path!(BOOL_TYPE), SmplType::Bool);
 
         let type_map = vec![
@@ -101,14 +109,21 @@ impl Universe {
 
         Universe {
             type_constructor: TypeConstructor::new(),
-            types: type_map.clone().into_iter().map(|(id, _, t)| (id, Rc::new(t))).collect(),
+            types: type_map
+                .clone()
+                .into_iter()
+                .map(|(id, _, t)| (id, Rc::new(t)))
+                .collect(),
             fn_map: HashMap::new(),
             builtin_fn_map: HashMap::new(),
             module_map: HashMap::new(),
             module_name: HashMap::new(),
             id_counter: Cell::new(5),
             std_scope: ScopedData {
-                type_map: type_map.into_iter().map(|(id, path, _)| (path, id)).collect(),
+                type_map: type_map
+                    .into_iter()
+                    .map(|(id, path, _)| (path, id))
+                    .collect(),
                 var_map: HashMap::new(),
                 var_type_map: HashMap::new(),
                 fn_map: HashMap::new(),
@@ -154,7 +169,7 @@ impl Universe {
     }
 
     pub fn get_module(&self, id: ModuleId) -> &Module {
-       self.module_map.get(&id).unwrap()
+        self.module_map.get(&id).unwrap()
     }
 
     pub fn module_id(&self, name: &Ident) -> Option<ModuleId> {
@@ -176,25 +191,32 @@ impl Universe {
         };
 
         if self.fn_map.insert(fn_id, Rc::new(function)).is_some() {
-            panic!("Attempting to override Function with FnId {} in the Universe", fn_id.0);
+            panic!(
+                "Attempting to override Function with FnId {} in the Universe",
+                fn_id.0
+            );
         }
     }
 
     pub fn insert_builtin_fn(&mut self, fn_id: FnId, type_id: TypeId, fn_t: FunctionType) {
         self.insert_type(type_id, SmplType::Function(fn_t));
 
-        let builtin = BuiltinFunction {
-            fn_type: type_id
-        };
+        let builtin = BuiltinFunction { fn_type: type_id };
 
         if self.builtin_fn_map.insert(fn_id, builtin).is_some() {
-            panic!("Attempting to override builtin function with FnId {} in the Universe", fn_id.0);
+            panic!(
+                "Attempting to override builtin function with FnId {} in the Universe",
+                fn_id.0
+            );
         }
     }
 
     pub fn insert_type(&mut self, id: TypeId, t: SmplType) {
         if self.types.insert(id, Rc::new(t)).is_some() {
-            panic!("Attempting to override type with TypeId {} in the Universe", id.0);
+            panic!(
+                "Attempting to override type with TypeId {} in the Universe",
+                id.0
+            );
         }
     }
 
@@ -202,7 +224,8 @@ impl Universe {
         match self.types
             .get(&id)
             .map(|t| t.clone())
-            .or(self.type_constructor.get_type(id)) {
+            .or(self.type_constructor.get_type(id))
+        {
             Some(t) => t,
             None => panic!("Type with TypeId {} does not exist.", id.0),
         }
@@ -257,14 +280,18 @@ impl Universe {
     }
 
     pub fn all_types(&self) -> Vec<(TypeId, Rc<SmplType>)> {
-        self.types.iter()
+        self.types
+            .iter()
             .map(|(id, t)| (id.clone(), t.clone()))
             .chain(self.type_constructor.all_types())
             .collect()
     }
 
     pub fn all_fns(&self) -> Vec<(FnId, Rc<Function>)> {
-        self.fn_map.iter().map(|(id, f)| (id.clone(), f.clone())).collect()
+        self.fn_map
+            .iter()
+            .map(|(id, f)| (id.clone(), f.clone()))
+            .collect()
     }
 
     pub fn all_modules(&self) -> Vec<(&Ident, &ModuleId)> {
@@ -279,7 +306,6 @@ pub struct TypeConstructor {
 }
 
 impl TypeConstructor {
-
     fn new() -> TypeConstructor {
         TypeConstructor {
             map: RefCell::new(HashMap::new()),
@@ -341,7 +367,6 @@ impl TypeConstructor {
     }
 
     pub fn construct_fn_type(universe: &Universe, params: Vec<TypeId>, return_t: TypeId) -> TypeId {
-
         let ft = FunctionType {
             params: ParamType::Checked(params),
             return_type: return_t,
@@ -370,9 +395,13 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn new(module_scope: ScopedData, owned_t: Vec<TypeId>, 
-               owned_fns: Vec<FnId>, dependencies: Vec<ModuleId>,
-               id: ModuleId) -> Module {
+    pub fn new(
+        module_scope: ScopedData,
+        owned_t: Vec<TypeId>,
+        owned_fns: Vec<FnId>,
+        dependencies: Vec<ModuleId>,
+        id: ModuleId,
+    ) -> Module {
         Module {
             id: id,
             module_scope: module_scope,
@@ -412,7 +441,6 @@ pub struct ScopedData {
 }
 
 impl ScopedData {
-
     pub fn insert_fn(&mut self, name: ModulePath, fn_id: FnId) {
         // TODO: Fn name override behaviour?
         self.fn_map.insert(name, fn_id);
@@ -422,22 +450,24 @@ impl ScopedData {
         self.fn_map.remove(&name).unwrap();
     }
 
-    pub fn type_id<'a, 'b, 'c>(&'a self, universe: &'c Universe, type_annotation: TypeAnnotationRef<'b>) -> Result<TypeId, Err> {
+    pub fn type_id<'a, 'b, 'c>(
+        &'a self,
+        universe: &'c Universe,
+        type_annotation: TypeAnnotationRef<'b>,
+    ) -> Result<TypeId, Err> {
         match type_annotation {
-            TypeAnnotationRef::Path(path) => {
-                self.type_map.get(&path.clone().into())
-                    .map(|id| id.clone())
-                    .ok_or(Err::UnknownType(type_annotation.into()))
-            }
+            TypeAnnotationRef::Path(path) => self.type_map
+                .get(&path.clone().into())
+                .map(|id| id.clone())
+                .ok_or(Err::UnknownType(type_annotation.into())),
 
             TypeAnnotationRef::Array(base_type, size) => {
                 let base_type = base_type.data();
                 let base_type = ScopedData::type_id(self, universe, base_type.into())?;
-                let type_id = TypeConstructor::construct_array_type(universe, 
-                                                                   base_type, 
-                                                                   size.clone());
+                let type_id =
+                    TypeConstructor::construct_array_type(universe, base_type, size.clone());
                 Ok(type_id)
-            },
+            }
 
             TypeAnnotationRef::FnType(params, return_t) => {
                 let param_types = match params {
@@ -459,12 +489,16 @@ impl ScopedData {
                     Some(r) => {
                         let r_path = r.data();
                         ScopedData::type_id(self, universe, r_path.into())?
-                    },
+                    }
 
                     None => universe.unit(),
                 };
 
-                Ok(TypeConstructor::construct_fn_type(universe, param_types, return_t))
+                Ok(TypeConstructor::construct_fn_type(
+                    universe,
+                    param_types,
+                    return_t,
+                ))
             }
         }
     }
@@ -475,13 +509,14 @@ impl ScopedData {
 
     pub fn binding_info(&self, name: &Ident) -> Result<BindingInfo, Err> {
         match self.var_map.get(name) {
-            Some(v_id) => {
-                Ok(BindingInfo::Var(v_id.clone(), 
-                                    self.var_type_map.get(v_id).unwrap().clone()))
-            }
+            Some(v_id) => Ok(BindingInfo::Var(
+                v_id.clone(),
+                self.var_type_map.get(v_id).unwrap().clone(),
+            )),
             None => {
                 let p = ModulePath(vec![name.clone()]);
-                self.fn_map.get(&p)
+                self.fn_map
+                    .get(&p)
                     .map(|f| BindingInfo::Fn(f.clone()))
                     .ok_or(Err::UnknownBinding(name.clone()))
             }
@@ -489,13 +524,11 @@ impl ScopedData {
     }
 
     pub fn var_info(&self, name: &Ident) -> Result<(VarId, TypeId), Err> {
-        let var_id = self.var_map.get(name)
-                         .ok_or(Err::UnknownBinding(name.clone()))?
-                         .clone();
-        let type_id = self.var_type_map
-                          .get(&var_id)
-                          .unwrap()
-                          .clone();
+        let var_id = self.var_map
+            .get(name)
+            .ok_or(Err::UnknownBinding(name.clone()))?
+            .clone();
+        let type_id = self.var_type_map.get(&var_id).unwrap().clone();
 
         Ok((var_id, type_id))
     }
@@ -509,9 +542,10 @@ impl ScopedData {
     }
 
     pub fn get_fn(&self, path: &AstModulePath) -> Result<FnId, Err> {
-        self.fn_map.get(&path.clone().into())
-                   .map(|id| id.clone())
-                   .ok_or(Err::UnknownFn(path.clone()))
+        self.fn_map
+            .get(&path.clone().into())
+            .map(|id| id.clone())
+            .ok_or(Err::UnknownFn(path.clone()))
     }
 
     pub fn all_types(&self) -> Vec<(&ModulePath, &TypeId)> {
@@ -769,12 +803,10 @@ impl ModulePath {
 
 impl fmt::Display for ModulePath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let buffer = self.0
-            .iter()
-            .fold(String::new(), |mut buffer, ref item| {
-                buffer.push_str(&item.0);
-                buffer
-            });
+        let buffer = self.0.iter().fold(String::new(), |mut buffer, ref item| {
+            buffer.push_str(&item.0);
+            buffer
+        });
         write!(f, "{}", buffer)
     }
 }

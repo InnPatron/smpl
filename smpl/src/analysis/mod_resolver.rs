@@ -1,18 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use err::{TypeErr, Err};
-use ast::{
-    DeclStmt, 
-    Struct, 
-    Function as AstFunction, 
-    Module as AstModule
-};
-use ast::{ 
-    AstNode,
-    Ident, 
-    UseDecl,
-    BuiltinFunction as AstBuiltinFunction,
-};
+use err::{Err, TypeErr};
+use ast::{DeclStmt, Function as AstFunction, Module as AstModule, Struct};
+use ast::{AstNode, BuiltinFunction as AstBuiltinFunction, Ident, UseDecl};
 
 use super::feature_checkers::*;
 use super::metadata::*;
@@ -72,18 +62,22 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_type) in raw_mod.reserved_structs.iter() {
             let type_id = reserved_type.0;
-            let (struct_type, field_ordering) = generate_struct_type(program, 
-                                                               raw_program.scopes.get(mod_id).unwrap(), 
-                                                               reserved_type.1.data())?;
+            let (struct_type, field_ordering) = generate_struct_type(
+                program,
+                raw_program.scopes.get(mod_id).unwrap(),
+                reserved_type.1.data(),
+            )?;
 
-            program.universe_mut().insert_type(type_id, SmplType::Struct(struct_type));
+            program
+                .universe_mut()
+                .insert_type(type_id, SmplType::Struct(struct_type));
 
             type_roots.push(type_id);
 
             let field_ordering = FieldOrdering::new(type_id, field_ordering);
-            program.metadata_mut().insert_field_ordering(type_id, field_ordering);
-
-           
+            program
+                .metadata_mut()
+                .insert_field_ordering(type_id, field_ordering);
         }
     }
 
@@ -92,28 +86,47 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
             let fn_id = reserved_fn.0;
             let type_id = reserved_fn.1;
             let fn_decl = reserved_fn.2.data();
-            let fn_type = generate_fn_type(program, raw_program.scopes.get(mod_id).unwrap(), fn_id, reserved_fn.2.data())?;
+            let fn_type = generate_fn_type(
+                program,
+                raw_program.scopes.get(mod_id).unwrap(),
+                fn_id,
+                reserved_fn.2.data(),
+            )?;
             let cfg = CFG::generate(program.universe(), fn_decl.body.clone(), &fn_type)?;
 
-            program.universe_mut().insert_fn(fn_id, type_id, fn_type, cfg);
-            program.metadata_mut().insert_module_fn(mod_id.clone(), fn_decl.name.data().clone(), fn_id);
+            program
+                .universe_mut()
+                .insert_fn(fn_id, type_id, fn_type, cfg);
+            program.metadata_mut().insert_module_fn(
+                mod_id.clone(),
+                fn_decl.name.data().clone(),
+                fn_id,
+            );
         }
 
         for (_, reserved_builtin) in raw_mod.reserved_builtins.iter() {
             let fn_id = reserved_builtin.0;
             let type_id = reserved_builtin.1;
             let fn_decl = reserved_builtin.2.data();
-            let fn_type = generate_builtin_fn_type(program, 
-                                                   raw_program.scopes.get(mod_id).unwrap(), 
-                                                   fn_id, 
-                                                   reserved_builtin.2.data())?;
+            let fn_type = generate_builtin_fn_type(
+                program,
+                raw_program.scopes.get(mod_id).unwrap(),
+                fn_id,
+                reserved_builtin.2.data(),
+            )?;
 
             program.features_mut().add_feature(BUILTIN_FN);
 
-            program.universe_mut().insert_builtin_fn(fn_id, type_id, fn_type);
+            program
+                .universe_mut()
+                .insert_builtin_fn(fn_id, type_id, fn_type);
 
             program.metadata_mut().insert_builtin(fn_id);
-            program.metadata_mut().insert_module_fn(mod_id.clone(), fn_decl.name.data().clone(), fn_id);
+            program.metadata_mut().insert_module_fn(
+                mod_id.clone(),
+                fn_decl.name.data().clone(),
+                fn_id,
+            );
         }
     }
 
@@ -121,7 +134,11 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
         cyclic_type_check(program, root)?;
         let struct_type = program.universe().get_type(root);
         let struct_type = irmatch!(*struct_type; SmplType::Struct(ref s) => s);
-        for field_type in struct_type.fields.iter().map(|(_, type_id)| type_id.clone()) {
+        for field_type in struct_type
+            .fields
+            .iter()
+            .map(|(_, type_id)| type_id.clone())
+        {
             let (universe, _, features) = program.analysis_context();
             field_type_scanner(universe, features, field_type);
         }
@@ -130,18 +147,29 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;
-            analyze_fn(program, raw_program.scopes.get(mod_id).unwrap(), fn_id, mod_id.clone())?;
+            analyze_fn(
+                program,
+                raw_program.scopes.get(mod_id).unwrap(),
+                fn_id,
+                mod_id.clone(),
+            )?;
         }
     }
 
     for (name, mod_id) in raw_program.raw_map.into_iter() {
         let module_data = raw_data.remove(&mod_id).unwrap();
 
-        let owned_structs = module_data.reserved_structs.into_iter()
-            .map(|(_, r)| r.0).collect::<Vec<_>>();
-        let owned_fns = module_data.reserved_fns.into_iter()
-            .map(|(_, r)| r.0).chain(module_data.reserved_builtins.into_iter()
-                                     .map(|(_, r)| r.0)).collect::<Vec<_>>();
+        let owned_structs = module_data
+            .reserved_structs
+            .into_iter()
+            .map(|(_, r)| r.0)
+            .collect::<Vec<_>>();
+        let owned_fns = module_data
+            .reserved_fns
+            .into_iter()
+            .map(|(_, r)| r.0)
+            .chain(module_data.reserved_builtins.into_iter().map(|(_, r)| r.0))
+            .collect::<Vec<_>>();
 
         let module_scope = raw_program.scopes.remove(&mod_id).unwrap();
 
@@ -158,22 +186,22 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
 fn cyclic_type_check(program: &Program, root_id: TypeId) -> Result<(), Err> {
     let mut visited_structs = HashSet::new();
     let mut to_visit = Vec::new();
-    
+
     to_visit.push(root_id);
 
     loop {
         let depth = to_visit;
         to_visit = Vec::new();
         for type_id in depth.into_iter() {
-
             if visited_structs.contains(&type_id) {
                 return Err(TypeErr::CyclicType(root_id).into());
             }
 
             match *program.universe().get_type(type_id) {
                 SmplType::Struct(ref struct_type) => {
-                    // Remove fields with duplicate types 
-                    let set: HashSet<_> = struct_type.fields
+                    // Remove fields with duplicate types
+                    let set: HashSet<_> = struct_type
+                        .fields
                         .iter()
                         .map(|(_, type_id)| type_id.clone())
                         .collect();
@@ -199,7 +227,11 @@ fn cyclic_type_check(program: &Program, root_id: TypeId) -> Result<(), Err> {
     Ok(())
 }
 
-fn generate_struct_type(program: &mut Program, scope: &ScopedData, struct_def: &Struct) -> Result<(StructType, Vec<FieldId>), Err> {
+fn generate_struct_type(
+    program: &mut Program,
+    scope: &ScopedData,
+    struct_def: &Struct,
+) -> Result<(StructType, Vec<FieldId>), Err> {
     let (universe, _metadata, _features) = program.analysis_context();
 
     let mut fields = HashMap::new();
@@ -216,7 +248,7 @@ fn generate_struct_type(program: &mut Program, scope: &ScopedData, struct_def: &
             field_map.insert(f_name, f_id);
             order.push(f_id);
         }
-    } 
+    }
 
     let struct_t = StructType {
         name: struct_def.name.data().clone(),
@@ -227,35 +259,43 @@ fn generate_struct_type(program: &mut Program, scope: &ScopedData, struct_def: &
     Ok((struct_t, order))
 }
 
-fn map_usings(raw_modules: &HashMap<ModuleId, RawModData>, raw_prog: &mut RawProgram) -> Result<(), Err> {
+fn map_usings(
+    raw_modules: &HashMap<ModuleId, RawModData>,
+    raw_prog: &mut RawProgram,
+) -> Result<(), Err> {
     for (id, raw_mod) in raw_modules {
         let mut dependencies = Vec::new();
         for use_decl in raw_mod.uses.iter() {
             let import_name = use_decl.data().0.data();
-            let import_id = raw_prog.raw_map.get(import_name).ok_or(Err::UnresolvedUses(vec![use_decl.clone()]))?;
+            let import_id = raw_prog
+                .raw_map
+                .get(import_name)
+                .ok_or(Err::UnresolvedUses(vec![use_decl.clone()]))?;
 
             dependencies.push(import_id.clone());
             // Get imported module's types and functions
             let (all_types, all_fns) = {
                 let imported_scope = raw_prog.scopes.get(import_id).unwrap();
-                let all_types = imported_scope.all_types()
-                                              .into_iter()
-                                              .map(|(path, id)| {
-                                                  let mut path = path.clone();
-                                                  path.0.insert(0, import_name.clone());
-                                                  
-                                                  (path, id.clone())
-                                              })
-                                              .collect::<HashMap<_, _>>();
-                let all_fns = imported_scope.all_fns()
-                                            .into_iter()
-                                            .map(|(path, id)| {
-                                                let mut path = path.clone();
-                                                path.0.insert(0, import_name.clone());
-                                                  
-                                                (path, id.clone())
-                                            })
-                                            .collect::<HashMap<_,_>>();
+                let all_types = imported_scope
+                    .all_types()
+                    .into_iter()
+                    .map(|(path, id)| {
+                        let mut path = path.clone();
+                        path.0.insert(0, import_name.clone());
+
+                        (path, id.clone())
+                    })
+                    .collect::<HashMap<_, _>>();
+                let all_fns = imported_scope
+                    .all_fns()
+                    .into_iter()
+                    .map(|(path, id)| {
+                        let mut path = path.clone();
+                        path.0.insert(0, import_name.clone());
+
+                        (path, id.clone())
+                    })
+                    .collect::<HashMap<_, _>>();
 
                 (all_types, all_fns)
             };
@@ -264,13 +304,16 @@ fn map_usings(raw_modules: &HashMap<ModuleId, RawModData>, raw_prog: &mut RawPro
 
             // Bring imported types into scope
             for (path, imported) in all_types.into_iter() {
-                if current_module_scope.insert_type(path.clone().into(), imported).is_some() {
+                if current_module_scope
+                    .insert_type(path.clone().into(), imported)
+                    .is_some()
+                {
                     panic!("Should not have overrwritten {}. Paths should be unique by prefixing with the originating module.", path);
                 }
             }
 
             // Bring imported functions into scope
-            for(path, imported) in all_fns.into_iter() {
+            for (path, imported) in all_fns.into_iter() {
                 current_module_scope.insert_fn(path, imported);
             }
         }
@@ -307,22 +350,24 @@ fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> HashMap<Modul
         for decl_stmt in module.1.into_iter() {
             match decl_stmt {
                 DeclStmt::Struct(d) => {
-                    struct_reserve.insert(d.data().name.data().clone().clone(), 
-                                          ReservedType(universe.new_type_id(), d));
+                    struct_reserve.insert(
+                        d.data().name.data().clone().clone(),
+                        ReservedType(universe.new_type_id(), d),
+                    );
                 }
 
                 DeclStmt::Function(d) => {
-                    fn_reserve.insert(d.data().name.data().clone(), 
-                               ReservedFn(universe.new_fn_id(),
-                                            universe.new_type_id(),
-                                            d));
+                    fn_reserve.insert(
+                        d.data().name.data().clone(),
+                        ReservedFn(universe.new_fn_id(), universe.new_type_id(), d),
+                    );
                 }
 
                 DeclStmt::BuiltinFunction(d) => {
-                    builtin_fn_reserve.insert(d.data().name.data().clone(), 
-                               ReservedBuiltinFn(universe.new_fn_id(),
-                                                universe.new_type_id(),
-                                                d));
+                    builtin_fn_reserve.insert(
+                        d.data().name.data().clone(),
+                        ReservedBuiltinFn(universe.new_fn_id(), universe.new_type_id(), d),
+                    );
                 }
 
                 DeclStmt::Use(u) => {
@@ -337,7 +382,7 @@ fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> HashMap<Modul
             reserved_structs: struct_reserve,
             reserved_fns: fn_reserve,
             reserved_builtins: builtin_fn_reserve,
-            uses: uses
+            uses: uses,
         };
 
         mod_map.insert(raw.id.clone(), raw);

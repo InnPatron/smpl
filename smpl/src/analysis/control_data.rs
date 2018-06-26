@@ -3,7 +3,6 @@ use span::Span;
 use super::typed_ast;
 use super::semantic_data::{BranchingId, LoopId};
 
-
 #[derive(Clone, Debug)]
 pub enum Node {
     Start,

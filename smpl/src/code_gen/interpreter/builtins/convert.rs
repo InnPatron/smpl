@@ -11,7 +11,6 @@ pub const CONVERT_FLOAT_TO_INT: &'static str = "float_to_int";
 pub const CONVERT_IS_FLOAT: &'static str = "is_float";
 pub const CONVERT_IS_INT: &'static str = "is_int";
 
-
 pub const CONVERT_STRING_TO_FLOAT: &'static str = "string_to_float";
 pub const CONVERT_STRING_TO_INT: &'static str = "string_to_int";
 
@@ -22,14 +21,23 @@ pub fn include(modules: &mut Vec<Module>) {
 }
 
 pub fn add(vm: &mut VM) {
-    vm.insert_builtin(MOD_CONVERT, CONVERT_INT_TO_FLOAT, Box::new(IntToFloat)).unwrap();
-    vm.insert_builtin(MOD_CONVERT, CONVERT_FLOAT_TO_INT, Box::new(FloatToInt)).unwrap();
+    vm.insert_builtin(MOD_CONVERT, CONVERT_INT_TO_FLOAT, Box::new(IntToFloat))
+        .unwrap();
+    vm.insert_builtin(MOD_CONVERT, CONVERT_FLOAT_TO_INT, Box::new(FloatToInt))
+        .unwrap();
 
-    vm.insert_builtin(MOD_CONVERT, CONVERT_IS_FLOAT, Box::new(IsFloat)).unwrap();
-    vm.insert_builtin(MOD_CONVERT, CONVERT_IS_INT, Box::new(IsInt)).unwrap();
+    vm.insert_builtin(MOD_CONVERT, CONVERT_IS_FLOAT, Box::new(IsFloat))
+        .unwrap();
+    vm.insert_builtin(MOD_CONVERT, CONVERT_IS_INT, Box::new(IsInt))
+        .unwrap();
 
-    vm.insert_builtin(MOD_CONVERT, CONVERT_STRING_TO_FLOAT, Box::new(StringToFloat)).unwrap();
-    vm.insert_builtin(MOD_CONVERT, CONVERT_STRING_TO_INT, Box::new(StringToInt)).unwrap();
+    vm.insert_builtin(
+        MOD_CONVERT,
+        CONVERT_STRING_TO_FLOAT,
+        Box::new(StringToFloat),
+    ).unwrap();
+    vm.insert_builtin(MOD_CONVERT, CONVERT_STRING_TO_INT, Box::new(StringToInt))
+        .unwrap();
 }
 
 pub struct IntToFloat;
@@ -96,11 +104,10 @@ impl BuiltinFn for StringToFloat {
         let a = args.remove(0);
 
         match a {
-            Value::String(s) => Value::Float(s
-                                             .parse::<f32>()
-                                             .expect(&format!("{} was not a valid float.", s)
-                                                     )
-                                             ),
+            Value::String(s) => Value::Float(
+                s.parse::<f32>()
+                    .expect(&format!("{} was not a valid float.", s)),
+            ),
             _ => unreachable!(),
         }
     }
@@ -114,11 +121,10 @@ impl BuiltinFn for StringToInt {
         let a = args.remove(0);
 
         match a {
-            Value::String(s) => Value::Int(s
-                                             .parse::<i32>()
-                                             .expect(&format!("{} was not a valid int.", s)
-                                                     )
-                                             ),
+            Value::String(s) => Value::Int(
+                s.parse::<i32>()
+                    .expect(&format!("{} was not a valid int.", s)),
+            ),
             _ => unreachable!(),
         }
     }

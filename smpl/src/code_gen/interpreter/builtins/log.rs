@@ -14,8 +14,10 @@ pub fn include(modules: &mut Vec<Module>) {
 }
 
 pub fn add(vm: &mut VM) {
-    vm.insert_builtin(MOD_LOG, LOG_PRINT, Box::new(Print)).unwrap();
-    vm.insert_builtin(MOD_LOG, LOG_PRINTLN, Box::new(Println)).unwrap();
+    vm.insert_builtin(MOD_LOG, LOG_PRINT, Box::new(Print))
+        .unwrap();
+    vm.insert_builtin(MOD_LOG, LOG_PRINTLN, Box::new(Println))
+        .unwrap();
 }
 
 pub struct Print;
@@ -36,7 +38,6 @@ pub struct Println;
 
 impl BuiltinFn for Println {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
-
         if let Some(args) = args {
             for arg in args {
                 print!("{}", arg);

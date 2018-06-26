@@ -31,7 +31,7 @@ impl fmt::Display for Value {
                     write!(f, "{},", value)?
                 }
                 write!(f, " ]")
-            },
+            }
 
             Value::Struct(ref s) => {
                 write!(f, "{{ ")?;
@@ -40,9 +40,9 @@ impl fmt::Display for Value {
                     write!(f, "{}: {},", k, v)?;
                 }
                 write!(f, " }}")
-            },
+            }
 
-            Value::Function(..) => write!(f, "Function"),   // TODO: Add more information
+            Value::Function(..) => write!(f, "Function"), // TODO: Add more information
 
             Value::Unit => write!(f, "()"),
         }
@@ -58,7 +58,9 @@ impl Struct {
     }
 
     pub fn set_field(&mut self, name: String, v: Value) -> Option<Value> {
-        self.0.insert(name, Rc::new(RefCell::new(v))).map(|rc| rc.borrow().clone())
+        self.0
+            .insert(name, Rc::new(RefCell::new(v)))
+            .map(|rc| rc.borrow().clone())
     }
 
     pub fn get_field(&self, name: &str) -> Option<Value> {
@@ -69,7 +71,7 @@ impl Struct {
         self.0.get(name).map(|rc| rc.clone())
     }
 
-    pub fn fields(&self) -> impl Iterator<Item=(&str, Rc<RefCell<Value>>)> {
+    pub fn fields(&self) -> impl Iterator<Item = (&str, Rc<RefCell<Value>>)> {
         self.0.iter().map(|(k, v)| (k.as_str(), v.clone()))
     }
 }

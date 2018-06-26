@@ -5,7 +5,7 @@ use std::rc::Rc;
 use petgraph::graph::NodeIndex;
 use petgraph::Direction;
 
-use ast::{Module, Ident};
+use ast::{Ident, Module};
 
 use err::Err;
 
@@ -37,7 +37,10 @@ impl VM {
     pub fn eval_fn(&self, handle: FnHandle) -> Value {
         let id = handle.id();
         if self.program.metadata().is_builtin(id) {
-            self.builtins.get(&id).expect("Missing a built-in").execute(None)
+            self.builtins
+                .get(&id)
+                .expect("Missing a built-in")
+                .execute(None)
         } else {
             let mut fn_env = FnEnv::new(&self, id, None);
             fn_env.eval()
@@ -47,34 +50,41 @@ impl VM {
     pub fn eval_fn_args(&self, handle: FnHandle, args: Vec<Value>) -> Value {
         let id = handle.id();
         if self.program.metadata().is_builtin(id) {
-            self.builtins.get(&id).expect("Missing a built-in").execute(Some(args))
+            self.builtins
+                .get(&id)
+                .expect("Missing a built-in")
+                .execute(Some(args))
         } else {
             let mut fn_env = FnEnv::new(self, id, Some(args));
             fn_env.eval()
         }
     }
 
-    pub fn insert_builtin(&mut self, module_str: &str, name_str: &str, builtin: Box<BuiltinFn>) 
-        -> Result<Option<Box<BuiltinFn>>, String> {
-
+    pub fn insert_builtin(
+        &mut self,
+        module_str: &str,
+        name_str: &str,
+        builtin: Box<BuiltinFn>,
+    ) -> Result<Option<Box<BuiltinFn>>, String> {
         let module = Ident(module_str.to_string());
         let name = Ident(name_str.to_string());
         let mod_id = self.program.universe().module_id(&module);
 
         match mod_id {
-            Some(mod_id) => {
-                match self.program.metadata().module_fn(mod_id, name) {
-                    Some(fn_id) => {
-                        if self.program.metadata().is_builtin(fn_id) {
-                            Ok(self.builtins.insert(fn_id, builtin))
-                        } else {
-                            Err(format!("{}::{} is not a valid builtin function", module_str, name_str))
-                        }
+            Some(mod_id) => match self.program.metadata().module_fn(mod_id, name) {
+                Some(fn_id) => {
+                    if self.program.metadata().is_builtin(fn_id) {
+                        Ok(self.builtins.insert(fn_id, builtin))
+                    } else {
+                        Err(format!(
+                            "{}::{} is not a valid builtin function",
+                            module_str, name_str
+                        ))
                     }
-
-                    None => Err(format!("{} is not a function in {}", name_str, module_str)),
                 }
-            }
+
+                None => Err(format!("{} is not a function in {}", name_str, module_str)),
+            },
 
             None => Err(format!("Module '{}' does not exist", module_str)),
         }
@@ -86,10 +96,10 @@ impl VM {
         let mod_id = self.program.universe().module_id(&module);
 
         match mod_id {
-            Some(mod_id) => {
-                Ok(self.program.metadata().module_fn(mod_id, name)
-                    .map(|fn_id| fn_id.into()))
-            }
+            Some(mod_id) => Ok(self.program
+                .metadata()
+                .module_fn(mod_id, name)
+                .map(|fn_id| fn_id.into())),
 
             None => Err(format!("Module '{}' does not exist", module)),
         }
@@ -108,7 +118,7 @@ struct Env {
 impl Env {
     pub fn new() -> Env {
         Env {
-            env: HashMap::new()
+            env: HashMap::new(),
         }
     }
 
@@ -121,7 +131,9 @@ impl Env {
     }
 
     pub fn map_value(&mut self, name: String, value: Value) -> Option<Value> {
-        self.env.insert(name, Rc::new(RefCell::new(value))).map(|rc| rc.borrow().clone())
+        self.env
+            .insert(name, Rc::new(RefCell::new(value)))
+            .map(|rc| rc.borrow().clone())
     }
 
     pub fn get(&self, name: &str) -> Option<Value> {
@@ -164,7 +176,7 @@ struct FnEnv<'a> {
     loop_heads: HashMap<LoopId, NodeIndex>,
     loop_result: HashMap<LoopId, bool>,
     previous_is_loop_head: bool,
-    loop_stack: Vec<LoopId>, 
+    loop_stack: Vec<LoopId>,
 }
 
 enum NodeEval {
@@ -173,14 +185,14 @@ enum NodeEval {
 }
 
 impl<'a> FnEnv<'a> {
-
     fn new(vm: &VM, fn_id: FnId, args: Option<Vec<Value>>) -> FnEnv {
         let mut env = Env::new();
 
         if let Some(args) = args {
             for (arg, param_info) in args.into_iter()
-                .zip(vm.program().metadata().function_param_ids(fn_id)) {
-                    env.map_var(param_info.var_id(), arg);
+                .zip(vm.program().metadata().function_param_ids(fn_id))
+            {
+                env.map_var(param_info.var_id(), arg);
             }
         }
 
@@ -345,7 +357,8 @@ impl<'a> FnEnv<'a> {
                             value = {
                                 let value = value.borrow();
                                 let struct_value = irmatch!(*value; Value::Struct(ref s) => s);
-                                let field_to_index = struct_value.ref_field(f.name().as_str()).unwrap();
+                                let field_to_index =
+                                    struct_value.ref_field(f.name().as_str()).unwrap();
                                 let field_to_index = field_to_index.borrow();
                                 let field = irmatch!(*field_to_index; Value::Array(ref a) => a);
 
@@ -375,7 +388,7 @@ impl<'a> FnEnv<'a> {
                 self.previous_is_loop_head = false;
                 let value = match data.expr {
                     Some(ref expr) => Expr::eval_expr(self.vm, &self.env, expr),
-                    None => Value::Unit
+                    None => Value::Unit,
                 };
                 Ok(NodeEval::Return(value))
             }
@@ -384,18 +397,13 @@ impl<'a> FnEnv<'a> {
                 let value = Expr::eval_expr(self.vm, &self.env, &data.expr);
                 let value = irmatch!(value; Value::Bool(b) => b);
                 let (t_b, f_b) = self.func.cfg().after_condition(current);
-                let next = if value {
-                    t_b
-                } else {
-                    f_b
-                };
+                let next = if value { t_b } else { f_b };
 
                 if self.previous_is_loop_head {
                     let id = self.pop_loop_stack();
                     self.loop_result.insert(id, value);
                     self.loop_stack.push(id);
                 }
-
 
                 self.previous_is_loop_head = false;
                 Ok(NodeEval::Next(self.func.cfg().next(next)))
@@ -405,15 +413,15 @@ impl<'a> FnEnv<'a> {
 }
 
 mod Expr {
-    use std::ops::{Add, Sub, Div, Mul, BitAnd, BitOr, Neg, Not};
+    use std::ops::{Add, BitAnd, BitOr, Div, Mul, Neg, Not, Sub};
 
     use ast::Literal;
-    use analysis::{Expr, Tmp, Value as AbstractValue, BindingId, ArrayInit, PathSegment};
+    use analysis::{ArrayInit, BindingId, Expr, PathSegment, Tmp, Value as AbstractValue};
     use analysis::smpl_type::SmplType;
     use super::*;
     use super::super::value::*;
 
-    pub(in super) fn eval_expr(vm: &VM, host_env: &Env, expr: &Expr) -> Value {
+    pub(super) fn eval_expr(vm: &VM, host_env: &Env, expr: &Expr) -> Value {
         let mut expr_env = Env::new();
         let mut last = None;
         for id in expr.execution_order() {
@@ -429,13 +437,11 @@ mod Expr {
 
     fn eval_tmp(vm: &VM, host_env: &Env, expr_env: &Env, _expr: &Expr, tmp: &Tmp) -> Value {
         match *tmp.value().data() {
-            AbstractValue::Literal(ref literal) => {
-                match *literal {
-                    Literal::Bool(b) => Value::Bool(b),
-                    Literal::Int(i) => Value::Int(i as i32),
-                    Literal::Float(f) => Value::Float(f as f32),
-                    Literal::String(ref s) => Value::String(s.to_string()),
-                }
+            AbstractValue::Literal(ref literal) => match *literal {
+                Literal::Bool(b) => Value::Bool(b),
+                Literal::Int(i) => Value::Int(i as i32),
+                Literal::Float(f) => Value::Float(f as f32),
+                Literal::String(ref s) => Value::String(s.to_string()),
             },
 
             AbstractValue::Binding(ref binding) => {
@@ -478,7 +484,8 @@ mod Expr {
                             value = {
                                 let value = value.borrow();
                                 let struct_value = irmatch!(*value; Value::Struct(ref s) => s);
-                                let field_to_index = struct_value.ref_field(f.name().as_str()).unwrap();
+                                let field_to_index =
+                                    struct_value.ref_field(f.name().as_str()).unwrap();
                                 let field_to_index = field_to_index.borrow();
                                 let field = irmatch!(*field_to_index; Value::Array(ref a) => a);
 
@@ -493,7 +500,7 @@ mod Expr {
                 let ret = borrow.clone();
 
                 ret
-            },
+            }
 
             AbstractValue::FnCall(ref call) => {
                 let fn_id = match call.get_id().unwrap() {
@@ -507,9 +514,9 @@ mod Expr {
                 };
 
                 let args: Option<Vec<_>> = call.args().map(|v| {
-                    v.iter().map(|tmp| {
-                        expr_env.get_tmp(tmp.data().clone()).unwrap().clone()
-                    }).collect()
+                    v.iter()
+                        .map(|tmp| expr_env.get_tmp(tmp.data().clone()).unwrap().clone())
+                        .collect()
                 });
 
                 match args {
@@ -519,11 +526,10 @@ mod Expr {
                         } else {
                             vm.eval_fn(fn_id.into())
                         }
-                    } 
+                    }
 
                     None => vm.eval_fn(fn_id.into()),
                 }
-
             }
 
             AbstractValue::BinExpr(ref op, ref lhs, ref rhs) => {
@@ -538,7 +544,6 @@ mod Expr {
                         let lhs = irmatch!(lh_v; Value::Int(i) => i);
                         let rhs = irmatch!(rh_v; Value::Int(i) => i);
 
-
                         if is_math(op.clone()) {
                             let result = math_op(op.clone(), lhs, rhs);
                             Value::Int(result)
@@ -552,7 +557,6 @@ mod Expr {
                         let lhs = irmatch!(lh_v; Value::Float(f) => f);
                         let rhs = irmatch!(rh_v; Value::Float(f) => f);
 
-
                         if is_math(op.clone()) {
                             let result = math_op(op.clone(), lhs, rhs);
                             Value::Float(result)
@@ -561,11 +565,10 @@ mod Expr {
                             Value::Bool(result)
                         }
                     }
-                    
+
                     SmplType::Bool => {
                         let lhs = irmatch!(lh_v; Value::Bool(b) => b);
                         let rhs = irmatch!(rh_v; Value::Bool(b) => b);
-
 
                         if is_logical(op.clone()) {
                             let result = logical(op.clone(), lhs, rhs);
@@ -576,9 +579,7 @@ mod Expr {
                         }
                     }
 
-                    _ => {
-                        Value::Bool(partial_cmp(op.clone(), lh_v, rh_v))
-                    }
+                    _ => Value::Bool(partial_cmp(op.clone(), lh_v, rh_v)),
                 }
             }
 
@@ -616,27 +617,32 @@ mod Expr {
                         }
                     }
 
-                    None => ()
+                    None => (),
                 }
 
                 Value::Struct(s)
             }
 
-            AbstractValue::ArrayInit(ref init) => {
-                match *init {
-                    ArrayInit::List(ref v) => {
-                        Value::Array(v.iter().map(|element| {
+            AbstractValue::ArrayInit(ref init) => match *init {
+                ArrayInit::List(ref v) => Value::Array(
+                    v.iter()
+                        .map(|element| {
                             let element_id = element.data().clone();
                             Rc::new(RefCell::new(expr_env.get_tmp(element_id).unwrap().clone()))
-                        }).collect())
-                    }
+                        })
+                        .collect(),
+                ),
 
-                    ArrayInit::Value(ref v, size) => {
-                        let element = expr_env.get_tmp(v.data().clone()).unwrap();
-                        Value::Array((0..size).into_iter().map(|_| Rc::new(RefCell::new(element.clone()))).collect())
-                    }
+                ArrayInit::Value(ref v, size) => {
+                    let element = expr_env.get_tmp(v.data().clone()).unwrap();
+                    Value::Array(
+                        (0..size)
+                            .into_iter()
+                            .map(|_| Rc::new(RefCell::new(element.clone())))
+                            .collect(),
+                    )
                 }
-            }
+            },
 
             AbstractValue::Indexing(ref indexing) => {
                 let array = expr_env.ref_tmp(indexing.array.data().clone()).unwrap();
@@ -663,11 +669,11 @@ mod Expr {
         }
     }
 
-    fn not<T: Not<Output=T>>(t: T) -> T {
+    fn not<T: Not<Output = T>>(t: T) -> T {
         !t
     }
 
-    fn negate<T: Neg<Output=T>>(t: T) -> T {
+    fn negate<T: Neg<Output = T>>(t: T) -> T {
         -t
     }
 
@@ -681,11 +687,15 @@ mod Expr {
     fn is_math(op: BinOp) -> bool {
         match op {
             BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div => true,
-            _ => false
+            _ => false,
         }
     }
 
-    fn math_op<T: Add<Output=T> + Sub<Output=T> + Div<Output=T> + Mul<Output=T>>(op: BinOp, lhs: T, rhs: T) -> T {
+    fn math_op<T: Add<Output = T> + Sub<Output = T> + Div<Output = T> + Mul<Output = T>>(
+        op: BinOp,
+        lhs: T,
+        rhs: T,
+    ) -> T {
         irmatch!(op;
             BinOp::Add => lhs + rhs,
             BinOp::Sub => lhs - rhs,
@@ -712,7 +722,7 @@ mod Expr {
         )
     }
 
-    fn logical<T: BitAnd<Output=T> + BitOr<Output=T>>(op: BinOp, lhs: T, rhs: T) -> T {
+    fn logical<T: BitAnd<Output = T> + BitOr<Output = T>>(op: BinOp, lhs: T, rhs: T) -> T {
         irmatch!(op;
                  BinOp::LogicalAnd => lhs & rhs,
                  BinOp::LogicalOr => lhs | rhs

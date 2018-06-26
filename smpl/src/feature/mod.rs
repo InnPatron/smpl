@@ -15,7 +15,6 @@ pub struct PresentFeatures {
 }
 
 impl PresentFeatures {
-
     pub fn new() -> PresentFeatures {
         PresentFeatures {
             features: HashSet::new(),
@@ -46,8 +45,7 @@ pub struct FeatureInfo {
 }
 
 impl FeatureInfo {
-    pub fn new(r: Vec<FeatureReasoning>, 
-               d: Vec<FeatureReasoning>) -> FeatureInfo {
+    pub fn new(r: Vec<FeatureReasoning>, d: Vec<FeatureReasoning>) -> FeatureInfo {
         FeatureInfo {
             required: r,
             denied: d,
@@ -69,22 +67,14 @@ impl FeatureInfo {
             }
         }
 
-        let rl = if rl.len() == 0 {
-            None
-        } else {
-            Some(rl)
-        };
+        let rl = if rl.len() == 0 { None } else { Some(rl) };
 
-        let dl = if dl.len() == 0 {
-            None
-        } else {
-            Some(dl)
-        };
+        let dl = if dl.len() == 0 { None } else { Some(dl) };
 
         if rl.is_some() || dl.is_some() {
             Err(FeatureErr {
                 requires: rl,
-                denies: dl
+                denies: dl,
             })
         } else {
             Ok(())
@@ -102,14 +92,14 @@ impl FeatureReasoning {
     pub fn with_feature(f: &str) -> FeatureReasoning {
         FeatureReasoning {
             feature: f.to_string(),
-            reason: None
+            reason: None,
         }
     }
 
     pub fn feature_with_reason(f: &str, r: &str) -> FeatureReasoning {
         FeatureReasoning {
             feature: f.to_string(),
-            reason: Some(r.to_string())
+            reason: Some(r.to_string()),
         }
     }
 

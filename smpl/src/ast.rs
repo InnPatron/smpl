@@ -10,31 +10,47 @@ pub struct AstNode<T: ::std::fmt::Debug> {
     span: Span,
 }
 
-impl<T> PartialEq for AstNode<T> where T: ::std::fmt::Debug + PartialEq {
+impl<T> PartialEq for AstNode<T>
+where
+    T: ::std::fmt::Debug + PartialEq,
+{
     fn eq(&self, other: &AstNode<T>) -> bool {
         self.data == other.data
     }
 }
 
-impl<T> Eq for AstNode<T> where T: ::std::fmt::Debug + Eq { }
-
-impl<T> ::std::hash::Hash for AstNode<T> where T: ::std::fmt::Debug + ::std::hash::Hash {
-   fn hash<H: ::std::hash::Hasher>(&self, state: &mut H) {
-       self.data.hash(state);
-   }
+impl<T> Eq for AstNode<T>
+where
+    T: ::std::fmt::Debug + Eq,
+{
 }
 
-impl<T> Clone for AstNode<T> where T: ::std::fmt::Debug + Clone {
+impl<T> ::std::hash::Hash for AstNode<T>
+where
+    T: ::std::fmt::Debug + ::std::hash::Hash,
+{
+    fn hash<H: ::std::hash::Hasher>(&self, state: &mut H) {
+        self.data.hash(state);
+    }
+}
+
+impl<T> Clone for AstNode<T>
+where
+    T: ::std::fmt::Debug + Clone,
+{
     fn clone(&self) -> AstNode<T> {
         AstNode::new(self.data.clone(), self.span.clone())
     }
 }
 
-impl<T> AstNode<T> where T: ::std::fmt::Debug {
+impl<T> AstNode<T>
+where
+    T: ::std::fmt::Debug,
+{
     pub fn new(data: T, span: Span) -> AstNode<T> {
         AstNode {
             data: data,
-            span: span
+            span: span,
         }
     }
 
@@ -324,7 +340,10 @@ impl fmt::Display for Ident {
 pub enum TypeAnnotation {
     Path(ModulePath),
     Array(Box<AstNode<TypeAnnotation>>, u64),
-    FnType(Option<Vec<AstNode<TypeAnnotation>>>, Option<Box<AstNode<TypeAnnotation>>>),
+    FnType(
+        Option<Vec<AstNode<TypeAnnotation>>>,
+        Option<Box<AstNode<TypeAnnotation>>>,
+    ),
 }
 
 impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
@@ -332,7 +351,10 @@ impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
         match t {
             &TypeAnnotation::Path(ref p) => TypeAnnotationRef::Path(p),
             &TypeAnnotation::Array(ref t, ref s) => TypeAnnotationRef::Array(t, s),
-            &TypeAnnotation::FnType(ref p, ref r) => TypeAnnotationRef::FnType(p.as_ref().map(|v| v.as_slice()), r.as_ref().map(|r| r.borrow())),
+            &TypeAnnotation::FnType(ref p, ref r) => TypeAnnotationRef::FnType(
+                p.as_ref().map(|v| v.as_slice()),
+                r.as_ref().map(|r| r.borrow()),
+            ),
         }
     }
 }
@@ -341,7 +363,10 @@ impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
 pub enum TypeAnnotationRef<'a> {
     Path(&'a ModulePath),
     Array(&'a AstNode<TypeAnnotation>, &'a u64),
-    FnType(Option<&'a [AstNode<TypeAnnotation>]>, Option<&'a AstNode<TypeAnnotation>>),
+    FnType(
+        Option<&'a [AstNode<TypeAnnotation>]>,
+        Option<&'a AstNode<TypeAnnotation>>,
+    ),
 }
 
 impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
@@ -350,7 +375,9 @@ impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
             TypeAnnotationRef::Path(p) => TypeAnnotation::Path(p.clone()),
             TypeAnnotationRef::Array(t, s) => TypeAnnotation::Array(Box::new(t.clone()), s.clone()),
             TypeAnnotationRef::FnType(p, r) => TypeAnnotation::FnType(
-                p.map(|params| params.iter().map(|param| param.clone()).collect()), r.map(|r| Box::new(r.clone())))
+                p.map(|params| params.iter().map(|param| param.clone()).collect()),
+                r.map(|r| Box::new(r.clone())),
+            ),
         }
     }
 }
@@ -359,7 +386,7 @@ impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
 pub struct ModulePath(pub Vec<AstNode<Ident>>);
 
 impl ModulePath {
-    pub fn iter<'a>(&'a self) -> Box<Iterator<Item=&Ident> + 'a> {
+    pub fn iter<'a>(&'a self) -> Box<Iterator<Item = &Ident> + 'a> {
         Box::new(self.0.iter().map(|node| &node.data))
     }
 }
@@ -372,12 +399,10 @@ impl<'a> From<&'a ModulePath> for TypeAnnotationRef<'a> {
 
 impl fmt::Display for ModulePath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let buffer = self.0
-            .iter()
-            .fold(String::new(), |mut buffer, ref item| {
-                buffer.push_str(&item.data().0);
-                buffer
-            });
+        let buffer = self.0.iter().fold(String::new(), |mut buffer, ref item| {
+            buffer.push_str(&item.data().0);
+            buffer
+        });
         write!(f, "{}", buffer)
     }
 }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use analysis::{TypeId, FieldId};
+use analysis::{FieldId, TypeId};
 use ast::Ident;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -20,7 +20,6 @@ pub enum ConstructedType {
     Array(ArrayType),
     Function(FunctionType),
 }
-
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ArrayType {

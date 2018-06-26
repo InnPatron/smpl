@@ -21,7 +21,6 @@ pub fn check_program(modules: Vec<AstModule>) -> Result<Program, Err> {
     Ok(program)
 }
 
-
 #[cfg(test)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 mod tests {
