@@ -262,7 +262,7 @@ impl<'a> FnAnalyzer<'a> {
     ) -> Result<TypeId, Err> {
 
         let path = field_access.path();
-        let mut path_iter = path.path().iter();
+        let path_iter = path.path().iter();
 
         let root_var_id;
         let root_var_type_id;

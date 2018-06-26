@@ -42,7 +42,7 @@ struct ToString;
 
 impl BuiltinFn for ToString {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.expect("str::to_string() expected 1+ args");
+        let args = args.expect("str::to_string() expected 1+ args");
 
         let mut s = String::new();
 

@@ -568,7 +568,7 @@ impl self::Path {
     }
 
     pub fn set_root_var_type(&self, id: TypeId) {
-        let mut r = self.root_var.borrow_mut();
+        let r = self.root_var.borrow_mut();
 
         match *r {
             Some(ref t) => t.set_type_id(id),
@@ -636,7 +636,7 @@ impl Field {
     }
 
     pub fn set_field_type(&self, id: TypeId) {
-        let mut f = self.field_id.borrow_mut();
+        let f = self.field_id.borrow_mut();
 
         match *f {
             Some(ref t) => t.set_type_id(id),

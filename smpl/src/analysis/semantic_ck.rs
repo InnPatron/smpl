@@ -8,9 +8,9 @@ use super::semantic_data::*;
 use super::mod_resolver;
 
 pub fn check_program(modules: Vec<AstModule>) -> Result<Program, Err> {
-    let mut metadata = Metadata::new();
-    let mut universe = Universe::std();
-    let mut features = PresentFeatures::new();
+    let metadata = Metadata::new();
+    let universe = Universe::std();
+    let features = PresentFeatures::new();
 
     let mut program = Program::new(universe, metadata, features);
 

@@ -451,7 +451,7 @@ StructFieldInit: (AstNode<Ident>, Box<Expr>) = {
 
 FnCall: FnCall = {
 	<path: ModuleBinding> "(" <args: FnCallArgs?> ")" => {
-		let mut path = path;
+		let path = path;
 		FnCall::new(
 			path,
 			args,

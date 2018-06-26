@@ -79,7 +79,7 @@ impl Metadata {
 
     pub fn insert_array_type(&mut self, mod_id: ModuleId, type_id: TypeId) {
         if self.array_types.contains_key(&mod_id) {
-            let mut v = self.array_types.get_mut(&mod_id).unwrap();
+            let v = self.array_types.get_mut(&mod_id).unwrap();
             v.push(type_id);
         } else {
             self.array_types.insert(mod_id, vec![type_id]);

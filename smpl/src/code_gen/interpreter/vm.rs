@@ -905,7 +905,7 @@ fn test() -> int {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let mut vm = VM::new(modules).unwrap();
+        let vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -929,7 +929,7 @@ fn test() -> int {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let mut vm = VM::new(modules).unwrap();
+        let vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -957,7 +957,7 @@ fn test() -> int {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let mut vm = VM::new(modules).unwrap();
+        let vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -985,7 +985,7 @@ fn test() -> int {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let mut vm = VM::new(modules).unwrap();
+        let vm = VM::new(modules).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -1010,7 +1010,7 @@ fn recurse(i: int) -> int {
 ";
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let mut vm = VM::new(modules).unwrap();
+        let vm = VM::new(modules).unwrap();
 
         let fn_handle = vm.query_module("mod1", "recurse").unwrap().unwrap();
 
@@ -1044,7 +1044,7 @@ fn recurse_b(i: int) -> int {
 
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let mut vm = VM::new(modules).unwrap();
+        let vm = VM::new(modules).unwrap();
 
         let fn_handle = vm.query_module("mod1", "recurse_a").unwrap().unwrap();
 
@@ -1067,7 +1067,7 @@ fn test_floor() -> float {
 ";
         let modules = vec![parse_module(mod1).unwrap()];
 
-        let mut vm = VM::new(modules).unwrap();
+        let vm = VM::new(modules).unwrap();
 
         let fn_handle = vm.query_module("mod1", "test_floor").unwrap().unwrap();
 
@@ -1092,7 +1092,7 @@ fn test() -> int {
 
         let mod1 = parse_module(mod1).unwrap();
         
-        let mut vm = VM::new(vec![mod1]).unwrap();
+        let vm = VM::new(vec![mod1]).unwrap();
 
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -1120,7 +1120,7 @@ fn test() -> int {
 
         let mod1 = parse_module(mod1).unwrap();
         
-        let mut vm = VM::new(vec![mod1]).unwrap();
+        let vm = VM::new(vec![mod1]).unwrap();
 
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 

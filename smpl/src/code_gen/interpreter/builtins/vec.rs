@@ -134,14 +134,14 @@ impl BuiltinFn for Insert {
             let data = vec_struct.ref_field(VEC_DATA_KEY).unwrap();
             
             let mut borrow = data.borrow_mut();
-            let mut data = irmatch!(*borrow; Value::Array(ref mut a) => a);
+            let data = irmatch!(*borrow; Value::Array(ref mut a) => a);
             data.insert(index as usize, Rc::new(RefCell::new(to_insert)));
         }
 
         {
             let len = vec_struct.ref_field(VEC_LEN_KEY).unwrap();
             let mut borrow = len.borrow_mut();
-            let mut len = irmatch!(*borrow; Value::Int(ref mut i) => i);
+            let len = irmatch!(*borrow; Value::Int(ref mut i) => i);
             *len += 1;
         }
 
@@ -164,14 +164,14 @@ impl BuiltinFn for Push {
             let data = vec_struct.ref_field(VEC_DATA_KEY).unwrap();
             
             let mut borrow = data.borrow_mut();
-            let mut data = irmatch!(*borrow; Value::Array(ref mut a) => a);
+            let data = irmatch!(*borrow; Value::Array(ref mut a) => a);
             data.push(Rc::new(RefCell::new(to_insert)));
         }
 
         {
             let len = vec_struct.ref_field(VEC_LEN_KEY).unwrap();
             let mut borrow = len.borrow_mut();
-            let mut len = irmatch!(*borrow; Value::Int(ref mut i) => i);
+            let len = irmatch!(*borrow; Value::Int(ref mut i) => i);
             *len += 1;
         }
 
@@ -215,7 +215,7 @@ impl BuiltinFn for Remove {
         {
             let data = vec_struct.ref_field(VEC_DATA_KEY).unwrap();
             let mut borrow = data.borrow_mut();
-            let mut data = irmatch!(*borrow; Value::Array(ref mut a) => a);
+            let data = irmatch!(*borrow; Value::Array(ref mut a) => a);
 
             data.remove(index);
         }
@@ -223,7 +223,7 @@ impl BuiltinFn for Remove {
         {
             let len = vec_struct.ref_field(VEC_LEN_KEY).unwrap();
             let mut borrow = len.borrow_mut();
-            let mut len = irmatch!(*borrow; Value::Int(ref mut i) => i);
+            let len = irmatch!(*borrow; Value::Int(ref mut i) => i);
             *len -= 1;
         }
 

@@ -162,7 +162,7 @@ fn cyclic_type_check(program: &Program, root_id: TypeId) -> Result<(), Err> {
     to_visit.push(root_id);
 
     loop {
-        let mut depth = to_visit;
+        let depth = to_visit;
         to_visit = Vec::new();
         for type_id in depth.into_iter() {
 

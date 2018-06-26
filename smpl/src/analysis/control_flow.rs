@@ -1180,7 +1180,7 @@ if (test) {
         }
 
         let end = exit_neighbors.next().unwrap();
-        let mut end_neighbors = neighbors!(cfg, end);
+        let end_neighbors = neighbors!(cfg, end);
         assert_eq!(end_neighbors.count(), 0);
         match *node_w!(cfg, end) {
             Node::End => (),
