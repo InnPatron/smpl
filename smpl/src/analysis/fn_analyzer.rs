@@ -524,7 +524,7 @@ impl<'a> FnAnalyzer<'a> {
                         BindingInfo::Fn(fn_id) => {
                             self.program.features_mut().add_feature(FUNCTION_VALUE);
 
-                            if(self.program.metadata_mut().is_builtin_params_unchecked(fn_id)) {
+                            if self.program.metadata_mut().is_builtin_params_unchecked(fn_id) {
                                 return Err(Err::UncheckedFunctionBinding(var.ident().clone()));
                             }
 
