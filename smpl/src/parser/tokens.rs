@@ -427,7 +427,7 @@ impl<'input> Tokenizer<'input> {
                     })?;
                     Ok(SpannedToken::new(Token::Gte, LocationSpan::new(start, end)))
                 } else {
-                    Ok(SpannedToken::new(Token::Lt, LocationSpan::span_1(start, 1)))
+                    Ok(SpannedToken::new(Token::Gt, LocationSpan::span_1(start, 1)))
                 }
             }
 
