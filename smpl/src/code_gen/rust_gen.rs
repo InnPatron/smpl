@@ -181,7 +181,7 @@ impl<'a> RustModGen<'a> {
 
             {
                 let traverser = Traverser::new(&*cfg, &mut fn_gen);
-                traverser.traverse();
+                traverser.traverse().unwrap();
             }
 
             let fn_string = fn_gen.function();

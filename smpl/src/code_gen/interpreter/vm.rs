@@ -818,7 +818,7 @@ fn test(a: int, b: int) -> int {
         let modules = vec![parse_module(mod1).unwrap()];
 
         let mut vm = VM::new(modules).unwrap();
-        vm.insert_builtin("mod1", "add", Box::new(Add));
+        vm.insert_builtin("mod1", "add", Box::new(Add)).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -842,7 +842,7 @@ fn test(a: int, b: int) -> int {
 
 
         let mut vm = VM::new(modules).unwrap();
-        vm.insert_builtin("mod1", "sum", Box::new(VarArgSum));
+        vm.insert_builtin("mod1", "sum", Box::new(VarArgSum)).unwrap();
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -875,7 +875,7 @@ fn test2() -> int {
         let modules = vec![parse_module(mod1).unwrap(), parse_module(mod2).unwrap()];
 
         let mut vm = VM::new(modules).unwrap();
-        vm.insert_builtin("mod1", "add", Box::new(Add));
+        vm.insert_builtin("mod1", "add", Box::new(Add)).unwrap();
         
         let fn_handle = vm.query_module("mod2", "test2").unwrap().unwrap();
 

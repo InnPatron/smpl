@@ -54,13 +54,13 @@ pub fn add(vm: &mut VM, item_type: &str) {
 
     let mod_name = strfmt(MOD_VEC, &vars).unwrap();
 
-    vm.insert_builtin(&mod_name, VEC_NEW, Box::new(New));
-    vm.insert_builtin(&mod_name, VEC_LEN, Box::new(Len));
-    vm.insert_builtin(&mod_name, VEC_CONTAINS, Box::new(Contains));
-    vm.insert_builtin(&mod_name, VEC_PUSH, Box::new(Push));
-    vm.insert_builtin(&mod_name, VEC_INSERT, Box::new(Insert));
-    vm.insert_builtin(&mod_name, VEC_GET, Box::new(Get));
-    vm.insert_builtin(&mod_name, VEC_REMOVE, Box::new(Remove));
+    vm.insert_builtin(&mod_name, VEC_NEW, Box::new(New)).unwrap();
+    vm.insert_builtin(&mod_name, VEC_LEN, Box::new(Len)).unwrap();
+    vm.insert_builtin(&mod_name, VEC_CONTAINS, Box::new(Contains)).unwrap();
+    vm.insert_builtin(&mod_name, VEC_PUSH, Box::new(Push)).unwrap();
+    vm.insert_builtin(&mod_name, VEC_INSERT, Box::new(Insert)).unwrap();
+    vm.insert_builtin(&mod_name, VEC_GET, Box::new(Get)).unwrap();
+    vm.insert_builtin(&mod_name, VEC_REMOVE, Box::new(Remove)).unwrap();
 }
 
 pub struct New;

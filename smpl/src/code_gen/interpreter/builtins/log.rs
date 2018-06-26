@@ -14,8 +14,8 @@ pub fn include(modules: &mut Vec<Module>) {
 }
 
 pub fn add(vm: &mut VM) {
-    vm.insert_builtin(MOD_LOG, LOG_PRINT, Box::new(Print));
-    vm.insert_builtin(MOD_LOG, LOG_PRINTLN, Box::new(Println));
+    vm.insert_builtin(MOD_LOG, LOG_PRINT, Box::new(Print)).unwrap();
+    vm.insert_builtin(MOD_LOG, LOG_PRINTLN, Box::new(Println)).unwrap();
 }
 
 pub struct Print;

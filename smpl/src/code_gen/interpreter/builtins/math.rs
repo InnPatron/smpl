@@ -33,25 +33,25 @@ pub fn include(modules: &mut Vec<Module>) {
 }
 
 pub fn add(vm: &mut VM) {
-    vm.insert_builtin(MOD_MATH, MATH_SIN, Box::new(Sin));
-    vm.insert_builtin(MOD_MATH, MATH_COS, Box::new(Cos));
-    vm.insert_builtin(MOD_MATH, MATH_TAN, Box::new(Tan));
+    vm.insert_builtin(MOD_MATH, MATH_SIN, Box::new(Sin)).unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_COS, Box::new(Cos)).unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_TAN, Box::new(Tan)).unwrap();
 
-    vm.insert_builtin(MOD_MATH, MATH_ASIN, Box::new(Asin));
-    vm.insert_builtin(MOD_MATH, MATH_ACOS, Box::new(Acos));
-    vm.insert_builtin(MOD_MATH, MATH_ATAN, Box::new(Atan));
-    vm.insert_builtin(MOD_MATH, MATH_ATAN2, Box::new(Atan2));
+    vm.insert_builtin(MOD_MATH, MATH_ASIN, Box::new(Asin)).unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_ACOS, Box::new(Acos)).unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_ATAN, Box::new(Atan)).unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_ATAN2, Box::new(Atan2)).unwrap();
 
-    vm.insert_builtin(MOD_MATH, MATH_TO_RADIANS, Box::new(ToRadians));
-    vm.insert_builtin(MOD_MATH, MATH_TO_DEGREES, Box::new(ToDegrees));
+    vm.insert_builtin(MOD_MATH, MATH_TO_RADIANS, Box::new(ToRadians)).unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_TO_DEGREES, Box::new(ToDegrees)).unwrap();
 
-    vm.insert_builtin(MOD_MATH, MATH_FPOWF, Box::new(FPowF));
-    vm.insert_builtin(MOD_MATH, MATH_FPOWI, Box::new(FPowI));
-    vm.insert_builtin(MOD_MATH, MATH_IPOW, Box::new(IPow));
+    vm.insert_builtin(MOD_MATH, MATH_FPOWF, Box::new(FPowF)).unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_FPOWI, Box::new(FPowI)).unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_IPOW, Box::new(IPow)).unwrap();
 
-    vm.insert_builtin(MOD_MATH, MATH_FLOOR, Box::new(Floor));
-    vm.insert_builtin(MOD_MATH, MATH_CEIL, Box::new(Ceil));
-    vm.insert_builtin(MOD_MATH, MATH_ROUND, Box::new(Round));
+    vm.insert_builtin(MOD_MATH, MATH_FLOOR, Box::new(Floor)).unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_CEIL, Box::new(Ceil)).unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_ROUND, Box::new(Round)).unwrap();
 }
 
 /// In radians
