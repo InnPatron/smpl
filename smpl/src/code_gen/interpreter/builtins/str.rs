@@ -198,6 +198,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn interpreter_str_intermodule_to_string() {
         let mod1 =
 "

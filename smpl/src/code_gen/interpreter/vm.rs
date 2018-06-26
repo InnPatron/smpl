@@ -721,6 +721,7 @@ mod Expr {
 }
 
 #[cfg(test)]
+#[cfg_attr(rustfmt, rustfmt_skip)]
 mod tests {
     use parser::parse_module;
     use code_gen::interpreter::*;

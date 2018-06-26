@@ -23,6 +23,7 @@ pub fn check_program(modules: Vec<AstModule>) -> Result<Program, Err> {
 
 
 #[cfg(test)]
+#[cfg_attr(rustfmt, rustfmt_skip)]
 mod tests {
     use err::*;
     use super::*;

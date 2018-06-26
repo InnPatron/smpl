@@ -233,6 +233,7 @@ impl BuiltinFn for Remove {
 }
 
 #[cfg(test)]
+#[cfg_attr(rustfmt, rustfmt_skip)]
 mod tests {
 
     use super::*;
