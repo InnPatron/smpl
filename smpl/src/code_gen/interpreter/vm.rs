@@ -1139,4 +1139,29 @@ fn test() -> int {
 
         assert_eq!(Value::Int(15), result);
     }
+
+    #[test]
+    fn interpreter_fn_piping() {
+        let mod1 =
+"
+mod mod1;
+
+fn add(i: int, a: int) -> int {
+    return i + a;
+}
+
+fn test() -> int {
+    return add(0, 1) |> add(1) |> add(1) |> add(2);
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+
+        let vm = VM::new(vec![mod1]).unwrap();
+
+        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+
+        let result = vm.eval_fn(fn_handle);
+
+        assert_eq!(Value::Int(5), result);
+    }
 }
