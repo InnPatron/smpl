@@ -872,4 +872,21 @@ fn test() -> int {
         check_program(vec![mod1]).unwrap();
     }
 
+    #[test]
+    fn fn_piping() {
+        let mod1 =
+"
+mod mod1;
+
+fn inc(i: int) -> int {
+    return i + 1;
+}
+
+fn test() -> int {
+    return inc(0) |> inc() |> inc() |> inc();
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
 }

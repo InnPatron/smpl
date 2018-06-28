@@ -31,6 +31,10 @@ where
         &self.data
     }
 
+    pub fn data_mut(&mut self) -> &mut T {
+        &mut self.data
+    }
+
     pub fn untyped(data: T) -> Typed<T> {
         Typed {
             data: data,
@@ -192,6 +196,12 @@ impl Expr {
             .expect("Given ID should always be valid if taken from the correct Expr")
     }
 
+    pub fn get_tmp_mut(&mut self, id: TmpId) -> &mut Tmp {
+        self.map
+            .get_mut(&id)
+            .expect("Given ID should always be valid if taken from the correct Expr")
+    }
+
     pub fn execution_order(&self) -> Iter<TmpId> {
         self.execution_order.iter()
     }
@@ -245,6 +255,10 @@ impl PartialEq for Tmp {
 impl Tmp {
     pub fn id(&self) -> TmpId {
         self.id
+    }
+
+    pub fn value_mut(&mut self) -> &mut Typed<Value> {
+        &mut self.value
     }
 
     pub fn value(&self) -> &Typed<Value> {
@@ -504,6 +518,10 @@ impl FnCall {
 
     pub fn args(&self) -> Option<&Vec<Typed<TmpId>>> {
         self.args.as_ref()
+    }
+
+    pub fn args_mut(&mut self) -> &mut Option<Vec<Typed<TmpId>>> {
+        &mut self.args
     }
 
     pub fn set_id<T>(&self, id: T)
