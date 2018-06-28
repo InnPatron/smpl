@@ -87,6 +87,8 @@ pub enum Token {
     Slash,
     Percent,
 
+    Pipe,
+
     Ref,
 
     LAnd,
@@ -375,6 +377,12 @@ impl<'input> Tokenizer<'input> {
                         location: start,
                     })?;
                     Ok(SpannedToken::new(Token::LOr, LocationSpan::new(start, end)))
+                } else if self.test_lookahead(|c| c == '>') {
+                    let (end, _) = self.chars.next().ok_or(SpannedError {
+                        error: TokenizerError::UnexpectedEndOfInput,
+                        location: start,
+                    })?;
+                    Ok(SpannedToken::new(Token::Pipe, LocationSpan::new(start, end)))
                 } else {
                     Err(SpannedError {
                         error: TokenizerError::IncompleteToken(Token::LOr),
