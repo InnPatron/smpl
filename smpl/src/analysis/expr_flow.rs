@@ -4,7 +4,7 @@ use super::typed_ast::Binding as TypedBinding;
 
 use span::Span;
 
-use ast::{ArrayInit as AstArrayInit, Expr as AstExpr};
+use ast::{ArrayInit as AstArrayInit, Expr as AstExpr, AstNode};
 
 pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
@@ -155,6 +155,47 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
                 scope.map_tmp(universe, Value::AnonymousFn(AnonymousFn::new(a_fn)), span),
                 span,
             )
+        }
+
+        AstExpr::FnCallChain(chain) => {
+            let (chain, span) = chain.to_data();
+
+            let (base, span) = chain.base.to_data();
+            let base_expr = AstExpr::FnCall(AstNode::new(base, span));
+
+            let (base_result, span) = flatten_expr(universe, scope, base_expr);
+
+            let mut previous_result = base_result;
+            let mut span = span;
+
+            for fn_call in chain.chain.into_iter() {
+                let (call, next_span) = fn_call.to_data();
+                let fn_call_expr = AstExpr::FnCall(AstNode::new(call, next_span));
+
+                let (fn_call_result, next_span) = flatten_expr(universe, scope, fn_call_expr);
+
+                let fn_call = scope.get_tmp_mut(fn_call_result);
+
+                let fn_call = irmatch!(fn_call.value_mut().data_mut(); 
+                                       Value::FnCall(ref mut call) => call);
+
+                // Use the result of the function call as the first argument
+                // of the next function.
+                let first_arg = Typed::untyped(previous_result);
+
+                let args = fn_call.args_mut();
+
+                match args {
+                    Some(ref mut vec) => vec.insert(0, first_arg),
+
+                    None => *args = Some(vec![first_arg]),
+                }
+
+                previous_result = fn_call_result;
+                span = next_span;
+            }
+
+            (previous_result, span)
         }
     }
 }
