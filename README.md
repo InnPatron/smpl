@@ -1,7 +1,5 @@
 # SMPL
-
-S(ome) M(ore) P(rogramming) L(anguage), pronounced 'simple.'
-
+S(ome) M(ore) P(rogramming) L(anguage), pronounced 'simple.' 
 ## What is it?
 
 SMPL is a simple statically typed programming language meant for easy embedding in [Rust](https://www.rust-lang.org/en-US/) and to write standalone programs.
@@ -12,38 +10,52 @@ SMPL was built to replace [Popstcl](https://gitlab.com/Random_Civvy/popstcl) as 
 
 Popstcl has dynamic types and dynamic scoping, all of which I found painful to use.
 
+**SMPL has an embeddable interpreter and a Rust code-generator. Use the interpreter for access to all language features.**
+
 ## The Good
 
 * Rust-like syntax.
 * Statically typed
 * Lexically scoped
 * Compiler with Rust code generator
+* Embeddable interpreter
+* SMPL code is sandboxed (?)
+* Funciton piping
 
 ## The Bad
-* Types and functions are brought into scope top-to-bottom.
-* A lot of unimplemented features
+* ~~Types and functions are brought into scope top-to-bottom.~~ Declarations can be in any order
+* ~~A lot of unimplemented features~~ It works...
 * Does not have the same semantics as Rust code
 * * No move semantics
 * * No concept of lifetime
-* No standard library
+* ~~No~~ Bare-bones standard library for the interpreter
 
 ## Example
 
 ```
+mod test;
+
+// From interpreter's stdlib 
+use log;
+
 struct Point {
-    x: i32,
-    y: i32,
+    x: int,
+    y: int,
 }
 
-fn default_point_x() -> i32 {
+fn default_point_x() -> int {
     return 100;
 }
 
+fn add(l: int, r: int) -> int {
+	return l + r;
+}
+
 fn main() {
-    let a: i32 = default_point_x();
-    let b: i32 = 10;
+    let a = default_point_x();
+    let b = 10;
     
-    let p: Point = init Point {
+    let p = init Point {
         x: a,
         y: b,
     };
@@ -54,9 +66,11 @@ fn main() {
         result = "Failure";
     } elif b != p.x {
 		result = "Failure";
-	} else {
-		// Success
 	}
+
+	log::println(result);
+
+	log::println(add(a, 1) |> add(2));
 }
 
 
@@ -72,7 +86,7 @@ smplc -i INPUT_FILE -o OUTPUT_DIR -b 0
 
 The `-b` flag stands for backend. The Rust backend is '0'.
 
-Alternatively, the SMPL core library has an embeddable serial interpreter which can run the full language.
+**SMPL is meant to be embedded in other Rust programs. The interpreter is the only method of SMPL code execution guaranteed to support ALL language features.**
 
 ## Build instructions
 
@@ -83,20 +97,5 @@ cargo build
 cargo run
 ```
 
-## Feature Backlog
-
-1. ~~Arrays~~
-2. Resizable arrays
-3. Pointers
-4. ~~First-class functions~~
-5. ~~Interpreter~~
-6. More code generators (LLVM, x86_64 ASM).
-7. Implement optimizations (constant folding, dead code elimination, etc.)
-8. Integrate [Cycle-collecting reference counters](https://gitlab.com/Random_Civvy/cc) for garbage collection.
-9. Compiler commands
-10. ~~Modules~~
-11. Error messages
-12. Number casting between ints and floats
-
 ## License
-Released under the [MIT License](https://opensource.org/licenses/MIT) (See LICENSE-MIT). Good luck using this for any commercial projects :|
+Released under the [MIT License](https://opensource.org/licenses/MIT) (See LICENSE-MIT).
