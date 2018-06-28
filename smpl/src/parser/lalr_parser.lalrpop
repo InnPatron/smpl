@@ -59,6 +59,8 @@ extern {
 		"&&" => Token::LAnd,
 		"||" => Token::LOr,
 
+		"|>" => Token::Pipe,
+
 		"(" => Token::LParen,
 		")" => Token::RParen,
 		"{" => Token::LBrace,
@@ -378,7 +380,9 @@ ExprPath: Expr = {
 Primary: Expr = {
 	<l: @L> "(" <e: Expr> ")" <r: @R> => e,
 	<l: @L> <lit: Literal> <r: @R> => Expr::Literal(AstNode::new(lit, Span::new(l, r))),
+
 	<f: FnCall> => Expr::FnCall(f),
+	<l: @L> <f: FnCallChain> <r: @R> => Expr::FnCallChain(AstNode::new(f, Span::new(l, r))),
 
 	<l: @L> <a: ArrayInit> <r: @R> => Expr::ArrayInit(AstNode::new(a, Span::new(l, r))),
 
@@ -447,6 +451,16 @@ StructFieldInitList: Vec<(AstNode<Ident>, Box<Expr>)> = {
 
 StructFieldInit: (AstNode<Ident>, Box<Expr>) = {
 	<name: Ident> ":" <init: Expr> => (name, Box::new(init)),
+};
+
+FnCallChain: FnCallChain = {
+	<f: FnCall> <chain: ("|>" FnCall)+> => {
+
+		FnCallChain {
+			base: f,
+			chain: chain.into_iter().map(|(_, call)| call).collect(),
+		}
+	}
 };
 
 FnCall: AstNode<FnCall> = {

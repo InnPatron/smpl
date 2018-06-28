@@ -223,6 +223,7 @@ pub enum Expr {
     Indexing(AstNode<Indexing>),
     ModAccess(AstNode<ModulePath>),
     AnonymousFn(AstNode<AnonymousFn>),
+    FnCallChain(AstNode<FnCallChain>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -242,6 +243,12 @@ pub struct Indexing {
 pub enum ArrayInit {
     InitList(Vec<Expr>),
     Value(Box<Expr>, u64),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct FnCallChain {
+    pub base: AstNode<FnCall>,
+    pub chain: Vec<AstNode<FnCall>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
