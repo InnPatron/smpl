@@ -69,10 +69,18 @@ impl Metadata {
         }
     }
 
+    pub fn field_ordering(&self, id: TypeId) -> &FieldOrdering {
+        self.field_ordering.get(&id).unwrap()
+    }
+
     pub fn insert_fn_layout(&mut self, id: FnId, data: FnLayout) {
         if self.fn_layout.insert(id, data).is_some() {
             panic!("Overwriting for fn {}", id);
         }
+    }
+
+    pub fn fn_layout(&self, id: FnId) -> &FnLayout {
+        self.fn_layout.get(&id).unwrap()
     }
 
     pub fn insert_array_type(&mut self, mod_id: ModuleId, type_id: TypeId) {
@@ -82,6 +90,10 @@ impl Metadata {
         } else {
             self.array_types.insert(mod_id, vec![type_id]);
         }
+    }
+
+    pub fn array_types(&self, id: ModuleId) -> Option<&[TypeId]> {
+        self.array_types.get(&id).map(|v| v.as_slice())
     }
 
     pub fn insert_function_param_ids(&mut self, fn_id: FnId, params: Vec<FunctionParameter>) {
@@ -119,17 +131,5 @@ impl Metadata {
 
     pub fn main(&self) -> Option<(FnId, ModuleId)> {
         self.main
-    }
-
-    pub fn array_types(&self, id: ModuleId) -> Option<&[TypeId]> {
-        self.array_types.get(&id).map(|v| v.as_slice())
-    }
-
-    pub fn field_ordering(&self, id: TypeId) -> &FieldOrdering {
-        self.field_ordering.get(&id).unwrap()
-    }
-
-    pub fn fn_layout(&self, id: FnId) -> &FnLayout {
-        self.fn_layout.get(&id).unwrap()
     }
 }
