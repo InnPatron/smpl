@@ -1,3 +1,9 @@
+mod layout;
+mod fn_data;
+
+pub use self::layout::*;
+pub use self::fn_data::*;
+
 use std::collections::{HashMap, HashSet};
 
 use ast::Ident;
@@ -125,78 +131,5 @@ impl Metadata {
 
     pub fn fn_layout(&self, id: FnId) -> &FnLayout {
         self.fn_layout.get(&id).unwrap()
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct FnLayout {
-    locals: Vec<(VarId, TypeId)>,
-    params: Vec<(VarId, TypeId)>,
-
-    ret_ty: TypeId,
-}
-
-impl FnLayout {
-    pub fn new(
-        locals: Vec<(VarId, TypeId)>,
-        params: Vec<(VarId, TypeId)>,
-        ret_ty: TypeId,
-    ) -> FnLayout {
-        FnLayout {
-            locals: locals,
-            params: params,
-            ret_ty: ret_ty,
-        }
-    }
-
-    pub fn locals(&self) -> &[(VarId, TypeId)] {
-        &self.locals
-    }
-
-    pub fn params(&self) -> &[(VarId, TypeId)] {
-        &self.params
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct FieldOrdering {
-    id: TypeId,
-    order: Vec<FieldId>,
-}
-
-impl FieldOrdering {
-    pub fn new(id: TypeId, order: Vec<FieldId>) -> FieldOrdering {
-        FieldOrdering {
-            id: id,
-            order: order,
-        }
-    }
-
-    pub fn id(&self) -> TypeId {
-        self.id
-    }
-
-    pub fn order(&self) -> &[FieldId] {
-        &self.order
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct FunctionParameter {
-    id: VarId,
-    name: Ident,
-}
-
-impl FunctionParameter {
-    pub fn new(name: Ident, id: VarId) -> FunctionParameter {
-        FunctionParameter { id: id, name: name }
-    }
-
-    pub fn var_id(&self) -> VarId {
-        self.id
-    }
-
-    pub fn name(&self) -> &Ident {
-        &self.name
     }
 }
