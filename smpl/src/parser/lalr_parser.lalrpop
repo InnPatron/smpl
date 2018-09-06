@@ -87,6 +87,26 @@ pub Module: Module = {
 	}
 };
 
+Annotation: Annotation = {
+	"#" "[" <list: KeyPairList> "]" => Annotation { keys: list },
+};
+
+KeyPairList: Vec<(Ident, Option<String>)> = {
+	<head: KeyPair> "," <tail: KeyPairList> => {
+		let mut v = vec![head];
+		v.extend(tail);
+		v
+	},
+
+	<kp: KeyPair> ","? => vec![kp],
+};
+
+KeyPair: (Ident, Option<String>) = {
+	<k: "identifier"> <v: ("=" "string_literal")?> => {
+		(Ident(k), v.map(|(_, literal)| literal))
+	}
+};
+
 DeclStmt: DeclStmt = {
 	<f: FnDecl> => DeclStmt::Function(f),
 	<s: StructDecl> => DeclStmt::Struct(s),

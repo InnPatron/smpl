@@ -422,3 +422,8 @@ pub enum PathSegment {
     Ident(AstNode<Ident>),
     Indexing(AstNode<Ident>, Box<Expr>),
 }
+
+#[derive(Debug)]
+pub struct Annotation {
+    pub keys: Vec<(Ident, Option<String>)>,
+}
