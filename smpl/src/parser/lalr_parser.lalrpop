@@ -76,6 +76,8 @@ extern {
 		":" => Token::Colon,
 		"::" => Token::ColonColon,
 		";" => Token::Semi,
+		
+		"#" => Token::Pound,
 	}
 }
 
