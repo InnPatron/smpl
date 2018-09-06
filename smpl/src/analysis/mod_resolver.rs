@@ -35,7 +35,7 @@ struct ReservedFn(FnId, TypeId, AstNode<AstFunction>);
 struct ReservedBuiltinFn(FnId, TypeId, AstNode<AstBuiltinFunction>);
 
 pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(), Err> {
-    let mut raw_data = raw_mod_data(program, modules);
+    let mut raw_data = raw_mod_data(program, modules)?;
 
     let mut mapped_raw = HashMap::new();
     let mut scopes = HashMap::new();
@@ -338,7 +338,7 @@ fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
     }
 }
 
-fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> HashMap<ModuleId, RawModData> {
+fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> Result<HashMap<ModuleId, RawModData>, Err> {
     let universe = program.universe_mut();
     let mut mod_map = HashMap::new();
     for module in modules {
@@ -377,7 +377,7 @@ fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> HashMap<Modul
         }
 
         let raw = RawModData {
-            name: module.0.unwrap(),
+            name: module.0.ok_or(Err::MissingModName)?,
             id: universe.new_module_id(),
             reserved_structs: struct_reserve,
             reserved_fns: fn_reserve,
@@ -388,5 +388,5 @@ fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> HashMap<Modul
         mod_map.insert(raw.id.clone(), raw);
     }
 
-    mod_map
+    Ok(mod_map)
 }
