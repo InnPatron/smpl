@@ -95,6 +95,7 @@ pub struct BuiltinFunction {
     pub name: AstNode<Ident>,
     pub params: BuiltinFnParams,
     pub return_type: Option<AstNode<TypeAnnotation>>,
+    pub annotations: Vec<Annotation>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -109,6 +110,7 @@ pub struct Function {
     pub params: Option<Vec<AstNode<FnParameter>>>,
     pub return_type: Option<AstNode<TypeAnnotation>>,
     pub body: AstNode<Block>,
+    pub annotations: Vec<Annotation>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -121,6 +123,7 @@ pub struct FnParameter {
 pub struct Struct {
     pub name: AstNode<Ident>,
     pub body: StructBody,
+    pub annotations: Vec<Annotation>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -423,7 +426,7 @@ pub enum PathSegment {
     Indexing(AstNode<Ident>, Box<Expr>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Annotation {
     pub keys: Vec<(Ident, Option<String>)>,
 }

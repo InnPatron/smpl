@@ -119,11 +119,12 @@ UseDecl: AstNode<UseDecl> = {
 };
 
 pub BuiltinFnDecl: AstNode<BuiltinFunction> = {
-	<l: @L> "builtin" "fn" <name: Ident> "(" <params: BuiltinFnParams> ")" <return_type: ("->" TypeAnnotation)?> ";" <r: @R> => {
+	<annotations: Annotation*> <l: @L> "builtin" "fn" <name: Ident> "(" <params: BuiltinFnParams> ")" <return_type: ("->" TypeAnnotation)?> ";" <r: @R> => {
 		AstNode::new(BuiltinFunction {
 			name: name,
 			params: params,
 			return_type: return_type.map(|r| r.1),
+			annotations: annotations,
 		}, Span::new(l, r))
 	}
 };
@@ -134,12 +135,13 @@ BuiltinFnParams: BuiltinFnParams = {
 };
 
 pub FnDecl: AstNode<Function> = {
-	<l: @L> "fn" <name: Ident> "(" <params: FnParameterList?> ")" <return_type: ("->" TypeAnnotation)?> <b: Block> <r: @R> => {
+	<annotations: Annotation*> <l: @L> "fn" <name: Ident> "(" <params: FnParameterList?> ")" <return_type: ("->" TypeAnnotation)?> <b: Block> <r: @R> => {
 		AstNode::new(Function {
 			name: name,
 			params: params,
 			return_type: return_type.map(|r| r.1),
 			body: b,
+			annotations: annotations,
 		}, Span::new(l, r))
 	}
 };
@@ -162,10 +164,11 @@ FnParameter: AstNode<FnParameter> = {
 };
 
 pub StructDecl: AstNode<Struct> = {
-	<l: @L> "struct" <name: Ident> "{" <fields: StructFieldList?>"}" <r: @R> => {
+	<annotations: Annotation*> <l: @L> "struct" <name: Ident> "{" <fields: StructFieldList?>"}" <r: @R> => {
 		AstNode::new(Struct {
 			name: name,
-			body: StructBody(fields)
+			body: StructBody(fields),
+			annotations: annotations,
 		}, Span::new(l, r))
 	}
 };
