@@ -6,7 +6,7 @@ pub use self::fn_data::*;
 
 use std::collections::{HashMap, HashSet};
 
-use ast::Ident;
+use ast::{Annotation, Ident};
 use err::Err;
 use analysis::semantic_data::{FieldId, FnId, ModuleId, Program, TypeId, VarId};
 
@@ -22,6 +22,9 @@ pub struct Metadata {
     builtin: HashSet<FnId>,
 
     unchecked_builtins_params: HashSet<FnId>,
+
+    struct_annotations: HashMap<TypeId, HashMap<String, Option<String>>>,
+    fn_annotations: HashMap<FnId, HashMap<String, Option<String>>>,
 }
 
 impl Metadata {
@@ -35,6 +38,8 @@ impl Metadata {
             fn_map: HashMap::new(),
             builtin: HashSet::new(),
             unchecked_builtins_params: HashSet::new(),
+            struct_annotations: HashMap::new(),
+            fn_annotations: HashMap::new(),
         }
     }
 
@@ -131,5 +136,37 @@ impl Metadata {
 
     pub fn main(&self) -> Option<(FnId, ModuleId)> {
         self.main
+    }
+
+    pub fn set_struct_annotations(&mut self, type_id: TypeId, annotations: &[Annotation]) {
+        self.struct_annotations.insert(type_id, annotations
+                                       .into_iter()
+                                       .fold(HashMap::new(), |mut acc, anno| {
+                                           for &(ref k, ref v) in anno.keys.iter() {
+                                               acc.insert(k.to_string(), v.clone());
+                                           }
+
+                                           acc
+                                       }));
+    }
+
+    pub fn get_struct_annotations(&self, type_id: TypeId) -> Option<&HashMap<String, Option<String>>> {
+        self.struct_annotations.get(&type_id)
+    }
+
+    pub fn set_fn_annotations(&mut self, fn_id: FnId, annotations: &[Annotation]) {
+        self.fn_annotations.insert(fn_id, annotations
+                                       .into_iter()
+                                       .fold(HashMap::new(), |mut acc, anno| {
+                                           for &(ref k, ref v) in anno.keys.iter() {
+                                               acc.insert(k.to_string(), v.clone());
+                                           }
+
+                                           acc
+                                       }));
+    }
+
+    pub fn get_fn_annotations(&self, fn_id: FnId) -> Option<&HashMap<String, Option<String>>> {
+        self.fn_annotations.get(&fn_id)
     }
 }
