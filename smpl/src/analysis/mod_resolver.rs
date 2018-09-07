@@ -78,6 +78,9 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
             program
                 .metadata_mut()
                 .insert_field_ordering(type_id, field_ordering);
+            program
+                .metadata_mut()
+                .set_struct_annotations(type_id, &reserved_type.1.data().annotations);
         }
     }
 
@@ -102,6 +105,9 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
                 fn_decl.name.data().clone(),
                 fn_id,
             );
+            program
+                .metadata_mut()
+                .set_fn_annotations(fn_id, &reserved_fn.2.data().annotations);
         }
 
         for (_, reserved_builtin) in raw_mod.reserved_builtins.iter() {
@@ -127,6 +133,9 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
                 fn_decl.name.data().clone(),
                 fn_id,
             );
+            program
+                .metadata_mut()
+                .set_fn_annotations(fn_id, &reserved_builtin.2.data().annotations);
         }
     }
 
