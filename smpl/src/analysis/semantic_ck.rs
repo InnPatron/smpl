@@ -28,6 +28,7 @@ mod tests {
     use super::*;
     use parser::*;
     use analysis::smpl_type::*;
+    use ast::Ident;
 
     #[test]
     fn basic_test_semantic_analysis() {
@@ -888,5 +889,40 @@ fn test() -> int {
 
         let mod1 = parse_module(mod1).unwrap();
         check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn annotate_struct() {
+        let input =
+"mod mod1;
+#[test, foo = \"bar\"]
+struct Foo { }";
+
+        let mod1 = parse_module(input).unwrap();
+        let program = check_program(vec![mod1]).unwrap();
+        let module_id = program.universe().module_id(&Ident("mod1".to_string())).unwrap();
+        let module = program.universe().get_module(module_id);
+        let struct_type = module.owned_types().iter().next().unwrap().clone();
+        let annotations = program.metadata().get_struct_annotations(struct_type).unwrap();
+        assert!(annotations.get("test") == Some(&None));
+        assert!(annotations.get("foo") == Some(&Some("bar".to_string())));
+    }
+
+    #[test]
+    fn annotate_fn() {
+        let input =
+"mod mod1;
+#[test, foo = \"bar\"]
+
+fn foo() { }";
+
+        let mod1 = parse_module(input).unwrap();
+        let program = check_program(vec![mod1]).unwrap();
+        let module_id = program.universe().module_id(&Ident("mod1".to_string())).unwrap();
+        let module = program.universe().get_module(module_id);
+        let function = module.owned_fns().iter().next().unwrap().clone();
+        let annotations = program.metadata().get_fn_annotations(function).unwrap();
+        assert!(annotations.get("test") == Some(&None));
+        assert!(annotations.get("foo") == Some(&Some("bar".to_string())));
     }
 }

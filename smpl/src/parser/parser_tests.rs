@@ -489,4 +489,24 @@ struct TestStruct {
         let parser = ExprParser::new();
         parser.parse(input).unwrap();
     }
+
+
+    #[test]
+    fn parse_annotate_struct() {
+        let input =
+"#[test, foo = \"bar\"]
+struct Foo { }";
+
+        let input = parse_module(input).unwrap();
+    }
+
+    #[test]
+    fn parse_annotate_fn() {
+        let input =
+"#[test, foo = \"bar\"]
+
+fn foo() { }";
+
+        let input = parse_module(input).unwrap();
+    }
 }

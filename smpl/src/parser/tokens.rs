@@ -110,6 +110,7 @@ pub enum Token {
     ColonColon,
     Semi,
 
+    Pound,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -560,7 +561,10 @@ impl<'input> Iterator for Tokenizer<'input> {
                 '{' => Some(Ok(SpannedToken::new(Token::LBrace,  LocationSpan::span_1(start, 1)))),
                 '}' => Some(Ok(SpannedToken::new(Token::RBrace,  LocationSpan::span_1(start, 1)))),
 
+                '#' => Some(Ok(SpannedToken::new(Token:: Pound, LocationSpan::span_1(start, 1)))),
+
                 '\"' => Some(self.string_literal(start)),
+
 
                 ch if is_ident_start(ch) => Some(Ok(self.identifier(start))),
                 ch if is_digit(ch) || (ch == '-' && self.test_lookahead(is_digit))
