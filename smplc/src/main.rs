@@ -134,8 +134,6 @@ fn rust_gen(input: Vec<(&str, &str)>) -> Result<Vec<u8>, String> {
     for (file_name, code) in input {
         let mut module = parse_module(code).map_err(|err| format!("{:?}", err))?;
 
-        module.name_if_none(file_name);
-
         modules.push(module);
     }
 

@@ -1,3 +1,5 @@
+mod while_tests;
+
 fn while_basic() {
 	let name: String = "while_basic";
 
