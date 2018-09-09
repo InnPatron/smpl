@@ -120,6 +120,11 @@ pub enum TypeErr {
         found: TypeId,
         span: Span,
     },
+
+    InitOpaqueType {
+        struct_type: TypeId,
+        span: Span,
+    }
 }
 
 impl From<TypeErr> for Err {
