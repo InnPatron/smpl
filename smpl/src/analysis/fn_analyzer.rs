@@ -417,6 +417,15 @@ impl<'a> FnAnalyzer<'a> {
                         }
                     }
 
+                    // Check if the struct is an 'opaque' type (i.e. cannot be initialized by SMPL
+                    // code)
+                    if self.program.metadata().is_opaque(struct_type_id) {
+                        return Err(TypeErr::InitOpaqueType {
+                            struct_type: struct_type_id,
+                            span: tmp.span(),
+                        }.into());
+                    }
+
                     init.set_struct_type(struct_type_id);
                     if let Err(unknown_fields) = init.set_field_init(self.program.universe()) {
                         // TODO: Allow for multiple errors
