@@ -6,3 +6,4 @@ macro_rules! key {
     ($i: ident) => { pub const $i: &'static str = stringify!($i); };
 }
 
+key!(OPAQUE, "opaque");
