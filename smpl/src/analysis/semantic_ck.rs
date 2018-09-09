@@ -925,4 +925,37 @@ fn foo() { }";
         assert!(annotations.get("test") == Some(&None));
         assert!(annotations.get("foo") == Some(&Some("bar".to_string())));
     }
+
+    #[test]
+    fn opaque_struct() {
+        let input =
+"mod mod1;
+#[opaque]
+struct Foo { bla: int }
+
+fn test() {
+    init Foo {
+        bla: 5
+    };
+}";
+        
+        let mod1 = parse_module(input).unwrap();
+        let err = check_program(vec![mod1]);
+
+        match err {
+            Ok(_) => panic!("Expected err"),
+            Err(err) => {
+                match err {
+                    Err::TypeErr(t) => {
+                        match t {
+                            TypeErr::InitOpaqueType {..} => (),
+                            _ => panic!("{:?}", t),
+                        }
+                    },
+
+                    _ => panic!("Expected type err"),
+                }
+            },
+        }
+    }
 }

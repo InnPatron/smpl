@@ -1,5 +1,6 @@
 mod layout;
 mod fn_data;
+mod attribute_keys;
 
 pub use self::layout::*;
 pub use self::fn_data::*;
@@ -168,5 +169,9 @@ impl Metadata {
 
     pub fn get_fn_annotations(&self, fn_id: FnId) -> Option<&HashMap<String, Option<String>>> {
         self.fn_annotations.get(&fn_id)
+    }
+
+    pub fn is_opaque(&self, type_id: TypeId) -> bool {
+        self.get_struct_annotations(type_id).map_or(false, |map| map.contains_key(attribute_keys::OPAQUE))
     }
 }
