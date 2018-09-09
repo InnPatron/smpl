@@ -1,3 +1,5 @@
+mod sample_program;
+
 use sample_dependency;
 
 struct Point {

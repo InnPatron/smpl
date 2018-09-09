@@ -1,3 +1,5 @@
+mod if_test;
+
 fn if_test() {
 	let hello: String = "Hello!";
 }

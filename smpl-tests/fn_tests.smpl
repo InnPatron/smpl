@@ -1,3 +1,5 @@
+mod fn_tests;
+
 fn arg_usage(a1: int, a2: bool) {
 	let name: String = "arg_usage";
 
