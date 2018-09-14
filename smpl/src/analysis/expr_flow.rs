@@ -77,10 +77,11 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
 
         AstExpr::FieldAccess(path) => {
             let (path, span) = path.to_data();
+            let field_access = FieldAccess::new(universe, scope, path);
             (
                 scope.map_tmp(
                     universe,
-                    Value::FieldAccess(FieldAccess::new(universe, scope, path)),
+                    Value::FieldAccess(field_access),
                     span,
                 ),
                 span,
