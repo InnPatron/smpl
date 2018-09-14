@@ -214,6 +214,10 @@ impl Expr {
         self.execution_order.iter()
     }
 
+    pub fn order_length(&self) -> usize {
+        self.execution_order.len()
+    }
+
     pub fn set_span(&mut self, span: Span) {
         if self.span.is_some() {
             panic!();
