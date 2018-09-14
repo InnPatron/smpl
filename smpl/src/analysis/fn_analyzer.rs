@@ -250,6 +250,7 @@ fn resolve_uni_op(
 impl<'a> FnAnalyzer<'a> {
     fn resolve_field_access(
         &mut self,
+        expr: &Expr,
         field_access: &FieldAccess,
         span: Span,
     ) -> Result<TypeId, Err> {
@@ -269,7 +270,7 @@ impl<'a> FnAnalyzer<'a> {
         current_type_id = root_var_type_id;
 
         if let Some(e) = path.root_indexing_expr() {
-            let indexing_type_id = self.resolve_expr(e)?;
+            let indexing_type_id = expr.get_tmp(e).value().type_id().unwrap();
             let indexing_type = self.program.universe().get_type(indexing_type_id);
 
             match *indexing_type {
@@ -277,7 +278,7 @@ impl<'a> FnAnalyzer<'a> {
                 _ => {
                     return Err(TypeErr::InvalidIndex {
                         found: indexing_type_id,
-                        span: e.span(),
+                        span: expr.get_tmp(e).span(),
                     }.into());
                 }
             }
@@ -289,7 +290,7 @@ impl<'a> FnAnalyzer<'a> {
                 _ => {
                     return Err(TypeErr::NotAnArray {
                         found: var_type_id,
-                        span: e.span(),
+                        span: expr.get_tmp(e).span(),
                     }.into());
                 }
             }
@@ -330,7 +331,7 @@ impl<'a> FnAnalyzer<'a> {
                         field.set_field_id(field_id);
                         field.set_field_type(field_type_id);
 
-                        let indexing_type_id = self.resolve_expr(indexing)?;
+                        let indexing_type_id = expr.get_tmp(*indexing).value().type_id().unwrap();
                         let indexing_type = self.program.universe().get_type(indexing_type_id);
 
                         match *indexing_type {
@@ -339,7 +340,7 @@ impl<'a> FnAnalyzer<'a> {
                             _ => {
                                 return Err(TypeErr::InvalidIndex {
                                     found: indexing_type_id,
-                                    span: indexing.span(),
+                                    span: expr.get_tmp(*indexing).span(),
                                 }.into());
                             }
                         }
@@ -535,7 +536,7 @@ impl<'a> FnAnalyzer<'a> {
 
                 Value::FieldAccess(ref field_access) => {
                     let accessed_field_type_id =
-                        self.resolve_field_access(field_access, tmp.span())?;
+                        self.resolve_field_access(expr, field_access, tmp.span())?;
 
                     tmp_type = accessed_field_type_id;
                 }
@@ -936,7 +937,7 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         let assignment = &assignment.assignment;
         let assignee = assignment.assignee();
 
-        let assignee_type_id = self.resolve_field_access(assignee, assignment.access_span())?;
+        let assignee_type_id = self.resolve_field_access(assignment.access(), assignee, assignment.access_span())?;
 
         let expr_type_id = self.resolve_expr(assignment.value())?;
 
