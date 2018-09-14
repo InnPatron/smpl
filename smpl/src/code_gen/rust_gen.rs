@@ -702,7 +702,12 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         self.output.emit_line("{");
         self.output.shift_right();
 
-        let expr = self.emit_expr(assignment.value());
+        if assignment.access().order_length() > 0 {
+            // NOTE: Don't need to do anything with the assignment access expression except emit it
+            // Will be used by the root
+            self.emit_expr(assignment.access());
+        }
+        let value_expr = self.emit_expr(assignment.value());
 
         self.output.emit_line(&format!(
             "let mut _borrow_{} = {};",
@@ -768,7 +773,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
         let assignee = format!("*_borrow_{}", previous_borrow);
         let rhs = {
-            let tmp = RustGenFmt::tmp_id(expr);
+            let tmp = RustGenFmt::tmp_id(value_expr);
             tmp
         };
 
