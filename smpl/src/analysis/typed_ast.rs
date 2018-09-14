@@ -76,16 +76,19 @@ where
 pub struct Assignment {
     field_access: FieldAccess,
     access_span: Span,
+    access: self::Expr,
     value: self::Expr,
 }
 
 impl Assignment {
     pub fn new(universe: &Universe, assignment: ast::Assignment) -> Assignment {
-        let mut expr = expr_flow::flatten(universe, assignment.value);
         let (name, name_span) = assignment.name.to_data();
+        let mut access = Expr::new();
+        let field_access = FieldAccess::new(universe, &mut access, name);
         Assignment {
-            field_access: FieldAccess::new(universe, &mut expr, name),
-            value: expr,
+            field_access: field_access,
+            access: access,
+            value: expr_flow::flatten(universe, assignment.value),
             access_span: name_span,
         }
     }
@@ -100,6 +103,10 @@ impl Assignment {
 
     pub fn value(&self) -> &self::Expr {
         &self.value
+    }
+
+    pub fn access(&self) -> &self::Expr {
+        &self.access
     }
 }
 
