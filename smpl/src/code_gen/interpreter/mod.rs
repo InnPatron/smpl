@@ -3,6 +3,7 @@ mod value;
 mod vm_i;
 mod loader;
 mod comp;
+mod env;
 
 pub mod builtins;
 
