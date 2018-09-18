@@ -218,6 +218,10 @@ impl Expr {
         self.execution_order.len()
     }
 
+    pub fn tmp_by_index(&self, tmp_index: usize) -> TmpId {
+        self.execution_order.get(tmp_index).expect(&format!("Invalid temporary index {}", tmp_index)).clone()
+    }
+
     pub fn set_span(&mut self, span: Span) {
         if self.span.is_some() {
             panic!();
