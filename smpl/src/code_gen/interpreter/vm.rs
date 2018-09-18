@@ -414,13 +414,12 @@ impl<'a> FnEnv<'a> {
 }
 
 mod Expr {
-    use std::ops::{Add, BitAnd, BitOr, Div, Mul, Neg, Not, Sub};
-
     use ast::Literal;
     use analysis::{ArrayInit, BindingId, Expr, PathSegment, Tmp, Value as AbstractValue};
     use analysis::smpl_type::SmplType;
     use super::*;
     use super::super::value::*;
+    use super::super::comp::*;
 
     pub(super) fn eval_expr(vm: &VM, host_env: &Env, expr: &Expr) -> Value {
         let mut expr_env = Env::new();
@@ -668,66 +667,6 @@ mod Expr {
                 Value::Function(fn_id.into())
             }
         }
-    }
-
-    fn not<T: Not<Output = T>>(t: T) -> T {
-        !t
-    }
-
-    fn negate<T: Neg<Output = T>>(t: T) -> T {
-        -t
-    }
-
-    fn is_logical(op: BinOp) -> bool {
-        match op {
-            BinOp::LogicalAnd | BinOp::LogicalOr => true,
-            _ => false,
-        }
-    }
-
-    fn is_math(op: BinOp) -> bool {
-        match op {
-            BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div => true,
-            _ => false,
-        }
-    }
-
-    fn math_op<T: Add<Output = T> + Sub<Output = T> + Div<Output = T> + Mul<Output = T>>(
-        op: BinOp,
-        lhs: T,
-        rhs: T,
-    ) -> T {
-        irmatch!(op;
-            BinOp::Add => lhs + rhs,
-            BinOp::Sub => lhs - rhs,
-            BinOp::Mul => lhs * rhs,
-            BinOp::Div => lhs / rhs
-        )
-    }
-
-    fn partial_cmp<T: PartialEq>(op: BinOp, lhs: T, rhs: T) -> bool {
-        irmatch!(op;
-                 BinOp::Eq => lhs == rhs,
-                 BinOp::InEq => lhs != rhs
-        )
-    }
-
-    fn cmp<T: PartialOrd>(op: BinOp, lhs: T, rhs: T) -> bool {
-        irmatch!(op;
-            BinOp::Eq => lhs == rhs,
-            BinOp::InEq => lhs != rhs,
-            BinOp::GreaterEq => lhs >= rhs,
-            BinOp::LesserEq => lhs <= rhs,
-            BinOp::Lesser => lhs < rhs,
-            BinOp::Greater => lhs > rhs
-        )
-    }
-
-    fn logical<T: BitAnd<Output = T> + BitOr<Output = T>>(op: BinOp, lhs: T, rhs: T) -> T {
-        irmatch!(op;
-                 BinOp::LogicalAnd => lhs & rhs,
-                 BinOp::LogicalOr => lhs | rhs
-        )
     }
 }
 
