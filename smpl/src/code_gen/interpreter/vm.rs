@@ -333,10 +333,10 @@ impl<'a> FnEnv<'a> {
                 let root_var = self.env.ref_var(root_var).unwrap();
 
                 let mut value = root_var;
-                if let Some(ref e) = path.root_indexing_expr() {
+                if let Some(tmp) = path.root_indexing_expr() {
                     value = {
                         let borrow = value.borrow();
-                        let indexer = Expr::eval_expr(self.vm, &self.env, e);
+                        let indexer = self.env.get_tmp(tmp).unwrap();
                         let indexer = irmatch!(indexer; Value::Int(i) => i);
                         let array = irmatch!(*borrow; Value::Array(ref a) => a);
                         array.get(indexer as usize).unwrap().clone()
@@ -362,7 +362,8 @@ impl<'a> FnEnv<'a> {
                                 let field_to_index = field_to_index.borrow();
                                 let field = irmatch!(*field_to_index; Value::Array(ref a) => a);
 
-                                let indexer = Expr::eval_expr(self.vm, &self.env, indexer);
+                                
+                                let indexer = self.env.get_tmp(*indexer).unwrap();
                                 let indexer = irmatch!(indexer; Value::Int(i) => i);
                                 field.get(indexer as usize).unwrap().clone()
                             };
@@ -460,10 +461,10 @@ mod Expr {
 
                 let mut value = root_var;
 
-                if let Some(ref e) = path.root_indexing_expr() {
+                if let Some(indexer) = path.root_indexing_expr() {
                     value = {
                         let borrow = value.borrow();
-                        let indexer = eval_expr(vm, host_env, e);
+                        let indexer = host_env.get_tmp(indexer).unwrap();
                         let indexer = irmatch!(indexer; Value::Int(i) => i);
                         let array = irmatch!(*borrow; Value::Array(ref a) => a);
                         array.get(indexer as usize).unwrap().clone()
@@ -489,7 +490,7 @@ mod Expr {
                                 let field_to_index = field_to_index.borrow();
                                 let field = irmatch!(*field_to_index; Value::Array(ref a) => a);
 
-                                let indexer = eval_expr(vm, host_env, indexer);
+                                let indexer = host_env.get_tmp(*indexer).unwrap();
                                 let indexer = irmatch!(indexer; Value::Int(i) => i);
                                 field.get(indexer as usize).unwrap().clone()
                             };

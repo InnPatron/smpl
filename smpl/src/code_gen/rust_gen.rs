@@ -415,8 +415,7 @@ impl<'a> RustFnGen<'a> {
                 ));
                 let mut previous_borrow = root_var;
 
-                if let Some(e) = path.root_indexing_expr() {
-                    let tmp = RustFnGen::emit_expr(self, e);
+                if let Some(tmp) = path.root_indexing_expr() {
                     let tmp = RustGenFmt::tmp_id(tmp);
 
                     self.output.emit_line(&format!(
@@ -444,7 +443,7 @@ impl<'a> RustFnGen<'a> {
                             previous_borrow = stringified_field;
                         }
 
-                        PathSegment::Indexing(ref f, ref e) => {
+                        PathSegment::Indexing(ref f, ref tmp) => {
                             // Borrow field
                             let stringified_field = RustGenFmt::field_id(f.field_id());
                             let borrow = RustGenFmt::borrow_ref(format!(
@@ -457,8 +456,7 @@ impl<'a> RustFnGen<'a> {
                                 stringified_field, borrow
                             ));
 
-                            let tmp = RustFnGen::emit_expr(self, e);
-                            let tmp = RustGenFmt::tmp_id(tmp);
+                            let tmp = RustGenFmt::tmp_id(*tmp);
 
                             self.output.emit_line(&format!(
                                 "let _borrow_{} = _borrow_{}[{}].borrow();",
@@ -704,7 +702,12 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         self.output.emit_line("{");
         self.output.shift_right();
 
-        let expr = self.emit_expr(assignment.value());
+        if assignment.access().order_length() > 0 {
+            // NOTE: Don't need to do anything with the assignment access expression except emit it
+            // Will be used by the root
+            self.emit_expr(assignment.access());
+        }
+        let value_expr = self.emit_expr(assignment.value());
 
         self.output.emit_line(&format!(
             "let mut _borrow_{} = {};",
@@ -714,8 +717,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
         let mut previous_borrow = root_var;
 
-        if let Some(e) = path.root_indexing_expr() {
-            let tmp = self.emit_expr(e);
+        if let Some(tmp) = path.root_indexing_expr() {
             let tmp = RustGenFmt::tmp_id(tmp);
 
             self.output.emit_line(&format!(
@@ -744,7 +746,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
                     previous_borrow = stringified_field;
                 }
 
-                PathSegment::Indexing(ref f, ref e) => {
+                PathSegment::Indexing(ref f, ref tmp) => {
                     // Borrow field
                     let stringified_field = RustGenFmt::field_id(f.field_id());
                     let borrow = RustGenFmt::borrow_ref(format!(
@@ -757,8 +759,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
                         stringified_field, borrow
                     ));
 
-                    let tmp = self.emit_expr(e);
-                    let tmp = RustGenFmt::tmp_id(tmp);
+                    let tmp = RustGenFmt::tmp_id(*tmp);
 
                     self.output.emit_line(&format!(
                         "let mut _borrow_{} = _borrow_{}[{}].borrow_mut();",
@@ -772,7 +773,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
         let assignee = format!("*_borrow_{}", previous_borrow);
         let rhs = {
-            let tmp = RustGenFmt::tmp_id(expr);
+            let tmp = RustGenFmt::tmp_id(value_expr);
             tmp
         };
 
