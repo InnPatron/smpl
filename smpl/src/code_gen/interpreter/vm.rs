@@ -14,6 +14,7 @@ use analysis::*;
 use super::loader;
 use super::vm_i::*;
 use super::value::Value;
+use super::env::Env;
 
 pub struct VM {
     program: Program,
@@ -107,65 +108,6 @@ impl VM {
 
     fn program(&self) -> &Program {
         &self.program
-    }
-}
-
-#[derive(Debug, Clone)]
-struct Env {
-    env: HashMap<String, Rc<RefCell<Value>>>,
-}
-
-impl Env {
-    pub fn new() -> Env {
-        Env {
-            env: HashMap::new(),
-        }
-    }
-
-    pub fn map_var(&mut self, var: VarId, value: Value) -> Option<Value> {
-        self.map_value(Env::var_id(var), value)
-    }
-
-    pub fn map_tmp(&mut self, tmp: TmpId, value: Value) -> Option<Value> {
-        self.map_value(Env::tmp_id(tmp), value)
-    }
-
-    pub fn map_value(&mut self, name: String, value: Value) -> Option<Value> {
-        self.env
-            .insert(name, Rc::new(RefCell::new(value)))
-            .map(|rc| rc.borrow().clone())
-    }
-
-    pub fn get(&self, name: &str) -> Option<Value> {
-        self.env.get(name).map(|r| (*r.borrow()).clone())
-    }
-
-    pub fn get_var(&self, id: VarId) -> Option<Value> {
-        self.get(&Env::var_id(id))
-    }
-
-    pub fn get_tmp(&self, id: TmpId) -> Option<Value> {
-        self.get(&Env::tmp_id(id))
-    }
-
-    pub fn ref_value(&self, name: &str) -> Option<Rc<RefCell<Value>>> {
-        self.env.get(name).map(|r| r.clone())
-    }
-
-    pub fn ref_var(&self, id: VarId) -> Option<Rc<RefCell<Value>>> {
-        self.ref_value(&Env::var_id(id))
-    }
-
-    pub fn ref_tmp(&self, id: TmpId) -> Option<Rc<RefCell<Value>>> {
-        self.ref_value(&Env::tmp_id(id))
-    }
-
-    fn tmp_id(id: TmpId) -> String {
-        format!("_tmp_{}", id.raw())
-    }
-
-    fn var_id(id: VarId) -> String {
-        format!("_var_{}", id.raw())
     }
 }
 
@@ -414,13 +356,12 @@ impl<'a> FnEnv<'a> {
 }
 
 mod Expr {
-    use std::ops::{Add, BitAnd, BitOr, Div, Mul, Neg, Not, Sub};
-
     use ast::Literal;
     use analysis::{ArrayInit, BindingId, Expr, PathSegment, Tmp, Value as AbstractValue};
     use analysis::smpl_type::SmplType;
     use super::*;
     use super::super::value::*;
+    use super::super::comp::*;
 
     pub(super) fn eval_expr(vm: &VM, host_env: &Env, expr: &Expr) -> Value {
         let mut expr_env = Env::new();
@@ -668,66 +609,6 @@ mod Expr {
                 Value::Function(fn_id.into())
             }
         }
-    }
-
-    fn not<T: Not<Output = T>>(t: T) -> T {
-        !t
-    }
-
-    fn negate<T: Neg<Output = T>>(t: T) -> T {
-        -t
-    }
-
-    fn is_logical(op: BinOp) -> bool {
-        match op {
-            BinOp::LogicalAnd | BinOp::LogicalOr => true,
-            _ => false,
-        }
-    }
-
-    fn is_math(op: BinOp) -> bool {
-        match op {
-            BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div => true,
-            _ => false,
-        }
-    }
-
-    fn math_op<T: Add<Output = T> + Sub<Output = T> + Div<Output = T> + Mul<Output = T>>(
-        op: BinOp,
-        lhs: T,
-        rhs: T,
-    ) -> T {
-        irmatch!(op;
-            BinOp::Add => lhs + rhs,
-            BinOp::Sub => lhs - rhs,
-            BinOp::Mul => lhs * rhs,
-            BinOp::Div => lhs / rhs
-        )
-    }
-
-    fn partial_cmp<T: PartialEq>(op: BinOp, lhs: T, rhs: T) -> bool {
-        irmatch!(op;
-                 BinOp::Eq => lhs == rhs,
-                 BinOp::InEq => lhs != rhs
-        )
-    }
-
-    fn cmp<T: PartialOrd>(op: BinOp, lhs: T, rhs: T) -> bool {
-        irmatch!(op;
-            BinOp::Eq => lhs == rhs,
-            BinOp::InEq => lhs != rhs,
-            BinOp::GreaterEq => lhs >= rhs,
-            BinOp::LesserEq => lhs <= rhs,
-            BinOp::Lesser => lhs < rhs,
-            BinOp::Greater => lhs > rhs
-        )
-    }
-
-    fn logical<T: BitAnd<Output = T> + BitOr<Output = T>>(op: BinOp, lhs: T, rhs: T) -> T {
-        irmatch!(op;
-                 BinOp::LogicalAnd => lhs & rhs,
-                 BinOp::LogicalOr => lhs | rhs
-        )
     }
 }
 
