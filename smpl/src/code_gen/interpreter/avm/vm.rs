@@ -39,6 +39,15 @@ pub struct ExecutionContext {
 }
 
 impl ExecutionContext {
+
+    pub fn stack(&self) -> &Vec<StackInfo> {
+        &self.stack
+    }
+
+    pub fn stack_mut(&mut self) -> &mut Vec<StackInfo> {
+        &mut self.stack
+    }
+
     pub fn top(&self) -> &StackInfo {
         self.stack.last().unwrap()
     }
@@ -68,6 +77,7 @@ pub struct FnContext {
     pub loop_result: HashMap<LoopId, bool>,
     pub previous_is_loop_head: bool,
     pub loop_stack: Vec<LoopId>,
+    pub return_store: Option<Value>,
 }
 
 impl FnContext {
@@ -79,6 +89,7 @@ impl FnContext {
             loop_result: HashMap::new(),
             previous_is_loop_head: false,
             loop_stack: Vec::new(),
+            return_store: None,
         }
     }
 
@@ -106,14 +117,13 @@ pub enum ExecResult<T, E> {
 }
 
 pub struct Executor<'a> {
-    state: ExecutorState,
     context: ExecutionContext,
     program: &'a Program,
 }
 
 impl<'a> Executor<'a> {
     pub fn step(&mut self) -> ExecResult<Value, ()> {
-        match self.state {
+        match self.context.top().exec_state {
             ExecutorState::Fetch(node_index) => {
                 let node_fetch = match node_fetch(&mut self.context.top_mut().fn_context, 
                                                   self.program, 
@@ -123,15 +133,25 @@ impl<'a> Executor<'a> {
 
                 };
                 match node_fetch {
-                    FetchResult::Next(next) => self.state = ExecutorState::Fetch(next),
+                    FetchResult::Next(next) => self.context.top_mut().exec_state = ExecutorState::Fetch(next),
                     FetchResult::Expr(expr_phase) => { 
-                        self.state = ExecutorState::Expr {
+                        self.context.top_mut().exec_state = ExecutorState::Expr {
                             node: node_index,
                             tmp_index: 0,
                             expr_phase: expr_phase,
                         };
                     },
-                    FetchResult::Return(v) => return ExecResult::Ok(v),
+                    FetchResult::Return(v) => {
+                        let stack = self.context.stack_mut();
+
+                        let _returning_fn = stack.pop();
+
+                        match stack.last_mut() {
+                            Some(ref mut top) => top.fn_context.return_store = Some(v),
+
+                            None => return ExecResult::Ok(v),
+                        }
+                    },
                 }
             }
 
