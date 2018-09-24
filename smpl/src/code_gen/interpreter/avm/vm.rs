@@ -12,6 +12,8 @@ use analysis::smpl_type::*;
 use code_gen::interpreter::value::{Struct, Value as Value};
 use code_gen::interpreter::env::Env;
 
+use super::node_fetch::*;
+
 type TmpIndex = usize;
 
 pub struct AVM {
@@ -92,4 +94,63 @@ impl FnContext {
     pub fn get_loop_head(&self, id: LoopId) -> NodeIndex {
         self.loop_heads.get(&id).unwrap().clone()
     }
+}
+
+pub enum ExecResult<T, E> {
+    Ok(T),
+    Pending,
+    Err(E),
+}
+
+pub struct Executor<'a> {
+    state: ExecutorState,
+    context: ExecutionContext,
+    program: &'a Program,
+}
+
+impl<'a> Executor<'a> {
+    pub fn step(&mut self) -> ExecResult<Value, ()> {
+        match self.state {
+            ExecutorState::Fetch(node_index) => {
+                let node_fetch = match node_fetch(&mut self.context.top_mut().fn_context, 
+                                                  self.program, 
+                                                  node_index) {
+                    Ok(d) => d,
+                    Err(e) => return ExecResult::Err(e),
+
+                };
+                match node_fetch {
+                    FetchResult::Next(next) => self.state = ExecutorState::Fetch(next),
+                    FetchResult::Expr(expr_phase) => { 
+                        self.state = ExecutorState::Expr {
+                            node: node_index,
+                            tmp_index: 0,
+                            expr_phase: expr_phase,
+                        };
+                    },
+                    FetchResult::Return(v) => return ExecResult::Ok(v),
+                }
+            }
+
+            ExecutorState::Expr {
+                node: node,
+                tmp_index: tmp_index,
+                expr_phase: expr_phase
+            } => unimplemented!(),
+
+            ExecutorState::Eval(node_index) => unimplemented!(),
+        }
+
+        ExecResult::Pending
+    }
+}
+
+enum ExecutorState {
+    Fetch(NodeIndex),
+    Expr {
+        node: NodeIndex,
+        tmp_index: usize,
+        expr_phase: usize,
+    },
+    Eval(NodeIndex),
 }
