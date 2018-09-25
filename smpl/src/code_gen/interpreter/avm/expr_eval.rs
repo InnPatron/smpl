@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use petgraph::graph::NodeIndex;
+
 use analysis::*;
 use analysis::{Value as AbstractValue};
 use analysis::smpl_type::*;
@@ -11,12 +13,223 @@ use code_gen::interpreter::comp::*;
 
 use super::vm::*;
 
-enum TmpResult {
-    Value(Value),
-    FnCall(FnId),
+const LHS_PHASE: usize = 0;
+const RHS_PHASE: usize = 1;
+
+pub enum ExprEvalResult {
+    Value(Value, TmpId),
+    PhaseChange(Value, TmpId),
+    FnCall(FnId, Option<Vec<Value>>),
+    Finished(Value, TmpId),
 }
 
-fn eval_tmp(vm: &AVM, context: &ExecutionContext, tmp: &Tmp) -> TmpResult {
+impl ExprEvalResult {
+    fn from_tmp_result(tmp_result: TmpResult,
+                       node: &Node, 
+                       current_tmp: usize, 
+                       current_tmp_id: TmpId,
+                       expr_phase: usize) -> ExprEvalResult {
+        match *node {
+            Node::LocalVarDecl(ref data) => {
+                assert_eq!(expr_phase, 0, "Local Variable Declaration node only has phase 0. Found phase {}", 
+                           expr_phase);
+                let expr = data.decl.init_expr();
+
+                match tmp_result {
+                    TmpResult::Value(v) => {
+                        if current_tmp == expr.order_length() - 1 {
+                            ExprEvalResult::Finished(v, current_tmp_id)
+                        } else {
+                            ExprEvalResult::Value(v, current_tmp_id)
+                        }
+                    }
+
+                    TmpResult::FnCall(fn_id, args) => ExprEvalResult::FnCall(fn_id, args),
+                }
+            }
+
+            Node::Assignment(ref data) => {
+                assert!(expr_phase < 2, "Assignment node only has phase 0-1. Found phase {}", 
+                       expr_phase);
+
+                match tmp_result {
+                    TmpResult::Value(v) => {
+                        if expr_phase == LHS_PHASE {
+                            let expr = data.assignment.access();
+                            if current_tmp == expr.order_length() - 1 {
+                                ExprEvalResult::PhaseChange(v, current_tmp_id)
+                            } else {
+                                ExprEvalResult::Value(v, current_tmp_id)
+                            }
+                        } else {
+                            let expr = data.assignment.access();
+                            if current_tmp == expr.order_length() - 1 {
+                                ExprEvalResult::Finished(v, current_tmp_id)
+                            } else {
+                                ExprEvalResult::Value(v, current_tmp_id)
+                            }
+                        }
+                    }
+
+                    TmpResult::FnCall(fn_id, args) => ExprEvalResult::FnCall(fn_id, args),
+                }
+                
+            }
+
+            Node::Expr(ref data) => {
+                assert_eq!(expr_phase, 0, "Expression node only has phase 0. Found phase {}", expr_phase);
+                let expr = &data.expr;
+
+                match tmp_result {
+                    TmpResult::Value(v) => {
+                        if current_tmp == expr.order_length() - 1 {
+                            ExprEvalResult::Finished(v, current_tmp_id)
+                        } else {
+                            ExprEvalResult::Value(v, current_tmp_id)
+                        }
+                    }
+
+                    TmpResult::FnCall(fn_id, args) => ExprEvalResult::FnCall(fn_id, args),
+                }
+            }
+
+            Node::Return(ref data) => {
+                assert_eq!(expr_phase, 0, "Return node only has phase 0. Found phase {}", expr_phase);
+                let expr = match data.expr {
+                    Some(ref expr) => expr,
+                    None => unreachable!(),
+                };
+
+                match tmp_result {
+                    TmpResult::Value(v) => {
+                        if current_tmp == expr.order_length() - 1 {
+                            ExprEvalResult::Finished(v, current_tmp_id)
+                        } else {
+                            ExprEvalResult::Value(v, current_tmp_id)
+                        }
+                    }
+
+                    TmpResult::FnCall(fn_id, args) => ExprEvalResult::FnCall(fn_id, args),
+                }
+            }
+
+            Node::Condition(ref data) => {
+                assert_eq!(expr_phase, 0, "Condition node only has phase 0. Found phase {}", expr_phase);
+                let expr = &data.expr;
+
+                match tmp_result {
+                    TmpResult::Value(v) => {
+                        if current_tmp == expr.order_length() - 1 {
+                            ExprEvalResult::Finished(v, current_tmp_id)
+                        } else {
+                            ExprEvalResult::Value(v, current_tmp_id)
+                        }
+                    }
+
+                    TmpResult::FnCall(fn_id, args) => ExprEvalResult::FnCall(fn_id, args),
+                }
+            }
+
+            _ => unreachable!(),
+        }
+    }
+}
+
+pub fn eval_node_tmp(program: &Program, 
+                context: &mut ExecutionContext, 
+                current_node: NodeIndex, 
+                tmp_index: usize, 
+                expr_phase: usize) -> ExprEvalResult {
+
+    let func = context.top().fn_context.get_fn(program);
+    let cfg = func.cfg();
+    let node = cfg.node_weight(current_node);
+    match *node {
+        Node::LocalVarDecl(ref data) => {
+            assert_eq!(expr_phase, 0, "Local Variable Declaration node only has phase 0. Found phase {}", 
+                       expr_phase);
+            let expr = data.decl.init_expr();
+            let tmp_id = expr.tmp_by_index(tmp_index);
+            let tmp = expr.get_tmp(tmp_id);
+            ExprEvalResult::from_tmp_result(eval_tmp(program, context, tmp), 
+                                            node, 
+                                            tmp_index,
+                                            tmp_id,
+                                            expr_phase)
+        }
+
+        Node::Assignment(ref data) => {
+            assert!(expr_phase < 2, "Assignment node only has phase 0-1. Found phase {}", 
+                       expr_phase);
+            
+            if expr_phase == LHS_PHASE {
+                let expr = data.assignment.access();
+                let tmp_id = expr.tmp_by_index(tmp_index);
+                let tmp = expr.get_tmp(tmp_id);
+                ExprEvalResult::from_tmp_result(eval_tmp(program, context, tmp), 
+                                                node, 
+                                                tmp_index, 
+                                                tmp_id,
+                                                expr_phase)
+            } else {
+                let expr = data.assignment.access();
+                let tmp_id = expr.tmp_by_index(tmp_index);
+                let tmp = expr.get_tmp(tmp_id);
+                ExprEvalResult::from_tmp_result(eval_tmp(program, context, tmp), 
+                                                node, 
+                                                tmp_index, 
+                                                tmp_id,
+                                                expr_phase)
+            }
+        }
+
+        Node::Expr(ref data) => {
+            assert_eq!(expr_phase, 0, "Expression node only has phase 0. Found phase {}", expr_phase);
+            let tmp_id = data.expr.tmp_by_index(tmp_index);
+            let tmp = data.expr.get_tmp(tmp_id);
+            ExprEvalResult::from_tmp_result(eval_tmp(program, context, tmp), 
+                                            node, 
+                                            tmp_index, 
+                                            tmp_id,
+                                            expr_phase)
+        }
+
+        Node::Return(ref data) => {
+            assert_eq!(expr_phase, 0, "Return node only has phase 0. Found phase {}", expr_phase);
+            let expr = match data.expr {
+                Some(ref expr) => expr,
+                None => unreachable!(),
+            };
+            let tmp_id = expr.tmp_by_index(tmp_index);
+            let tmp = expr.get_tmp(tmp_id);
+            ExprEvalResult::from_tmp_result(eval_tmp(program, context, tmp), 
+                                            node, 
+                                            tmp_index, 
+                                            tmp_id,
+                                            expr_phase)
+        }
+
+        Node::Condition(ref data) => {
+            assert_eq!(expr_phase, 0, "Condition node only has phase 0. Found phase {}", expr_phase);
+            let tmp_id = data.expr.tmp_by_index(tmp_index);
+            let tmp = data.expr.get_tmp(tmp_id);
+            ExprEvalResult::from_tmp_result(eval_tmp(program, context, tmp), 
+                                            node, 
+                                            tmp_index, 
+                                            tmp_id,
+                                            expr_phase)
+        }
+
+        _ => unreachable!(),
+    }
+}
+
+enum TmpResult {
+    Value(Value),
+    FnCall(FnId, Option<Vec<Value>>),
+}
+
+fn eval_tmp(program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> TmpResult {
     let tmp_value = match *tmp.value().data() {
         AbstractValue::Literal(ref literal) => match *literal {
             Literal::Bool(b) => Value::Bool(b),
@@ -84,6 +297,16 @@ fn eval_tmp(vm: &AVM, context: &ExecutionContext, tmp: &Tmp) -> TmpResult {
         }
 
         AbstractValue::FnCall(ref call) => {
+
+            if context.top_mut().fn_context.return_store.is_some() {
+                return TmpResult::Value(context
+                                        .top_mut()
+                                        .fn_context
+                                        .return_store
+                                        .take()
+                                        .unwrap());
+            }
+
             let fn_id = match call.get_id().unwrap() {
                 BindingId::Var(var) => {
                     let var = context.top().func_env.get_var(var).unwrap();
@@ -94,26 +317,14 @@ fn eval_tmp(vm: &AVM, context: &ExecutionContext, tmp: &Tmp) -> TmpResult {
                 BindingId::Fn(fn_id) => fn_id,
             };
 
-            /*
+            
             let args: Option<Vec<_>> = call.args().map(|v| {
                 v.iter()
-                    .map(|tmp| expr_env.get_tmp(tmp.data().clone()).unwrap().clone())
+                    .map(|tmp| context.top().func_env.get_tmp(tmp.data().clone()).unwrap().clone())
                     .collect()
             });
 
-            match args {
-                Some(args) => {
-                    if args.len() > 0 {
-                        vm.eval_fn_args(fn_id.into(), args)
-                    } else {
-                        vm.eval_fn(fn_id.into())
-                    }
-                }
-
-                None => vm.eval_fn(fn_id.into()),
-            }
-            */
-            unimplemented!();
+            return TmpResult::FnCall(fn_id, args);
         }
 
         AbstractValue::BinExpr(ref op, ref lhs, ref rhs) => {
@@ -123,7 +334,7 @@ fn eval_tmp(vm: &AVM, context: &ExecutionContext, tmp: &Tmp) -> TmpResult {
             let lh_v = context.top().func_env.get_tmp(lh_id).unwrap();
             let rh_v = context.top().func_env.get_tmp(rh_id).unwrap();
 
-            match *vm.program().universe().get_type(lhs.type_id().unwrap()) {
+            match *program.universe().get_type(lhs.type_id().unwrap()) {
                 SmplType::Int => {
                     let lhs = irmatch!(lh_v; Value::Int(i) => i);
                     let rhs = irmatch!(rh_v; Value::Int(i) => i);
@@ -171,7 +382,7 @@ fn eval_tmp(vm: &AVM, context: &ExecutionContext, tmp: &Tmp) -> TmpResult {
             let t_id = t.data().clone();
             let t_v = context.top().func_env.get_tmp(t_id).unwrap();
 
-            irmatch!(*vm.program().universe().get_type(t.type_id().unwrap());
+            irmatch!(*program.universe().get_type(t.type_id().unwrap());
                      SmplType::Float => {
                          let f = irmatch!(t_v; Value::Float(f) => f);
                          Value::Float(negate(f))
