@@ -14,6 +14,7 @@ use code_gen::interpreter::env::Env;
 
 use super::node_fetch::*;
 use super::expr_eval::*;
+use super::node_eval::*;
 
 type TmpIndex = usize;
 
@@ -213,7 +214,35 @@ impl<'a> Executor<'a> {
                 }
             }
 
-            ExecutorState::Eval(node_index) => unimplemented!(),
+            ExecutorState::Eval(current_node) => {
+                let result = eval_node(self.context.top_mut(), self.program, current_node);
+
+                let result = match result {
+                    Ok(r) => r,
+                    Err(e) => {
+                        return ExecResult::Err(e);
+                    }
+                };
+
+                match result {
+
+                    NodeEval::Next(next_node) => {
+                        self.context.top_mut().exec_state = ExecutorState::Fetch(next_node);
+                    }
+
+                    NodeEval::Return(value) => {
+                        let stack = self.context.stack_mut();
+
+                        let _returning_fn = stack.pop();
+
+                        match stack.last_mut() {
+                            Some(ref mut top) => top.fn_context.return_store = Some(value),
+
+                            None => return ExecResult::Ok(value),
+                        }
+                    },
+                }
+            }
         }
 
         ExecResult::Pending
