@@ -1,5 +1,6 @@
 use super::builtins::*;
 use super::vm::VM;
+use super::BuiltinMap;
 
 use ast::Module;
 
@@ -13,7 +14,7 @@ pub fn include(mut modules: Vec<Module>) -> Vec<Module> {
     modules
 }
 
-pub fn load(vm: &mut VM) {
+pub fn load<MAP: BuiltinMap>(vm: &mut MAP) {
     log::add(vm);
     convert::add(vm);
     math::add(vm);
