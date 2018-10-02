@@ -74,7 +74,7 @@ impl AVM {
                 .expect("Missing a built-in")
                 .execute(args))
         } else {
-            Executor::new_fn_executor(&self.program, handle, args)
+            Executor::new_fn_executor(&self.program, &self.builtins, handle, args)
         }
     }
 
@@ -220,13 +220,14 @@ pub enum ExecResult<T, E> {
     Err(E),
 }
 
-pub struct Executor<'a> {
+struct InternalExecutor<'a> {
     context: ExecutionContext,
     program: &'a Program,
+    builtins: &'a HashMap<FnId, Box<BuiltinFn>>,
 }
 
-impl<'a> Executor<'a> {
-    pub fn step(&mut self) -> ExecResult<Value, ()> {
+impl<'a> InternalExecutor<'a> {
+    fn step(&mut self) -> ExecResult<Value, ()> {
         match self.context.top().exec_state {
             ExecutorState::Fetch(node_index) => {
                 let node_fetch = match node_fetch(&mut self.context.top_mut().fn_context, 
@@ -348,5 +349,48 @@ impl<'a> Executor<'a> {
         }
 
         ExecResult::Pending
+    }
+}
+
+enum ExecutorType<'a> {
+    Executor(InternalExecutor<'a>),
+    BuiltinStub(Value),
+}
+
+pub struct Executor<'a> {
+    exec_type: ExecutorType<'a>,
+}
+
+impl<'a> Executor<'a> {
+    fn new_fn_executor(program: &'a Program,
+                        builtins: &'a HashMap<FnId, Box<BuiltinFn>>,
+                        fn_id: FnHandle, args: Option<Vec<Value>>) -> Executor<'a> {
+
+        let mut exec_context = ExecutionContext {
+            stack: Vec::new(),
+            return_value: None,
+        };
+
+        let fn_id = fn_id.id();
+        Executor { 
+            exec_type: ExecutorType::Executor(InternalExecutor {
+                program: program,
+                context: exec_context,
+                builtins: builtins,
+            })
+        }
+    }
+
+    fn builtin_stub(value: Value) -> Executor<'a> {
+        Executor {
+            exec_type: ExecutorType::BuiltinStub(value),
+        }
+    }
+
+    pub fn step(&mut self) -> ExecResult<Value, ()> {
+        match self.exec_type {
+            ExecutorType::Executor(ref mut internal_executor) => internal_executor.step(),
+            ExecutorType::BuiltinStub(ref v) => ExecResult::Ok(v.clone()),
+        }
     }
 }
