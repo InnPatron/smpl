@@ -6,6 +6,10 @@ mod comp;
 mod env;
 mod avm;
 
+#[cfg(test)]
+#[cfg_attr(rustfmt, rustfmt_skip)]
+mod vm_tests;
+
 pub mod builtins;
 
 pub use self::vm::VM;
