@@ -293,6 +293,26 @@ impl<'a> InternalExecutor<'a> {
                     },
 
                     ExprEvalResult::FnCall(fn_id, args) => {
+                        // Check if builtin first
+                        if self.program.metadata().is_builtin(fn_id) {
+                            let result = self.builtins
+                                                .get(&fn_id)
+                                                .expect("Missing a built-in")
+                                                .execute(args);
+
+                            match self.context.stack.last_mut() {
+                                // Store return value in return store
+                                Some(ref mut top) => {
+                                    top.fn_context.return_store = Some(result);
+                                    return ExecResult::Pending;
+
+                                }
+
+                                None => unreachable!(),
+                            }
+                        }
+
+
                         let fn_context = FnContext::new(self.program, fn_id);
                         let start = fn_context.get_fn(self.program).cfg().start();
 
