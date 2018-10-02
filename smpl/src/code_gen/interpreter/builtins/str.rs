@@ -17,7 +17,7 @@ pub fn include(modules: &mut Vec<Module>) {
     modules.push(parse_module(STRING_DECLARATION).unwrap());
 }
 
-pub fn add(vm: &mut VM) {
+pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
     vm.insert_builtin(MOD_STRING, STRING_LEN, Box::new(Len))
         .unwrap();
     vm.insert_builtin(MOD_STRING, STRING_TO_STRING, Box::new(ToString))

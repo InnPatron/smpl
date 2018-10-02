@@ -31,7 +31,7 @@ pub fn include(modules: &mut Vec<Module>) {
     modules.push(parse_module(MATH_DECLARATION).unwrap());
 }
 
-pub fn add(vm: &mut VM) {
+pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
     vm.insert_builtin(MOD_MATH, MATH_SIN, Box::new(Sin))
         .unwrap();
     vm.insert_builtin(MOD_MATH, MATH_COS, Box::new(Cos))
