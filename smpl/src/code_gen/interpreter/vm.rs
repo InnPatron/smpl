@@ -49,15 +49,15 @@ impl VM {
         }
     }
 
-    pub fn eval_fn_args(&self, handle: FnHandle, args: Vec<Value>) -> Value {
+    pub fn eval_fn_args(&self, handle: FnHandle, args: Option<Vec<Value>>) -> Value {
         let id = handle.id();
         if self.program.metadata().is_builtin(id) {
             self.builtins
                 .get(&id)
                 .expect("Missing a built-in")
-                .execute(Some(args))
+                .execute(args)
         } else {
-            let mut fn_env = FnEnv::new(self, id, Some(args));
+            let mut fn_env = FnEnv::new(self, id, args);
             fn_env.eval()
         }
     }
@@ -464,17 +464,7 @@ mod Expr {
                         .collect()
                 });
 
-                match args {
-                    Some(args) => {
-                        if args.len() > 0 {
-                            vm.eval_fn_args(fn_id.into(), args)
-                        } else {
-                            vm.eval_fn(fn_id.into())
-                        }
-                    }
-
-                    None => vm.eval_fn(fn_id.into()),
-                }
+                vm.eval_fn_args(fn_id.into(), args)
             }
 
             AbstractValue::BinExpr(ref op, ref lhs, ref rhs) => {
@@ -668,7 +658,7 @@ fn test(a: int, b: int) -> int {
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, vec![Value::Int(5), Value::Int(7)]);
+        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::Int(5), Value::Int(7)]));
 
         assert_eq!(Value::Int(12), result);
     }
@@ -692,7 +682,7 @@ fn test(a: int, b: int) -> T {
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, vec![Value::Int(5), Value::Int(7)]);
+        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::Int(5), Value::Int(7)]));
 
         let result = irmatch!(result; Value::Struct(s) => s.get_field("f").unwrap());
         let result = irmatch!(result; Value::Int(i) => i);
@@ -718,7 +708,7 @@ fn test(a: int, b: int) -> int {
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, vec![Value::Int(5), Value::Int(7)]);
+        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::Int(5), Value::Int(7)]));
 
         assert_eq!(Value::Int(12), result);
     }
@@ -742,7 +732,7 @@ fn test(a: int, b: int) -> int {
         
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, vec![Value::Int(5), Value::Int(7)]);
+        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::Int(5), Value::Int(7)]));
 
         assert_eq!(Value::Int(114), result);
     }
@@ -910,7 +900,7 @@ fn recurse(i: int) -> int {
 
         let fn_handle = vm.query_module("mod1", "recurse").unwrap().unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, vec![Value::Int(2)]);
+        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::Int(2)]));
 
         assert_eq!(Value::Int(3), result);
     }
@@ -944,7 +934,7 @@ fn recurse_b(i: int) -> int {
 
         let fn_handle = vm.query_module("mod1", "recurse_a").unwrap().unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, vec![Value::Int(1)]);
+        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::Int(1)]));
 
         assert_eq!(Value::Int(-5), result);    
     }

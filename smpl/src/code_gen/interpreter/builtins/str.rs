@@ -117,13 +117,13 @@ mod tests {
 
         let fn_handle = vm.query_module(MOD_STRING, STRING_LEN).unwrap().unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, vec![Value::String("".to_string())]);
+        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::String("".to_string())]));
         assert_eq!(Value::Int(0), result);
 
-        let result = vm.eval_fn_args(fn_handle, vec![Value::String("1".to_string())]);
+        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::String("1".to_string())]));
         assert_eq!(Value::Int(1), result);
 
-        let result = vm.eval_fn_args(fn_handle, vec![Value::String("123456789".to_string())]);
+        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::String("123456789".to_string())]));
         assert_eq!(Value::Int(9), result);
     }
 
@@ -141,11 +141,11 @@ mod tests {
 
         let result = vm.eval_fn_args(
             fn_handle,
-            vec![
+            Some(vec![
                 Value::String("I am ".to_string()),
                 Value::Int(1337),
                 Value::String("!".to_string()),
-            ],
+            ]),
         );
         assert_eq!(Value::String("I am 1337!".to_string()), result);
     }
@@ -162,10 +162,10 @@ mod tests {
 
         let result = vm.eval_fn_args(
             fn_handle,
-            vec![
+            Some(vec![
                 Value::String("I'll ".to_string()),
                 Value::String("be back.".to_string()),
-            ],
+            ]),
         );
         assert_eq!(Value::String("I'll be back.".to_string()), result);
     }
@@ -182,7 +182,7 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, vec![Value::String("LOUD NOISES".to_string())]);
+        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::String("LOUD NOISES".to_string())]));
         assert_eq!(Value::String("loud noises".to_string()), result);
     }
 
@@ -198,7 +198,7 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, vec![Value::String("loud noises".to_string())]);
+        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::String("loud noises".to_string())]));
         assert_eq!(Value::String("LOUD NOISES".to_string()), result);
     }
 
