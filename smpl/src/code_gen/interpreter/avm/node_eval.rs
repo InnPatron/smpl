@@ -10,40 +10,24 @@ use analysis::{Value as AbstractValue};
 use analysis::smpl_type::*;
 
 use code_gen::interpreter::value::{Struct, Value as Value};
-use super::vm::FnContext;
+use super::vm::StackInfo;
 
-enum NodeEval {
+pub enum NodeEval {
     Next(NodeIndex),
     Return(Value),
 }
 
-fn eval_node(context: &mut FnContext, program: &Program, current: NodeIndex) -> Result<NodeEval, ()> {
+/// Performs any Node post-processing
+pub fn eval_node(stack_info: &mut StackInfo, program: &Program, current: NodeIndex) -> Result<NodeEval, ()> {
+    let context = &mut stack_info.fn_context;
     let func = context.get_fn(program);
     match *func.cfg().node_weight(current) {
-        Node::End => unreachable!(),
-
-        Node::Start => unreachable!(),
-
-        Node::BranchSplit(_) => unreachable!(),
-
-        Node::BranchMerge(_) => unreachable!(),
-
-        Node::LoopHead(ref data) => unreachable!(),
-
-        Node::LoopFoot(_) => unreachable!(),
-
-        Node::Continue(_) => unreachable!(),
-
-        Node::Break(_) => unreachable!(),
-
-        Node::EnterScope => unreachable!(),
-
-        Node::ExitScope => unreachable!(),
-
+        
         Node::LocalVarDecl(ref data) => {
             context.previous_is_loop_head = false;
-            let value = Expr::eval_expr(context.vm, &self.env, data.decl.init_expr());
-            context.env.map_var(data.decl.var_id(), value);
+            let value_tmp_id = data.decl.init_expr().last();
+            let value = stack_info.func_env.get_tmp(value_tmp_id).unwrap();
+            stack_info.func_env.map_var(data.decl.var_id(), value);
             Ok(NodeEval::Next(func.cfg().next(current)))
         }
 
@@ -52,13 +36,13 @@ fn eval_node(context: &mut FnContext, program: &Program, current: NodeIndex) -> 
             let path = data.assignment.assignee().path();
 
             let root_var = path.root_var_id();
-            let root_var = context.env.ref_var(root_var).unwrap();
+            let root_var = stack_info.func_env.ref_var(root_var).unwrap();
 
             let mut value = root_var;
             if let Some(tmp) = path.root_indexing_expr() {
                 value = {
                     let borrow = value.borrow();
-                    let indexer = context.env.get_tmp(tmp).unwrap();
+                    let indexer = stack_info.func_env.get_tmp(tmp).unwrap();
                     let indexer = irmatch!(indexer; Value::Int(i) => i);
                     let array = irmatch!(*borrow; Value::Array(ref a) => a);
                     array.get(indexer as usize).unwrap().clone()
@@ -85,7 +69,7 @@ fn eval_node(context: &mut FnContext, program: &Program, current: NodeIndex) -> 
                             let field = irmatch!(*field_to_index; Value::Array(ref a) => a);
 
                             
-                            let indexer = context.env.get_tmp(*indexer).unwrap();
+                            let indexer = stack_info.func_env.get_tmp(*indexer).unwrap();
                             let indexer = irmatch!(indexer; Value::Int(i) => i);
                             field.get(indexer as usize).unwrap().clone()
                         };
@@ -93,7 +77,8 @@ fn eval_node(context: &mut FnContext, program: &Program, current: NodeIndex) -> 
                 }
             }
 
-            let result = Expr::eval_expr(context.vm, &self.env, data.assignment.value());
+            let result_tmp_id = data.assignment.value().last();
+            let result = stack_info.func_env.get_tmp(result_tmp_id).unwrap();
 
             let mut borrow = value.borrow_mut();
             *borrow = result;
@@ -101,24 +86,25 @@ fn eval_node(context: &mut FnContext, program: &Program, current: NodeIndex) -> 
             Ok(NodeEval::Next(func.cfg().next(current)))
         }
 
-        Node::Expr(ref data) => {
-            context.previous_is_loop_head = false;
-            Expr::eval_expr(context.vm, &self.env, &data.expr);
-            Ok(NodeEval::Next(func.cfg().next(current)))
-        }
-
         Node::Return(ref data) => {
             context.previous_is_loop_head = false;
             let value = match data.expr {
-                Some(ref expr) => Expr::eval_expr(context.vm, &self.env, expr),
+                Some(ref expr) => {
+                    let result_tmp_id = expr.last();
+                    let result = stack_info.func_env.get_tmp(result_tmp_id);
+                    result.unwrap()
+                },
+
                 None => Value::Unit,
             };
             Ok(NodeEval::Return(value))
         }
 
         Node::Condition(ref data) => {
-            let value = Expr::eval_expr(context.vm, &self.env, &data.expr);
+            let value_tmp_id = data.expr.last();
+            let value = stack_info.func_env.get_tmp(value_tmp_id).unwrap();
             let value = irmatch!(value; Value::Bool(b) => b);
+
             let (t_b, f_b) = func.cfg().after_condition(current);
             let next = if value { t_b } else { f_b };
 
@@ -131,5 +117,11 @@ fn eval_node(context: &mut FnContext, program: &Program, current: NodeIndex) -> 
             context.previous_is_loop_head = false;
             Ok(NodeEval::Next(func.cfg().next(next)))
         }
+
+        Node::Expr(_) => {
+            Ok(NodeEval::Next(func.cfg().next(current)))
+        }
+
+        _ => unreachable!(),
     }
 }
