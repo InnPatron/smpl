@@ -1,10 +1,33 @@
 use parser::parse_module;
 use code_gen::interpreter::*;
 
-use parser::parse_module;
-use code_gen::interpreter::*;
-
 struct Add;
+
+macro_rules! setup_and_run {
+    ($mod1: expr, $mod_name: expr, $fn_name: expr, $args: expr) => {{
+
+        let modules = vec![parse_module($mod1).expect("Failed to parse module")];
+        let mut vm = VM::new(modules.clone()).unwrap();
+        let mut avm = AVM::new(modules).unwrap();
+        
+
+        let _ = vm.insert_builtin($mod_name, "add", Box::new(Add));
+        let _ = vm.insert_builtin($mod_name, "sum", Box::new(VarArgSum));
+
+        let _ = avm.insert_builtin($mod_name, "add", Box::new(Add));
+        let _ = avm.insert_builtin($mod_name, "sum", Box::new(VarArgSum));
+
+        let fn_handle = vm.query_module($mod_name, $fn_name).unwrap().unwrap();
+        let a_fn_handle = avm.query_module($mod_name, $fn_name).unwrap().unwrap();
+
+        let result = vm.eval_fn_args(fn_handle, $args.clone());
+        let a_result = avm.eval_fn_args_sync(fn_handle, $args)
+            .expect("AVM eval error");
+
+        assert_eq!(result, a_result);
+        result
+    }}
+}
 
 impl BuiltinFn for Add {
     fn execute(&self, args: Option<Vec<Value>>) -> Value {
