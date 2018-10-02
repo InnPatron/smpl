@@ -139,7 +139,6 @@ pub struct StackInfo {
 
 pub struct ExecutionContext {
     stack: Vec<StackInfo>,
-    return_value: Option<Value>,
 }
 
 impl ExecutionContext {
@@ -388,10 +387,18 @@ impl<'a> Executor<'a> {
 
         let mut exec_context = ExecutionContext {
             stack: Vec::new(),
-            return_value: None,
         };
 
+        // Set up the stack to execute the first node in the called function
         let fn_id = fn_id.id();
+        let start = program.universe().get_fn(fn_id).cfg().start();
+        exec_context.push_info(StackInfo {
+            func: fn_id,
+            func_env: Env::new(),
+            fn_context: FnContext::new(program, fn_id),
+            exec_state: ExecutorState::Fetch(start),
+        });
+
         Executor { 
             exec_type: ExecutorType::Executor(InternalExecutor {
                 program: program,
