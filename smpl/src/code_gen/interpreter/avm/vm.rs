@@ -9,8 +9,17 @@ use analysis::*;
 use analysis::{Value as AbstractValue};
 use analysis::smpl_type::*;
 
+use ast::{Ident, Module};
+
+use err::Err;
+
 use code_gen::interpreter::value::{Struct, Value as Value};
 use code_gen::interpreter::env::Env;
+
+use code_gen::interpreter::BuiltinMap;
+use code_gen::interpreter::loader;
+use code_gen::interpreter::vm_i::*;
+
 
 use super::node_fetch::*;
 use super::expr_eval::*;
@@ -19,12 +28,105 @@ use super::node_eval::*;
 type TmpIndex = usize;
 
 pub struct AVM {
-    program: Program
+    program: Program,
+    builtins: HashMap<FnId, Box<BuiltinFn>>,
 }
 
 impl AVM {
+    pub fn new(user_modules: Vec<Module>) -> Result<AVM, Err> {
+        let modules = loader::include(user_modules);
+        let program = check_program(modules)?;
+        let mut vm = AVM {
+            program: program,
+            builtins: HashMap::new(),
+        };
+
+        loader::load(&mut vm);
+
+        Ok(vm)
+    }
+
+    pub fn eval_fn_sync(&self, handle: FnHandle) -> Result<Value, ()> {
+        self.eval_fn_args_sync(handle, None)
+    }
+
+    pub fn eval_fn_args_sync(&self, handle: FnHandle, args: Option<Vec<Value>>) -> Result<Value, ()> {
+        let mut executor = self.eval_fn_args(handle, args);
+
+        loop {
+            match executor.step() {
+                ExecResult::Ok(v) => return Ok(v),
+                ExecResult::Pending => (),
+                ExecResult::Err(e) => return Err(e),
+            }
+        }
+    }
+
+    pub fn eval_fn(&self, handle: FnHandle) -> Executor {
+        self.eval_fn_args(handle, None)
+    }
+
+    pub fn eval_fn_args(&self, handle: FnHandle, args: Option<Vec<Value>>) -> Executor {
+        let id = handle.id();
+        if self.program.metadata().is_builtin(id) {
+            Executor::builtin_stub(self.builtins
+                .get(&id)
+                .expect("Missing a built-in")
+                .execute(args))
+        } else {
+            Executor::new_fn_executor(&self.program, handle, args)
+        }
+    }
+
+    pub fn query_module(&self, module: &str, name: &str) -> Result<Option<FnHandle>, String> {
+        let module = Ident(module.to_string());
+        let name = Ident(name.to_string());
+        let mod_id = self.program.universe().module_id(&module);
+
+        match mod_id {
+            Some(mod_id) => Ok(self.program
+                .metadata()
+                .module_fn(mod_id, name)
+                .map(|fn_id| fn_id.into())),
+
+            None => Err(format!("Module '{}' does not exist", module)),
+        }
+    }
+
     pub fn program(&self) -> &Program {
         &self.program
+    }
+}
+
+impl BuiltinMap for AVM {
+    fn insert_builtin(
+        &mut self,
+        module_str: &str,
+        name_str: &str,
+        builtin: Box<BuiltinFn>,
+    ) -> Result<Option<Box<BuiltinFn>>, String> {
+        let module = Ident(module_str.to_string());
+        let name = Ident(name_str.to_string());
+        let mod_id = self.program.universe().module_id(&module);
+
+        match mod_id {
+            Some(mod_id) => match self.program.metadata().module_fn(mod_id, name) {
+                Some(fn_id) => {
+                    if self.program.metadata().is_builtin(fn_id) {
+                        Ok(self.builtins.insert(fn_id, builtin))
+                    } else {
+                        Err(format!(
+                            "{}::{} is not a valid builtin function",
+                            module_str, name_str
+                        ))
+                    }
+                }
+
+                None => Err(format!("{} is not a function in {}", name_str, module_str)),
+            },
+
+            None => Err(format!("Module '{}' does not exist", module_str)),
+        }
     }
 }
 
