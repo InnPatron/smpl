@@ -47,7 +47,7 @@ pub fn include(modules: &mut Vec<Module>, item_type_mod: Option<&str>, item_type
     modules.push(parse_module(&decl).unwrap());
 }
 
-pub fn add(vm: &mut VM, item_type: &str) {
+pub fn add<MAP: BuiltinMap>(vm: &mut MAP, item_type: &str) {
     let mut vars = HashMap::new();
     vars.insert(VEC_FMT_ITEM_TYPE.to_string(), item_type);
 

@@ -15,7 +15,7 @@ pub fn include(modules: &mut Vec<Module>) {
     modules.push(parse_module(ERR_DECLARATION).unwrap());
 }
 
-pub fn add(vm: &mut VM) {
+pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
     vm.insert_builtin(MOD_ERR, ERR_PANIC, Box::new(Panic))
         .unwrap();
     vm.insert_builtin(MOD_ERR, ERR_PANIC_MSG, Box::new(PanicMsg))

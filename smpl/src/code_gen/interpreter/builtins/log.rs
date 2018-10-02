@@ -13,7 +13,7 @@ pub fn include(modules: &mut Vec<Module>) {
     modules.push(parse_module(LOG_DECLARATION).unwrap());
 }
 
-pub fn add(vm: &mut VM) {
+pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
     vm.insert_builtin(MOD_LOG, LOG_PRINT, Box::new(Print))
         .unwrap();
     vm.insert_builtin(MOD_LOG, LOG_PRINTLN, Box::new(Println))

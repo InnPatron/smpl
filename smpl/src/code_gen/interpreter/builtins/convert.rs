@@ -20,7 +20,7 @@ pub fn include(modules: &mut Vec<Module>) {
     modules.push(parse_module(CONVERT_DECLARATION).unwrap());
 }
 
-pub fn add(vm: &mut VM) {
+pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
     vm.insert_builtin(MOD_CONVERT, CONVERT_INT_TO_FLOAT, Box::new(IntToFloat))
         .unwrap();
     vm.insert_builtin(MOD_CONVERT, CONVERT_FLOAT_TO_INT, Box::new(FloatToInt))

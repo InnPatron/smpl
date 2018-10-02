@@ -11,6 +11,7 @@ use err::Err;
 
 use analysis::*;
 
+use super::BuiltinMap;
 use super::loader;
 use super::vm_i::*;
 use super::value::Value;
@@ -61,7 +62,28 @@ impl VM {
         }
     }
 
-    pub fn insert_builtin(
+    pub fn query_module(&self, module: &str, name: &str) -> Result<Option<FnHandle>, String> {
+        let module = Ident(module.to_string());
+        let name = Ident(name.to_string());
+        let mod_id = self.program.universe().module_id(&module);
+
+        match mod_id {
+            Some(mod_id) => Ok(self.program
+                .metadata()
+                .module_fn(mod_id, name)
+                .map(|fn_id| fn_id.into())),
+
+            None => Err(format!("Module '{}' does not exist", module)),
+        }
+    }
+
+    fn program(&self) -> &Program {
+        &self.program
+    }
+}
+
+impl BuiltinMap for VM {
+    fn insert_builtin(
         &mut self,
         module_str: &str,
         name_str: &str,
@@ -89,25 +111,6 @@ impl VM {
 
             None => Err(format!("Module '{}' does not exist", module_str)),
         }
-    }
-
-    pub fn query_module(&self, module: &str, name: &str) -> Result<Option<FnHandle>, String> {
-        let module = Ident(module.to_string());
-        let name = Ident(name.to_string());
-        let mod_id = self.program.universe().module_id(&module);
-
-        match mod_id {
-            Some(mod_id) => Ok(self.program
-                .metadata()
-                .module_fn(mod_id, name)
-                .map(|fn_id| fn_id.into())),
-
-            None => Err(format!("Module '{}' does not exist", module)),
-        }
-    }
-
-    fn program(&self) -> &Program {
-        &self.program
     }
 }
 
