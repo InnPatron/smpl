@@ -13,6 +13,7 @@ use code_gen::interpreter::value::{Struct, Value as Value};
 use code_gen::interpreter::env::Env;
 
 use super::node_fetch::*;
+use super::expr_eval::*;
 
 type TmpIndex = usize;
 
@@ -159,7 +160,58 @@ impl<'a> Executor<'a> {
                 node: node,
                 tmp_index: tmp_index,
                 expr_phase: expr_phase
-            } => unimplemented!(),
+            } => {
+                match eval_node_tmp(self.program, 
+                                    &mut self.context, 
+                                    node, 
+                                    tmp_index, 
+                                    expr_phase) {
+                    ExprEvalResult::Value(v, tmp_id) => {
+                        self.context.top_mut().exec_state = ExecutorState::Expr {
+                            node: node,
+                            tmp_index: tmp_index + 1, // Go to the next tmp
+                            expr_phase: expr_phase,
+                        };
+
+                        // Map the tmp
+                        self.context.top_mut().func_env.map_tmp(tmp_id, v);
+                    },
+
+                    ExprEvalResult::PhaseChange(v, tmp_id) => {
+                        self.context.top_mut().exec_state = ExecutorState::Expr {
+                            node: node,
+                            tmp_index: 0, // Go to the start of the next phase
+                            expr_phase: expr_phase + 1, // Go to the next phase
+                        };
+
+                        // Map the tmp
+                        self.context.top_mut().func_env.map_tmp(tmp_id, v);
+                    },
+
+                    ExprEvalResult::FnCall(fn_id, args) => {
+                        let fn_context = FnContext::new(self.program, fn_id);
+                        let start = fn_context.get_fn(self.program).cfg().start();
+
+                        // Push a StackInfo onto the stack, diverting the control flow to that
+                        // function.
+                        self.context.push_info(StackInfo {
+                            func: fn_id,
+                            func_env: Env::new(),
+                            fn_context: fn_context,
+                            exec_state: ExecutorState::Fetch(start),
+                        });
+                    },
+
+                    ExprEvalResult::Finished(v, tmp_id) => {
+                        // All expressions have been evaluated. Perform any node post-processing
+                        // eval
+                        self.context.top_mut().exec_state = ExecutorState::Eval(node);
+
+                        // Map the tmp
+                        self.context.top_mut().func_env.map_tmp(tmp_id, v);
+                    },
+                }
+            }
 
             ExecutorState::Eval(node_index) => unimplemented!(),
         }
