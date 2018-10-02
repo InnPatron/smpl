@@ -112,7 +112,13 @@ pub fn node_fetch(context: &mut FnContext, program: &Program, current: NodeIndex
 
         Node::Assignment(ref data) => {
             context.previous_is_loop_head = false;
-            Ok(FetchResult::Expr(0))
+            if data.assignment.access().order_length() > 0 {
+                // Assignee has an expression
+                Ok(FetchResult::Expr(0))
+            } else {
+                // No assignee expression, execute the right hand side immediately
+                Ok(FetchResult::Expr(1))
+            }
         }
 
         Node::Expr(ref data) => {

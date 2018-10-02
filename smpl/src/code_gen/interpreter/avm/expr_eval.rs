@@ -62,7 +62,7 @@ impl ExprEvalResult {
                                 ExprEvalResult::Value(v, current_tmp_id)
                             }
                         } else {
-                            let expr = data.assignment.access();
+                            let expr = data.assignment.value();
                             if current_tmp == expr.order_length() - 1 {
                                 ExprEvalResult::Finished(v, current_tmp_id)
                             } else {
@@ -172,7 +172,7 @@ pub fn eval_node_tmp(program: &Program,
                                                 tmp_id,
                                                 expr_phase)
             } else {
-                let expr = data.assignment.access();
+                let expr = data.assignment.value();
                 let tmp_id = expr.tmp_by_index(tmp_index);
                 let tmp = expr.get_tmp(tmp_id);
                 ExprEvalResult::from_tmp_result(eval_tmp(program, context, tmp), 
