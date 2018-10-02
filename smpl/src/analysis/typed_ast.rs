@@ -210,6 +210,10 @@ impl Expr {
             .expect("Given ID should always be valid if taken from the correct Expr")
     }
 
+    pub fn last(&self) -> TmpId {
+        self.execution_order.last().unwrap().clone()
+    }
+
     pub fn execution_order(&self) -> Iter<TmpId> {
         self.execution_order.iter()
     }
