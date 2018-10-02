@@ -210,12 +210,20 @@ impl Expr {
             .expect("Given ID should always be valid if taken from the correct Expr")
     }
 
+    pub fn last(&self) -> TmpId {
+        self.execution_order.last().unwrap().clone()
+    }
+
     pub fn execution_order(&self) -> Iter<TmpId> {
         self.execution_order.iter()
     }
 
     pub fn order_length(&self) -> usize {
         self.execution_order.len()
+    }
+
+    pub fn tmp_by_index(&self, tmp_index: usize) -> TmpId {
+        self.execution_order.get(tmp_index).expect(&format!("Invalid temporary index {}", tmp_index)).clone()
     }
 
     pub fn set_span(&mut self, span: Span) {
