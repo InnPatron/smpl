@@ -11,6 +11,7 @@ pub mod builtins;
 pub use self::vm::VM;
 pub use self::value::*;
 pub use self::vm_i::*;
+pub use self::avm::{AVM, Executor};
 
 use self::vm_i::BuiltinFn;
 
