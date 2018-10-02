@@ -315,11 +315,21 @@ impl<'a> InternalExecutor<'a> {
                         let fn_context = FnContext::new(self.program, fn_id);
                         let start = fn_context.get_fn(self.program).cfg().start();
 
+                        // Set up arguments
+                        let mut env = Env::new();
+                        if let Some(args) = args {
+                            for (arg, param_info) in args.into_iter()
+                                .zip(self.program.metadata().function_param_ids(fn_id))
+                            {
+                               env.map_var(param_info.var_id(), arg);
+                            }
+                        }
+
                         // Push a StackInfo onto the stack, diverting the control flow to that
                         // function.
                         self.context.push_info(StackInfo {
                             func: fn_id,
-                            func_env: Env::new(),
+                            func_env: env,
                             fn_context: fn_context,
                             exec_state: ExecutorState::Fetch(start),
                         });
@@ -398,6 +408,15 @@ impl<'a> Executor<'a> {
             fn_context: FnContext::new(program, fn_id),
             exec_state: ExecutorState::Fetch(start),
         });
+
+        // Set up arguments
+        if let Some(args) = args {
+            for (arg, param_info) in args.into_iter()
+                .zip(program.metadata().function_param_ids(fn_id))
+            {
+                exec_context.top_mut().func_env.map_var(param_info.var_id(), arg);
+            }
+        }
 
         Executor { 
             exec_type: ExecutorType::Executor(InternalExecutor {
