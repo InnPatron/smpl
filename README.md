@@ -18,9 +18,9 @@ Popstcl has dynamic types and dynamic scoping, all of which I found painful to u
 * Statically typed
 * Lexically scoped
 * Compiler with Rust code generator
-* Embeddable interpreter
+* Embeddable (**asynchronous!**) interpreter
 * SMPL code is sandboxed (?)
-* Funciton piping
+* Function piping
 
 ## The Bad
 * ~~Types and functions are brought into scope top-to-bottom.~~ Declarations can be in any order
@@ -87,6 +87,8 @@ smplc -i INPUT_FILE -o OUTPUT_DIR -b 0
 The `-b` flag stands for backend. The Rust backend is '0'.
 
 **SMPL is meant to be embedded in other Rust programs. The interpreter is the only method of SMPL code execution guaranteed to support ALL language features.**
+
+**SMPL now has an asynchronous interpreter (the AVM). The AVM also exposes a synchrnous interface.**
 
 ## Build instructions
 
