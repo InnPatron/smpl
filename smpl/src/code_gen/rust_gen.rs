@@ -864,6 +864,7 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
     }
 }
 
+#[allow(non_snake_case)]
 mod RustGenFmt {
     use ast::{BinOp, UniOp};
     use analysis::*;
