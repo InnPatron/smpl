@@ -741,53 +741,6 @@ impl ModuleId {
     }
 }
 
-pub struct ModuleCkData {
-    pub name: Ident,
-    pub unresolved_module_uses: Vec<AstNode<UseDecl>>,
-    pub unresolved_module_structs: Vec<AstNode<Struct>>,
-    pub unresolved_module_fns: Vec<AstNode<AstFunction>>,
-    pub unresolved_module_builtin_fns: Vec<AstNode<AstBuiltinFunction>>,
-    pub module_scope: ScopedData,
-    pub owned_types: Vec<TypeId>,
-    pub owned_fns: Vec<FnId>,
-    pub dependencies: Vec<ModuleId>,
-}
-
-impl ModuleCkData {
-    pub fn new(universe: &Universe, module: AstModule) -> Result<ModuleCkData, Err> {
-        let mut module_uses = Vec::new();
-        let mut module_structs = Vec::new();
-        let mut module_fns = Vec::new();
-        let mut module_builtin_fns = Vec::new();
-
-        for decl_stmt in module.1.into_iter() {
-            match decl_stmt {
-                DeclStmt::Struct(d) => module_structs.push(d),
-                DeclStmt::Function(d) => module_fns.push(d),
-                DeclStmt::Use(d) => module_uses.push(d),
-                DeclStmt::BuiltinFunction(d) => module_builtin_fns.push(d),
-            }
-        }
-
-        Ok(ModuleCkData {
-            name: module.0.ok_or(Err::MissingModName)?.data().clone(),
-            unresolved_module_uses: module_uses,
-            unresolved_module_structs: module_structs,
-            unresolved_module_fns: module_fns,
-            unresolved_module_builtin_fns: module_builtin_fns,
-            module_scope: universe.std_scope(),
-            owned_types: Vec::new(),
-            owned_fns: Vec::new(),
-            dependencies: Vec::new(),
-        })
-    }
-}
-
-pub enum ModuleCkSignal {
-    Defer(ModuleCkData),
-    Success,
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ModulePath(pub Vec<Ident>);
 
