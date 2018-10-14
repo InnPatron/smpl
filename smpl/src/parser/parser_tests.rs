@@ -499,7 +499,7 @@ struct TestStruct {
 "#[test, foo = \"bar\"]
 struct Foo { }";
 
-        let input = parse_module(input).unwrap();
+        let _input = parse_module(input).unwrap();
     }
 
     #[test]
@@ -509,6 +509,6 @@ struct Foo { }";
 
 fn foo() { }";
 
-        let input = parse_module(input).unwrap();
+        let _input = parse_module(input).unwrap();
     }
 }
