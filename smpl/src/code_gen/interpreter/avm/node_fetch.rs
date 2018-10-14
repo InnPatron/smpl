@@ -1,15 +1,9 @@
-use std::collections::HashMap;
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use petgraph::graph::NodeIndex;
 use petgraph::Direction;
 
 use analysis::*;
-use analysis::{Value as AbstractValue};
-use analysis::smpl_type::*;
 
-use code_gen::interpreter::value::{Struct, Value as Value};
+use code_gen::interpreter::value::Value;
 use super::vm::FnContext;
 
 type ExprStage = usize;

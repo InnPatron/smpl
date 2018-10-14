@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 
 use analysis::*;
-use analysis::{Value as AbstractValue};
-use analysis::smpl_type::*;
 
-use code_gen::interpreter::value::{Struct, Value as Value};
+use code_gen::interpreter::value::Value;
 use code_gen::interpreter::env::Env;
 
 use code_gen::interpreter::vm_i::*;

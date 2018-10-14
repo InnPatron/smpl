@@ -1,4 +1,4 @@
-use analysis::semantic_data::{FieldId, FnId, TypeId, VarId};
+use analysis::semantic_data::{FieldId, TypeId, VarId};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnLayout {

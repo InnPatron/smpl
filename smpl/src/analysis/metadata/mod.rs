@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 
 use ast::{Annotation, Ident};
 use err::Err;
-use analysis::semantic_data::{FieldId, FnId, ModuleId, Program, TypeId, VarId};
+use analysis::semantic_data::{FnId, ModuleId, Program, TypeId};
 
 #[derive(Clone, Debug)]
 pub struct Metadata {
