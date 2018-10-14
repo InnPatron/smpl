@@ -18,8 +18,6 @@ use code_gen::interpreter::vm_i::*;
 
 use super::internal_executor::InternalExecutor;
 
-type TmpIndex = usize;
-
 pub struct AVM {
     program: Program,
     builtins: HashMap<FnId, Box<BuiltinFn>>,
