@@ -289,10 +289,6 @@ impl<'input> Tokenizer<'input> {
         }
     }
 
-    fn skip_to_end(&mut self) {
-        while let Some(_) = self.chars.next() { }
-    }
-
     fn test_lookahead<F>(&self, mut test: F) -> bool
         where F: FnMut(char) -> bool {
         self.chars.peek().map_or(false, |c| test(c.1))
