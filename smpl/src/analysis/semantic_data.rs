@@ -6,8 +6,7 @@ use std::fmt;
 
 use err::Err;
 use ast::*;
-use ast::{BuiltinFunction as AstBuiltinFunction, Function as AstFunction, Module as AstModule,
-          ModulePath as AstModulePath};
+use ast::ModulePath as AstModulePath;
 use feature::PresentFeatures;
 
 use super::metadata::Metadata;
