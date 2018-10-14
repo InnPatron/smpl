@@ -256,12 +256,12 @@ fn vec_new() {
         let mut modules = vec![parse_module(mod1).unwrap()];
         include(&mut modules, None, "int");
 
-        let mut vm = VM::new(modules).unwrap();
+        let mut vm = AVM::new(modules).unwrap();
         add(&mut vm, "int");
 
         let fn_handle = vm.query_module("mod1", "vec_new").unwrap().unwrap();
 
-        let result = vm.eval_fn(fn_handle);
+        let result = vm.eval_fn_sync(fn_handle).unwrap();
 
         assert_eq!(Value::Unit, result);
     }
@@ -284,12 +284,12 @@ fn test() -> int {
         let mut modules = vec![parse_module(mod1).unwrap()];
         include(&mut modules, None, "int");
 
-        let mut vm = VM::new(modules).unwrap();
+        let mut vm = AVM::new(modules).unwrap();
         add(&mut vm, "int");
 
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
-        let result = vm.eval_fn(fn_handle);
+        let result = vm.eval_fn_sync(fn_handle).unwrap();
 
         assert_eq!(Value::Int(2), result);
     }
@@ -315,12 +315,12 @@ fn test() -> int {
         let mut modules = vec![parse_module(mod1).unwrap()];
         include(&mut modules, None, "int");
 
-        let mut vm = VM::new(modules).unwrap();
+        let mut vm = AVM::new(modules).unwrap();
         add(&mut vm, "int");
 
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
-        let result = vm.eval_fn(fn_handle);
+        let result = vm.eval_fn_sync(fn_handle).unwrap();
 
         assert_eq!(Value::Int(123 * 456), result);
     }
@@ -346,12 +346,12 @@ fn test() -> int {
         let mut modules = vec![parse_module(mod1).unwrap()];
         include(&mut modules, None, "int");
 
-        let mut vm = VM::new(modules).unwrap();
+        let mut vm = AVM::new(modules).unwrap();
         add(&mut vm, "int");
 
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
-        let result = vm.eval_fn(fn_handle);
+        let result = vm.eval_fn_sync(fn_handle).unwrap();
 
         assert_eq!(Value::Int(789), result);
     }
@@ -378,12 +378,12 @@ fn test() -> int {
         let mut modules = vec![parse_module(mod1).unwrap()];
         include(&mut modules, None, "int");
 
-        let mut vm = VM::new(modules).unwrap();
+        let mut vm = AVM::new(modules).unwrap();
         add(&mut vm, "int");
 
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
-        let result = vm.eval_fn(fn_handle);
+        let result = vm.eval_fn_sync(fn_handle).unwrap();
 
         assert_eq!(Value::Int(1337), result);
     }
@@ -424,17 +424,17 @@ fn test2() -> bool {
         let mut modules = vec![parse_module(mod1).unwrap()];
         include(&mut modules, None, "int");
 
-        let mut vm = VM::new(modules).unwrap();
+        let mut vm = AVM::new(modules).unwrap();
         add(&mut vm, "int");
 
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
-        let result = vm.eval_fn(fn_handle);
+        let result = vm.eval_fn_sync(fn_handle).unwrap();
 
         assert_eq!(Value::Bool(true), result);
 
         let fn_handle = vm.query_module("mod1", "test2").unwrap().unwrap();
-        let result = vm.eval_fn(fn_handle);
+        let result = vm.eval_fn_sync(fn_handle).unwrap();
 
         assert_eq!(Value::Bool(false), result);
     }
