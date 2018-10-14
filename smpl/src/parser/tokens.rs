@@ -19,6 +19,7 @@ impl PartialEq for SpannedToken {
     }
 }
 
+#[allow(dead_code)]
 impl SpannedToken {
     pub fn new(token: Token, location: LocationSpan) -> SpannedToken {
         SpannedToken {
@@ -119,6 +120,7 @@ pub struct LocationSpan {
     end: Location,
 }
 
+#[allow(dead_code)]
 impl LocationSpan {
     pub fn new(start: Location, end: Location) -> LocationSpan {
         LocationSpan {
@@ -158,6 +160,7 @@ pub struct Location {
     column: usize,
 }
 
+#[allow(dead_code)]
 impl Location {
     pub fn byte_index(&self) -> usize {
         self.byte_index
@@ -284,10 +287,6 @@ impl<'input> Tokenizer<'input> {
             input: input,
             chars: CharInput::new(input),
         }
-    }
-
-    fn skip_to_end(&mut self) {
-        while let Some(_) = self.chars.next() { }
     }
 
     fn test_lookahead<F>(&self, mut test: F) -> bool

@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 
 use analysis::*;
-use analysis::{Value as AbstractValue};
-use analysis::smpl_type::*;
 
-use code_gen::interpreter::value::{Struct, Value as Value};
+use code_gen::interpreter::value::Value;
 use code_gen::interpreter::env::Env;
 
 use code_gen::interpreter::vm_i::*;
@@ -55,9 +53,9 @@ impl<'a> InternalExecutor<'a> {
             }
 
             ExecutorState::Expr {
-                node: node,
-                tmp_index: tmp_index,
-                expr_phase: expr_phase
+                node,
+                tmp_index,
+                expr_phase,
             } => {
                 match eval_node_tmp(self.program, 
                                     &mut self.context, 
@@ -107,7 +105,7 @@ impl<'a> InternalExecutor<'a> {
                         }
 
 
-                        let fn_context = FnContext::new(self.program, fn_id);
+                        let fn_context = FnContext::new(fn_id);
                         let start = fn_context.get_fn(self.program).cfg().start();
 
                         // Set up arguments

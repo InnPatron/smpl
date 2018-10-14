@@ -18,8 +18,8 @@ impl Span {
 
         for span in spans {
             match start {
-                Some(startPos) => {
-                    if span.start() < startPos {
+                Some(start_pos) => {
+                    if span.start() < start_pos {
                         start = Some(span.start);
                     }
                 }
@@ -28,8 +28,8 @@ impl Span {
             }
 
             match end {
-                Some(endPos) => {
-                    if span.end() < endPos {
+                Some(end_pos) => {
+                    if span.end() < end_pos {
                         end = Some(span.end());
                     }
                 }

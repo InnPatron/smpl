@@ -937,7 +937,7 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         let assignment = &assignment.assignment;
         let assignee = assignment.assignee();
 
-        if (assignment.access().order_length() > 0) {
+        if assignment.access().order_length() > 0 {
             self.resolve_expr(assignment.access())?;
         }
         let assignee_type_id = self.resolve_field_access(assignment.access(), assignee, assignment.access_span())?;
