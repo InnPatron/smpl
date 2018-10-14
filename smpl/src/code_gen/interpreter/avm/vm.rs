@@ -181,7 +181,7 @@ pub struct FnContext {
 }
 
 impl FnContext {
-    fn new(program: &Program, fn_id: FnId) -> FnContext {
+    pub fn new(program: &Program, fn_id: FnId) -> FnContext {
 
         FnContext {
             fn_id: fn_id,

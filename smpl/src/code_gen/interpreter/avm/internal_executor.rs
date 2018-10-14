@@ -15,9 +15,9 @@ use super::expr_eval::*;
 use super::node_eval::*;
 
 pub struct InternalExecutor<'a> {
-    context: ExecutionContext,
-    program: &'a Program,
-    builtins: &'a HashMap<FnId, Box<BuiltinFn>>,
+    pub context: ExecutionContext,
+    pub program: &'a Program,
+    pub builtins: &'a HashMap<FnId, Box<BuiltinFn>>,
 }
 
 impl<'a> InternalExecutor<'a> {
@@ -94,7 +94,7 @@ impl<'a> InternalExecutor<'a> {
                                                 .expect("Missing a built-in")
                                                 .execute(args);
 
-                            match self.context.stack.last_mut() {
+                            match self.context.stack_mut().last_mut() {
                                 // Store return value in return store
                                 Some(ref mut top) => {
                                     top.fn_context.return_store = Some(result);
