@@ -177,7 +177,7 @@ pub struct FnContext {
 }
 
 impl FnContext {
-    pub fn new(program: &Program, fn_id: FnId) -> FnContext {
+    pub fn new(fn_id: FnId) -> FnContext {
 
         FnContext {
             fn_id: fn_id,
@@ -236,7 +236,7 @@ impl<'a> Executor<'a> {
         exec_context.push_info(StackInfo {
             func: fn_id,
             func_env: Env::new(),
-            fn_context: FnContext::new(program, fn_id),
+            fn_context: FnContext::new(fn_id),
             exec_state: ExecutorState::Fetch(start),
         });
 

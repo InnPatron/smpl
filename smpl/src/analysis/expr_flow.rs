@@ -159,7 +159,7 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
         }
 
         AstExpr::FnCallChain(chain) => {
-            let (chain, span) = chain.to_data();
+            let (chain, _span) = chain.to_data();
 
             let (base, span) = chain.base.to_data();
             let base_expr = AstExpr::FnCall(AstNode::new(base, span));

@@ -99,7 +99,7 @@ pub fn node_fetch(context: &mut FnContext, program: &Program, current: NodeIndex
             Ok(FetchResult::Next(func.cfg().next(current)))
         }
 
-        Node::LocalVarDecl(ref data) => {
+        Node::LocalVarDecl(_) => {
             context.previous_is_loop_head = false;
             Ok(FetchResult::Expr(0))
         }
@@ -115,7 +115,7 @@ pub fn node_fetch(context: &mut FnContext, program: &Program, current: NodeIndex
             }
         }
 
-        Node::Expr(ref data) => {
+        Node::Expr(_) => {
             context.previous_is_loop_head = false;
             Ok(FetchResult::Expr(0))
         }
@@ -128,7 +128,7 @@ pub fn node_fetch(context: &mut FnContext, program: &Program, current: NodeIndex
             }
         }
 
-        Node::Condition(ref data) => {
+        Node::Condition(_) => {
             Ok(FetchResult::Expr(0))
         }
     }

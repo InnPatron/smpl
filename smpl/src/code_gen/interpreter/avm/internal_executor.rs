@@ -105,7 +105,7 @@ impl<'a> InternalExecutor<'a> {
                         }
 
 
-                        let fn_context = FnContext::new(self.program, fn_id);
+                        let fn_context = FnContext::new(fn_id);
                         let start = fn_context.get_fn(self.program).cfg().start();
 
                         // Set up arguments
