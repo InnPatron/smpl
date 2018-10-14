@@ -1,5 +1,4 @@
 use super::builtins::*;
-use super::vm::VM;
 use super::BuiltinMap;
 
 use ast::Module;

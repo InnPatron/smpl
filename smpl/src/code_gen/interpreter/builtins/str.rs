@@ -112,18 +112,18 @@ mod tests {
         let mut modules = Vec::new();
         include(&mut modules);
 
-        let mut vm = VM::new(modules).unwrap();
+        let mut vm = AVM::new(modules).unwrap();
         add(&mut vm);
 
         let fn_handle = vm.query_module(MOD_STRING, STRING_LEN).unwrap().unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::String("".to_string())]));
+        let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("".to_string())])).unwrap();
         assert_eq!(Value::Int(0), result);
 
-        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::String("1".to_string())]));
+        let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("1".to_string())])).unwrap();
         assert_eq!(Value::Int(1), result);
 
-        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::String("123456789".to_string())]));
+        let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("123456789".to_string())])).unwrap();
         assert_eq!(Value::Int(9), result);
     }
 
@@ -132,21 +132,21 @@ mod tests {
         let mut modules = Vec::new();
         include(&mut modules);
 
-        let mut vm = VM::new(modules).unwrap();
+        let mut vm = AVM::new(modules).unwrap();
         add(&mut vm);
 
         let fn_handle = vm.query_module(MOD_STRING, STRING_TO_STRING)
             .unwrap()
             .unwrap();
 
-        let result = vm.eval_fn_args(
+        let result = vm.eval_fn_args_sync(
             fn_handle,
             Some(vec![
                 Value::String("I am ".to_string()),
                 Value::Int(1337),
                 Value::String("!".to_string()),
             ]),
-        );
+        ).unwrap();
         assert_eq!(Value::String("I am 1337!".to_string()), result);
     }
 
@@ -155,18 +155,18 @@ mod tests {
         let mut modules = Vec::new();
         include(&mut modules);
 
-        let mut vm = VM::new(modules).unwrap();
+        let mut vm = AVM::new(modules).unwrap();
         add(&mut vm);
 
         let fn_handle = vm.query_module(MOD_STRING, STRING_APPEND).unwrap().unwrap();
 
-        let result = vm.eval_fn_args(
+        let result = vm.eval_fn_args_sync(
             fn_handle,
             Some(vec![
                 Value::String("I'll ".to_string()),
                 Value::String("be back.".to_string()),
             ]),
-        );
+        ).unwrap();
         assert_eq!(Value::String("I'll be back.".to_string()), result);
     }
 
@@ -175,14 +175,14 @@ mod tests {
         let mut modules = Vec::new();
         include(&mut modules);
 
-        let mut vm = VM::new(modules).unwrap();
+        let mut vm = AVM::new(modules).unwrap();
         add(&mut vm);
 
         let fn_handle = vm.query_module(MOD_STRING, STRING_TO_LOWER)
             .unwrap()
             .unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::String("LOUD NOISES".to_string())]));
+        let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("LOUD NOISES".to_string())])).unwrap();
         assert_eq!(Value::String("loud noises".to_string()), result);
     }
 
@@ -191,14 +191,14 @@ mod tests {
         let mut modules = Vec::new();
         include(&mut modules);
 
-        let mut vm = VM::new(modules).unwrap();
+        let mut vm = AVM::new(modules).unwrap();
         add(&mut vm);
 
         let fn_handle = vm.query_module(MOD_STRING, STRING_TO_UPPER)
             .unwrap()
             .unwrap();
 
-        let result = vm.eval_fn_args(fn_handle, Some(vec![Value::String("loud noises".to_string())]));
+        let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("loud noises".to_string())])).unwrap();
         assert_eq!(Value::String("LOUD NOISES".to_string()), result);
     }
 
@@ -218,12 +218,12 @@ fn test() -> String {
         let mut modules = vec![parse_module(mod1).unwrap()];
         include(&mut modules);
 
-        let mut vm = VM::new(modules).unwrap();
+        let mut vm = AVM::new(modules).unwrap();
         add(&mut vm);
 
         let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
-        let result = vm.eval_fn(fn_handle);
+        let result = vm.eval_fn_sync(fn_handle).unwrap();
         assert_eq!(Value::String("Cannot touch this!?".to_string()), result);
     }
 }
