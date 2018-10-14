@@ -793,8 +793,8 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
         Ok(())
     }
 
-    fn ret(&mut self, _id: NodeIndex, rData: &ReturnData) -> Result<(), ()> {
-        let expr = &rData.expr;
+    fn ret(&mut self, _id: NodeIndex, r_data: &ReturnData) -> Result<(), ()> {
+        let expr = &r_data.expr;
         match expr {
             Some(ref expr) => {
                 let expr = self.emit_expr(expr);
