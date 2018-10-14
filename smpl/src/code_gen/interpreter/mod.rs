@@ -1,4 +1,3 @@
-mod vm;
 mod value;
 mod vm_i;
 mod loader;
@@ -12,7 +11,6 @@ mod vm_tests;
 
 pub mod builtins;
 
-pub use self::vm::VM;
 pub use self::value::*;
 pub use self::vm_i::*;
 pub use self::avm::{AVM, Executor, ExecResult};
