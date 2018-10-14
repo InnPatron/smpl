@@ -1,4 +1,6 @@
+
 #[cfg(test)]
+#[allow(non_snake_case)]
 mod parser_tests {
     use parser::*;
     use ast::*;
