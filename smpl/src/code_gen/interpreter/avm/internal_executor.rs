@@ -53,9 +53,9 @@ impl<'a> InternalExecutor<'a> {
             }
 
             ExecutorState::Expr {
-                node: node,
-                tmp_index: tmp_index,
-                expr_phase: expr_phase
+                node,
+                tmp_index,
+                expr_phase,
             } => {
                 match eval_node_tmp(self.program, 
                                     &mut self.context, 
