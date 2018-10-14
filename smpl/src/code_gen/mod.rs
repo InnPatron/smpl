@@ -8,6 +8,7 @@ struct StringEmitter {
     shift: u32,
 }
 
+#[allow(dead_code)]
 impl StringEmitter {
     pub fn new() -> StringEmitter {
         StringEmitter {
