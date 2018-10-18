@@ -1,9 +1,11 @@
+use failure::Fail;
+
 use analysis::{FnId, TypeId};
 
 use super::value::Value;
 
 pub trait BuiltinFn {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value;
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>>;
 }
 
 #[derive(Debug, Clone, PartialEq)]

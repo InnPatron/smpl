@@ -1,6 +1,8 @@
 use petgraph::graph::NodeIndex;
 use petgraph::Direction;
 
+use failure::Fail;
+
 use analysis::*;
 
 use code_gen::interpreter::value::Value;
@@ -14,7 +16,7 @@ pub enum FetchResult {
     Return(Value),
 }
 
-pub fn node_fetch(context: &mut FnContext, program: &Program, current: NodeIndex) -> Result<FetchResult, ()> {
+pub fn node_fetch(context: &mut FnContext, program: &Program, current: NodeIndex) -> Result<FetchResult, Box<Fail>> {
     let func = context.get_fn(program);
     match *func.cfg().node_weight(current) {
         Node::End => {
