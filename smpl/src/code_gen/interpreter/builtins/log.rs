@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use ast::Module;
 use parser::parse_module;
 
@@ -30,6 +32,8 @@ impl BuiltinFn for Print {
             print!("{}", arg);
         }
 
+        ::std::io::stdout().flush();
+
         Value::Unit
     }
 }
@@ -45,6 +49,8 @@ impl BuiltinFn for Println {
         }
 
         print!("\n");
+
+        ::std::io::stdout().flush();
 
         Value::Unit
     }
