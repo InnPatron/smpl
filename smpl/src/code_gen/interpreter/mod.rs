@@ -15,7 +15,7 @@ pub use self::value::*;
 pub use self::vm_i::*;
 pub use self::avm::{AVM, Executor, ExecResult};
 
-use self::vm_i::BuiltinFn;
+pub use self::vm_i::BuiltinFn;
 
 pub trait BuiltinMap {
     fn insert_builtin(
