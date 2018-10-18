@@ -3,6 +3,9 @@ extern crate irmatch;
 extern crate itertools;
 extern crate petgraph;
 extern crate strfmt;
+extern crate failure;
+#[macro_use]
+extern crate failure_derive;
 
 mod feature;
 mod err;
