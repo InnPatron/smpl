@@ -1,3 +1,5 @@
+use failure::Fail;
+
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -72,33 +74,33 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP, item_type: &str) {
 pub struct New;
 
 impl BuiltinFn for New {
-    fn execute(&self, _args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut vec = Struct::new();
         vec.set_field(VEC_DATA_KEY.to_string(), Value::Array(Vec::new()));
         vec.set_field(VEC_LEN_KEY.to_string(), Value::Int(0));
 
-        Value::Struct(vec)
+        Ok(Value::Struct(vec))
     }
 }
 
 pub struct Len;
 
 impl BuiltinFn for Len {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
         let vec_struct = args.pop().unwrap();
         let vec_struct = irmatch!(vec_struct; Value::Struct(s) => s);
 
         let length = vec_struct.get_field(VEC_LEN_KEY).unwrap();
 
-        length
+        Ok(length)
     }
 }
 
 pub struct Contains;
 
 impl BuiltinFn for Contains {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
 
         let to_search = args.pop().unwrap();
@@ -114,18 +116,18 @@ impl BuiltinFn for Contains {
         for element in data {
             let element = element.borrow();
             if *element == to_search {
-                return Value::Bool(true);
+                return Ok(Value::Bool(true));
             }
         }
 
-        Value::Bool(false)
+        Ok(Value::Bool(false))
     }
 }
 
 pub struct Insert;
 
 impl BuiltinFn for Insert {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
 
         let to_insert = args.pop().unwrap();
@@ -150,14 +152,14 @@ impl BuiltinFn for Insert {
             *len += 1;
         }
 
-        Value::Struct(vec_struct)
+        Ok(Value::Struct(vec_struct))
     }
 }
 
 pub struct Push;
 
 impl BuiltinFn for Push {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
 
         let to_insert = args.pop().unwrap();
@@ -180,14 +182,14 @@ impl BuiltinFn for Push {
             *len += 1;
         }
 
-        Value::Struct(vec_struct)
+        Ok(Value::Struct(vec_struct))
     }
 }
 
 pub struct Get;
 
 impl BuiltinFn for Get {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
 
         let index = args.pop().unwrap();
@@ -201,14 +203,14 @@ impl BuiltinFn for Get {
         let borrow = data.borrow();
         let data = irmatch!(*borrow; Value::Array(ref a) => a);
 
-        data.get(index).map(|rc| (*rc.borrow()).clone()).unwrap()
+        Ok(data.get(index).map(|rc| (*rc.borrow()).clone()).unwrap())
     }
 }
 
 pub struct Remove;
 
 impl BuiltinFn for Remove {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
 
         let index = args.pop().unwrap();
@@ -232,7 +234,7 @@ impl BuiltinFn for Remove {
             *len -= 1;
         }
 
-        Value::Struct(vec_struct)
+        Ok(Value::Struct(vec_struct))
     }
 }
 

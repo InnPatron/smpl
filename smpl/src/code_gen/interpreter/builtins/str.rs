@@ -1,3 +1,5 @@
+use failure::Fail;
+
 use ast::Module;
 use parser::parse_module;
 
@@ -33,20 +35,20 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
 struct Len;
 
 impl BuiltinFn for Len {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
 
         let string = args.pop().unwrap();
         let string = irmatch!(string; Value::String(s) => s);
 
-        Value::Int(string.len() as i32)
+        Ok(Value::Int(string.len() as i32))
     }
 }
 
 struct ToString;
 
 impl BuiltinFn for ToString {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let args = args.expect("str::to_string() expected 1+ args");
 
         let mut s = String::new();
@@ -55,14 +57,14 @@ impl BuiltinFn for ToString {
             s.push_str(&a.to_string());
         }
 
-        Value::String(s)
+        Ok(Value::String(s))
     }
 }
 
 struct Append;
 
 impl BuiltinFn for Append {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
 
         let to_append = args.pop().unwrap();
@@ -73,33 +75,33 @@ impl BuiltinFn for Append {
 
         base.push_str(&to_append);
 
-        Value::String(base)
+        Ok(Value::String(base))
     }
 }
 
 struct ToLower;
 
 impl BuiltinFn for ToLower {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
 
         let string = args.pop().unwrap();
         let string = irmatch!(string; Value::String(s) => s);
 
-        Value::String(string.to_lowercase())
+        Ok(Value::String(string.to_lowercase()))
     }
 }
 
 struct ToUpper;
 
 impl BuiltinFn for ToUpper {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
 
         let string = args.pop().unwrap();
         let string = irmatch!(string; Value::String(s) => s);
 
-        Value::String(string.to_uppercase())
+        Ok(Value::String(string.to_uppercase()))
     }
 }
 

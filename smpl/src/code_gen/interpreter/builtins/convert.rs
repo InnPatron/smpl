@@ -1,3 +1,5 @@
+use failure::Fail;
+
 use ast::Module;
 use parser::parse_module;
 
@@ -43,12 +45,12 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
 pub struct IntToFloat;
 
 impl BuiltinFn for IntToFloat {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
 
         let a = args.remove(0);
         match a {
-            Value::Int(i) => Value::Float(i as f32),
+            Value::Int(i) => Ok(Value::Float(i as f32)),
             _ => unreachable!(),
         }
     }
@@ -57,12 +59,12 @@ impl BuiltinFn for IntToFloat {
 pub struct FloatToInt;
 
 impl BuiltinFn for FloatToInt {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
 
         let a = args.remove(0);
         match a {
-            Value::Float(f) => Value::Int(f as i32),
+            Value::Float(f) => Ok(Value::Int(f as i32)),
             _ => unreachable!(),
         }
     }
@@ -71,12 +73,12 @@ impl BuiltinFn for FloatToInt {
 pub struct IsFloat;
 
 impl BuiltinFn for IsFloat {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
         let a = args.remove(0);
 
         match a {
-            Value::String(s) => Value::Bool(s.parse::<f32>().is_ok()),
+            Value::String(s) => Ok(Value::Bool(s.parse::<f32>().is_ok())),
             _ => unreachable!(),
         }
     }
@@ -85,12 +87,12 @@ impl BuiltinFn for IsFloat {
 pub struct IsInt;
 
 impl BuiltinFn for IsInt {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
         let a = args.remove(0);
 
         match a {
-            Value::String(s) => Value::Bool(s.parse::<i32>().is_ok()),
+            Value::String(s) => Ok(Value::Bool(s.parse::<i32>().is_ok())),
             _ => unreachable!(),
         }
     }
@@ -99,15 +101,15 @@ impl BuiltinFn for IsInt {
 pub struct StringToFloat;
 
 impl BuiltinFn for StringToFloat {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
         let a = args.remove(0);
 
         match a {
-            Value::String(s) => Value::Float(
+            Value::String(s) => Ok(Value::Float(
                 s.parse::<f32>()
                     .expect(&format!("{} was not a valid float.", s)),
-            ),
+            )),
             _ => unreachable!(),
         }
     }
@@ -116,15 +118,15 @@ impl BuiltinFn for StringToFloat {
 pub struct StringToInt;
 
 impl BuiltinFn for StringToInt {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
         let a = args.remove(0);
 
         match a {
-            Value::String(s) => Value::Int(
+            Value::String(s) => Ok(Value::Int(
                 s.parse::<i32>()
                     .expect(&format!("{} was not a valid int.", s)),
-            ),
+            )),
             _ => unreachable!(),
         }
     }

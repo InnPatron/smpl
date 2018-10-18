@@ -1,3 +1,5 @@
+use failure::Fail;
+
 use ast::Module;
 use parser::parse_module;
 
@@ -27,7 +29,7 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
 pub struct Panic;
 
 impl BuiltinFn for Panic {
-    fn execute(&self, _args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         panic!();
     }
 }
@@ -35,7 +37,7 @@ impl BuiltinFn for Panic {
 pub struct PanicMsg;
 
 impl BuiltinFn for PanicMsg {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
         let a = args.remove(0);
 
@@ -49,13 +51,13 @@ impl BuiltinFn for PanicMsg {
 pub struct Assert;
 
 impl BuiltinFn for Assert {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
         let mut args = args.unwrap();
         let a = args.remove(0);
 
         let a = irmatch!(a; Value::Bool(a) => a);
         assert!(a);
 
-        Value::Unit
+        Ok(Value::Unit)
     }
 }
