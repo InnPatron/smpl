@@ -526,8 +526,13 @@ impl<'a> FnAnalyzer<'a> {
                             return Err(Err::UncheckedFunctionBinding(var.ident().clone()));
                         }
 
-                        let f = self.program.universe().get_fn(fn_id);
-                        let fn_type_id = f.type_id();
+                        let fn_type_id = if self.program.metadata().is_builtin(fn_id) {
+                            let f = self.program.universe().get_builtin_fn(fn_id);
+                            f.type_id()
+                        } else {
+                            let f = self.program.universe().get_fn(fn_id);
+                            f.type_id()
+                        };
 
                         var.set_id(fn_id);
                         tmp_type = fn_type_id;
