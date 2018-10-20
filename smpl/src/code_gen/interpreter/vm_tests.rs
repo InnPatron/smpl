@@ -394,3 +394,25 @@ fn bar() -> int {
 
     assert_eq!(Value::Int(8), result);
 }
+
+#[test]
+fn interpreter_complex_if() {
+    let result = setup_and_run!(
+"mod mod1;
+
+fn foo() -> int {
+    if false {
+        return 0;
+    } elif false {
+        return 0;
+    } else {
+        return 1000;
+    }
+}
+",
+    "mod1",
+    "foo",
+    None);
+
+    assert_eq!(Value::Int(1000), result);
+}
