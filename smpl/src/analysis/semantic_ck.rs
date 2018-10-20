@@ -958,4 +958,20 @@ fn test() {
             },
         }
     }
+
+    #[test]
+    fn builtin_bind() {
+        let mod1 = 
+"mod mod1;
+
+builtin fn add(a: int, b: int) -> int;
+
+fn bar() -> int {
+    let f = add;
+    return f(3, 5);
+}";
+
+        let mod1 = parse_module(mod1).unwrap();
+        let err = check_program(vec![mod1]).unwrap();
+    }
 }
