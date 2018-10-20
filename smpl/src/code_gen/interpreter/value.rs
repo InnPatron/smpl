@@ -5,7 +5,7 @@ use std::fmt;
 
 use super::vm_i::FnHandle;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Value {
     Int(i32),
     Float(f32),
@@ -15,6 +15,37 @@ pub enum Value {
     Function(FnHandle),
     Struct(Struct),
     Unit,
+}
+
+impl Clone for Value {
+    fn clone(&self) -> Value {
+        match *self {
+            Value::Int(i) => Value::Int(i),
+
+            Value::Float(f) => Value::Float(f),
+
+            Value::Bool(b) => Value::Bool(b),
+
+            Value::String(ref s) => Value::String(s.clone()),
+
+            Value::Array(ref a) => {
+                Value::Array(
+                    a
+                    .into_iter()
+                    .map(|rc| {
+                        let borrow = rc.borrow();
+                        Rc::new(RefCell::new((*borrow).clone()))
+                    })
+                    .collect())
+            }
+
+            Value::Function(f) => Value::Function(f),
+
+            Value::Struct(ref s) => Value::Struct(s.clone()),
+
+            Value::Unit => Value::Unit
+        }
+    }
 }
 
 impl fmt::Display for Value {
