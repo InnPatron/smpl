@@ -80,7 +80,7 @@ impl fmt::Display for Value {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Struct(HashMap<String, Rc<RefCell<Value>>>);
 
 impl Struct {
@@ -104,5 +104,17 @@ impl Struct {
 
     pub fn fields(&self) -> impl Iterator<Item = (&str, Rc<RefCell<Value>>)> {
         self.0.iter().map(|(k, v)| (k.as_str(), v.clone()))
+    }
+}
+
+impl Clone for Struct {
+    fn clone(&self) -> Struct {
+        Struct(self.0
+               .iter()
+               .map(|(key, rc)| {
+                   let borrow = rc.borrow();
+                   (key.clone(), Rc::new(RefCell::new((*borrow).clone())))
+               })
+               .collect())
     }
 }
