@@ -565,6 +565,8 @@ impl<'a> FnAnalyzer<'a> {
                 Value::UniExpr(ref op, ref uni_e) => {
                     let tmp_type_id = expr.get_tmp(*uni_e.data()).value().type_id().unwrap();
 
+                    uni_e.set_type_id(tmp_type_id);
+
                     tmp_type =
                         resolve_uni_op(self.program.universe(), op, tmp_type_id, tmp.span())?;
                 }

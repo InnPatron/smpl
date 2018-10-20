@@ -416,3 +416,19 @@ fn foo() -> int {
 
     assert_eq!(Value::Int(1000), result);
 }
+
+#[test]
+fn interpreter_uni_expr() {
+    let result = setup_and_run!(
+"mod mod1;
+
+fn foo() -> bool {
+    let bar = !false;
+    return bar;
+}",
+    "mod1",
+    "foo",
+    None);
+
+    assert_eq!(Value::Bool(true), result);
+}
