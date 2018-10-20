@@ -376,3 +376,21 @@ return add(0, 1) |> add(1) |> add(1) |> add(2);
 
     assert_eq!(Value::Int(5), result);
 }
+
+#[test]
+fn interpreter_builtin_bind() {
+    let result = setup_and_run!(
+"mod mod1;
+
+builtin fn add(a: int, b: int) -> int;
+
+fn bar() -> int {
+    let f = add;
+    return f(3, 5);
+}",
+    "mod1",
+    "bar",
+    None);
+
+    assert_eq!(Value::Int(8), result);
+}
