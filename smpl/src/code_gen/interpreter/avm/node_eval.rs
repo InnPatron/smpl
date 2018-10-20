@@ -108,7 +108,7 @@ pub fn eval_node(stack_info: &mut StackInfo, program: &Program, current: NodeInd
             }
 
             context.previous_is_loop_head = false;
-            Ok(NodeEval::Next(func.cfg().next(next)))
+            Ok(NodeEval::Next(next))
         }
 
         Node::Expr(_) => {
