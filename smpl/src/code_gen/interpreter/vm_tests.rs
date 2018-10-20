@@ -432,3 +432,54 @@ fn foo() -> bool {
 
     assert_eq!(Value::Bool(true), result);
 }
+
+#[test]
+fn interpreter_2d_array() {
+    let result = setup_and_run!(
+"mod mod1;
+
+fn foo() -> int {
+    let array = [[0,0,0]; 3];
+
+    let curRow = array[0];
+    curRow[0] = 5;
+
+    let total = 0;
+
+    let curRow = array[2];
+    total = total + curRow[0];
+
+    let curRow = array[1];
+    total = total + curRow[0];
+
+    return total;
+}",
+    "mod1",
+    "foo",
+    None);
+
+    assert_eq!(Value::Int(0), result);
+}
+
+#[test]
+fn interpreter_structs_complex() {
+    let result = setup_and_run!(
+"mod mod1;
+
+struct Bar {
+    i: int,
+}
+
+fn foo() -> int {
+    let b1 = init Bar { i: 0 };
+    let b2 = b1;
+    b2.i = 5;
+
+    return b1.i;
+}",
+    "mod1",
+    "foo",
+    None);
+
+    assert_eq!(Value::Int(0), result);
+}
