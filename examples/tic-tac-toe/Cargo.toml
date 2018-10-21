@@ -1,0 +1,7 @@
+[package]
+name = "tic-tac-toe"
+version = "0.1.0"
+authors = ["Alexander Vo <randomcivvy0121@gmail.com>"]
+
+[dependencies]
+smpl = { git = "https://github.com/InnPatron/smpl-mirror", branch = "dev" }

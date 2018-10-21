@@ -6,4 +6,5 @@ members = [
 exclude = [
 	"smpl-tests/target/sample_program",
 	"smpl-tests/target/basic_tests",
+	"examples/tic-tac-toe",
 ]
