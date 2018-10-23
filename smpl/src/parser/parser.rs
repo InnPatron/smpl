@@ -28,3 +28,28 @@ macro_rules! consume_token  {
         }
     }};
 }
+
+pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
+
+    let mut name = None;
+    if tokens.peek(|tok| {
+        match tok {
+            Token::Mod => true,
+            _ => false,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        // Found mod declaration
+        name = Some(module_decl(tokens)?);
+    }
+
+    unimplemented!()
+}
+
+fn module_decl(tokens: &mut BufferedTokenizer) -> ParseErr<Ident> {
+    // Consume MOD
+    let _mod_kw = consume_token!(tokens, Token::Mod);
+    let (_idloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+    let _semi = consume_token!(tokens, Token::Semi);
+
+    Ok(ident)
+}
