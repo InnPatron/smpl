@@ -41,7 +41,7 @@ impl SpannedToken {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Identifier(String),
     StringLiteral(String),
@@ -196,13 +196,13 @@ impl Default for Location {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct SpannedError {
     error: TokenizerError,
     location: Location,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenizerError {
     UnexpectedChar(char),
     UnexpectedEndOfInput,
