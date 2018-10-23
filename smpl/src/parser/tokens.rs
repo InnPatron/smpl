@@ -583,6 +583,49 @@ impl<'input> Iterator for Tokenizer<'input> {
     }
 }
 
+pub struct BufferedTokenizer<'a> {
+    tokenizer: Tokenizer<'a>,
+    next: Option<Result<SpannedToken, SpannedError>>,
+}
+
+impl<'a> BufferedTokenizer<'a> {
+    pub fn new(mut tokenizer: Tokenizer) -> BufferedTokenizer {
+        let next = tokenizer.next();
+
+        BufferedTokenizer {
+            tokenizer: tokenizer,
+            next: next
+        }
+    }
+
+    pub fn next(&mut self) -> Option<Result<SpannedToken, SpannedError>> {
+        let to_return = self.next.take();
+
+        self.next = self.tokenizer.next();
+
+        to_return
+    }
+
+    pub fn peek_is_none(&self) -> bool {
+        self.next.is_none()
+    }
+
+    pub fn peek<F, R>(&self, 
+                   closure: F) -> Result<R, SpannedError> 
+    where F: Fn(&Token) -> R {
+
+        match self.next {
+            Some(ref res_tok) => {
+                match res_tok {
+                    Ok(ref t) => Ok(closure(t.token())),
+                    Err(ref e) => Err((*e).clone()),
+                }
+            }
+            None => panic!("Check if peek is none first"),
+        }
+    }
+}
+
 fn is_colon(c: char) -> bool {
     c == ':'
 }
