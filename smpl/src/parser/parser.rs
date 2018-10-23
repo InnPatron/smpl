@@ -1,5 +1,6 @@
 use std::iter::{Iterator, Peekable};
 
+use span::*;
 use ast::*;
 use super::tokens::*;
 
@@ -42,7 +43,54 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
         name = Some(module_decl(tokens)?);
     }
 
+    let mut decls = Vec::new();
+    let mut annotations: Vec<Annotation> = Vec::new();
+
+    while tokens.has_next() {
+        if tokens.peek(|tok| {
+            match tok {
+                Token::Struct => true,
+                _ => false,
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+            decls.push(DeclStmt::Struct(struct_decl(tokens, annotations)?));
+            annotations = Vec::new();
+        }
+    }
+
     unimplemented!()
+}
+
+fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseErr<AstNode<Struct>> {
+
+    let (structLoc, _) = consume_token!(tokens, Token::Struct);
+    let (nameLoc, structName) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+    let _lbrace = consume_token!(tokens, Token::LBrace);
+
+    // Check if no struct fields
+    let body = if tokens.peek(|tok| {
+        match tok {
+            Token::RBrace => false,
+            _ => true,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        unimplemented!("Parse for struct fields");
+    } else {
+        // Empty struct body
+        StructBody(None)
+    };
+
+    // Get Keys
+    let (rloc, _) = consume_token!(tokens, Token::RBrace);
+
+    let overallSpan = LocationSpan::new(structLoc.start(), rloc.start());
+
+    Ok(AstNode::new(Struct {
+            name: AstNode::new(structName, nameLoc.make_span()),
+            body: body,
+            annotations: anns,
+        }, overallSpan.make_span())
+    )
 }
 
 fn module_decl(tokens: &mut BufferedTokenizer) -> ParseErr<Ident> {
