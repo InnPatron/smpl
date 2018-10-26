@@ -32,6 +32,11 @@ macro_rules! consume_token  {
 
 pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
 
+    enum ModDec {
+        Struct,
+        Annotation,
+    }
+
     let mut name = None;
     if tokens.peek(|tok| {
         match tok {
@@ -44,21 +49,91 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
     }
 
     let mut decls = Vec::new();
-    let mut annotations: Vec<Annotation> = Vec::new();
+    let mut anno = Vec::new();
 
     while tokens.has_next() {
-        if tokens.peek(|tok| {
+        match tokens.peek(|tok| {
             match tok {
-                Token::Struct => true,
-                _ => false,
+                Token::Struct => ModDec::Struct,
+                Token::Pound => ModDec::Annotation,
+                _ => unimplemented!(),
             }
         }).map_err(|e| format!("{:?}", e))? {
-            decls.push(DeclStmt::Struct(struct_decl(tokens, annotations)?));
-            annotations = Vec::new();
+            ModDec::Struct => {
+                decls.push(DeclStmt::Struct(struct_decl(tokens, anno)?));
+                anno = Vec::new();
+            }
+
+            ModDec::Annotation => {
+                anno = annotations(tokens)?;
+            },
         }
     }
 
     unimplemented!()
+}
+
+fn annotations(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Annotation>> {
+    let mut annotations = Vec::new();
+
+    while tokens.has_next() && tokens.peek(|tok| {
+        match tok {
+            Token::Pound => true,
+            _ => false,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        let _pound = consume_token!(tokens, Token::Pound);
+        let _lbracket = consume_token!(tokens, Token::LBracket);
+        annotations.push(Annotation{ keys: kv_list(tokens)? });
+        let _rbracket = consume_token!(tokens, Token::RBracket);
+    }
+
+    Ok(annotations)
+}
+
+fn kv_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<(Ident, Option<String>)>> {
+    let mut list = vec![kv_pair(tokens)?];
+
+    while tokens.has_next() {
+        if tokens.peek(|tok| {
+            match tok {
+                Token::Comma => true,
+                _ => false
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+            let _comma = consume_token!(tokens, Token::Comma);
+            if tokens.has_next() && tokens.peek(|tok| {
+                match tok {
+                    Token::RBracket => false,
+                    _ => true,
+                }
+            }).map_err(|e| format!("{:?}", e))? {
+                list.push(kv_pair(tokens)?);
+                continue;
+            }
+        }
+
+        break;
+    }
+
+    Ok(list)
+}
+
+fn kv_pair(tokens: &mut BufferedTokenizer) -> ParseErr<(Ident, Option<String>)> {
+    let (_, ident) = consume_token!(tokens, Token::Identifier(i) => i);
+
+    if tokens.peek(|tok| {
+        match tok {
+            Token::Eq => true,
+            _ => false,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        let _eq = consume_token!(tokens, Token::Eq);
+        let (_, v) = consume_token!(tokens, Token::StringLiteral(s) => s);
+        Ok((Ident(ident), Some(v)))
+    } else {
+        Ok((Ident(ident), None))
+    }
 }
 
 fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseErr<AstNode<Struct>> {
