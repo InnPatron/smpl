@@ -149,7 +149,8 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
             _ => true,
         }
     }).map_err(|e| format!("{:?}", e))? {
-        unimplemented!("Parse for struct fields");
+        let body = struct_field_list(tokens)?;
+        StructBody(Some(body))
     } else {
         // Empty struct body
         StructBody(None)
@@ -166,6 +167,46 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
             annotations: anns,
         }, overallSpan.make_span())
     )
+}
+
+fn struct_field_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<StructField>> {
+    let mut list = vec![struct_field(tokens)?];
+
+    while tokens.has_next() {
+        if tokens.peek(|tok| {
+            match tok {
+                Token::Comma => true,
+                _ => false
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+            let _comma = consume_token!(tokens, Token::Comma);
+            if tokens.has_next() && tokens.peek(|tok| {
+                match tok {
+                    Token::RBrace => false,
+                    _ => true,
+                }
+            }).map_err(|e| format!("{:?}", e))? {
+                list.push(struct_field(tokens)?);
+                continue;
+            }
+        }
+
+        break;
+    }
+
+    Ok(list)
+}
+
+
+fn struct_field(tokens: &mut BufferedTokenizer) -> ParseErr<StructField> {
+    let (idloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+    let _colon = consume_token!(tokens, Token::Colon);
+    let ann = type_annotation(tokens)?;
+
+    Ok(StructField {
+        name: AstNode::new(ident, idloc.make_span()),
+        field_type: ann,
+    })
 }
 
 fn module_decl(tokens: &mut BufferedTokenizer) -> ParseErr<Ident> {
