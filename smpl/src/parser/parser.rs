@@ -188,7 +188,7 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
 
     let mut body: Option<AstNode<Block>> = None;
     if !is_builtin {
-        unimplemented!("Parse for function body");
+        body = Some(block(tokens)?);
     }
 
     let mut return_type = None;
