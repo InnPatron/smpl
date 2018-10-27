@@ -73,7 +73,8 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
             },
 
             ModDec::Function(is_builtin) => {
-
+                decls.push(fn_decl(tokens, anno, is_builtin)?);
+                anno = Vec::new();
             }
 
             ModDec::Err => unimplemented!("Unexpected token: {:?}", tokens.next().unwrap()),
