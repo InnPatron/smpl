@@ -176,3 +176,136 @@ fn module_decl(tokens: &mut BufferedTokenizer) -> ParseErr<Ident> {
 
     Ok(ident)
 }
+
+fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> {
+    
+    enum TypeAnnDec {
+        Module,
+        FnType,
+        ArrayType,
+        Err,
+    }
+
+    if tokens.has_next() == false {
+        unimplemented!("Unexpected End of Input: Expected Type Annotation");
+    }
+    match tokens.peek(|tok| {
+        match tok {
+            Token::Fn => TypeAnnDec::FnType,
+            Token::Identifier(_) => TypeAnnDec::Module,
+            Token::LBracket => TypeAnnDec::ArrayType,
+
+            _ => TypeAnnDec::Err,
+        }
+
+    }).map_err(|e| format!("{:?}", e))? {
+        TypeAnnDec::Module => module_binding(tokens),
+        TypeAnnDec::FnType => fn_type(tokens),
+        TypeAnnDec::ArrayType => array_type(tokens),
+
+        TypeAnnDec::Err => unimplemented!(),
+    }
+}
+
+fn module_binding(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> {
+    let mut path = Vec::new();
+    let (floc, first) =  consume_token!(tokens, Token::Identifier(i) => Ident(i));
+
+    let mut binding_span = LocationSpan::new(floc.start(), floc.end());
+    path.push(AstNode::new(first, floc.make_span()));
+
+    if tokens.peek(|tok| {
+        match tok {
+            Token::ColonColon => true,
+            _ => false,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        let _coloncolon = consume_token!(tokens, Token::ColonColon);
+        let (nloc, next) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+        path.push(AstNode::new(next, nloc.make_span()));
+        binding_span = LocationSpan::new(floc.start(), nloc.end());
+    }
+
+    Ok(AstNode::new(TypeAnnotation::Path(ModulePath(path)), binding_span.make_span()))
+}
+
+fn array_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> {
+    let (lloc, _) = consume_token!(tokens, Token::LBracket);
+    let base_type = Box::new(type_annotation(tokens)?);
+    let _semi = consume_token!(tokens, Token::Semi);
+    let (_, number) = consume_token!(tokens, Token::IntLiteral(i) => i);
+    let (rloc, _) = consume_token!(tokens, Token::RBracket);
+
+    let array_type_span = LocationSpan::new(lloc.start(), rloc.end());
+
+    if (number <= 0) {
+        unimplemented!("Parser error: number of elements must be greater than 0. Found {}", number);
+    }
+
+    Ok(AstNode::new(TypeAnnotation::Array(base_type, number as u64), 
+                    array_type_span.make_span()))
+}
+
+fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> {
+    let (fnloc, _) = consume_token!(tokens, Token::Fn);
+    let _lparen = consume_token!(tokens, Token::LParen);
+        
+    let mut params = None;
+    if tokens.has_next() && tokens.peek(|tok| {
+        match tok {
+            Token::RParen => false,
+            _ => true,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        params = Some(fn_type_params(tokens)?);
+    }
+
+    let (rparenloc, _) = consume_token!(tokens, Token::RParen);
+
+    let mut fn_type_span = LocationSpan::new(fnloc.start(), rparenloc.end()).make_span();
+
+    let mut return_type = None;
+    if tokens.has_next() && tokens.peek(|tok| {
+        match tok {
+            Token::Arrow => true,
+            _ => false,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        let _arrow = consume_token!(tokens, Token::Arrow);
+        let ret = type_annotation(tokens)?;
+        let return_span = ret.span();
+
+        return_type = Some(Box::new(ret));
+        fn_type_span = Span::combine(fn_type_span, return_span);
+    }
+
+    Ok(AstNode::new(TypeAnnotation::FnType(params, return_type), fn_type_span))
+}
+
+fn fn_type_params(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<TypeAnnotation>>> {
+    let mut list = vec![type_annotation(tokens)?];
+
+    while tokens.has_next() {
+        if tokens.peek(|tok| {
+            match tok {
+                Token::Comma => true,
+                _ => false
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+            let _comma = consume_token!(tokens, Token::Comma);
+            if tokens.has_next() && tokens.peek(|tok| {
+                match tok {
+                    Token::RParen => false,
+                    _ => true,
+                }
+            }).map_err(|e| format!("{:?}", e))? {
+                list.push(type_annotation(tokens)?);
+                continue;
+            }
+        }
+
+        break;
+    }
+
+    Ok(list)
+}
