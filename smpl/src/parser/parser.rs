@@ -35,6 +35,8 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
     enum ModDec {
         Struct,
         Annotation,
+        Function(bool),
+        Err,
     }
 
     let mut name = None;
@@ -56,7 +58,9 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
             match tok {
                 Token::Struct => ModDec::Struct,
                 Token::Pound => ModDec::Annotation,
-                _ => unimplemented!(),
+                Token::Fn => ModDec::Function(false),
+                Token::Builtin => ModDec::Function(true),
+                _ => ModDec::Err,
             }
         }).map_err(|e| format!("{:?}", e))? {
             ModDec::Struct => {
@@ -67,6 +71,12 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
             ModDec::Annotation => {
                 anno = annotations(tokens)?;
             },
+
+            ModDec::Function(is_builtin) => {
+
+            }
+
+            ModDec::Err => unimplemented!("Unexpected token: {:?}", tokens.next().unwrap()),
         }
     }
 
@@ -134,6 +144,123 @@ fn kv_pair(tokens: &mut BufferedTokenizer) -> ParseErr<(Ident, Option<String>)> 
     } else {
         Ok((Ident(ident), None))
     }
+}
+
+fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_builtin: bool) -> ParseErr<DeclStmt> {
+    let mut span = Span::new(0, 0);
+    if is_builtin {
+        let (bloc, builtin) = consume_token!(tokens, Token::Builtin);
+        span = bloc.make_span();
+    }
+
+    let (fnloc, _) = consume_token!(tokens, Token::Fn);
+    if !is_builtin {
+        span = fnloc.make_span();
+    }
+
+    let (idloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+    let _lparen = consume_token!(tokens, Token::LParen);
+
+    let params = if tokens.peek(|tok| {
+        match tok {
+            Token::Unchecked => true,
+            _ => false
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        BuiltinFnParams::Unchecked
+    } else {
+        if tokens.peek(|tok| {
+            match tok {
+                Token::RParen => false,
+                _ => true,
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+            BuiltinFnParams::Checked(Some(fn_param_list(tokens)?))
+        } else {
+            BuiltinFnParams::Checked(None)
+        }
+    };
+        
+
+    let (rloc, _) = consume_token!(tokens, Token::RParen);
+    span = Span::combine(span, rloc.make_span());
+
+    let mut body: Option<AstNode<Block>> = None;
+    if !is_builtin {
+        unimplemented!("Parse for function body");
+    }
+
+    let mut return_type = None;
+    if tokens.peek(|tok| {
+        match tok {
+            Token::Arrow => true,
+            _ => false,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        let _arrow = consume_token!(tokens, Token::Arrow);
+        return_type = Some(type_annotation(tokens)?);
+    }
+
+    let (semiloc, _) = consume_token!(tokens, Token::Semi);
+    span = Span::combine(span, semiloc.make_span());
+
+    if is_builtin {
+        Ok(DeclStmt::BuiltinFunction(
+            AstNode::new(
+                BuiltinFunction {
+                    name: AstNode::new(ident, idloc.make_span()),
+                    params: params,
+                    return_type: return_type,
+                    annotations: annotations,
+                },
+                span)
+            )
+        )
+    } else {
+        unimplemented!("Regular function parsing");
+    }
+}
+
+fn fn_param_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<FnParameter>>> {
+    let mut list = vec![fn_param(tokens)?];
+
+    while tokens.has_next() {
+        if tokens.peek(|tok| {
+            match tok {
+                Token::Comma => true,
+                _ => false
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+            let _comma = consume_token!(tokens, Token::Comma);
+            if tokens.has_next() && tokens.peek(|tok| {
+                match tok {
+                    Token::RParen => false,
+                    _ => true,
+                }
+            }).map_err(|e| format!("{:?}", e))? {
+                list.push(fn_param(tokens)?);
+                continue;
+            }
+        }
+
+        break;
+    }
+
+    Ok(list)
+}
+
+fn fn_param(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<FnParameter>> {
+    let (idloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+    let _colon = consume_token!(tokens, Token::Colon);
+    let ann = type_annotation(tokens)?;
+
+    let span = Span::combine(idloc.make_span(), ann.span());
+    let param = FnParameter {
+        name: AstNode::new(ident, idloc.make_span()),
+        param_type: ann,
+    };
+
+    Ok(AstNode::new(param, span))
 }
 
 fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseErr<AstNode<Struct>> {
