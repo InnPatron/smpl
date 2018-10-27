@@ -534,11 +534,11 @@ impl CFG {
                         let loop_id = universe.new_loop_id();
                         let loop_head = cfg.graph.add_node(Node::LoopHead(LoopData {
                             loop_id: loop_id,
-                            span: block.1,
+                            span: Span::new(expr_stmt_span.start(), expr_stmt_span.start()),
                         }));
                         let loop_foot = cfg.graph.add_node(Node::LoopFoot(LoopData {
                             loop_id: loop_id,
-                            span: block.2,
+                            span: Span::new(expr_stmt_span.end(), expr_stmt_span.end()),
                         }));
 
                         cfg.graph.add_edge(loop_foot, loop_head, Edge::BackEdge);

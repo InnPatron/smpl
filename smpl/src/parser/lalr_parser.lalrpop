@@ -200,8 +200,8 @@ pub Stmt: Stmt = {
 };
 
 Block: AstNode<Block> = {
-	<l: @L> <ll: @L> "{" <rr: @R> <s: Stmt*> <lll: @L> "}" <rrr: @R> <r: @R> => {
-		AstNode::new(Block(s, Span::new(ll, rr), Span::new(lll, rrr)), Span::new(l, r))
+	<l: @L> "{" <rr: @R> <s: Stmt*> <lll: @L> "}" <r: @R> => {
+		AstNode::new(Block(s), Span::new(l, r))
 	}
 };
 

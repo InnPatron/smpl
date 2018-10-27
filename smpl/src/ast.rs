@@ -311,7 +311,7 @@ pub enum Literal {
 }
 
 #[derive(Clone, Debug)]
-pub struct Block(pub Vec<Stmt>, pub Span, pub Span);
+pub struct Block(pub Vec<Stmt>);
 
 impl PartialEq for Block {
     fn eq(&self, other: &Block) -> bool {
