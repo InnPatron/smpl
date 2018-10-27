@@ -7,6 +7,14 @@ use super::tokens::*;
 pub type ParseErr<T> = Result<T, String>;
 
 macro_rules! consume_token  {
+
+    ($input: expr) => {{
+        let next = $input.next()
+            .ok_or("Unexpected end of input")?
+            .map_err(|e| format!("{:?}", e))?;
+        next.to_data()
+    }};
+
     ($input: expr, $token: pat) => {{
         let next = $input.next()
             .ok_or("Unexpected end of input")?
