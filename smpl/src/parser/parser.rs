@@ -217,7 +217,28 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
             )
         )
     } else {
-        unimplemented!("Regular function parsing");
+        let params = match params {
+            BuiltinFnParams::Unchecked => return Err("Unchecked parameters in non-builtin function".to_string()),
+            BuiltinFnParams::Checked(p) => p,
+        };
+
+        let body = match body {
+            Some(b) => b,
+            None => return Err("Function has no body".to_string()),
+        };
+
+        Ok(DeclStmt::Function(
+            AstNode::new(
+                Function {
+                    name: AstNode::new(ident, idloc.make_span()),
+                    params: params,
+                    return_type: return_type,
+                    body: body,
+                    annotations: annotations,
+                },
+                span)
+            )
+        )
     }
 }
 
