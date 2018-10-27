@@ -499,3 +499,14 @@ fn fn_type_params(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<TypeAn
 
     Ok(list)
 }
+
+fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
+    let (lloc, _) = consume_token!(tokens, Token::LBrace);
+    let (rloc, _) = consume_token!(tokens, Token::RBrace);
+
+    let span = LocationSpan::new(lloc.start(), rloc.end());
+    Ok(AstNode::new(
+        unimplemented!(),
+        span.make_span())
+    )
+}
