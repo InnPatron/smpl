@@ -510,3 +510,25 @@ fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
         span.make_span())
     )
 }
+
+fn continue_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
+    let (contloc, _) = consume_token!(tokens, Token::Continue);
+    let (semiloc, _) = consume_token!(tokens, Token::Semi);
+
+    let span = LocationSpan::new(contloc.start(), semiloc.end());
+    Ok(AstNode::new(
+        ExprStmt::Continue(span.make_span()),
+        span.make_span())
+    )
+}
+
+fn break_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
+    let (contloc, _) = consume_token!(tokens, Token::Break);
+    let (semiloc, _) = consume_token!(tokens, Token::Semi);
+
+    let span = LocationSpan::new(contloc.start(), semiloc.end());
+    Ok(AstNode::new(
+        ExprStmt::Break(span.make_span()),
+        span.make_span())
+    )
+}
