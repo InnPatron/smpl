@@ -210,8 +210,10 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
         return_type = Some(type_annotation(tokens)?);
     }
 
-    let (semiloc, _) = consume_token!(tokens, Token::Semi);
-    span = Span::combine(span, semiloc.make_span());
+    if is_builtin {
+        let (semiloc, _) = consume_token!(tokens, Token::Semi);
+        span = Span::combine(span, semiloc.make_span());
+    }
 
     if is_builtin {
         Ok(DeclStmt::BuiltinFunction(
