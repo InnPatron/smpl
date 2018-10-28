@@ -878,5 +878,47 @@ fn array_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
 }
 
 fn anonymous_fn(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
-    unimplemented!()
+
+    let (fnloc, _) = consume_token!(tokens, Token::Fn);
+
+    let _lparen = consume_token!(tokens, Token::LParen);
+
+    let params = if tokens.peek(|tok| {
+        match tok {
+            Token::RParen => false,
+            _ => true,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        Some(fn_param_list(tokens)?)
+    } else {
+        None
+    };
+        
+
+    let (rloc, _) = consume_token!(tokens, Token::RParen);
+
+    let body = block(tokens)?;
+
+    let mut return_type = None;
+    if tokens.peek(|tok| {
+        match tok {
+            Token::Arrow => true,
+            _ => false,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        let _arrow = consume_token!(tokens, Token::Arrow);
+        return_type = Some(type_annotation(tokens)?);
+    }
+
+    let span = Span::combine(fnloc.make_span(), body.span());
+
+    let anon = AnonymousFn {
+        params: params,
+        return_type: return_type,
+        body: body,
+    };
+
+    let anon = AstNode::new(anon, span);
+
+    Ok(AstNode::new(Expr::AnonymousFn(anon), span))
 }
