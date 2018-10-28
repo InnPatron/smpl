@@ -803,7 +803,62 @@ fn leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
 }
 
 fn leaf_ident(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
-    unimplemented!()
+
+    enum IdentDec {
+        SingleBinding,
+        AccessPath,
+        ModuleBinding,
+        FnCallChain,
+        Indexing,
+    }
+
+    let (bloc, base) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+
+    if tokens.has_next() {
+        match tokens.peek(|tok| {
+            match tok {
+                Token::ColonColon => IdentDec::ModuleBinding,
+                Token::Dot => IdentDec::AccessPath,
+                Token::LParen => IdentDec::FnCallChain,
+                Token::LBracket => IdentDec::Indexing,
+                _ => IdentDec::SingleBinding,
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+
+            IdentDec::SingleBinding => {
+                let ident = AstNode::new(base, bloc.make_span());
+                Ok(AstNode::new(Expr::Binding(ident), bloc.make_span()))
+            },
+
+            IdentDec::ModuleBinding => {
+                let _coloncolon = consume_token!(tokens, Token::ColonColon);
+                let (tail, tloc) = module_binding(tokens)?.to_data();
+
+                let mut vec = tail.0;
+                vec.insert(0, AstNode::new(base, bloc.make_span()));
+
+                let span = Span::combine(bloc.make_span(), tloc);
+                
+                let mod_bind = ModulePath(vec);
+                let mod_bind = AstNode::new(mod_bind, span);
+                Ok(AstNode::new(Expr::ModAccess(mod_bind), span))
+            }
+
+            IdentDec::AccessPath => {
+                unimplemented!()
+            },
+
+            IdentDec::FnCallChain => {
+                unimplemented!()
+            }
+
+            IdentDec::Indexing => {
+                unimplemented!()
+            },
+        }
+    } else {
+        unimplemented!("Unexpected end of input");
+    }
 }
 
 fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
