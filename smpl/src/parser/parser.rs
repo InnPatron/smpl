@@ -540,3 +540,216 @@ fn break_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
         span.make_span())
     )
 }
+
+fn expr(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+    logic_expr(tokens)
+}
+
+fn bin_op(token: Token) -> BinOp {
+    match token {
+        Token::Eq => BinOp::Eq,
+        Token::NEq => BinOp::InEq,
+
+        Token::Gte => BinOp::GreaterEq,
+        Token::Gt => BinOp::Greater,
+        Token::Lte => BinOp::LesserEq,
+        Token::Lt => BinOp::Lesser,
+
+        Token::Plus => BinOp::Add,
+        Token::Minus => BinOp::Sub,
+        Token::Star => BinOp::Mul,
+        Token::Slash => BinOp::Div,
+        Token::Percent => BinOp::Mod,
+
+        Token::LAnd => BinOp::LogicalAnd,
+        Token::LOr => BinOp::LogicalOr,
+
+        _ => panic!("Unrecognized bin op: {:?}", token),
+    }
+}
+
+fn logic_expr(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+    let lhs = equal_expr(tokens)?;
+
+    if tokens.peek(|tok| {
+        match tok {
+            Token::LAnd | Token::LOr => true,
+            _ => false
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        let (_, op) = consume_token!(tokens);
+        let rhs = logic_expr(tokens)?;
+
+        let (lhs, seq) = lhs.to_data();
+        let (rhs, srhs) = rhs.to_data();
+        let span = Span::combine(seq, srhs);
+
+        let bin = BinExpr {
+            op: bin_op(op),
+            lhs: Box::new(lhs),
+            rhs: Box::new(rhs),
+        };
+
+        let bin = AstNode::new(bin, span);
+        return Ok(AstNode::new(Expr::Bin(bin), span));
+    }
+
+    Ok(lhs)
+}
+
+fn equal_expr(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+    let lhs = relative_expr(tokens)?;
+
+    if tokens.peek(|tok| {
+        match tok {
+            Token::Eq | Token::NEq => true,
+            _ => false
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        let (_, op) = consume_token!(tokens);
+        let rhs = equal_expr(tokens)?;
+
+        let (lhs, seq) = lhs.to_data();
+        let (rhs, srhs) = rhs.to_data();
+        let span = Span::combine(seq, srhs);
+
+        let bin = BinExpr {
+            op: bin_op(op),
+            lhs: Box::new(lhs),
+            rhs: Box::new(rhs),
+        };
+
+        let bin = AstNode::new(bin, span);
+        return Ok(AstNode::new(Expr::Bin(bin), span));
+    }
+
+    Ok(lhs)
+}
+
+fn relative_expr(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+    let lhs = math_expr(tokens)?;
+
+    if tokens.peek(|tok| {
+        match tok {
+            Token::Gte | Token::Gt | Token::Lte | Token::Lt => true,
+            _ => false
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        let (_, op) = consume_token!(tokens);
+        let rhs = math_expr(tokens)?;
+
+        let (lhs, seq) = lhs.to_data();
+        let (rhs, srhs) = rhs.to_data();
+        let span = Span::combine(seq, srhs);
+
+        let bin = BinExpr {
+            op: bin_op(op),
+            lhs: Box::new(lhs),
+            rhs: Box::new(rhs),
+        };
+
+        let bin = AstNode::new(bin, span);
+        return Ok(AstNode::new(Expr::Bin(bin), span));
+    }
+
+    Ok(lhs)
+}
+
+fn math_expr(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+    let lhs = factor(tokens)?;
+
+    if tokens.peek(|tok| {
+        match tok {
+            Token::Plus | Token::Minus => true,
+            _ => false
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        let (_, op) = consume_token!(tokens);
+        let rhs = math_expr(tokens)?;
+
+        let (lhs, seq) = lhs.to_data();
+        let (rhs, srhs) = rhs.to_data();
+        let span = Span::combine(seq, srhs);
+
+        let bin = BinExpr {
+            op: bin_op(op),
+            lhs: Box::new(lhs),
+            rhs: Box::new(rhs),
+        };
+
+        let bin = AstNode::new(bin, span);
+        return Ok(AstNode::new(Expr::Bin(bin), span));
+    }
+
+    Ok(lhs)
+}
+
+fn factor(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+    let lhs = uni_expr(tokens)?;
+
+    if tokens.peek(|tok| {
+        match tok {
+            Token::Star | Token::Slash | Token::Percent => true,
+            _ => false
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        let (_, op) = consume_token!(tokens);
+        let rhs = factor(tokens)?;
+
+        let (lhs, seq) = lhs.to_data();
+        let (rhs, srhs) = rhs.to_data();
+        let span = Span::combine(seq, srhs);
+
+        let bin = BinExpr {
+            op: bin_op(op),
+            lhs: Box::new(lhs),
+            rhs: Box::new(rhs),
+        };
+
+        let bin = AstNode::new(bin, span);
+        return Ok(AstNode::new(Expr::Bin(bin), span));
+    }
+
+    Ok(lhs)
+}
+
+fn uni_op(token: Token) -> UniOp {
+    match token {
+        Token::Minus => UniOp::Negate,
+        Token::Invert => UniOp::LogicalInvert,
+        _ => panic!("Unrecognized uniop: {:?}", token)
+    }
+}
+
+fn uni_expr(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+    if tokens.has_next() && tokens.peek(|tok| {
+        match tok {
+            Token::Minus | Token::Invert | Token::Ref | Token::Star => true,
+            _ => false
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+
+        let (lop, op) = consume_token!(tokens);
+        let base = leaf(tokens)?;
+
+        let (base, sbase) = base.to_data();
+
+        let span = Span::combine(lop.make_span(), sbase);
+
+        let uni_expr = UniExpr {
+            op: uni_op(op),
+            expr: Box::new(base),
+        };
+
+        let uni_expr = AstNode::new(uni_expr, span);
+
+        Ok(AstNode::new(Expr::Uni(uni_expr), span))
+
+    } else {
+        leaf(tokens)
+    }
+}
+
+fn leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+    unimplemented!()
+}
