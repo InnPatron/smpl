@@ -755,5 +755,63 @@ fn uni_expr(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
 }
 
 fn leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+    enum LeafDec {
+        Paren,
+        Ident,
+        StructInit,
+        ArrayInit,
+        AnonymousFn,
+        Err,
+    }
+    if tokens.has_next() {
+        match tokens.peek(|tok| {
+            match tok {
+                Token::LParen => LeafDec::Paren,
+                Token::Identifier(i) => LeafDec::Ident,
+                Token::Init => LeafDec::StructInit,
+                Token::LBracket => LeafDec::ArrayInit,
+                Token::Fn => LeafDec::AnonymousFn,
+                _ => LeafDec::Err,
+            }
+
+        }).map_err(|e| format!("{:?}", e))? {
+
+            LeafDec::Paren => {
+                let (lloc, _) = consume_token!(tokens, Token::LParen);
+                let expr = expr(tokens)?;
+                let (rloc, _) = consume_token!(tokens, Token::RParen);
+
+                Ok(expr)
+            }
+
+            LeafDec::Ident => leaf_ident(tokens),
+
+            LeafDec::StructInit => struct_init(tokens),
+            
+            LeafDec::ArrayInit => array_init(tokens),
+
+            LeafDec::AnonymousFn => anonymous_fn(tokens),
+
+            LeafDec::Err => unimplemented!("Unexpected token"),
+        }
+    } else {
+        
+        unimplemented!("Unexpected end of input");
+    }
+}
+
+fn leaf_ident(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+    unimplemented!()
+}
+
+fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+    unimplemented!()
+}
+
+fn array_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+    unimplemented!()
+}
+
+fn anonymous_fn(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
     unimplemented!()
 }
