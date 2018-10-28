@@ -397,7 +397,11 @@ fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnot
         }
 
     }).map_err(|e| format!("{:?}", e))? {
-        TypeAnnDec::Module => module_binding(tokens),
+        TypeAnnDec::Module => {
+            let (bind, span) = module_binding(tokens)?.to_data();
+
+            Ok(AstNode::new(TypeAnnotation::Path(bind), span))
+        },
         TypeAnnDec::FnType => fn_type(tokens),
         TypeAnnDec::ArrayType => array_type(tokens),
 
@@ -405,7 +409,7 @@ fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnot
     }
 }
 
-fn module_binding(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> {
+fn module_binding(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ModulePath>> {
     let mut path = Vec::new();
     let (floc, first) =  consume_token!(tokens, Token::Identifier(i) => Ident(i));
 
@@ -424,7 +428,7 @@ fn module_binding(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnota
         binding_span = LocationSpan::new(floc.start(), nloc.end());
     }
 
-    Ok(AstNode::new(TypeAnnotation::Path(ModulePath(path)), binding_span.make_span()))
+    Ok(AstNode::new(ModulePath(path), binding_span.make_span()))
 }
 
 fn array_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> {
