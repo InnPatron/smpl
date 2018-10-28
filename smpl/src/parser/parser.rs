@@ -805,7 +805,72 @@ fn leaf_ident(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
 }
 
 fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
-    unimplemented!()
+    let (linit, _) = consume_token!(tokens, Token::Init);
+    let (path, _) = module_binding(tokens)?.to_data();
+
+    let _lbrace = consume_token!(tokens, Token::LBrace);
+
+    let mut init = None;
+    if tokens.peek(|tok| {
+        match tok {
+            Token::RBrace => false,
+            _ => true,
+        }
+
+    }).map_err(|e| format!("{:?}", e))? {
+        init = Some(struct_field_init_list(tokens)?);
+    }
+
+    let (lroc, _rbrace) = consume_token!(tokens, Token::RBrace);
+
+    let span = LocationSpan::new(linit.start(), lroc.end());
+
+    let struct_init = StructInit {
+        struct_name: path,
+        field_init: init,
+    };
+
+    let struct_init = AstNode::new(struct_init, span.make_span());
+
+    Ok(AstNode::new(Expr::StructInit(struct_init), span.make_span()))
+}
+
+fn struct_field_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<(AstNode<Ident>, Box<Expr>)>> {
+    let mut list = vec![struct_field_init(tokens)?];
+
+    while tokens.has_next() {
+        if tokens.peek(|tok| {
+            match tok {
+                Token::Comma => true,
+                _ => false
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+            let _comma = consume_token!(tokens, Token::Comma);
+            if tokens.has_next() && tokens.peek(|tok| {
+                match tok {
+                    Token::RBrace => false,
+                    _ => true,
+                }
+            }).map_err(|e| format!("{:?}", e))? {
+                list.push(struct_field_init(tokens)?);
+                continue;
+            }
+        }
+
+        break;
+    }
+
+    Ok(list)
+}
+
+fn struct_field_init(tokens: &mut BufferedTokenizer) -> ParseErr<(AstNode<Ident>, Box<Expr>)> {
+    let (iloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+
+    let _colon = consume_token!(tokens, Token::Colon);
+
+    let (expr, _) = expr(tokens)?.to_data();
+
+    Ok((AstNode::new(ident, iloc.make_span()), Box::new(expr)))
 }
 
 fn array_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
