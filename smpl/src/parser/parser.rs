@@ -6,6 +6,7 @@ use super::tokens::*;
 
 pub type ParseErr<T> = Result<T, String>;
 
+#[macro_export]
 macro_rules! consume_token  {
 
     ($input: expr) => {{
