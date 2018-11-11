@@ -274,7 +274,7 @@ init NAME {
         let func = parser.parse(input).unwrap();
         let func = func.data().clone();
         assert_eq!(func.name, dummy_node!(ident!("test_fn")));
-        assert_eq!(func.body, dummy_node!(Block(Vec::new(), Span::new(0, 0), Span::new(0, 0))));
+        assert_eq!(func.body, dummy_node!(Block(Vec::new())));
 
         let expected = vec![(dummy_node!(ident!("arg")), type_path!("i32")),
                             (dummy_node!(ident!("test")), type_path!("float")),
