@@ -23,11 +23,11 @@ pub fn expr(tokens: &mut BufferedTokenizer,
         Break,
     }
 
-    if tokens.has_next() == false {
-        return Err("Unexpected end of input".to_string());
-    }
-
     loop {
+
+        if tokens.has_next() == false {
+            return Ok(lhs);
+        }
 
         let peek_result = tokens.peek(|tok| {
             let op = match get_op(tok) {
