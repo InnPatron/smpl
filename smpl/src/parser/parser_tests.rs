@@ -496,6 +496,28 @@ struct TestStruct {
              0).unwrap();
     }
 
+    #[test]
+    fn parse_another_complex_expr() {
+        let input = "1 + 10 * 4 / 3 == 5 && false";
+        let mut input = buffer_input(input);
+        let lhs = parse_primary(&mut input).unwrap();
+        expr(&mut input, 
+             lhs,
+             &[],
+             0).unwrap();
+    }
+
+    #[test]
+    fn parse_math_expr() {
+        let input = "1 + 10 * 4 / 3";
+        let mut input = buffer_input(input);
+        let lhs = parse_primary(&mut input).unwrap();
+        expr(&mut input, 
+             lhs,
+             &[],
+             0).unwrap();
+    }
+
 
     #[test]
     fn parse_annotate_struct() {
