@@ -21,6 +21,30 @@ pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<Expr> {
     unimplemented!()
 }
 
+fn get_op(token: &Token) -> Option<BinOp> {
+    use self::Token::*;
+    match token {
+        Plus => Some(BinOp::Add),
+        Minus => Some(BinOp::Sub),
+        Star => Some(BinOp::Mul),
+        Slash => Some(BinOp::Div),
+        Percent => Some(BinOp::Mod),
+
+        Gte => Some(BinOp::GreaterEq),
+        Gt => Some(BinOp::Greater),
+        Lte => Some(BinOp::LesserEq),
+        Lt => Some(BinOp::Lesser),
+
+        LAnd => Some(BinOp::LogicalAnd),
+        LOr => Some(BinOp::LogicalOr),
+
+        Eq => Some(BinOp::Eq),
+        NEq => Some(BinOp::InEq),
+
+        _ => None
+    }
+}
+
 fn bin_op_precedence(op: &BinOp) -> u64 {
     use self::BinOp::*;
     match op {
