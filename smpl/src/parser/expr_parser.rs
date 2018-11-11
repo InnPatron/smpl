@@ -4,6 +4,7 @@ use span::*;
 use ast::*;
 use super::tokens::*;
 use super::parser::ParseErr;
+use crate::consume_token;
 
 pub enum Delimiter {
     RParen,
@@ -11,13 +12,91 @@ pub enum Delimiter {
     Comma,
 }
 
-pub fn expr(tokens: &mut BufferedTokenizer, delim_token: &[Delimiter], min_precedence: u64) 
-    -> ParseErr<Expr> {
+pub fn expr(tokens: &mut BufferedTokenizer, 
+            mut lhs: AstNode<Expr>, 
+            delim_token: &[Delimiter], 
+            min_precedence: u64) 
+    -> ParseErr<AstNode<Expr>> {
 
-    unimplemented!()
+    enum PeekResult {
+        Execute(BinOp),
+        Break,
+    }
+
+    if tokens.has_next() == false {
+        return Err("Unexpected end of input".to_string());
+    }
+
+    loop {
+
+        let peek_result = tokens.peek(|tok| {
+            let op = match get_op(tok) {
+                Some(op) => op,
+                None => return PeekResult::Break,
+            };
+
+            if bin_op_precedence(&op) >= min_precedence {
+                PeekResult::Execute(op)
+            } else {
+                PeekResult::Break
+            }
+        }).map_err(|e| format!("{:?}", e))?;
+
+        if let PeekResult::Break = peek_result {
+            break;
+        }
+
+        let (next_span, next) = consume_token!(tokens);
+        let main_op = get_op(&next).unwrap();
+        let main_prec = bin_op_precedence(&main_op);
+
+        let mut rhs = parse_primary(tokens)?;
+
+        loop {
+            let peek_result = tokens.peek(|tok| {
+                let op = match get_op(tok) {
+                    Some(op) => op,
+                    None => return PeekResult::Break,
+                };
+
+                if bin_op_precedence(&op) >= main_prec ||
+                (is_left_associative(&op) == false && bin_op_precedence(&op) == main_prec) {
+                    PeekResult::Execute(op)
+                } else {
+                    PeekResult::Break
+                }
+            }).map_err(|e| format!("{:?}", e))?;
+
+            let rhs_op_peek = match peek_result {
+                PeekResult::Execute(op) => op,
+                PeekResult::Break => break,
+            };
+
+            let rhs_op_prec = bin_op_precedence(&rhs_op_peek);
+            
+            rhs = expr(tokens, rhs, delim_token, rhs_op_prec)?;
+        }
+
+        let span = Span::combine(lhs.span(), rhs.span());
+
+        let bin_expr = {
+            let (lhs, _) = lhs.to_data();
+            let (rhs, _) = rhs.to_data();
+
+            BinExpr {
+                op: main_op,
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs),
+            }
+        };
+
+        lhs = AstNode::new(Expr::Bin(AstNode::new(bin_expr, span)), span);
+    }
+
+    Ok(lhs)
 }
 
-pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<Expr> {
+pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
     unimplemented!()
 }
 
