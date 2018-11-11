@@ -37,3 +37,9 @@ pub fn wrap_input<'a>(input: &'a str) -> Box< Iterator<Item=Result<(usize, token
         })
     )
 }
+
+#[cfg(test)]
+pub fn buffer_input(input: &str) -> tokens::BufferedTokenizer {
+    let tokenizer = tokens::Tokenizer::new(input);
+    tokens::BufferedTokenizer::new(tokenizer)
+}

@@ -2,6 +2,7 @@
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod parser_tests {
+    use parser::expr_parser::*;
     use parser::*;
     use ast::*;
     use span::Span;
@@ -487,9 +488,12 @@ struct TestStruct {
     #[test]
     fn parse_float_expr() {
         let input = "1.5";
-        let input = wrap_input(input);
-        let parser = ExprParser::new();
-        parser.parse(input).unwrap();
+        let mut input = buffer_input(input);
+        let lhs = parse_primary(&mut input).unwrap();
+        expr(&mut input, 
+             lhs,
+             &[],
+             0).unwrap();
     }
 
 
