@@ -53,6 +53,10 @@ pub fn expr(tokens: &mut BufferedTokenizer,
         let mut rhs = parse_primary(tokens)?;
 
         loop {
+            if tokens.has_next() == false {
+                break;
+            }
+
             let peek_result = tokens.peek(|tok| {
                 let op = match get_op(tok) {
                     Some(op) => op,
