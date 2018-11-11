@@ -97,7 +97,61 @@ pub fn expr(tokens: &mut BufferedTokenizer,
 }
 
 pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
-    unimplemented!()
+    enum PrimaryDec {
+        Ident,
+        Literal,
+        UniExpr,
+        LParen,
+        Err,
+    }
+
+    match tokens.peek(|tok| {
+        match tok {
+            Token::Plus => PrimaryDec::UniExpr,
+            Token::Minus => PrimaryDec::UniExpr,
+
+            Token::IntLiteral(_) => PrimaryDec::Literal,
+            Token::FloatLiteral(_) => PrimaryDec::Literal,
+            Token::BoolLiteral(_) => PrimaryDec::Literal,
+            Token::StringLiteral(_) => PrimaryDec::Literal,
+
+            Token::LParen => PrimaryDec::LParen,
+
+            Token::Identifier(_) => PrimaryDec::Ident,
+
+            _ => PrimaryDec::Err,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+
+        PrimaryDec::Ident => unimplemented!(),
+
+        PrimaryDec::UniExpr => unimplemented!(),
+
+        PrimaryDec::Literal => {
+            let (next_span, next) = tokens
+                .next()
+                .unwrap()
+                .map_err(|e| format!("{:?}", e))?
+                .to_data();
+
+            let literal = match next {
+                Token::IntLiteral(i) => Literal::Int(i),
+                Token::FloatLiteral(f) => Literal::Float(f),
+                Token::BoolLiteral(b) => Literal::Bool(b),
+                Token::StringLiteral(s) => Literal::String(s),
+
+                _ => unreachable!(),
+            };
+
+            let span = next_span.make_span();
+
+            Ok(AstNode::new(Expr::Literal(AstNode::new(literal, span)), span))
+        }
+
+        PrimaryDec::LParen => unimplemented!(),
+
+        PrimaryDec::Err => unimplemented!(),
+    }
 }
 
 fn get_op(token: &Token) -> Option<BinOp> {
