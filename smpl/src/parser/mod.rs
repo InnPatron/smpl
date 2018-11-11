@@ -5,6 +5,7 @@ use err::Err;
 mod lalr_parser;
 mod tokens;
 mod parser;
+mod expr_parser;
 
 #[cfg(test)]
 pub mod lalr_parser;
