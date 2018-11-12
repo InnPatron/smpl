@@ -229,7 +229,11 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         }
     }).map_err(|e| format!("{:?}", e))? {
 
-        IdentLeafDec::AccessPath => unimplemented!(),
+        IdentLeafDec::AccessPath => {
+            let span = base_span.make_span();
+            let root = PathSegment::Ident(AstNode::new(base_ident, span));
+            access_path(tokens, root)
+        }
         IdentLeafDec::ModulePath => module_path(tokens, base_ident, base_span),
         IdentLeafDec::FnCall => unimplemented!(),
         IdentLeafDec::Indexing => unimplemented!(),
@@ -238,6 +242,68 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             Ok(AstNode::new(Expr::Binding(AstNode::new(base_ident, span)), span))
         }
     }
+}
+
+fn access_path(tokens: &mut BufferedTokenizer, root: PathSegment) 
+    -> ParseErr<AstNode<Expr>> {
+
+    let start = match root {
+        PathSegment::Ident(ref i) => i.span(),
+        PathSegment::Indexing(ref i, _) => i.span(),
+    };
+    
+    let mut end = start;
+    let mut path = vec![root];
+    while tokens.has_next() && tokens.peek(|tok| {
+        match tok {
+            Token::Dot => true,
+            _ => false,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+
+        let _dot = consume_token!(tokens, Token::Dot);
+        let path_segment = path_segment(tokens)?;
+
+        end = match path_segment {
+            PathSegment::Ident(ref i) => i.span(),
+            PathSegment::Indexing(ref i, _) => i.span(),
+        };
+        path.push(path_segment);
+    }
+
+    let span = Span::combine(start, end);
+
+    Ok(AstNode::new(Expr::FieldAccess(AstNode::new(Path(path), span)), span))
+    
+}
+
+// At end of path_segment, next token should be DOT or end of path
+fn path_segment(tokens: &mut BufferedTokenizer) -> ParseErr<PathSegment> {
+
+    enum SegmentDec {
+        Dot,
+        Indexing,
+        End,
+    }
+
+    let (ispan, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+
+    match tokens.peek(|tok| {
+        match tok {
+            Token::Dot => SegmentDec::Dot,
+            Token::LBracket => SegmentDec::Indexing,
+            _ => SegmentDec::End,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+
+        SegmentDec::Dot => (),
+        SegmentDec::End => (),
+
+        SegmentDec::Indexing => unimplemented!(),       // TODO: Indexing handler
+    }
+
+    let span = ispan.make_span();
+    Ok(PathSegment::Ident(AstNode::new(ident, span)))
 }
 
 fn fn_args(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Option<Vec<AstNode<Expr>>>>> {
