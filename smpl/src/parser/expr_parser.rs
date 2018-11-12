@@ -236,7 +236,38 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         }
         IdentLeafDec::ModulePath => module_path(tokens, base_ident, base_span),
         IdentLeafDec::FnCall => unimplemented!(),
-        IdentLeafDec::Indexing => unimplemented!(),
+        IdentLeafDec::Indexing => {
+            let _lbracket = consume_token!(tokens, Token::LBracket);
+            let indexer = parse_primary(tokens)?;
+            let indexer = expr(tokens, indexer, &[Delimiter::RBracket], 0)?;
+            let (indexer, _) = indexer.to_data();
+            let (rspan, _rbracket) = consume_token!(tokens, Token::RBracket);
+
+            if tokens.peek(|tok| {
+                match tok {
+                    Token::Dot => true,
+                    _ => false,
+                }
+            }).map_err(|e| format!("{:?}", e))? {
+
+                // Access path with indexing as root
+                let span = base_span.make_span();
+                let root = PathSegment::Indexing(AstNode::new(base_ident, span), Box::new(indexer));
+                access_path(tokens, root)
+
+            } else {
+
+                // Single indexing
+                let binding = Expr::Binding(AstNode::new(base_ident, base_span.make_span()));
+                let indexing = Indexing {
+                    array: Box::new(binding),
+                    indexer: Box::new(indexer),
+                };
+
+                let span = Span::combine(base_span.make_span(), rspan.make_span());
+                Ok(AstNode::new(Expr::Indexing(AstNode::new(indexing, span)), span))
+            }
+        },
         IdentLeafDec::Singleton => {
             let span = base_span.make_span();
             Ok(AstNode::new(Expr::Binding(AstNode::new(base_ident, span)), span))
