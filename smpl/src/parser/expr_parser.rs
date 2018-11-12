@@ -215,6 +215,49 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
     }
 }
 
+fn fn_args(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Option<Vec<AstNode<Expr>>>>> {
+    let (lspan, _) = consume_token!(tokens, Token::LParen);
+
+    let mut args: Option<Vec<AstNode<Expr>>> = None;
+
+    while tokens.has_next() &&
+        tokens.peek(|tok| {
+            match tok {
+                Token::RParen => false,
+
+                _ => true,
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+
+        let arg = parse_primary(tokens)?;
+        let arg = expr(tokens, arg, &[Delimiter::RParen, Delimiter::Comma], 0)?;
+
+        match args {
+            Some(mut a) => {
+                a.push(arg);
+                args = Some(a);
+            }
+            None => args = Some(vec![arg]),
+        }
+
+        if tokens.peek(|tok| {
+            match tok {
+                Token::Comma => true,
+                _ => false,
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+            let _comma = consume_token!(tokens, Token::Comma);
+        }
+    }
+
+    let (rspan, _) = consume_token!(tokens, Token::RParen);
+
+    let span = LocationSpan::new(lspan.start(), rspan.end());
+    let span = span.make_span();
+
+    Ok(AstNode::new(args, span))
+}
+
 fn module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: LocationSpan) 
     -> ParseErr<AstNode<Expr>> {
 
