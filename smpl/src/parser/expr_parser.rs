@@ -12,6 +12,7 @@ pub enum Delimiter {
     RBracket,
     Comma,
     Semi,
+    LBrace,
 }
 
 pub fn expr(tokens: &mut BufferedTokenizer, 
@@ -712,6 +713,7 @@ fn is_delim(token: &Token, delim: &[Delimiter]) -> bool {
         Token::RBracket => Delimiter::RBracket,
         Token::Comma => Delimiter::Comma,
         Token::Semi => Delimiter::Semi,
+        Token::LBrace => Delimiter::LBrace,
 
         _ => return false,
     };
