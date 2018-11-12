@@ -164,7 +164,19 @@ pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> 
             Ok(AstNode::new(Expr::Literal(AstNode::new(literal, span)), span))
         }
 
-        PrimaryDec::LParen => unimplemented!(),
+        PrimaryDec::LParen => {
+            let (lspan, _) = consume_token!(tokens, Token::LParen);
+
+            let inner_lhs = parse_primary(tokens)?;
+            let inner = expr(tokens, inner_lhs, &[Delimiter::RParen], 0)?;
+
+            let (rspan, _) = consume_token!(tokens, Token::RParen);
+
+            let span = LocationSpan::new(lspan.start(), rspan.end());
+            let span = span.make_span();
+
+            Ok(inner)
+        }
 
         PrimaryDec::Err => unimplemented!(),
     }
