@@ -235,7 +235,23 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             access_path(tokens, root)
         }
         IdentLeafDec::ModulePath => module_path(tokens, base_ident, base_span),
-        IdentLeafDec::FnCall => unimplemented!(),
+
+        IdentLeafDec::FnCall => {
+            let args = fn_args(tokens)?;
+            let (args, arg_span) = args.to_data();
+            let args = args.map(|v| v.into_iter().map(|a| a.to_data().0).collect());
+
+            let called = ModulePath(vec![AstNode::new(base_ident, base_span.make_span())]);
+
+            let fn_call = FnCall {
+                path: called,
+                args: args,
+            };
+
+            let span = Span::combine(base_span.make_span(), arg_span);
+            Ok(AstNode::new(Expr::FnCall(AstNode::new(fn_call, span)), span))
+        }
+
         IdentLeafDec::Indexing => {
             let _lbracket = consume_token!(tokens, Token::LBracket);
             let indexer = parse_primary(tokens)?;
