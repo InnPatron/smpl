@@ -139,7 +139,7 @@ pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> 
         }
     }).map_err(|e| format!("{:?}", e))? {
 
-        PrimaryDec::Ident => unimplemented!(),
+        PrimaryDec::Ident => parse_ident_leaf(tokens),
 
         PrimaryDec::UniExpr => unimplemented!(),
 
@@ -179,6 +179,39 @@ pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> 
         }
 
         PrimaryDec::Err => unimplemented!(),
+    }
+}
+
+fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+    enum IdentLeafDec {
+        AccessPath,
+        ModulePath,
+        Singleton,
+        FnCall,
+        Indexing,
+    }
+
+    let (base_span, base_ident) = consume_token!(tokens,
+                                                 Token::Identifier(ident) => Ident(ident));
+
+    match tokens.peek(|tok| {
+        match tok {
+            Token::Dot => IdentLeafDec::AccessPath,
+            Token::ColonColon => IdentLeafDec::ModulePath,
+            Token::LParen => IdentLeafDec::FnCall,
+            Token::LBracket => IdentLeafDec::Indexing,
+            _ => IdentLeafDec::Singleton,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+
+        IdentLeafDec::AccessPath => unimplemented!(),
+        IdentLeafDec::ModulePath => unimplemented!(),
+        IdentLeafDec::FnCall => unimplemented!(),
+        IdentLeafDec::Indexing => unimplemented!(),
+        IdentLeafDec::Singleton => {
+            let span = base_span.make_span();
+            Ok(AstNode::new(Expr::Binding(AstNode::new(base_ident, span)), span))
+        }
     }
 }
 
