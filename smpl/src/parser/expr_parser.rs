@@ -120,6 +120,7 @@ pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> 
         LParen,
         Err,
         StructInit,
+        ArrayInit,
     }
 
     match tokens.peek(|tok| {
@@ -138,6 +139,7 @@ pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> 
             Token::Identifier(_) => PrimaryDec::Ident,
 
             Token::Init => PrimaryDec::StructInit,
+            Token::LBracket => PrimaryDec::ArrayInit,
 
             _ => PrimaryDec::Err,
         }
@@ -207,6 +209,8 @@ pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> 
         }
 
         PrimaryDec::StructInit => struct_init(tokens),
+
+        PrimaryDec::ArrayInit => array_init(tokens),
 
         PrimaryDec::Err => unimplemented!(),
     }
@@ -548,6 +552,106 @@ fn struct_field_init(tokens: &mut BufferedTokenizer) -> ParseErr<(AstNode<Ident>
         .to_data();
 
     Ok((AstNode::new(ident, iloc.make_span()), Box::new(expr)))
+}
+
+fn array_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+
+    enum InitDec {
+        SingleList,
+        List,
+        Value,
+        Err,
+    }
+
+    let (lloc, _) = consume_token!(tokens, Token::LBracket);
+
+    let base_expr = parse_primary(tokens)?;
+    let (base_expr, _) = expr(tokens, 
+                              base_expr,
+                              &[Delimiter::Comma, Delimiter::RBracket],
+                              0)?
+        .to_data();
+
+    let init = if tokens.has_next() {
+        match tokens.peek(|tok| {
+            match tok {
+                Token::Comma => InitDec::List,
+                Token::Colon => InitDec::Value,
+                Token::RBracket => InitDec::SingleList,
+                _ => InitDec::Err
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+
+            InitDec::SingleList => ArrayInit::InitList(vec![base_expr]),
+
+            InitDec::List => {
+                let mut list = array_init_list(tokens)?;
+
+                list.insert(0, base_expr);
+
+                ArrayInit::InitList(list)
+            }
+
+            InitDec::Value => {
+                let _semi = consume_token!(tokens, Token::Semi);
+                let (_, number) = consume_token!(tokens, Token::IntLiteral(i) => i);
+
+                if number <= 0 {
+                    unimplemented!("Invalid array size: {}", number);
+                }
+
+                ArrayInit::Value(Box::new(base_expr), number as u64)
+            }
+
+            InitDec::Err => unimplemented!("Unexpected token"),
+        }
+    } else {
+        unimplemented!("Unexpected end of input");
+    };
+
+    let (rloc, _) = consume_token!(tokens, Token::RBracket);
+
+    let span = LocationSpan::new(lloc.start(), rloc.end());
+
+    let array_init = AstNode::new(init, span.make_span());
+
+    Ok(AstNode::new(Expr::ArrayInit(array_init), span.make_span()))
+}
+
+fn array_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Expr>> {
+    // First element already consumed, check for rest of list
+    let mut list = Vec::new(); 
+
+    while tokens.has_next() {
+        if tokens.peek(|tok| {
+            match tok {
+                Token::Comma => true,
+                _ => false
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+            let _comma = consume_token!(tokens, Token::Comma);
+            if tokens.has_next() && tokens.peek(|tok| {
+                match tok {
+                    Token::RBracket => false,
+                    _ => true,
+                }
+            }).map_err(|e| format!("{:?}", e))? {
+                let data = parse_primary(tokens)?;
+                list.push(expr(tokens,
+                               data,
+                               &[Delimiter::Comma, Delimiter::RBracket],
+                               0
+                               )?
+                          .to_data()
+                          .0);
+                continue;
+            }
+        }
+
+        break;
+    }
+
+    Ok(list)
 }
 
 fn is_delim(token: &Token, delim: &[Delimiter]) -> bool {
