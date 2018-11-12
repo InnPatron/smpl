@@ -205,13 +205,60 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
     }).map_err(|e| format!("{:?}", e))? {
 
         IdentLeafDec::AccessPath => unimplemented!(),
-        IdentLeafDec::ModulePath => unimplemented!(),
+        IdentLeafDec::ModulePath => module_path(tokens, base_ident, base_span),
         IdentLeafDec::FnCall => unimplemented!(),
         IdentLeafDec::Indexing => unimplemented!(),
         IdentLeafDec::Singleton => {
             let span = base_span.make_span();
             Ok(AstNode::new(Expr::Binding(AstNode::new(base_ident, span)), span))
         }
+    }
+}
+
+fn module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: LocationSpan) 
+    -> ParseErr<AstNode<Expr>> {
+
+    // Assume there at least 1 '::'
+    let root = AstNode::new(base, base_span.make_span());
+    let mut path = vec![root];
+    let mut end = base_span;
+
+    while tokens.has_next() && 
+        tokens.peek(|tok| {
+            match tok {
+                Token::ColonColon => true,
+                _ => false,
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+    
+        let (cspan, _) = consume_token!(tokens, Token::ColonColon);
+        let (ispan, ident) = consume_token!(tokens, 
+                                            Token::Identifier(i) => Ident(i));
+
+        let span = ispan;
+        end = span;     // Widen path span to end of current ident
+
+        path.push(AstNode::new(ident, span.make_span()));
+    }
+
+    // End of module path
+    // Check if FN call
+    if tokens.has_next() &&
+        tokens.peek(|tok| {
+            match tok {
+                Token::LParen => true,
+                _ => false,
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+
+        // FN call
+        unimplemented!()
+    } else {
+        let span = LocationSpan::new(base_span.start(), end.end());
+        let span = span.make_span();
+
+        let mod_access = AstNode::new(ModulePath(path), span);
+        Ok(AstNode::new(Expr::ModAccess(mod_access), span))
     }
 }
 
