@@ -524,6 +524,7 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
         Return,
 
         While,
+        If,
 
         Finished,
         Expr,
@@ -541,6 +542,7 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
                 Token::Return => BlockDec::Return,
 
                 Token::While => BlockDec::While,
+                Token::If => BlockDec::If,
                 
                 Token::RBrace => BlockDec::Finished,
 
@@ -564,6 +566,10 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
                 stmts.push(Stmt::ExprStmt(while_stmt(tokens)?));
             }
 
+            BlockDec::If => {
+                stmts.push(Stmt::ExprStmt(if_stmt(tokens)?));
+            }
+
             BlockDec::Expr => {
                 let primary = parse_primary(tokens)?;
                 let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
@@ -585,6 +591,80 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
         block,
         span.make_span())
     )
+}
+
+fn if_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
+
+    enum IfDec {
+        Elif,
+        Else,
+        End,
+    }
+
+    let (ifloc, _) = consume_token!(tokens, Token::If);
+
+    let mut end = ifloc.make_span();
+
+    let first_branch = if_branch(tokens)?;
+    end = first_branch.block.span();
+
+    let mut branches = vec![first_branch];
+    let mut default_branch = None;
+
+    while tokens.has_next() {
+        match tokens.peek(|tok| {
+            match tok {
+                Token::Elif => IfDec::Elif,
+                Token::Else => IfDec::Else,
+
+                _ => IfDec::End,
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+            IfDec::Elif => {
+                let _elif = consume_token!(tokens, Token::Elif);
+
+                let branch = if_branch(tokens)?;
+                end = branch.block.span();
+
+                branches.push(branch);
+            }
+
+            IfDec::Else => {
+                let _else = consume_token!(tokens, Token::Else);
+                let block = block(tokens)?;
+
+                end = block.span();
+                default_branch = Some(block);
+
+                break;
+            }
+
+            IfDec::End => break,
+        }
+    }
+
+    let span = Span::combine(ifloc.make_span(), end);
+
+    let if_stmt = If {
+        branches: branches,
+        default_block: default_branch,
+    };
+
+    Ok(AstNode::new(ExprStmt::If(if_stmt), span))
+}
+
+fn if_branch(tokens: &mut BufferedTokenizer) -> ParseErr<Branch> {
+    let primary = parse_primary(tokens)?;
+    let conditional = expr(tokens, primary, &[Delimiter::LBrace], 0)?;
+
+    let block = block(tokens)?;
+
+    let branch = Branch {
+        conditional: conditional,
+        block: block,
+    };
+
+    Ok(branch)
 }
 
 fn while_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
