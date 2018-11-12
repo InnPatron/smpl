@@ -125,6 +125,7 @@ pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> 
         match tok {
             Token::Plus => PrimaryDec::UniExpr,
             Token::Minus => PrimaryDec::UniExpr,
+            Token::Invert => PrimaryDec::UniExpr,
 
             Token::IntLiteral(_) => PrimaryDec::Literal,
             Token::FloatLiteral(_) => PrimaryDec::Literal,
@@ -141,7 +142,31 @@ pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> 
 
         PrimaryDec::Ident => parse_ident_leaf(tokens),
 
-        PrimaryDec::UniExpr => unimplemented!(),
+        PrimaryDec::UniExpr => {
+            let (uspan, uop) = consume_token!(tokens);
+            
+            let uop = match uop {
+                Token::Plus => return parse_primary(tokens),
+
+                Token::Minus => UniOp::Negate,
+
+                Token::Invert => UniOp::LogicalInvert,
+
+                _ => unreachable!(),
+            };
+
+            let base = parse_primary(tokens)?;
+            let (base, sbase) = base.to_data();
+
+            let span = Span::combine(uspan.make_span(), sbase);
+
+            let uexpr = UniExpr {
+                op: uop,
+                expr: Box::new(base),
+            };
+
+            Ok(AstNode::new(Expr::Uni(AstNode::new(uexpr, span)), span))
+        }
 
         PrimaryDec::Literal => {
             let (next_span, next) = tokens
