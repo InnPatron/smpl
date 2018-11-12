@@ -516,12 +516,53 @@ fn fn_type_params(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<TypeAn
 }
 
 pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
+
+    enum BlockDec {
+        Continue,
+        Break,
+
+        Finished,
+        Expr,
+    }
+
     let (lloc, _) = consume_token!(tokens, Token::LBrace);
+
+    let mut stmts = Vec::new();
+    // Parse for all statements untile '}'
+    while tokens.has_next() {
+        match tokens.peek(|tok| {
+            match tok {
+                Token::Continue => BlockDec::Continue,
+                Token::Break => BlockDec::Break,
+                
+                Token::RBrace => BlockDec::Finished,
+
+                _ => BlockDec::Expr,
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+
+            BlockDec::Continue => {
+                stmts.push(Stmt::ExprStmt(continue_stmt(tokens)?));
+            }
+
+            BlockDec::Break => {
+                stmts.push(Stmt::ExprStmt(continue_stmt(tokens)?));
+            }
+
+            BlockDec::Expr => unimplemented!(),
+
+            BlockDec::Finished => break,
+        }
+    }
+    
     let (rloc, _) = consume_token!(tokens, Token::RBrace);
 
     let span = LocationSpan::new(lloc.start(), rloc.end());
+
+    let block = Block(stmts);
+
     Ok(AstNode::new(
-        unimplemented!(),
+        block,
         span.make_span())
     )
 }
