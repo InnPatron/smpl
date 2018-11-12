@@ -6,6 +6,7 @@ use super::tokens::*;
 use super::parser::ParseErr;
 use crate::consume_token;
 
+#[derive(PartialEq)]
 pub enum Delimiter {
     RParen,
     RBracket,
@@ -14,7 +15,7 @@ pub enum Delimiter {
 
 pub fn expr(tokens: &mut BufferedTokenizer, 
             mut lhs: AstNode<Expr>, 
-            delim_token: &[Delimiter], 
+            delim_tokens: &[Delimiter], 
             min_precedence: u64) 
     -> ParseErr<AstNode<Expr>> {
 
@@ -30,6 +31,11 @@ pub fn expr(tokens: &mut BufferedTokenizer,
         }
 
         let peek_result = tokens.peek(|tok| {
+
+            if is_delim(tok, delim_tokens) {
+                return PeekResult::Break;
+            }
+
             let op = match get_op(tok) {
                 Some(op) => op,
                 None => return PeekResult::Break,
@@ -58,6 +64,12 @@ pub fn expr(tokens: &mut BufferedTokenizer,
             }
 
             let peek_result = tokens.peek(|tok| {
+
+                // TODO: Is this delimiter check correct?
+                if is_delim(tok, delim_tokens) {
+                    return PeekResult::Break;
+                }
+
                 let op = match get_op(tok) {
                     Some(op) => op,
                     None => return PeekResult::Break,
@@ -78,7 +90,7 @@ pub fn expr(tokens: &mut BufferedTokenizer,
 
             let rhs_op_prec = bin_op_precedence(&rhs_op_peek);
             
-            rhs = expr(tokens, rhs, delim_token, rhs_op_prec)?;
+            rhs = expr(tokens, rhs, delim_tokens, rhs_op_prec)?;
         }
 
         let span = Span::combine(lhs.span(), rhs.span());
@@ -156,6 +168,18 @@ pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> 
 
         PrimaryDec::Err => unimplemented!(),
     }
+}
+
+fn is_delim(token: &Token, delim: &[Delimiter]) -> bool {
+    let token = match token {
+        Token::RParen => Delimiter::RParen,
+        Token::RBracket => Delimiter::RBracket,
+        Token::Comma => Delimiter::Comma,
+
+        _ => return false,
+    };
+
+    delim.contains(&token)
 }
 
 fn get_op(token: &Token) -> Option<BinOp> {
