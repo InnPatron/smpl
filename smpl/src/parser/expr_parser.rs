@@ -299,7 +299,21 @@ fn path_segment(tokens: &mut BufferedTokenizer) -> ParseErr<PathSegment> {
         SegmentDec::Dot => (),
         SegmentDec::End => (),
 
-        SegmentDec::Indexing => unimplemented!(),       // TODO: Indexing handler
+        SegmentDec::Indexing => {
+            // TODO: Convert path indexing segment to use Expr, Expr form instead of Ident form
+            // TODO: Allow multiple indexing
+            
+            let _lbracket = consume_token!(tokens, Token::LBracket);
+
+            let indexer = parse_primary(tokens)?;
+            let indexer = expr(tokens, indexer, &[Delimiter::RBracket], 0)?;
+            let (indexer, _) = indexer.to_data();
+
+            let _rbracket = consume_token!(tokens, Token::RBracket);
+
+            return Ok(PathSegment::Indexing(AstNode::new(ident, ispan.make_span()), 
+                                            Box::new(indexer)));
+        }
     }
 
     let span = ispan.make_span();
