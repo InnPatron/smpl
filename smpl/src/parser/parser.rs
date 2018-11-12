@@ -521,6 +521,7 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
     enum BlockDec {
         Continue,
         Break,
+        Return,
 
         Finished,
         Expr,
@@ -535,6 +536,7 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
             match tok {
                 Token::Continue => BlockDec::Continue,
                 Token::Break => BlockDec::Break,
+                Token::Return => BlockDec::Return,
                 
                 Token::RBrace => BlockDec::Finished,
 
@@ -548,6 +550,10 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
 
             BlockDec::Break => {
                 stmts.push(Stmt::ExprStmt(continue_stmt(tokens)?));
+            }
+
+            BlockDec::Return => {
+                stmts.push(Stmt::ExprStmt(return_stmt(tokens)?));
             }
 
             BlockDec::Expr => {
@@ -571,6 +577,38 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
         block,
         span.make_span())
     )
+}
+
+fn return_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
+    let (returnloc, _) = consume_token!(tokens, Token::Return);
+
+    let mut end = returnloc.make_span();
+
+    let expr = if tokens.peek(|tok| {
+        match tok {
+            Token::Semi => true,
+            _ => false,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        // No expression
+        let (semiloc, _) = consume_token!(tokens, Token::Semi);
+        end = semiloc.make_span();
+
+        None
+    } else {
+        // Expression
+        let primary = parse_primary(tokens)?;
+        let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
+
+        let _semi = consume_token!(tokens, Token::Semi);
+
+        end = expr.span();
+
+        Some(expr)
+    };
+
+    let span = Span::combine(returnloc.make_span(), end);
+    Ok(AstNode::new(ExprStmt::Return(span, expr.map(|e| e.to_data().0)), span))
 }
 
 fn continue_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
