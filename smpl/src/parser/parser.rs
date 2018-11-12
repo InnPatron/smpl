@@ -523,6 +523,8 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
         Break,
         Return,
 
+        While,
+
         Finished,
         Expr,
     }
@@ -537,6 +539,8 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
                 Token::Continue => BlockDec::Continue,
                 Token::Break => BlockDec::Break,
                 Token::Return => BlockDec::Return,
+
+                Token::While => BlockDec::While,
                 
                 Token::RBrace => BlockDec::Finished,
 
@@ -554,6 +558,10 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
 
             BlockDec::Return => {
                 stmts.push(Stmt::ExprStmt(return_stmt(tokens)?));
+            }
+
+            BlockDec::While => {
+                stmts.push(Stmt::ExprStmt(while_stmt(tokens)?));
             }
 
             BlockDec::Expr => {
@@ -577,6 +585,24 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
         block,
         span.make_span())
     )
+}
+
+fn while_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
+    let (whileloc, _) = consume_token!(tokens, Token::While);
+
+    let primary = parse_primary(tokens)?;
+    let conditional = expr(tokens, primary, &[Delimiter::LBrace], 0)?;
+
+    let block = block(tokens)?;
+
+    let span = Span::combine(whileloc.make_span(), block.span());
+
+    let while_stmt = While {
+        conditional: conditional,
+        block: block,
+    };
+
+    Ok(AstNode::new(ExprStmt::While(while_stmt), span))
 }
 
 fn return_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
