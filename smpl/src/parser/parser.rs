@@ -526,6 +526,8 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
         While,
         If,
 
+        LocalVar,
+
         Finished,
         Expr,
     }
@@ -543,6 +545,8 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
 
                 Token::While => BlockDec::While,
                 Token::If => BlockDec::If,
+
+                Token::Let => BlockDec::LocalVar,
                 
                 Token::RBrace => BlockDec::Finished,
 
@@ -570,6 +574,10 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
                 stmts.push(Stmt::ExprStmt(if_stmt(tokens)?));
             }
 
+            BlockDec::LocalVar => {
+                stmts.push(Stmt::ExprStmt(local_var_decl(tokens)?));
+            }
+
             BlockDec::Expr => {
                 let primary = parse_primary(tokens)?;
                 let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
@@ -591,6 +599,48 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
         block,
         span.make_span())
     )
+}
+
+fn local_var_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
+    let (letloc, _) = consume_token!(tokens, Token::Let);
+
+    let (iloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+    let ident = AstNode::new(ident, iloc.make_span());
+
+    let mut type_anno = None;
+
+    if tokens.has_next() == false {
+        return Err("Unexpected end of input".to_string());
+    }
+
+    if tokens.peek(|tok| {
+        match tok {
+            Token::Colon => true,
+            _ => false,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+
+        let _colon = consume_token!(tokens, Token::Colon);
+        type_anno = Some(type_annotation(tokens)?);
+    }
+
+    let _assign = consume_token!(tokens, Token::Assign);
+
+    let primary = parse_primary(tokens)?;
+    let init_value = expr(tokens, primary, &[Delimiter::Semi], 0)?.to_data();
+
+    let (semiloc, _) = consume_token!(tokens, Token::Semi);
+
+    let span = LocationSpan::new(letloc.start(), semiloc.end());
+    let span = span.make_span();
+
+    let local_var_decl = LocalVarDecl {
+        var_type: type_anno,
+        var_name: ident,
+        var_init: init_value.0,
+    };
+
+    Ok(AstNode::new(ExprStmt::LocalVarDecl(local_var_decl), span))
 }
 
 fn if_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
