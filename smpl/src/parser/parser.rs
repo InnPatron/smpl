@@ -549,7 +549,7 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
             }
 
             BlockDec::Break => {
-                stmts.push(Stmt::ExprStmt(continue_stmt(tokens)?));
+                stmts.push(Stmt::ExprStmt(break_stmt(tokens)?));
             }
 
             BlockDec::Return => {
