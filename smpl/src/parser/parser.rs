@@ -3,6 +3,7 @@ use std::iter::{Iterator, Peekable};
 use span::*;
 use ast::*;
 use super::tokens::*;
+use super::expr_parser::*;
 
 pub type ParseErr<T> = Result<T, String>;
 
@@ -549,7 +550,12 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
                 stmts.push(Stmt::ExprStmt(continue_stmt(tokens)?));
             }
 
-            BlockDec::Expr => unimplemented!(),
+            BlockDec::Expr => {
+                let primary = parse_primary(tokens)?;
+                let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
+
+                stmts.push(Stmt::Expr(expr));
+            }
 
             BlockDec::Finished => break,
         }
