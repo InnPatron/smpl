@@ -3,7 +3,7 @@ use std::iter::{Iterator, Peekable};
 use span::*;
 use ast::*;
 use super::tokens::*;
-use super::parser::ParseErr;
+use super::parser::{module_binding as full_module_binding, ParseErr};
 use crate::consume_token;
 
 #[derive(PartialEq)]
@@ -119,6 +119,7 @@ pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> 
         UniExpr,
         LParen,
         Err,
+        StructInit,
     }
 
     match tokens.peek(|tok| {
@@ -135,6 +136,8 @@ pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> 
             Token::LParen => PrimaryDec::LParen,
 
             Token::Identifier(_) => PrimaryDec::Ident,
+
+            Token::Init => PrimaryDec::StructInit,
 
             _ => PrimaryDec::Err,
         }
@@ -202,6 +205,8 @@ pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> 
 
             Ok(inner)
         }
+
+        PrimaryDec::StructInit => struct_init(tokens),
 
         PrimaryDec::Err => unimplemented!(),
     }
@@ -469,6 +474,80 @@ fn module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: LocationS
         let mod_access = AstNode::new(ModulePath(path), span);
         Ok(AstNode::new(Expr::ModAccess(mod_access), span))
     }
+}
+
+fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+    let (linit, _) = consume_token!(tokens, Token::Init);
+    let (path, _) = full_module_binding(tokens)?.to_data();
+
+    let _lbrace = consume_token!(tokens, Token::LBrace);
+
+    let mut init = None;
+    if tokens.peek(|tok| {
+        match tok {
+            Token::RBrace => false,
+            _ => true,
+        }
+
+    }).map_err(|e| format!("{:?}", e))? {
+        init = Some(struct_field_init_list(tokens)?);
+    }
+
+    let (lroc, _rbrace) = consume_token!(tokens, Token::RBrace);
+
+    let span = LocationSpan::new(linit.start(), lroc.end());
+
+    let struct_init = StructInit {
+        struct_name: path,
+        field_init: init,
+    };
+
+    let struct_init = AstNode::new(struct_init, span.make_span());
+
+    Ok(AstNode::new(Expr::StructInit(struct_init), span.make_span()))
+}
+
+fn struct_field_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<(AstNode<Ident>, Box<Expr>)>> {
+    let mut list = vec![struct_field_init(tokens)?];
+
+    while tokens.has_next() {
+        if tokens.peek(|tok| {
+            match tok {
+                Token::Comma => true,
+                _ => false
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+            let _comma = consume_token!(tokens, Token::Comma);
+            if tokens.has_next() && tokens.peek(|tok| {
+                match tok {
+                    Token::RBrace => false,
+                    _ => true,
+                }
+            }).map_err(|e| format!("{:?}", e))? {
+                list.push(struct_field_init(tokens)?);
+                continue;
+            }
+        }
+
+        break;
+    }
+
+    Ok(list)
+}
+
+fn struct_field_init(tokens: &mut BufferedTokenizer) -> ParseErr<(AstNode<Ident>, Box<Expr>)> {
+    let (iloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+
+    let _colon = consume_token!(tokens, Token::Colon);
+
+    let field_init = parse_primary(tokens)?;
+    let (expr, _) = expr(tokens, 
+                         field_init, 
+                         &[Delimiter::Comma, Delimiter::RParen], 
+                         0)?
+        .to_data();
+
+    Ok((AstNode::new(ident, iloc.make_span()), Box::new(expr)))
 }
 
 fn is_delim(token: &Token, delim: &[Delimiter]) -> bool {
