@@ -295,7 +295,21 @@ fn module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: LocationS
         }).map_err(|e| format!("{:?}", e))? {
 
         // FN call
-        unimplemented!()
+        let (args, args_span) = fn_args(tokens)?.to_data();
+
+        let start = base_span.make_span();
+
+        let span = Span::combine(start, args_span);
+
+        let fn_call = FnCall {
+            path: ModulePath(path), 
+            args: args.map(|v| v.into_iter().map(|e| e.to_data().0).collect::<Vec<_>>()),
+        };
+
+        // TODO: FnCall chain check
+
+        Ok(AstNode::new(Expr::FnCall(AstNode::new(fn_call, span)), span))
+
     } else {
         let span = LocationSpan::new(base_span.start(), end.end());
         let span = span.make_span();
