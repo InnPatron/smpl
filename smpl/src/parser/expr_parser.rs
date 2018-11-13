@@ -583,7 +583,7 @@ fn array_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         match tokens.peek(|tok| {
             match tok {
                 Token::Comma => InitDec::List,
-                Token::Colon => InitDec::Value,
+                Token::Semi => InitDec::Value,
                 Token::RBracket => InitDec::SingleList,
                 _ => InitDec::Err
             }
