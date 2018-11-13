@@ -77,7 +77,7 @@ pub fn expr(tokens: &mut BufferedTokenizer,
                     None => return PeekResult::Break,
                 };
 
-                if bin_op_precedence(&op) >= main_prec ||
+                if bin_op_precedence(&op) > main_prec ||
                 (is_left_associative(&op) == false && bin_op_precedence(&op) == main_prec) {
                     PeekResult::Execute(op)
                 } else {
