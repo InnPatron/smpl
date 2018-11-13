@@ -10,8 +10,7 @@ mod parser_tests {
 
     fn parse_expr_quick(input: &str) -> Expr {
         let mut tokens = buffer_input(input);
-        let primary = parse_primary(&mut tokens).unwrap();
-        let expr = expr(&mut tokens, primary, &[], 0).unwrap();
+        let expr = piped_expr(&mut tokens, &[]).unwrap();
 
         expr.to_data().0
     }
@@ -438,55 +437,35 @@ struct TestStruct {
     fn parse_float_expr() {
         let input = "1.5";
         let mut input = buffer_input(input);
-        let lhs = parse_primary(&mut input).unwrap();
-        expr(&mut input, 
-             lhs,
-             &[],
-             0).unwrap();
+        piped_expr(&mut input, &[]).unwrap();
     }
 
     #[test]
     fn parse_another_complex_expr() {
         let input = "1 + 10 * 4 / 3 == 5 && false";
         let mut input = buffer_input(input);
-        let lhs = parse_primary(&mut input).unwrap();
-        expr(&mut input, 
-             lhs,
-             &[],
-             0).unwrap();
+        piped_expr(&mut input, &[]).unwrap();
     }
 
     #[test]
     fn parse_math_expr() {
         let input = "1 + 10 * 4 / 3";
         let mut input = buffer_input(input);
-        let lhs = parse_primary(&mut input).unwrap();
-        expr(&mut input, 
-             lhs,
-             &[],
-             0).unwrap();
+        piped_expr(&mut input, &[]).unwrap();
     }
 
     #[test]
     fn parse_paren_expr() {
         let input = "(1 + 10) * (4 / 3)";
         let mut input = buffer_input(input);
-        let lhs = parse_primary(&mut input).unwrap();
-        expr(&mut input, 
-             lhs,
-             &[],
-             0).unwrap();
+        piped_expr(&mut input, &[]).unwrap();
     }
 
     #[test]
     fn parse_nested_paren_expr() {
         let input = "((1 + 10) * (4 / (3)))";
         let mut input = buffer_input(input);
-        let lhs = parse_primary(&mut input).unwrap();
-        expr(&mut input, 
-             lhs,
-             &[],
-             0).unwrap();
+        piped_expr(&mut input, &[]).unwrap();
     }
 
     #[test]
