@@ -527,6 +527,7 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
         If,
 
         LocalVar,
+        PotentialAssign,
 
         Finished,
         Expr,
@@ -549,6 +550,8 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
                 Token::Let => BlockDec::LocalVar,
                 
                 Token::RBrace => BlockDec::Finished,
+
+                Token::Identifier(_) => BlockDec::PotentialAssign,
 
                 _ => BlockDec::Expr,
             }
@@ -578,6 +581,10 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
                 stmts.push(Stmt::ExprStmt(local_var_decl(tokens)?));
             }
 
+            BlockDec::PotentialAssign => {
+                stmts.push(potential_assign(tokens)?);
+            }
+
             BlockDec::Expr => {
                 let primary = parse_primary(tokens)?;
                 let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
@@ -599,6 +606,205 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
         block,
         span.make_span())
     )
+}
+
+fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
+    enum Dec {
+        AccessPath,
+        ModulePath,
+        FnCall,
+        Indexing,
+        DefSingletonAssignment,
+        DefSingletonExpr,
+    }
+
+    enum PathDec {
+        Assign,
+        Expr,
+    }
+
+    let (base_span, base_ident) = consume_token!(tokens,
+                                                 Token::Identifier(ident) => Ident(ident));
+
+    // Check if there is a full Access Path
+    // If there is module path or function call, parse for expr ';'
+    // If there is a 'ident = ...', parse for assignment
+    // If there is a 'ident op ...', parse for expr ';'
+    let path = match tokens.peek(|tok| {
+        match tok {
+            Token::Dot => Dec::AccessPath,
+            Token::ColonColon => Dec::ModulePath,
+            Token::LParen => Dec::FnCall,
+            Token::LBracket => Dec::Indexing,
+            Token::Assign => Dec::DefSingletonAssignment,
+            _ => Dec::DefSingletonExpr,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+
+        Dec::AccessPath => {
+            let span = base_span.make_span();
+            let root = PathSegment::Ident(AstNode::new(base_ident, span));
+            
+            let (path, _span) = access_path(tokens, root)?.to_data();
+
+            match path {
+                Expr::FieldAccess(path) => path,
+                _ => unreachable!(),
+            }
+        }
+
+        Dec::ModulePath => {
+            // Expecting: expr ';'
+            // Module paths are not lvalues
+
+            let primary = expr_module_path(tokens, base_ident, base_span)?;
+            let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
+
+            let _semi = consume_token!(tokens, Token::Semi);
+
+            return Ok(Stmt::Expr(expr));
+        }
+
+        Dec::FnCall => {
+            // Expecting: expr ';'
+            // Function calls are not lvalues
+
+            let args = fn_args(tokens)?;
+            let (args, arg_span) = args.to_data();
+            let args = args.map(|v| v.into_iter().map(|a| a.to_data().0).collect());
+
+            let called = ModulePath(vec![AstNode::new(base_ident, base_span.make_span())]);
+
+            let fn_call = FnCall {
+                path: called,
+                args: args,
+            };
+
+            let span = Span::combine(base_span.make_span(), arg_span);
+            let primary = AstNode::new(Expr::FnCall(AstNode::new(fn_call, span)), span);
+            let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
+            
+            return Ok(Stmt::Expr(expr));
+        }
+
+        Dec::Indexing => {
+            let _lbracket = consume_token!(tokens, Token::LBracket);
+            let indexer = parse_primary(tokens)?;
+            let indexer = expr(tokens, indexer, &[Delimiter::RBracket], 0)?;
+            let (indexer, _) = indexer.to_data();
+            let (rspan, _rbracket) = consume_token!(tokens, Token::RBracket);
+
+            if tokens.peek(|tok| {
+                match tok {
+                    Token::Dot => true,
+                    _ => false,
+                }
+            }).map_err(|e| format!("{:?}", e))? {
+
+                // Access path with indexing as root
+                let span = base_span.make_span();
+                let root = PathSegment::Indexing(AstNode::new(base_ident, span), Box::new(indexer));
+
+                let (path, _span) = access_path(tokens, root)?.to_data();
+                match path {
+                    Expr::FieldAccess(path) => path,
+                    _ => unreachable!(),
+                }
+
+            } else {
+
+                //Single indexing
+                let span = base_span.make_span();
+                let root = PathSegment::Indexing(AstNode::new(base_ident, span), Box::new(indexer));
+
+                let path = vec![root];
+                let path = Path(path);
+                
+                AstNode::new(path, span)
+            }
+        },
+
+        Dec::DefSingletonAssignment => {
+            let _assignop = consume_token!(tokens, Token::Assign);
+
+            let primary = parse_primary(tokens)?;
+            let value = expr(tokens, primary, &[Delimiter::Semi], 0)?;
+            let (value, value_span) = value.to_data();
+
+            let _semi = consume_token!(tokens, Token::Semi);
+
+            let segment = PathSegment::Ident(AstNode::new(base_ident, base_span.make_span()));
+            let path = vec![segment];
+            let path = AstNode::new(Path(path), base_span.make_span());
+
+            let assignment_span = Span::combine(base_span.make_span(), value_span);
+            let assignment = Assignment {
+                name: path,
+                value: value,
+            };
+
+            let assignment = ExprStmt::Assignment(assignment);
+
+            return Ok(Stmt::ExprStmt(AstNode::new(assignment, assignment_span)));
+        }
+
+        Dec::DefSingletonExpr => {
+            // Expecting: expr ';'
+            // 'ident op' is not a lvalue
+            let span = base_span.make_span();
+            let primary = AstNode::new(Expr::Binding(AstNode::new(base_ident, span)), span);
+            let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
+
+            return Ok(Stmt::Expr(expr));
+        }
+    };
+
+    // Found a full path
+    // Check if it's an assignment or expression
+
+    if tokens.has_next() == false {
+        return Err("Unexpected end of input".to_string());
+    }
+
+    match tokens.peek(|tok| {
+        match tok {
+            Token::Assign => PathDec::Assign,
+            _ => PathDec::Expr,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+        
+        PathDec::Assign => {
+            let path = path;
+
+            let _assign = consume_token!(tokens, Token::Assign);
+
+            let primary = parse_primary(tokens)?;
+
+            let (value, value_span) = expr(tokens, primary, &[Delimiter::Semi], 0)?.to_data();
+
+            let _semi = consume_token!(tokens, Token::Semi);
+
+            let span = Span::combine(path.span(), value_span);
+            let assignment = Assignment {
+                name: path,
+                value: value,
+            };
+
+            Ok(Stmt::ExprStmt(AstNode::new(ExprStmt::Assignment(assignment), span)))
+        }
+
+        PathDec::Expr => {
+            let span = path.span();
+            let path = Expr::FieldAccess(path);
+
+            let primary = AstNode::new(path, span);
+            let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
+
+            let _semi = consume_token!(tokens, Token::Semi);
+
+            Ok(Stmt::Expr(expr))
+        }
+    }
 }
 
 fn local_var_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
