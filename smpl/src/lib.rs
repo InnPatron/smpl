@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate irmatch;
 extern crate itertools;
-extern crate lalrpop_util;
 extern crate petgraph;
 extern crate strfmt;
 

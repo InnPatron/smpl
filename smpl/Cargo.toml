@@ -9,12 +9,8 @@ description = "Core library to compile the SMPL language"
 license="MIT"
 repository="https://github.com/InnPatron/smpl-mirror"
 
-[build-dependencies]
-lalrpop = "0.15.2"
-
 [dependencies]
 itertools = "0.6.3"
-lalrpop-util = "0.15.2"
 regex = "0.2.1"
 petgraph = "0.4.9"
 irmatch = "0.2.0"
