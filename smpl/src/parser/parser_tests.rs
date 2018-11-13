@@ -208,63 +208,6 @@ init NAME {
     }
 
     #[test]
-    fn test_parse_string() {
-        let input = r##""test""##;
-        let input = wrap_input(input);
-        let parser = LiteralParser::new();
-        let literal = parser.parse(input).unwrap();
-        match literal {
-            Literal::String(ref string) => assert_eq!(string, "test"),
-            _ => panic!(),
-        }
-    }
-
-    #[test]
-    fn test_parse_numbers() {
-        let parser = LiteralParser::new();
-
-        let input = "21";
-        let input = wrap_input(input);
-        let literal = parser.parse(input).unwrap();
-        match literal {
-            Literal::Int(int) => assert_eq!(int, 21),
-            _ => panic!(),
-        }
-
-        let input = "-21";
-        let input = wrap_input(input);
-        let literal = parser.parse(input).unwrap();
-        match literal {
-            Literal::Int(int) => assert_eq!(int, -21),
-            _ => panic!(),
-        }
-
-        let input = "21.0";
-        let input = wrap_input(input);
-        let literal = parser.parse(input).unwrap();
-        match literal {
-            Literal::Float(float) => assert_eq!(float, 21.0),
-            _ => panic!(),
-        }
-
-        let input = "21.";
-        let input = wrap_input(input);
-        let literal = parser.parse(input).unwrap();
-        match literal {
-            Literal::Float(float) => assert_eq!(float, 21.0),
-            _ => panic!(),
-        }
-
-        let input = "-21.";
-        let input = wrap_input(input);
-        let literal = parser.parse(input).unwrap();
-        match literal {
-            Literal::Float(float) => assert_eq!(float, -21.0),
-            _ => panic!(),
-        }
-    }
-
-    #[test]
     fn test_parse_local_var_decl() {
         let input = "let a: int = 10;";
 
