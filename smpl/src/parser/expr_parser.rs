@@ -6,13 +6,77 @@ use super::tokens::*;
 use super::parser::{module_binding as full_module_binding, ParseErr, fn_param_list, block, type_annotation};
 use crate::consume_token;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Delimiter {
     RParen,
     RBracket,
     Comma,
     Semi,
     LBrace,
+    Pipe,
+}
+
+pub fn piped_expr(tokens: &mut BufferedTokenizer, delim_tokens: &[Delimiter]) 
+    -> ParseErr<AstNode<Expr>> {
+    let mut delimiters = delim_tokens.to_vec();
+    delimiters.push(Delimiter::Pipe);
+
+    let primary_base = parse_primary(tokens)?;
+    let expr_base = expr(tokens, primary_base, &delim_tokens, 0)?;
+
+    let mut piped_exprs = Vec::new();
+
+    while tokens.has_next() &&
+        tokens.peek(|tok| {
+            match tok {
+                Token::Pipe => true,
+                _ => false,
+            }
+        }).map_err(|e| format!("{:?}", e))? {
+
+        let _pipe = consume_token!(tokens, Token::Pipe);
+
+        let primary = parse_primary(tokens)?;
+        let expr = expr(tokens, primary, &delim_tokens, 0)?;
+
+        piped_exprs.push(expr);
+    }
+
+    if piped_exprs.len() > 0 {
+        let (expr_base, eloc) = expr_base.to_data();
+        let expr_base = match expr_base {
+            Expr::FnCall(f) => f,
+
+            e @ _ => return Err(format!("Can only pipe function calls. Found:\n{:?}", e)),
+
+        };
+
+        let piped_exprs = piped_exprs
+            .into_iter()
+            .map(|e| {
+                let (e, espan) = e.to_data();
+                match e {
+                    Expr::FnCall(f) => Ok(f),
+                    e @ _ => Err(format!("Can only pipe function calls. Found:\n{:?}", e)),
+                }
+            })
+            .collect::<Result<Vec<AstNode<FnCall>>, String>>()?;
+
+        let end = piped_exprs.last().unwrap().span();
+        let span = Span::combine(eloc, end);
+
+        let fn_chain = FnCallChain {
+            base: expr_base,
+            chain: piped_exprs,
+        };
+
+        let fn_chain = AstNode::new(fn_chain, span);
+
+        Ok(AstNode::new(Expr::FnCallChain(fn_chain), span))
+
+    } else {
+        Ok(expr_base)
+    }
 }
 
 pub fn expr(tokens: &mut BufferedTokenizer, 
@@ -714,6 +778,7 @@ fn is_delim(token: &Token, delim: &[Delimiter]) -> bool {
         Token::Comma => Delimiter::Comma,
         Token::Semi => Delimiter::Semi,
         Token::LBrace => Delimiter::LBrace,
+        Token::Pipe => Delimiter::Pipe,
 
         _ => return false,
     };
