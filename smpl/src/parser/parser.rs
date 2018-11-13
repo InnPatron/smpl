@@ -714,7 +714,8 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             // Expecting: expr ';'
             // Module paths are not lvalues
 
-            let expr = piped_expr(tokens, &[Delimiter::Semi])?;
+            let path = expr_module_path(tokens, base_ident, base_span)?;
+            let expr = prebase_piped_expr(tokens, path, &[Delimiter::Semi])?;
 
             let _semi = consume_token!(tokens, Token::Semi);
 
@@ -736,8 +737,12 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
                 args: args,
             };
 
+
             let span = Span::combine(base_span.make_span(), arg_span);
-            let expr = piped_expr(tokens, &[Delimiter::Semi])?;
+            let expr_base = AstNode::new(fn_call, span);
+            let expr_base = AstNode::new(Expr::FnCall(expr_base), span);
+
+            let expr = prebase_piped_expr(tokens, expr_base, &[Delimiter::Semi])?;
 
             let _semi = consume_token!(tokens, Token::Semi);
             
