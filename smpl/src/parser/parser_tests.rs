@@ -7,6 +7,14 @@ mod parser_tests {
     use ast::*;
     use span::Span;
 
+    fn parse_expr_quick(input: &str) -> Expr {
+        let mut tokens = buffer_input(input);
+        let primary = parse_primary(&mut tokens).unwrap();
+        let expr = expr(tokens, primary, &[], 0).unwrap();
+
+        expr.to_data().0
+    }
+
     #[test]
     fn parse_programs() {
         {
