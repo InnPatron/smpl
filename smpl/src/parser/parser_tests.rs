@@ -95,13 +95,9 @@ init NAME {
     field2: true
 }
 "##;
-        let parser = ExprParser::new();
 
-        let init_1 = wrap_input(init_1);
-        let init_2 = wrap_input(init_2);
-
-        let init_1 = parser.parse(init_1).unwrap();
-        let init_2 = parser.parse(init_2).unwrap();
+        let init_1 = parse_expr_quick(init_1);
+        let init_2 = parse_expr_quick(init_2);
 
         // Check init_1
         {
@@ -133,9 +129,7 @@ init NAME {
     #[test]
     fn test_parse_complex_expr() {
         let input = r##"5 != 3 || "something" == false && true"##;
-        let input = wrap_input(input);
-        let parser = ExprParser::new();
-        let expr = parser.parse(input).unwrap();
+        let expr = parse_expr_quick(input);
 
         let lhs;
         let rhs;
@@ -272,11 +266,16 @@ init NAME {
 
     #[test]
     fn test_parse_local_var_decl() {
-        let parser = ExprStmtParser::new();
         let input = "let a: int = 10;";
-        let input = wrap_input(input);
-        let stmt = parser.parse(input).unwrap();
-        if let ExprStmt::LocalVarDecl(decl) = stmt {
+
+        let stmt = parse_stmt_quick(input);
+
+        let expr_stmt = match stmt { 
+            Stmt::ExprStmt(s) => s,
+            _ => panic!(),
+        };
+
+        if let ExprStmt::LocalVarDecl(decl) = expr_stmt.to_data().0 {
             let anno = decl.var_type.unwrap();
             assert_eq!(*anno.data(), TypeAnnotation::Path(type_path!("int")));
             assert_eq!(decl.var_name, dummy_node!(ident!("a")));
@@ -286,10 +285,10 @@ init NAME {
     #[test]
     fn test_parse_FnDecl() {
         let input = "fn test_fn(arg: i32, test: float, next: String) { }";
-        let input = wrap_input(input);
-        let parser = FnDeclParser::new();
-        let func = parser.parse(input).unwrap();
-        let func = func.data().clone();
+
+        let mut input = buffer_input(input);
+        let func = testfn_decl(&mut input).unwrap();
+
         assert_eq!(func.name, dummy_node!(ident!("test_fn")));
         assert_eq!(func.body, dummy_node!(Block(Vec::new())));
 
@@ -317,13 +316,12 @@ struct TestStruct {
 
         let parser = StructDeclParser::new();
 
-        let input = wrap_input(input);
-        let _struct = parser.parse(input).unwrap();
-        let input2 = wrap_input(input2);
-        let _struct2 = parser.parse(input2).unwrap();
+        let mut input = buffer_input(input);
+        let _struct = teststruct_decl(&mut input).unwrap();
 
-        let _struct = _struct.data().clone();
-        let _struct2 = _struct2.data().clone();
+        let mut input2 = buffer_input(input2);
+        let _struct2 = teststruct_decl(&mut input2).unwrap();
+
         assert_eq!(_struct.name, dummy_node!(ident!("TestStruct")));
         let struct_field_0 = _struct.clone().body.0.map(|v| v.get(0).unwrap().clone()).unwrap();
         let struct_field_1 = _struct2.clone().body.0.map(|v| v.get(1).unwrap().clone()).unwrap();
@@ -343,8 +341,7 @@ struct TestStruct {
         {
             let parser = MathExprParser::new();
             let input = "1+2";
-            let input = wrap_input(input);
-            let _e = parser.parse(input).unwrap();
+            let _e = parse_expr_quick(input);
             let _root = {
                 let _1 = int!(1 => BoxExpr);
                 let _2 = int!(2 => BoxExpr);
@@ -357,8 +354,7 @@ struct TestStruct {
         {
             let parser = MathExprParser::new();
             let input = "1.+2";
-            let input = wrap_input(input);
-            let _e = parser.parse(input).unwrap();
+            let _e = parse_expr_quick(input);
             let _root = {
                 let _1 = Box::new(Expr::Literal(AstNode::new(Literal::Float(1.0), Span::new(0, 0))));
                 let _2 = int!(2 => BoxExpr);
@@ -374,8 +370,7 @@ struct TestStruct {
         {
             let parser = MathExprParser::new();
             let input = "1 + 2 * 5";
-            let input = wrap_input(input);
-            let e = parser.parse(input).unwrap();
+            let e = parse_expr_quick(input);
             let root = {
                 let _1 = int!(1 => BoxExpr);
                 let _2 = int!(2 => BoxExpr);
@@ -391,8 +386,7 @@ struct TestStruct {
         {
             let parser = MathExprParser::new();
             let input = "5 * (1 + 2)";
-            let input = wrap_input(input);
-            let e = parser.parse(input).unwrap();
+            let e = parse_expr_quick(input);
             let root = {
                 let _1 = int!(1 => BoxExpr);
                 let _2 = int!(2 => BoxExpr);
@@ -409,8 +403,7 @@ struct TestStruct {
         {
             let parser = MathExprParser::new();
             let input = "5 % 5 * 10 - 321 / 8";
-            let input = wrap_input(input);
-            let e = parser.parse(input).unwrap();
+            let e = parse_expr_quick(input);
 
             let root = {
                 let _5 = int!(5 => BoxExpr);
@@ -435,8 +428,7 @@ struct TestStruct {
         {
             let parser = TruthExprParser::new();
             let input = "true && true || false";
-            let input = wrap_input(input);
-            let e = parser.parse(input).unwrap();
+            let e = parse_expr_quick(input);
             
             let root = {
                 let _true = boolean!(true => BoxExpr);
@@ -453,8 +445,7 @@ struct TestStruct {
         {
             let parser = TruthExprParser::new();
             let input = "1 + 5 == 2 && 3 != 4";
-            let input = wrap_input(input);
-            let e = parser.parse(input).unwrap();
+            let e = parse_expr_quick(input);
 
             let root = {
                 let _1 = int!(1 => BoxExpr);
@@ -477,8 +468,7 @@ struct TestStruct {
         {
             let parser = TruthExprParser::new();
             let input = "(1 + 5) * 6 == 2 && 3 != 4";
-            let input = wrap_input(input);
-            let e = parser.parse(input).unwrap();
+            let e = parse_expr_quick(input);
 
             let root = {
                 let _1 = int!(1 => BoxExpr);
