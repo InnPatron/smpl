@@ -746,22 +746,24 @@ fn get_op(token: &Token) -> Option<BinOp> {
 }
 
 fn bin_op_precedence(op: &BinOp) -> u64 {
+    // Precedence based off of Clang precedence table 
+    // OperatorPrecedence.h
     use self::BinOp::*;
     match op {
-        Add => 2,
-        Sub => 2,
-        Mul => 3,
-        Div => 3,
-        Mod => 3,
+        Add => 13,
+        Sub => 13,
+        Mul => 14,
+        Div => 14,
+        Mod => 14,
 
-        LogicalAnd => 6,
-        LogicalOr => 6,
-        GreaterEq => 4,
-        LesserEq => 4,
-        Greater => 4,
-        Lesser => 4,
-        Eq => 5,
-        InEq => 5,
+        LogicalAnd => 4,
+        LogicalOr => 4,
+        GreaterEq => 10,
+        LesserEq => 10,
+        Greater => 10,
+        Lesser => 10,
+        Eq => 9,
+        InEq => 9,
     }
 }
 
