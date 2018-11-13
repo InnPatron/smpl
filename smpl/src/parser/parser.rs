@@ -159,6 +159,15 @@ fn kv_pair(tokens: &mut BufferedTokenizer) -> ParseErr<(Ident, Option<String>)> 
     }
 }
 
+#[cfg(test)]
+pub fn testfn_decl(tokens: &mut BufferedTokenizer) -> ParseErr<Function> {
+    let decl = fn_decl(tokens, vec![], false)?;
+    match decl {
+        DeclStmt::Function(f) => Ok(f.to_data().0),
+        _ => unreachable!()
+    }
+}
+
 fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_builtin: bool) -> ParseErr<DeclStmt> {
     let mut span = Span::new(0, 0);
     if is_builtin {
@@ -297,6 +306,12 @@ fn fn_param(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<FnParameter>> {
     };
 
     Ok(AstNode::new(param, span))
+}
+
+#[cfg(test)]
+pub fn teststruct_decl(tokens: &mut BufferedTokenizer) -> ParseErr<Struct> {
+    let decl = struct_decl(tokens, vec![])?.to_data().0;
+    Ok(decl)
 }
 
 fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseErr<AstNode<Struct>> {
