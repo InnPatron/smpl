@@ -370,13 +370,15 @@ fn struct_field(tokens: &mut BufferedTokenizer) -> ParseErr<StructField> {
     })
 }
 
-fn module_decl(tokens: &mut BufferedTokenizer) -> ParseErr<Ident> {
+fn module_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Ident>> {
     // Consume MOD
-    let _mod_kw = consume_token!(tokens, Token::Mod);
+    let (modloc, _) = consume_token!(tokens, Token::Mod);
     let (_idloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
-    let _semi = consume_token!(tokens, Token::Semi);
+    let (semiloc, _) = consume_token!(tokens, Token::Semi);
 
-    Ok(ident)
+    let span = LocationSpan::new(modloc.start(), semiloc.end());
+    let span = span.make_span();
+    Ok(AstNode::new(ident, span))
 }
 
 pub fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> {
