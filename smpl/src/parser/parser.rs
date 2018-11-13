@@ -189,6 +189,7 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
             _ => false
         }
     }).map_err(|e| format!("{:?}", e))? {
+        let _unchecked = consume_token!(tokens, Token::Unchecked);
         BuiltinFnParams::Unchecked
     } else {
         if tokens.peek(|tok| {
