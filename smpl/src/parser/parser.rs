@@ -522,83 +522,20 @@ fn fn_type_params(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<TypeAn
 
 pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
 
-    enum BlockDec {
-        Continue,
-        Break,
-        Return,
-
-        While,
-        If,
-
-        LocalVar,
-        PotentialAssign,
-
-        Finished,
-        Expr,
-    }
 
     let (lloc, _) = consume_token!(tokens, Token::LBrace);
 
     let mut stmts = Vec::new();
     // Parse for all statements untile '}'
-    while tokens.has_next() {
-        match tokens.peek(|tok| {
-            match tok {
-                Token::Continue => BlockDec::Continue,
-                Token::Break => BlockDec::Break,
-                Token::Return => BlockDec::Return,
-
-                Token::While => BlockDec::While,
-                Token::If => BlockDec::If,
-
-                Token::Let => BlockDec::LocalVar,
-                
-                Token::RBrace => BlockDec::Finished,
-
-                Token::Identifier(_) => BlockDec::PotentialAssign,
-
-                _ => BlockDec::Expr,
-            }
-        }).map_err(|e| format!("{:?}", e))? {
-
-            BlockDec::Continue => {
-                stmts.push(Stmt::ExprStmt(continue_stmt(tokens)?));
-            }
-
-            BlockDec::Break => {
-                stmts.push(Stmt::ExprStmt(break_stmt(tokens)?));
-            }
-
-            BlockDec::Return => {
-                stmts.push(Stmt::ExprStmt(return_stmt(tokens)?));
-            }
-
-            BlockDec::While => {
-                stmts.push(Stmt::ExprStmt(while_stmt(tokens)?));
-            }
-
-            BlockDec::If => {
-                stmts.push(Stmt::ExprStmt(if_stmt(tokens)?));
-            }
-
-            BlockDec::LocalVar => {
-                stmts.push(Stmt::ExprStmt(local_var_decl(tokens)?));
-            }
-
-            BlockDec::PotentialAssign => {
-                stmts.push(potential_assign(tokens)?);
-            }
-
-            BlockDec::Expr => {
-                let primary = parse_primary(tokens)?;
-                let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
-
-                stmts.push(Stmt::Expr(expr));
-            }
-
-            BlockDec::Finished => break,
+    while tokens.has_next() && tokens.peek(|tok| {
+        match tok {
+            Token::RBrace => false,
+            _ => true,
         }
+    }).map_err(|e| format!("{:?}", e))? {
+        stmts.push(stmt(tokens)?);
     }
+    
     
     let (rloc, _) = consume_token!(tokens, Token::RBrace);
 
@@ -610,6 +547,77 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
         block,
         span.make_span())
     )
+}
+
+fn stmt(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
+    enum StmtDec {
+        Continue,
+        Break,
+        Return,
+
+        While,
+        If,
+
+        LocalVar,
+        PotentialAssign,
+
+        Expr,
+    }
+
+    let stmt = match tokens.peek(|tok| {
+        match tok {
+            Token::Continue => StmtDec::Continue,
+            Token::Break => StmtDec::Break,
+            Token::Return => StmtDec::Return,
+
+            Token::While => StmtDec::While,
+            Token::If => StmtDec::If,
+
+            Token::Let => StmtDec::LocalVar,
+            
+            Token::Identifier(_) => StmtDec::PotentialAssign,
+
+            _ => StmtDec::Expr,
+        }
+    }).map_err(|e| format!("{:?}", e))? {
+
+        StmtDec::Continue => {
+            Stmt::ExprStmt(continue_stmt(tokens)?)
+        }
+
+        StmtDec::Break => {
+            Stmt::ExprStmt(break_stmt(tokens)?)
+        }
+
+        StmtDec::Return => {
+            Stmt::ExprStmt(return_stmt(tokens)?)
+        }
+
+        StmtDec::While => {
+            Stmt::ExprStmt(while_stmt(tokens)?)
+        }
+
+        StmtDec::If => {
+            Stmt::ExprStmt(if_stmt(tokens)?)
+        }
+
+        StmtDec::LocalVar => {
+            Stmt::ExprStmt(local_var_decl(tokens)?)
+        }
+
+        StmtDec::PotentialAssign => {
+            potential_assign(tokens)?
+        }
+
+        StmtDec::Expr => {
+            let primary = parse_primary(tokens)?;
+            let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
+
+            Stmt::Expr(expr)
+        }
+    };
+
+    Ok(stmt)
 }
 
 fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
