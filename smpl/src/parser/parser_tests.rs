@@ -2,6 +2,7 @@
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod parser_tests {
+    use parser::parser::*;
     use parser::expr_parser::*;
     use parser::*;
     use ast::*;
@@ -10,9 +11,16 @@ mod parser_tests {
     fn parse_expr_quick(input: &str) -> Expr {
         let mut tokens = buffer_input(input);
         let primary = parse_primary(&mut tokens).unwrap();
-        let expr = expr(tokens, primary, &[], 0).unwrap();
+        let expr = expr(&mut tokens, primary, &[], 0).unwrap();
 
         expr.to_data().0
+    }
+
+    fn parse_stmt_quick(input: &str) -> Stmt {
+        let mut tokens = buffer_input(input);
+        let stmt = teststmt(&mut tokens).unwrap();
+
+        stmt
     }
 
     #[test]

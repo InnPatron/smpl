@@ -549,6 +549,12 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
     )
 }
 
+#[cfg(test)]
+pub fn teststmt(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
+    stmt(tokens)
+}
+
+
 fn stmt(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
     enum StmtDec {
         Continue,
