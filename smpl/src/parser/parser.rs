@@ -91,7 +91,9 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
         }
     }
 
-    unimplemented!()
+    let module = Module(name, decls);
+
+    Ok(module)
 }
 
 fn annotations(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Annotation>> {
