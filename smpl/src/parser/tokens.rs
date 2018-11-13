@@ -41,7 +41,7 @@ impl SpannedToken {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Identifier(String),
     StringLiteral(String),
@@ -196,13 +196,13 @@ impl Default for Location {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct SpannedError {
     error: TokenizerError,
     location: Location,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenizerError {
     UnexpectedChar(char),
     UnexpectedEndOfInput,
@@ -210,6 +210,7 @@ pub enum TokenizerError {
     IncompleteToken(Token),
 }
 
+#[derive(Debug)]
 struct CharInput<'input> {
     chars: Peekable<Enumerate<CharIndices<'input>>>,
     lookahead: Option<(Location, char)>,
@@ -276,6 +277,7 @@ impl<'input> Iterator for CharInput<'input> {
 }
 
 
+#[derive(Debug)]
 pub struct Tokenizer<'input> {
     input: &'input str,
     chars: CharInput<'input>,
@@ -580,6 +582,54 @@ impl<'input> Iterator for Tokenizer<'input> {
         }
 
         None
+    }
+}
+
+#[derive(Debug)]
+pub struct BufferedTokenizer<'a> {
+    tokenizer: Tokenizer<'a>,
+    next: Option<Result<SpannedToken, SpannedError>>,
+}
+
+impl<'a> BufferedTokenizer<'a> {
+    pub fn new(mut tokenizer: Tokenizer) -> BufferedTokenizer {
+        let next = tokenizer.next();
+
+        BufferedTokenizer {
+            tokenizer: tokenizer,
+            next: next
+        }
+    }
+
+    pub fn has_next(&self) -> bool {
+        self.next.is_some()
+    }
+
+    pub fn next(&mut self) -> Option<Result<SpannedToken, SpannedError>> {
+        let to_return = self.next.take();
+
+        self.next = self.tokenizer.next();
+
+        to_return
+    }
+
+    pub fn peek_is_none(&self) -> bool {
+        self.next.is_none()
+    }
+
+    pub fn peek<F, R>(&self, 
+                   closure: F) -> Result<R, SpannedError> 
+    where F: Fn(&Token) -> R {
+
+        match self.next {
+            Some(ref res_tok) => {
+                match res_tok {
+                    Ok(ref t) => Ok(closure(t.token())),
+                    Err(ref e) => Err((*e).clone()),
+                }
+            }
+            None => panic!("Check if peek is none first"),
+        }
     }
 }
 
