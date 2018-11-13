@@ -147,11 +147,11 @@ fn kv_pair(tokens: &mut BufferedTokenizer) -> ParseErr<(Ident, Option<String>)> 
 
     if tokens.peek(|tok| {
         match tok {
-            Token::Eq => true,
+            Token::Assign => true,
             _ => false,
         }
     }).map_err(|e| format!("{:?}", e))? {
-        let _eq = consume_token!(tokens, Token::Eq);
+        let _assign = consume_token!(tokens, Token::Assign);
         let (_, v) = consume_token!(tokens, Token::StringLiteral(s) => s);
         Ok((Ident(ident), Some(v)))
     } else {
