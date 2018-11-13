@@ -210,6 +210,7 @@ pub enum TokenizerError {
     IncompleteToken(Token),
 }
 
+#[derive(Debug)]
 struct CharInput<'input> {
     chars: Peekable<Enumerate<CharIndices<'input>>>,
     lookahead: Option<(Location, char)>,
@@ -276,6 +277,7 @@ impl<'input> Iterator for CharInput<'input> {
 }
 
 
+#[derive(Debug)]
 pub struct Tokenizer<'input> {
     input: &'input str,
     chars: CharInput<'input>,
@@ -583,6 +585,7 @@ impl<'input> Iterator for Tokenizer<'input> {
     }
 }
 
+#[derive(Debug)]
 pub struct BufferedTokenizer<'a> {
     tokenizer: Tokenizer<'a>,
     next: Option<Result<SpannedToken, SpannedError>>,
