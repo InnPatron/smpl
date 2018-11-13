@@ -266,8 +266,7 @@ fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         PrimaryDec::LParen => {
             let (lspan, _) = consume_token!(tokens, Token::LParen);
 
-            let inner_lhs = parse_primary(tokens)?;
-            let inner = expr(tokens, inner_lhs, &[Delimiter::RParen], 0)?;
+            let inner = piped_expr(tokens, &[Delimiter::RParen])?;
 
             let (rspan, _) = consume_token!(tokens, Token::RParen);
 
@@ -334,8 +333,7 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
 
         IdentLeafDec::Indexing => {
             let _lbracket = consume_token!(tokens, Token::LBracket);
-            let indexer = parse_primary(tokens)?;
-            let indexer = expr(tokens, indexer, &[Delimiter::RBracket], 0)?;
+            let indexer = piped_expr(tokens, &[Delimiter::RBracket])?;
             let (indexer, _) = indexer.to_data();
             let (rspan, _rbracket) = consume_token!(tokens, Token::RBracket);
 
@@ -432,8 +430,7 @@ fn path_segment(tokens: &mut BufferedTokenizer) -> ParseErr<PathSegment> {
             
             let _lbracket = consume_token!(tokens, Token::LBracket);
 
-            let indexer = parse_primary(tokens)?;
-            let indexer = expr(tokens, indexer, &[Delimiter::RBracket], 0)?;
+            let indexer = piped_expr(tokens, &[Delimiter::RBracket])?;
             let (indexer, _) = indexer.to_data();
 
             let _rbracket = consume_token!(tokens, Token::RBracket);
@@ -461,8 +458,7 @@ pub fn fn_args(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Option<Vec<As
             }
         }).map_err(|e| format!("{:?}", e))? {
 
-        let arg = parse_primary(tokens)?;
-        let arg = expr(tokens, arg, &[Delimiter::RParen, Delimiter::Comma], 0)?;
+        let arg = piped_expr(tokens, &[Delimiter::RParen, Delimiter::Comma])?;
 
         match args {
             Some(mut a) => {
