@@ -203,14 +203,8 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
         }
     };
         
-
     let (rloc, _) = consume_token!(tokens, Token::RParen);
     span = Span::combine(span, rloc.make_span());
-
-    let mut body: Option<AstNode<Block>> = None;
-    if !is_builtin {
-        body = Some(block(tokens)?);
-    }
 
     let mut return_type = None;
     if tokens.peek(|tok| {
@@ -221,6 +215,11 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
     }).map_err(|e| format!("{:?}", e))? {
         let _arrow = consume_token!(tokens, Token::Arrow);
         return_type = Some(type_annotation(tokens)?);
+    }
+
+    let mut body: Option<AstNode<Block>> = None;
+    if !is_builtin {
+        body = Some(block(tokens)?);
     }
 
     if is_builtin {
