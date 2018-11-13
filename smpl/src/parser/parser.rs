@@ -654,8 +654,7 @@ fn stmt(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
         }
 
         StmtDec::Expr => {
-            let primary = parse_primary(tokens)?;
-            let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
+            let expr = piped_expr(tokens, &[Delimiter::Semi])?;
 
             let _semi = consume_token!(tokens, Token::Semi);
 
@@ -715,8 +714,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             // Expecting: expr ';'
             // Module paths are not lvalues
 
-            let primary = expr_module_path(tokens, base_ident, base_span)?;
-            let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
+            let expr = piped_expr(tokens, &[Delimiter::Semi])?;
 
             let _semi = consume_token!(tokens, Token::Semi);
 
@@ -739,8 +737,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             };
 
             let span = Span::combine(base_span.make_span(), arg_span);
-            let primary = AstNode::new(Expr::FnCall(AstNode::new(fn_call, span)), span);
-            let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
+            let expr = piped_expr(tokens, &[Delimiter::Semi])?;
 
             let _semi = consume_token!(tokens, Token::Semi);
             
@@ -749,8 +746,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
 
         Dec::Indexing => {
             let _lbracket = consume_token!(tokens, Token::LBracket);
-            let indexer = parse_primary(tokens)?;
-            let indexer = expr(tokens, indexer, &[Delimiter::RBracket], 0)?;
+            let indexer = piped_expr(tokens, &[Delimiter::RBracket])?;
             let (indexer, _) = indexer.to_data();
             let (rspan, _rbracket) = consume_token!(tokens, Token::RBracket);
 
@@ -787,8 +783,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
         Dec::DefSingletonAssignment => {
             let _assignop = consume_token!(tokens, Token::Assign);
 
-            let primary = parse_primary(tokens)?;
-            let value = expr(tokens, primary, &[Delimiter::Semi], 0)?;
+            let value = piped_expr(tokens, &[Delimiter::Semi])?;
             let (value, value_span) = value.to_data();
 
             let _semi = consume_token!(tokens, Token::Semi);
@@ -812,8 +807,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             // Expecting: expr ';'
             // 'ident op' is not a lvalue
             let span = base_span.make_span();
-            let primary = AstNode::new(Expr::Binding(AstNode::new(base_ident, span)), span);
-            let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
+            let expr = piped_expr(tokens, &[Delimiter::Semi])?;
 
             let _semi = consume_token!(tokens, Token::Semi);
 
@@ -840,9 +834,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
 
             let _assign = consume_token!(tokens, Token::Assign);
 
-            let primary = parse_primary(tokens)?;
-
-            let (value, value_span) = expr(tokens, primary, &[Delimiter::Semi], 0)?.to_data();
+            let (value, value_span) = piped_expr(tokens, &[Delimiter::Semi])?.to_data();
 
             let _semi = consume_token!(tokens, Token::Semi);
 
@@ -859,8 +851,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             let span = path.span();
             let path = Expr::FieldAccess(path);
 
-            let primary = AstNode::new(path, span);
-            let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
+            let expr = piped_expr(tokens, &[Delimiter::Semi])?;
 
             let _semi = consume_token!(tokens, Token::Semi);
 
@@ -894,8 +885,7 @@ fn local_var_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>>
 
     let _assign = consume_token!(tokens, Token::Assign);
 
-    let primary = parse_primary(tokens)?;
-    let init_value = expr(tokens, primary, &[Delimiter::Semi], 0)?.to_data();
+    let init_value = piped_expr(tokens, &[Delimiter::Semi])?.to_data();
 
     let (semiloc, _) = consume_token!(tokens, Token::Semi);
 
@@ -972,8 +962,7 @@ fn if_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
 }
 
 fn if_branch(tokens: &mut BufferedTokenizer) -> ParseErr<Branch> {
-    let primary = parse_primary(tokens)?;
-    let conditional = expr(tokens, primary, &[Delimiter::LBrace], 0)?;
+    let conditional = piped_expr(tokens, &[Delimiter::LBrace])?;
 
     let block = block(tokens)?;
 
@@ -988,8 +977,7 @@ fn if_branch(tokens: &mut BufferedTokenizer) -> ParseErr<Branch> {
 fn while_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
     let (whileloc, _) = consume_token!(tokens, Token::While);
 
-    let primary = parse_primary(tokens)?;
-    let conditional = expr(tokens, primary, &[Delimiter::LBrace], 0)?;
+    let conditional = piped_expr(tokens, &[Delimiter::LBrace])?;
 
     let block = block(tokens)?;
 
@@ -1021,8 +1009,7 @@ fn return_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
         None
     } else {
         // Expression
-        let primary = parse_primary(tokens)?;
-        let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
+        let expr = piped_expr(tokens, &[Delimiter::Semi])?;
 
         let _semi = consume_token!(tokens, Token::Semi);
 

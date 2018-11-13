@@ -79,7 +79,7 @@ pub fn piped_expr(tokens: &mut BufferedTokenizer, delim_tokens: &[Delimiter])
     }
 }
 
-pub fn expr(tokens: &mut BufferedTokenizer, 
+fn expr(tokens: &mut BufferedTokenizer, 
             mut lhs: AstNode<Expr>, 
             delim_tokens: &[Delimiter], 
             min_precedence: u64) 
@@ -178,7 +178,7 @@ pub fn expr(tokens: &mut BufferedTokenizer,
     Ok(lhs)
 }
 
-pub fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
+fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
     enum PrimaryDec {
         Ident,
         Literal,
