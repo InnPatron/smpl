@@ -681,8 +681,6 @@ fn anonymous_fn(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
 
     let (rloc, _) = consume_token!(tokens, Token::RParen);
 
-    let body = block(tokens)?;
-
     let mut return_type = None;
     if tokens.peek(|tok| {
         match tok {
@@ -693,6 +691,8 @@ fn anonymous_fn(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         let _arrow = consume_token!(tokens, Token::Arrow);
         return_type = Some(type_annotation(tokens)?);
     }
+
+    let body = block(tokens)?;
 
     let span = Span::combine(fnloc.make_span(), body.span());
 
