@@ -256,8 +256,6 @@ struct TestStruct {
     field2: Type2,
 }";
 
-        let parser = StructDeclParser::new();
-
         let mut input = buffer_input(input);
         let _struct = teststruct_decl(&mut input).unwrap();
 
@@ -281,7 +279,6 @@ struct TestStruct {
     #[test]
     fn test_parse_MathExpr_no_spaces() {
         {
-            let parser = MathExprParser::new();
             let input = "1+2";
             let _e = parse_expr_quick(input);
             let _root = {
@@ -294,7 +291,6 @@ struct TestStruct {
         }
 
         {
-            let parser = MathExprParser::new();
             let input = "1.+2";
             let _e = parse_expr_quick(input);
             let _root = {
@@ -310,7 +306,6 @@ struct TestStruct {
     #[test]
     fn test_parse_MathExpr() {
         {
-            let parser = MathExprParser::new();
             let input = "1 + 2 * 5";
             let e = parse_expr_quick(input);
             let root = {
@@ -326,7 +321,6 @@ struct TestStruct {
         }
 
         {
-            let parser = MathExprParser::new();
             let input = "5 * (1 + 2)";
             let e = parse_expr_quick(input);
             let root = {
@@ -343,7 +337,6 @@ struct TestStruct {
         }
 
         {
-            let parser = MathExprParser::new();
             let input = "5 % 5 * 10 - 321 / 8";
             let e = parse_expr_quick(input);
 
@@ -368,7 +361,6 @@ struct TestStruct {
     #[test]
     fn test_parse_TruthExpr() {
         {
-            let parser = TruthExprParser::new();
             let input = "true && true || false";
             let e = parse_expr_quick(input);
             
@@ -385,7 +377,6 @@ struct TestStruct {
         }
 
         {
-            let parser = TruthExprParser::new();
             let input = "1 + 5 == 2 && 3 != 4";
             let e = parse_expr_quick(input);
 
@@ -408,7 +399,6 @@ struct TestStruct {
         }
 
         {
-            let parser = TruthExprParser::new();
             let input = "(1 + 5) * 6 == 2 && 3 != 4";
             let e = parse_expr_quick(input);
 

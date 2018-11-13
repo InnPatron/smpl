@@ -204,15 +204,15 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
 #[cfg(test)]
 mod tests {
     use parser::*;
+    use parser::expr_parser::*;
     use super::super::semantic_data::*;
     use super::*;
 
     #[test]
     fn expr_exec_order_ck() {
         let input = "5 + 2 / 3";
-        let input = wrap_input(input);
-        let parser = ExprParser::new();
-        let expr = parser.parse(input).unwrap();
+        let mut input = buffer_input(input);
+        let expr = piped_expr(&mut input, &[]).unwrap().to_data().0;
 
         let universe = Universe::std();
 

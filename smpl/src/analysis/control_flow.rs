@@ -675,6 +675,7 @@ impl CFG {
 mod tests {
     use super::*;
     use parser::*;
+    use parser::parser::*;
     use petgraph::dot::{Config, Dot};
     use petgraph::Direction;
 
@@ -699,15 +700,13 @@ mod tests {
 let a: int = 2;
 let b: int = 3;
 }";
-        let input = wrap_input(input);
+        let mut input = buffer_input(input);
         let universe = Universe::std();
         let fn_type = FunctionType {
             params: ParamType::Checked(vec![universe.int()]),
             return_type: universe.unit(),
         };
-        let parser = FnDeclParser::new();
-        let fn_def = parser.parse(input).unwrap();
-        let fn_def = fn_def.data();
+        let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
@@ -772,16 +771,14 @@ if (test) {
     let c: int = 4;
 }
 }";
-        let input = wrap_input(input);
+        let mut input = buffer_input(input);
 
         let universe = Universe::std();
         let fn_type = FunctionType {
             params: ParamType::Checked(vec![universe.int()]),
             return_type: universe.unit(),
         };
-        let parser = FnDeclParser::new();
-        let fn_def = parser.parse(input).unwrap();
-        let fn_def = fn_def.data();
+        let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
@@ -925,15 +922,14 @@ if (test) {
 
     }
 }";
-        let input = wrap_input(input);
+        let mut input = buffer_input(input);
         let universe = Universe::std();
         let fn_type = FunctionType {
             params: ParamType::Checked(vec![universe.int()]),
             return_type: universe.unit(),
         };
-        let parser = FnDeclParser::new();
-        let fn_def = parser.parse(input).unwrap();
-        let fn_def = fn_def.data();
+        
+        let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
@@ -1089,15 +1085,14 @@ if (test) {
         
     }
 }";
-        let input = wrap_input(input);
+        let mut input = buffer_input(input);
         let universe = Universe::std();
         let fn_type = FunctionType {
             params: ParamType::Checked(vec![universe.int()]),
             return_type: universe.unit(),
         };
-        let parser = FnDeclParser::new();
-        let fn_def = parser.parse(input).unwrap();
-        let fn_def = fn_def.data();
+        
+        let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
