@@ -789,6 +789,8 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             let primary = AstNode::new(Expr::Binding(AstNode::new(base_ident, span)), span);
             let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
 
+            let _semi = consume_token!(tokens, Token::Semi);
+
             return Ok(Stmt::Expr(expr));
         }
     };
