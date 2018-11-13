@@ -18,11 +18,18 @@ pub enum Delimiter {
 
 pub fn piped_expr(tokens: &mut BufferedTokenizer, delim_tokens: &[Delimiter]) 
     -> ParseErr<AstNode<Expr>> {
-    let mut delimiters = delim_tokens.to_vec();
-    delimiters.push(Delimiter::Pipe);
-
     let primary_base = parse_primary(tokens)?;
     let expr_base = expr(tokens, primary_base, &delim_tokens, 0)?;
+
+    prebase_piped_expr(tokens, expr_base, delim_tokens)
+}
+
+
+pub fn prebase_piped_expr(tokens: &mut BufferedTokenizer, expr_base: AstNode<Expr>, delim_tokens: &[Delimiter]) 
+    -> ParseErr<AstNode<Expr>> {
+
+    let mut delimiters = delim_tokens.to_vec();
+    delimiters.push(Delimiter::Pipe);
 
     let mut piped_exprs = Vec::new();
 
