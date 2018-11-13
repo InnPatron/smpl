@@ -657,6 +657,8 @@ fn stmt(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             let primary = parse_primary(tokens)?;
             let expr = expr(tokens, primary, &[Delimiter::Semi], 0)?;
 
+            let _semi = consume_token!(tokens, Token::Semi);
+
             Stmt::Expr(expr)
         }
     };
