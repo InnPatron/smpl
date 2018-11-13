@@ -46,6 +46,7 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
         Struct,
         Annotation,
         Function(bool),
+        Use,
         Err,
     }
 
@@ -70,6 +71,7 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
                 Token::Pound => ModDec::Annotation,
                 Token::Fn => ModDec::Function(false),
                 Token::Builtin => ModDec::Function(true),
+                Token::Use => ModDec::Use,
                 _ => ModDec::Err,
             }
         }).map_err(|e| format!("{:?}", e))? {
@@ -84,6 +86,11 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
 
             ModDec::Function(is_builtin) => {
                 decls.push(fn_decl(tokens, anno, is_builtin)?);
+                anno = Vec::new();
+            }
+
+            ModDec::Use => {
+                decls.push(use_decl(tokens)?);
                 anno = Vec::new();
             }
 
@@ -157,6 +164,22 @@ fn kv_pair(tokens: &mut BufferedTokenizer) -> ParseErr<(Ident, Option<String>)> 
     } else {
         Ok((Ident(ident), None))
     }
+}
+
+fn use_decl(tokens: &mut BufferedTokenizer) -> ParseErr<DeclStmt> {
+    let (uspan, _) = consume_token!(tokens, Token::Use);
+    let (mspan, module) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+    let _semi = consume_token!(tokens, Token::Semi);
+
+    let span = LocationSpan::new(uspan.start(), mspan.end());
+    let span = span.make_span();
+
+    let mspan = mspan.make_span();
+    let use_decl = UseDecl(AstNode::new(module, mspan));
+
+    let use_decl = DeclStmt::Use(AstNode::new(use_decl, span));
+    
+    Ok(use_decl)
 }
 
 #[cfg(test)]
