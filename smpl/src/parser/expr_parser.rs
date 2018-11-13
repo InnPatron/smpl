@@ -250,7 +250,7 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             let root = PathSegment::Ident(AstNode::new(base_ident, span));
             access_path(tokens, root)
         }
-        IdentLeafDec::ModulePath => module_path(tokens, base_ident, base_span),
+        IdentLeafDec::ModulePath => expr_module_path(tokens, base_ident, base_span),
 
         IdentLeafDec::FnCall => {
             let args = fn_args(tokens)?;
@@ -307,7 +307,7 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
     }
 }
 
-fn access_path(tokens: &mut BufferedTokenizer, root: PathSegment) 
+pub fn access_path(tokens: &mut BufferedTokenizer, root: PathSegment) 
     -> ParseErr<AstNode<Expr>> {
 
     let start = match root {
@@ -383,7 +383,7 @@ fn path_segment(tokens: &mut BufferedTokenizer) -> ParseErr<PathSegment> {
     Ok(PathSegment::Ident(AstNode::new(ident, span)))
 }
 
-fn fn_args(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Option<Vec<AstNode<Expr>>>>> {
+pub fn fn_args(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Option<Vec<AstNode<Expr>>>>> {
     let (lspan, _) = consume_token!(tokens, Token::LParen);
 
     let mut args: Option<Vec<AstNode<Expr>>> = None;
@@ -426,7 +426,7 @@ fn fn_args(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Option<Vec<AstNod
     Ok(AstNode::new(args, span))
 }
 
-fn module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: LocationSpan) 
+pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: LocationSpan) 
     -> ParseErr<AstNode<Expr>> {
 
     // Assume there at least 1 '::'
