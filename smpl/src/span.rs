@@ -31,6 +31,22 @@ impl LocationSpan {
     pub fn end(&self) -> Location {
         self.end
     }
+
+    pub fn combine(l: LocationSpan, r: LocationSpan) -> LocationSpan {
+        let start = if l.start().byte_index() < r.start().byte_index() {
+            l.start()
+        } else {
+            r.start()
+        };
+
+        let end = if l.end().byte_index() > r.end().byte_index() {
+            l.end()
+        } else {
+            r.end()
+        };
+
+        LocationSpan::new(start, end)
+    }
 }
 
 
