@@ -2,7 +2,7 @@
 macro_rules! dummy_node {
     ($val: expr) => {{
         use span::Span;
-        AstNode::new($val, Span::new(0, 0))
+        AstNode::new($val, Span::dummy())
     }};
 }
 
