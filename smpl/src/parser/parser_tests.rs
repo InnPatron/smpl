@@ -294,7 +294,7 @@ struct TestStruct {
             let input = "1.+2";
             let _e = parse_expr_quick(input);
             let _root = {
-                let _1 = Box::new(Expr::Literal(AstNode::new(Literal::Float(1.0), Span::new(0, 0))));
+                let _1 = Box::new(Expr::Literal(AstNode::new(Literal::Float(1.0), Span::dummy())));
                 let _2 = int!(2 => BoxExpr);
 
                 let parent = bin_expr!((_1, BinOp::Add, _2) => Expr);

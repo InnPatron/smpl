@@ -1,70 +1,80 @@
-#[derive(Debug, Copy, Clone)]
-pub struct Span {
-    start: usize,   // Inclusive
-    end: usize,     // Exclusive
+pub type Span = LocationSpan;
+
+#[derive(Copy, Clone, Debug)]
+pub struct LocationSpan {
+    start: Location,
+    end: Location,
 }
 
-impl Span {
-    pub fn new(start: usize, end: usize) -> Span {
-        Span {
+#[allow(dead_code)]
+impl LocationSpan {
+    pub fn new(start: Location, end: Location) -> LocationSpan {
+        LocationSpan {
             start: start,
-            end: end
+            end: end,
         }
     }
 
-    pub fn flatten(spans: &[Span]) -> Span {
-        let mut start = None;
-        let mut end = None;
+    pub fn span_1(start: Location, char_size: usize) -> LocationSpan {
+        let mut end = start.clone();
+        end.byte_index += char_size;
+        end.char_index += 1;
+        end.column += 1;
 
-        for span in spans {
-            match start {
-                Some(start_pos) => {
-                    if span.start() < start_pos {
-                        start = Some(span.start);
-                    }
-                }
-
-                None => start = Some(span.end()),
-            }
-
-            match end {
-                Some(end_pos) => {
-                    if span.end() < end_pos {
-                        end = Some(span.end());
-                    }
-                }
-
-                None => end = Some(span.end()),
-            }
-        }
-
-        Span::new(start.unwrap(), end.unwrap())
+        LocationSpan::new(start, end)
     }
 
-    pub fn combine(s1: Span, s2: Span) -> Span {
-        let start = if s1.start() < s2.start() {
-            s1.start()
-        } else {
-            s2.start()
-        };
-
-        let end = if s1.end() > s2.end() {
-            s1.end()
-        } else {
-            s2.end()
-        };
-
-        Span {
-            start: start,
-            end: end
-        }
+    pub fn dummy() -> LocationSpan {
+        LocationSpan::new(Location::new(0,0,0,0), Location::new(0,0,0,0))
     }
 
-    pub fn start(&self) -> usize {
+    pub fn start(&self) -> Location {
         self.start
     }
 
-    pub fn end(&self) -> usize {
+    pub fn end(&self) -> Location {
         self.end
+    }
+
+    pub fn combine(l: LocationSpan, r: LocationSpan) -> LocationSpan {
+        let start = if l.start().byte_index < r.start().byte_index {
+            l.start()
+        } else {
+            r.start()
+        };
+
+        let end = if l.end().byte_index > r.end().byte_index {
+            l.end()
+        } else {
+            r.end()
+        };
+
+        LocationSpan::new(start, end)
+    }
+}
+
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Location {
+    pub byte_index: usize,
+    pub char_index: usize,
+    pub line: usize,
+    pub column: usize,
+}
+
+impl Location {
+    pub fn new(byte_index: usize, char_index: usize, line: usize, column: usize) -> Location {
+        Location {
+            byte_index: byte_index,
+            char_index: char_index,
+            line: line,
+            column: column,
+        }
+    }
+}
+
+impl Default for Location {
+    fn default() -> Location {
+        Location::new(0, 0, 1, 1)
     }
 }

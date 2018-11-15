@@ -391,7 +391,7 @@ impl CFG {
                 previous,
                 Node::Return(ReturnData {
                     expr: None,
-                    span: Span::new(0, 0),
+                    span: Span::dummy(),
                 })
             );
         }
