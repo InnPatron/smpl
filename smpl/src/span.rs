@@ -1,70 +1,83 @@
-#[derive(Debug, Copy, Clone)]
-pub struct Span {
-    start: usize,   // Inclusive
-    end: usize,     // Exclusive
+pub type Span = LocationSpan;
+
+#[derive(Copy, Clone, Debug)]
+pub struct LocationSpan {
+    start: Location,
+    end: Location,
 }
 
-impl Span {
-    pub fn new(start: usize, end: usize) -> Span {
-        Span {
+#[allow(dead_code)]
+impl LocationSpan {
+    pub fn new(start: Location, end: Location) -> LocationSpan {
+        LocationSpan {
             start: start,
-            end: end
+            end: end,
         }
     }
 
-    pub fn flatten(spans: &[Span]) -> Span {
-        let mut start = None;
-        let mut end = None;
+    pub fn span_1(start: Location, char_size: usize) -> LocationSpan {
+        let mut end = start.clone();
+        end.byte_index += char_size;
+        end.char_index += 1;
+        end.column += 1;
 
-        for span in spans {
-            match start {
-                Some(start_pos) => {
-                    if span.start() < start_pos {
-                        start = Some(span.start);
-                    }
-                }
-
-                None => start = Some(span.end()),
-            }
-
-            match end {
-                Some(end_pos) => {
-                    if span.end() < end_pos {
-                        end = Some(span.end());
-                    }
-                }
-
-                None => end = Some(span.end()),
-            }
-        }
-
-        Span::new(start.unwrap(), end.unwrap())
+        LocationSpan::new(start, end)
     }
 
-    pub fn combine(s1: Span, s2: Span) -> Span {
-        let start = if s1.start() < s2.start() {
-            s1.start()
-        } else {
-            s2.start()
-        };
-
-        let end = if s1.end() > s2.end() {
-            s1.end()
-        } else {
-            s2.end()
-        };
-
-        Span {
-            start: start,
-            end: end
-        }
-    }
-
-    pub fn start(&self) -> usize {
+    pub fn start(&self) -> Location {
         self.start
     }
 
-    pub fn end(&self) -> usize {
+    pub fn end(&self) -> Location {
         self.end
+    }
+
+    pub fn make_span(&self) -> Span {
+        Span::new(self.start.byte_index(), self.end.byte_index())
+    }
+}
+
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Location {
+    byte_index: usize,
+    char_index: usize,
+    line: usize,
+    column: usize,
+}
+
+#[allow(dead_code)]
+impl Location {
+    pub fn byte_index(&self) -> usize {
+        self.byte_index
+    }
+
+    pub fn char_index(&self) -> usize {
+        self.char_index
+    }
+
+    pub fn line(&self) -> usize {
+        self.line
+    }
+
+    pub fn column(&self) -> usize {
+        self.column
+    }
+}
+
+impl Location {
+    fn new(byte_index: usize, char_index: usize, line: usize, column: usize) -> Location {
+        Location {
+            byte_index: byte_index,
+            char_index: char_index,
+            line: line,
+            column: column,
+        }
+    }
+}
+
+impl Default for Location {
+    fn default() -> Location {
+        Location::new(0, 0, 1, 1)
     }
 }
