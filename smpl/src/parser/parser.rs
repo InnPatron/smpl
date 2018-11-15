@@ -172,9 +172,7 @@ fn use_decl(tokens: &mut BufferedTokenizer) -> ParseErr<DeclStmt> {
     let _semi = consume_token!(tokens, Token::Semi);
 
     let span = LocationSpan::new(uspan.start(), mspan.end());
-    let span = span.make_span();
 
-    let mspan = mspan.make_span();
     let use_decl = UseDecl(AstNode::new(module, mspan));
 
     let use_decl = DeclStmt::Use(AstNode::new(use_decl, span));
@@ -192,15 +190,15 @@ pub fn testfn_decl(tokens: &mut BufferedTokenizer) -> ParseErr<Function> {
 }
 
 fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_builtin: bool) -> ParseErr<DeclStmt> {
-    let mut span = Span::new(0, 0);
+    let mut span = Span::dummy();
     if is_builtin {
         let (bloc, builtin) = consume_token!(tokens, Token::Builtin);
-        span = bloc.make_span();
+        span = bloc;
     }
 
     let (fnloc, _) = consume_token!(tokens, Token::Fn);
     if !is_builtin {
-        span = fnloc.make_span();
+        span = fnloc;
     }
 
     let (idloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
@@ -228,7 +226,7 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
     };
         
     let (rloc, _) = consume_token!(tokens, Token::RParen);
-    span = Span::combine(span, rloc.make_span());
+    span = Span::combine(span, rloc);
 
     let mut return_type = None;
     if tokens.peek(|tok| {
@@ -248,14 +246,14 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
 
     if is_builtin {
         let (semiloc, _) = consume_token!(tokens, Token::Semi);
-        span = Span::combine(span, semiloc.make_span());
+        span = Span::combine(span, semiloc);
     }
 
     if is_builtin {
         Ok(DeclStmt::BuiltinFunction(
             AstNode::new(
                 BuiltinFunction {
-                    name: AstNode::new(ident, idloc.make_span()),
+                    name: AstNode::new(ident, idloc),
                     params: params,
                     return_type: return_type,
                     annotations: annotations,
@@ -277,7 +275,7 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
         Ok(DeclStmt::Function(
             AstNode::new(
                 Function {
-                    name: AstNode::new(ident, idloc.make_span()),
+                    name: AstNode::new(ident, idloc),
                     params: params,
                     return_type: return_type,
                     body: body,
@@ -322,9 +320,9 @@ fn fn_param(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<FnParameter>> {
     let _colon = consume_token!(tokens, Token::Colon);
     let ann = type_annotation(tokens)?;
 
-    let span = Span::combine(idloc.make_span(), ann.span());
+    let span = Span::combine(idloc, ann.span());
     let param = FnParameter {
-        name: AstNode::new(ident, idloc.make_span()),
+        name: AstNode::new(ident, idloc),
         param_type: ann,
     };
 
@@ -363,10 +361,10 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
     let overallSpan = LocationSpan::new(structLoc.start(), rloc.start());
 
     Ok(AstNode::new(Struct {
-            name: AstNode::new(structName, nameLoc.make_span()),
+            name: AstNode::new(structName, nameLoc),
             body: body,
             annotations: anns,
-        }, overallSpan.make_span())
+        }, overallSpan)
     )
 }
 
@@ -405,7 +403,7 @@ fn struct_field(tokens: &mut BufferedTokenizer) -> ParseErr<StructField> {
     let ann = type_annotation(tokens)?;
 
     Ok(StructField {
-        name: AstNode::new(ident, idloc.make_span()),
+        name: AstNode::new(ident, idloc),
         field_type: ann,
     })
 }
@@ -417,7 +415,6 @@ fn module_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Ident>> {
     let (semiloc, _) = consume_token!(tokens, Token::Semi);
 
     let span = LocationSpan::new(modloc.start(), semiloc.end());
-    let span = span.make_span();
     Ok(AstNode::new(ident, span))
 }
 
@@ -460,7 +457,7 @@ pub fn module_binding(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Module
     let (floc, first) =  consume_token!(tokens, Token::Identifier(i) => Ident(i));
 
     let mut binding_span = LocationSpan::new(floc.start(), floc.end());
-    path.push(AstNode::new(first, floc.make_span()));
+    path.push(AstNode::new(first, floc));
 
     if tokens.peek(|tok| {
         match tok {
@@ -470,11 +467,11 @@ pub fn module_binding(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Module
     }).map_err(|e| format!("{:?}", e))? {
         let _coloncolon = consume_token!(tokens, Token::ColonColon);
         let (nloc, next) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
-        path.push(AstNode::new(next, nloc.make_span()));
+        path.push(AstNode::new(next, nloc));
         binding_span = LocationSpan::new(floc.start(), nloc.end());
     }
 
-    Ok(AstNode::new(ModulePath(path), binding_span.make_span()))
+    Ok(AstNode::new(ModulePath(path), binding_span))
 }
 
 fn array_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> {
@@ -491,7 +488,7 @@ fn array_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation
     }
 
     Ok(AstNode::new(TypeAnnotation::Array(base_type, number as u64), 
-                    array_type_span.make_span()))
+                    array_type_span))
 }
 
 fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> {
@@ -510,7 +507,7 @@ fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> 
 
     let (rparenloc, _) = consume_token!(tokens, Token::RParen);
 
-    let mut fn_type_span = LocationSpan::new(fnloc.start(), rparenloc.end()).make_span();
+    let mut fn_type_span = LocationSpan::new(fnloc.start(), rparenloc.end());
 
     let mut return_type = None;
     if tokens.has_next() && tokens.peek(|tok| {
@@ -583,7 +580,7 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
 
     Ok(AstNode::new(
         block,
-        span.make_span())
+        span)
     )
 }
 
@@ -699,7 +696,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
     }).map_err(|e| format!("{:?}", e))? {
 
         Dec::AccessPath => {
-            let span = base_span.make_span();
+            let span = base_span;
             let root = PathSegment::Ident(AstNode::new(base_ident, span));
             
             let (path, _span) = access_path(tokens, root)?.to_data();
@@ -730,7 +727,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             let (args, arg_span) = args.to_data();
             let args = args.map(|v| v.into_iter().map(|a| a.to_data().0).collect());
 
-            let called = ModulePath(vec![AstNode::new(base_ident, base_span.make_span())]);
+            let called = ModulePath(vec![AstNode::new(base_ident, base_span)]);
 
             let fn_call = FnCall {
                 path: called,
@@ -738,7 +735,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             };
 
 
-            let span = Span::combine(base_span.make_span(), arg_span);
+            let span = Span::combine(base_span, arg_span);
             let expr_base = AstNode::new(fn_call, span);
             let expr_base = AstNode::new(Expr::FnCall(expr_base), span);
 
@@ -763,7 +760,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             }).map_err(|e| format!("{:?}", e))? {
 
                 // Access path with indexing as root
-                let span = base_span.make_span();
+                let span = base_span;
                 let root = PathSegment::Indexing(AstNode::new(base_ident, span), Box::new(indexer));
 
                 let (path, _span) = access_path(tokens, root)?.to_data();
@@ -775,7 +772,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             } else {
 
                 //Single indexing
-                let span = base_span.make_span();
+                let span = base_span;
                 let root = PathSegment::Indexing(AstNode::new(base_ident, span), Box::new(indexer));
 
                 let path = vec![root];
@@ -793,11 +790,11 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
 
             let _semi = consume_token!(tokens, Token::Semi);
 
-            let segment = PathSegment::Ident(AstNode::new(base_ident, base_span.make_span()));
+            let segment = PathSegment::Ident(AstNode::new(base_ident, base_span));
             let path = vec![segment];
-            let path = AstNode::new(Path(path), base_span.make_span());
+            let path = AstNode::new(Path(path), base_span);
 
-            let assignment_span = Span::combine(base_span.make_span(), value_span);
+            let assignment_span = Span::combine(base_span, value_span);
             let assignment = Assignment {
                 name: path,
                 value: value,
@@ -811,7 +808,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
         Dec::DefSingletonExpr => {
             // Expecting: expr ';'
             // 'ident op' is not a lvalue
-            let span = base_span.make_span();
+            let span = base_span;
             let expr = piped_expr(tokens, &[Delimiter::Semi])?;
 
             let _semi = consume_token!(tokens, Token::Semi);
@@ -869,7 +866,7 @@ fn local_var_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>>
     let (letloc, _) = consume_token!(tokens, Token::Let);
 
     let (iloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
-    let ident = AstNode::new(ident, iloc.make_span());
+    let ident = AstNode::new(ident, iloc);
 
     let mut type_anno = None;
 
@@ -895,7 +892,6 @@ fn local_var_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>>
     let (semiloc, _) = consume_token!(tokens, Token::Semi);
 
     let span = LocationSpan::new(letloc.start(), semiloc.end());
-    let span = span.make_span();
 
     let local_var_decl = LocalVarDecl {
         var_type: type_anno,
@@ -916,7 +912,7 @@ fn if_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
 
     let (ifloc, _) = consume_token!(tokens, Token::If);
 
-    let mut end = ifloc.make_span();
+    let mut end = ifloc;
 
     let first_branch = if_branch(tokens)?;
     end = first_branch.block.span();
@@ -956,7 +952,7 @@ fn if_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
         }
     }
 
-    let span = Span::combine(ifloc.make_span(), end);
+    let span = Span::combine(ifloc, end);
 
     let if_stmt = If {
         branches: branches,
@@ -986,7 +982,7 @@ fn while_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
 
     let block = block(tokens)?;
 
-    let span = Span::combine(whileloc.make_span(), block.span());
+    let span = Span::combine(whileloc, block.span());
 
     let while_stmt = While {
         conditional: conditional,
@@ -999,7 +995,7 @@ fn while_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
 fn return_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
     let (returnloc, _) = consume_token!(tokens, Token::Return);
 
-    let mut end = returnloc.make_span();
+    let mut end = returnloc;
 
     let expr = if tokens.peek(|tok| {
         match tok {
@@ -1009,7 +1005,7 @@ fn return_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
     }).map_err(|e| format!("{:?}", e))? {
         // No expression
         let (semiloc, _) = consume_token!(tokens, Token::Semi);
-        end = semiloc.make_span();
+        end = semiloc;
 
         None
     } else {
@@ -1023,7 +1019,7 @@ fn return_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
         Some(expr)
     };
 
-    let span = Span::combine(returnloc.make_span(), end);
+    let span = Span::combine(returnloc, end);
     Ok(AstNode::new(ExprStmt::Return(span, expr.map(|e| e.to_data().0)), span))
 }
 
@@ -1033,8 +1029,8 @@ fn continue_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> 
 
     let span = LocationSpan::new(contloc.start(), semiloc.end());
     Ok(AstNode::new(
-        ExprStmt::Continue(span.make_span()),
-        span.make_span())
+        ExprStmt::Continue(span),
+        span)
     )
 }
 
@@ -1044,7 +1040,7 @@ fn break_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
 
     let span = LocationSpan::new(contloc.start(), semiloc.end());
     Ok(AstNode::new(
-        ExprStmt::Break(span.make_span()),
-        span.make_span())
+        ExprStmt::Break(span),
+        span)
     )
 }

@@ -239,7 +239,7 @@ fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             let base = parse_primary(tokens)?;
             let (base, sbase) = base.to_data();
 
-            let span = Span::combine(uspan.make_span(), sbase);
+            let span = Span::combine(uspan, sbase);
 
             let uexpr = UniExpr {
                 op: uop,
@@ -265,7 +265,7 @@ fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
                 _ => unreachable!(),
             };
 
-            let span = next_span.make_span();
+            let span = next_span;
 
             Ok(AstNode::new(Expr::Literal(AstNode::new(literal, span)), span))
         }
@@ -278,7 +278,7 @@ fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             let (rspan, _) = consume_token!(tokens, Token::RParen);
 
             let span = LocationSpan::new(lspan.start(), rspan.end());
-            let span = span.make_span();
+            let span = span;
 
             Ok(inner)
         }
@@ -316,7 +316,7 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
     }).map_err(|e| format!("{:?}", e))? {
 
         IdentLeafDec::AccessPath => {
-            let span = base_span.make_span();
+            let span = base_span;
             let root = PathSegment::Ident(AstNode::new(base_ident, span));
             access_path(tokens, root)
         }
@@ -327,14 +327,14 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             let (args, arg_span) = args.to_data();
             let args = args.map(|v| v.into_iter().map(|a| a.to_data().0).collect());
 
-            let called = ModulePath(vec![AstNode::new(base_ident, base_span.make_span())]);
+            let called = ModulePath(vec![AstNode::new(base_ident, base_span)]);
 
             let fn_call = FnCall {
                 path: called,
                 args: args,
             };
 
-            let span = Span::combine(base_span.make_span(), arg_span);
+            let span = Span::combine(base_span, arg_span);
             Ok(AstNode::new(Expr::FnCall(AstNode::new(fn_call, span)), span))
         }
 
@@ -352,25 +352,25 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             }).map_err(|e| format!("{:?}", e))? {
 
                 // Access path with indexing as root
-                let span = base_span.make_span();
+                let span = base_span;
                 let root = PathSegment::Indexing(AstNode::new(base_ident, span), Box::new(indexer));
                 access_path(tokens, root)
 
             } else {
 
                 // Single indexing
-                let binding = Expr::Binding(AstNode::new(base_ident, base_span.make_span()));
+                let binding = Expr::Binding(AstNode::new(base_ident, base_span));
                 let indexing = Indexing {
                     array: Box::new(binding),
                     indexer: Box::new(indexer),
                 };
 
-                let span = Span::combine(base_span.make_span(), rspan.make_span());
+                let span = Span::combine(base_span, rspan);
                 Ok(AstNode::new(Expr::Indexing(AstNode::new(indexing, span)), span))
             }
         },
         IdentLeafDec::Singleton => {
-            let span = base_span.make_span();
+            let span = base_span;
             Ok(AstNode::new(Expr::Binding(AstNode::new(base_ident, span)), span))
         }
     }
@@ -442,12 +442,12 @@ fn path_segment(tokens: &mut BufferedTokenizer) -> ParseErr<PathSegment> {
 
             let _rbracket = consume_token!(tokens, Token::RBracket);
 
-            return Ok(PathSegment::Indexing(AstNode::new(ident, ispan.make_span()), 
+            return Ok(PathSegment::Indexing(AstNode::new(ident, ispan), 
                                             Box::new(indexer)));
         }
     }
 
-    let span = ispan.make_span();
+    let span = ispan;
     Ok(PathSegment::Ident(AstNode::new(ident, span)))
 }
 
@@ -488,7 +488,6 @@ pub fn fn_args(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Option<Vec<As
     let (rspan, _) = consume_token!(tokens, Token::RParen);
 
     let span = LocationSpan::new(lspan.start(), rspan.end());
-    let span = span.make_span();
 
     Ok(AstNode::new(args, span))
 }
@@ -497,7 +496,7 @@ pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: 
     -> ParseErr<AstNode<Expr>> {
 
     // Assume there at least 1 '::'
-    let root = AstNode::new(base, base_span.make_span());
+    let root = AstNode::new(base, base_span);
     let mut path = vec![root];
     let mut end = base_span;
 
@@ -516,7 +515,7 @@ pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: 
         let span = ispan;
         end = span;     // Widen path span to end of current ident
 
-        path.push(AstNode::new(ident, span.make_span()));
+        path.push(AstNode::new(ident, span));
     }
 
     // End of module path
@@ -532,7 +531,7 @@ pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: 
         // FN call
         let (args, args_span) = fn_args(tokens)?.to_data();
 
-        let start = base_span.make_span();
+        let start = base_span;
 
         let span = Span::combine(start, args_span);
 
@@ -547,7 +546,7 @@ pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: 
 
     } else {
         let span = LocationSpan::new(base_span.start(), end.end());
-        let span = span.make_span();
+        let span = span;
 
         let mod_access = AstNode::new(ModulePath(path), span);
         Ok(AstNode::new(Expr::ModAccess(mod_access), span))
@@ -580,9 +579,9 @@ fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         field_init: init,
     };
 
-    let struct_init = AstNode::new(struct_init, span.make_span());
+    let struct_init = AstNode::new(struct_init, span);
 
-    Ok(AstNode::new(Expr::StructInit(struct_init), span.make_span()))
+    Ok(AstNode::new(Expr::StructInit(struct_init), span))
 }
 
 fn struct_field_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<(AstNode<Ident>, Box<Expr>)>> {
@@ -625,7 +624,7 @@ fn struct_field_init(tokens: &mut BufferedTokenizer) -> ParseErr<(AstNode<Ident>
                          0)?
         .to_data();
 
-    Ok((AstNode::new(ident, iloc.make_span()), Box::new(expr)))
+    Ok((AstNode::new(ident, iloc), Box::new(expr)))
 }
 
 fn array_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
@@ -687,9 +686,9 @@ fn array_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
 
     let span = LocationSpan::new(lloc.start(), rloc.end());
 
-    let array_init = AstNode::new(init, span.make_span());
+    let array_init = AstNode::new(init, span);
 
-    Ok(AstNode::new(Expr::ArrayInit(array_init), span.make_span()))
+    Ok(AstNode::new(Expr::ArrayInit(array_init), span))
 }
 
 fn array_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Expr>> {
@@ -761,7 +760,7 @@ fn anonymous_fn(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
 
     let body = block(tokens)?;
 
-    let span = Span::combine(fnloc.make_span(), body.span());
+    let span = Span::combine(fnloc, body.span());
 
     let anon = AnonymousFn {
         params: params,
