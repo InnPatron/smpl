@@ -100,11 +100,11 @@ fn check_win(state: State) -> int {
 
     // Check rows
     let row = 0;
-    let column = 0;
 
     let emptySpace = false;
 
     while row < 3 {
+        let column = 0;
         let rowTotal = 0;
         let curRow = state.array[row];
         while column < 3 {
@@ -127,10 +127,10 @@ fn check_win(state: State) -> int {
     }
 
     // Check columns
-    row = 0;
-    column = 0;
+    let column = 0;
 
     while column < 3 {
+        let row = 0;
         let columnTotal = 0;
         while row < 3 {
             let curRow = state.array[row];
