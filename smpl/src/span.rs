@@ -31,10 +31,6 @@ impl LocationSpan {
     pub fn end(&self) -> Location {
         self.end
     }
-
-    pub fn make_span(&self) -> Span {
-        Span::new(self.start.byte_index(), self.end.byte_index())
-    }
 }
 
 
