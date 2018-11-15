@@ -33,13 +33,13 @@ impl LocationSpan {
     }
 
     pub fn combine(l: LocationSpan, r: LocationSpan) -> LocationSpan {
-        let start = if l.start().byte_index() < r.start().byte_index() {
+        let start = if l.start().byte_index < r.start().byte_index {
             l.start()
         } else {
             r.start()
         };
 
-        let end = if l.end().byte_index() > r.end().byte_index() {
+        let end = if l.end().byte_index > r.end().byte_index {
             l.end()
         } else {
             r.end()
@@ -52,33 +52,14 @@ impl LocationSpan {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Location {
-    byte_index: usize,
-    char_index: usize,
-    line: usize,
-    column: usize,
-}
-
-#[allow(dead_code)]
-impl Location {
-    pub fn byte_index(&self) -> usize {
-        self.byte_index
-    }
-
-    pub fn char_index(&self) -> usize {
-        self.char_index
-    }
-
-    pub fn line(&self) -> usize {
-        self.line
-    }
-
-    pub fn column(&self) -> usize {
-        self.column
-    }
+    pub byte_index: usize,
+    pub char_index: usize,
+    pub line: usize,
+    pub column: usize,
 }
 
 impl Location {
-    fn new(byte_index: usize, char_index: usize, line: usize, column: usize) -> Location {
+    pub fn new(byte_index: usize, char_index: usize, line: usize, column: usize) -> Location {
         Location {
             byte_index: byte_index,
             char_index: char_index,
