@@ -2,11 +2,11 @@ use std::rc::Rc;
 use std::collections::HashSet;
 use petgraph::graph::NodeIndex;
 
-use feature::*;
-use ast;
-use err::*;
+use crate::feature::*;
+use crate::ast;
+use crate::err::*;
 
-use span::Span;
+use crate::span::Span;
 
 use super::metadata::FnLayout;
 
@@ -159,7 +159,7 @@ fn resolve_bin_op(
     rhs: TypeId,
     span: Span,
 ) -> Result<TypeId, Err> {
-    use ast::BinOp::*;
+    use crate::ast::BinOp::*;
 
     let lh_type = universe.get_type(lhs);
     let rh_type = universe.get_type(rhs);
@@ -218,7 +218,7 @@ fn resolve_uni_op(
     tmp_type_id: TypeId,
     span: Span,
 ) -> Result<TypeId, Err> {
-    use ast::UniOp::*;
+    use crate::ast::UniOp::*;
 
     let tmp_type = universe.get_type(tmp_type_id);
 
@@ -388,7 +388,7 @@ impl<'a> FnAnalyzer<'a> {
             let tmp_type;
             match *tmp.value().data() {
                 Value::Literal(ref literal) => {
-                    use ast::Literal;
+                    use crate::ast::Literal;
                     match *literal {
                         Literal::Int(_) => tmp_type = self.program.universe().int(),
                         Literal::Float(_) => tmp_type = self.program.universe().float(),

@@ -3,12 +3,12 @@ use std::rc::Rc;
 
 use petgraph::graph::NodeIndex;
 
-use analysis::*;
-use analysis::{Value as AbstractValue};
-use analysis::smpl_type::*;
+use crate::analysis::*;
+use crate::analysis::{Value as AbstractValue};
+use crate::analysis::smpl_type::*;
 
-use code_gen::interpreter::value::{Struct, Value as Value};
-use code_gen::interpreter::comp::*;
+use crate::code_gen::interpreter::value::{Struct, Value as Value};
+use crate::code_gen::interpreter::comp::*;
 
 use super::vm::*;
 

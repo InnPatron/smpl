@@ -5,18 +5,18 @@ use std::rc::Rc;
 
 use petgraph::graph::NodeIndex;
 
-use analysis::*;
+use crate::analysis::*;
 
-use ast::{Ident, Module};
+use crate::ast::{Ident, Module};
 
-use err::Err;
+use crate::err::Err;
 
-use code_gen::interpreter::value::Value;
-use code_gen::interpreter::env::Env;
+use crate::code_gen::interpreter::value::Value;
+use crate::code_gen::interpreter::env::Env;
 
-use code_gen::interpreter::BuiltinMap;
-use code_gen::interpreter::loader;
-use code_gen::interpreter::vm_i::*;
+use crate::code_gen::interpreter::BuiltinMap;
+use crate::code_gen::interpreter::loader;
+use crate::code_gen::interpreter::vm_i::*;
 
 use super::internal_executor::InternalExecutor;
 

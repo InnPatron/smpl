@@ -1,7 +1,7 @@
 use std::iter::{Iterator, Peekable};
 
-use span::*;
-use ast::*;
+use crate::span::*;
+use crate::ast::*;
 use super::tokens::*;
 use super::expr_parser::*;
 
@@ -192,7 +192,7 @@ pub fn testfn_decl(tokens: &mut BufferedTokenizer) -> ParseErr<Function> {
 fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_builtin: bool) -> ParseErr<DeclStmt> {
     let mut span = Span::dummy();
     if is_builtin {
-        let (bloc, builtin) = consume_token!(tokens, Token::Builtin);
+        let (bloc, _builtin) = consume_token!(tokens, Token::Builtin);
         span = bloc;
     }
 
@@ -483,7 +483,7 @@ fn array_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation
 
     let array_type_span = LocationSpan::new(lloc.start(), rloc.end());
 
-    if (number <= 0) {
+    if number <= 0 {
         unimplemented!("Parser error: number of elements must be greater than 0. Found {}", number);
     }
 
@@ -750,7 +750,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             let _lbracket = consume_token!(tokens, Token::LBracket);
             let indexer = piped_expr(tokens, &[Delimiter::RBracket])?;
             let (indexer, _) = indexer.to_data();
-            let (rspan, _rbracket) = consume_token!(tokens, Token::RBracket);
+            let (_rspan, _rbracket) = consume_token!(tokens, Token::RBracket);
 
             if tokens.peek(|tok| {
                 match tok {
@@ -808,7 +808,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
         Dec::DefSingletonExpr => {
             // Expecting: expr ';'
             // 'ident op' is not a lvalue
-            let span = base_span;
+            let _span = base_span;
             let expr = piped_expr(tokens, &[Delimiter::Semi])?;
 
             let _semi = consume_token!(tokens, Token::Semi);
@@ -850,8 +850,8 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
         }
 
         PathDec::Expr => {
-            let span = path.span();
-            let path = Expr::FieldAccess(path);
+            let _span = path.span();
+            let _path = Expr::FieldAccess(path);
 
             let expr = piped_expr(tokens, &[Delimiter::Semi])?;
 

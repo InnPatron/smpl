@@ -5,7 +5,7 @@ use std::str::CharIndices;
 use std::iter::{Iterator, Peekable, Enumerate};
 use std::default::Default;
 
-use span::*;
+use crate::span::*;
 
 #[derive(Debug)]
 pub struct SpannedToken {

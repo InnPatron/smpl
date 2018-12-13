@@ -2,9 +2,9 @@ use super::semantic_data::{TmpId, Universe};
 use super::typed_ast::*;
 use super::typed_ast::Binding as TypedBinding;
 
-use span::Span;
+use crate::span::Span;
 
-use ast::{ArrayInit as AstArrayInit, Expr as AstExpr, AstNode};
+use crate::ast::{ArrayInit as AstArrayInit, Expr as AstExpr, AstNode};
 
 pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
@@ -203,8 +203,8 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
 
 #[cfg(test)]
 mod tests {
-    use parser::*;
-    use parser::expr_parser::*;
+    use crate::parser::*;
+    use crate::parser::expr_parser::*;
     use super::super::semantic_data::*;
     use super::*;
 

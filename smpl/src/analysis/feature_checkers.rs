@@ -1,6 +1,6 @@
-use analysis::smpl_type::*;
-use analysis::*;
-use feature::*;
+use crate::analysis::smpl_type::*;
+use crate::analysis::*;
+use crate::feature::*;
 
 pub fn var_type_scanner(u: &Universe, f: &mut PresentFeatures, t: TypeId) {
     match *u.get_type(t) {

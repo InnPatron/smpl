@@ -3,9 +3,9 @@ use petgraph::Direction;
 
 use failure::Error;
 
-use analysis::*;
+use crate::analysis::*;
 
-use code_gen::interpreter::value::Value;
+use crate::code_gen::interpreter::value::Value;
 use super::vm::FnContext;
 
 type ExprStage = usize;

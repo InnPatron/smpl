@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use failure::Error;
 
-use analysis::*;
+use crate::analysis::*;
 
-use code_gen::interpreter::value::Value;
-use code_gen::interpreter::env::Env;
+use crate::code_gen::interpreter::value::Value;
+use crate::code_gen::interpreter::env::Env;
 
-use code_gen::interpreter::vm_i::*;
+use crate::code_gen::interpreter::vm_i::*;
 
 use super::vm::*;
 use super::node_fetch::*;

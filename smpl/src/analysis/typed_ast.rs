@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use std::slice::Iter;
 use std::iter::Iterator;
 
-use span::Span;
+use crate::span::Span;
 
-pub use ast::BinOp;
-pub use ast::UniOp;
-pub use ast::Literal;
-use ast;
+pub use crate::ast::BinOp;
+pub use crate::ast::UniOp;
+pub use crate::ast::Literal;
+use crate::ast;
 
 use super::smpl_type::*;
 use super::semantic_data::*;

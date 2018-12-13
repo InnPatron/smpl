@@ -1,7 +1,7 @@
 use std::iter::{Iterator, Peekable};
 
-use span::*;
-use ast::*;
+use crate::span::*;
+use crate::ast::*;
 use super::tokens::*;
 use super::parser::{module_binding as full_module_binding, ParseErr, fn_param_list, block, type_annotation};
 use crate::consume_token;
@@ -61,7 +61,7 @@ pub fn prebase_piped_expr(tokens: &mut BufferedTokenizer, expr_base: AstNode<Exp
         let piped_exprs = piped_exprs
             .into_iter()
             .map(|e| {
-                let (e, espan) = e.to_data();
+                let (e, _espan) = e.to_data();
                 match e {
                     Expr::FnCall(f) => Ok(f),
                     e @ _ => Err(format!("Can only pipe function calls. Found:\n{:?}", e)),
@@ -125,7 +125,7 @@ fn expr(tokens: &mut BufferedTokenizer,
             break;
         }
 
-        let (next_span, next) = consume_token!(tokens);
+        let (_next_span, next) = consume_token!(tokens);
         let main_op = get_op(&next).unwrap();
         let main_prec = bin_op_precedence(&main_op);
 
@@ -278,7 +278,7 @@ fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             let (rspan, _) = consume_token!(tokens, Token::RParen);
 
             let span = LocationSpan::new(lspan.start(), rspan.end());
-            let span = span;
+            let _span = span;
 
             Ok(inner)
         }
@@ -508,7 +508,7 @@ pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: 
             }
         }).map_err(|e| format!("{:?}", e))? {
     
-        let (cspan, _) = consume_token!(tokens, Token::ColonColon);
+        let (_cspan, _) = consume_token!(tokens, Token::ColonColon);
         let (ispan, ident) = consume_token!(tokens, 
                                             Token::Identifier(i) => Ident(i));
 
@@ -745,7 +745,7 @@ fn anonymous_fn(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
     };
         
 
-    let (rloc, _) = consume_token!(tokens, Token::RParen);
+    let (_rloc, _) = consume_token!(tokens, Token::RParen);
 
     let mut return_type = None;
     if tokens.peek(|tok| {

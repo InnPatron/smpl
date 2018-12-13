@@ -7,9 +7,9 @@ pub use self::fn_data::*;
 
 use std::collections::{HashMap, HashSet};
 
-use ast::{Annotation, Ident};
-use err::Err;
-use analysis::semantic_data::{FnId, ModuleId, Program, TypeId};
+use crate::ast::{Annotation, Ident};
+use crate::err::Err;
+use crate::analysis::semantic_data::{FnId, ModuleId, Program, TypeId};
 
 #[derive(Clone, Debug)]
 pub struct Metadata {
@@ -113,8 +113,8 @@ impl Metadata {
     }
 
     pub fn find_main(program: &mut Program) -> Result<(), Err> {
-        use ast::{AstNode, ModulePath};
-        use span::Span;
+        use crate::ast::{AstNode, ModulePath};
+        use crate::span::Span;
 
         let (u, m, _f) = program.analysis_context();
         let universe = u;

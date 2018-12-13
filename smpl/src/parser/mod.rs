@@ -1,5 +1,5 @@
 use super::ast::Module;
-use err::Err;
+use crate::err::Err;
 
 mod tokens;
 

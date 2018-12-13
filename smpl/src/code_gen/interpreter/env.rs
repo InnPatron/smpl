@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use analysis::*;
+use crate::analysis::*;
 
 use super::value::Value;
 

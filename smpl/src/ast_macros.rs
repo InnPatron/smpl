@@ -1,7 +1,7 @@
 #[allow(unused_macros)]
 macro_rules! dummy_node {
     ($val: expr) => {{
-        use span::Span;
+        use crate::span::Span;
         AstNode::new($val, Span::dummy())
     }};
 }
@@ -9,12 +9,12 @@ macro_rules! dummy_node {
 #[allow(unused_macros)]
 macro_rules! boolean {
     ($val: expr) => {{
-        use ast::Literal;
+        use crate::ast::Literal;
         Literal::Bool($val)
     }};
 
     ($val: expr => Expr) => {{
-        use ast::Expr;
+        use crate::ast::Expr;
         Expr::Literal(dummy_node!(boolean!($val)))
     }};
 
@@ -26,12 +26,12 @@ macro_rules! boolean {
 #[allow(unused_macros)]
 macro_rules! string {
     ($val: expr) => {{
-        use ast::Literal;
+        use crate::ast::Literal;
         Literal::String($val.to_string())
     }};
 
     ($val: expr => Expr) => {{
-        use ast::Expr;
+        use crate::ast::Expr;
         Expr::Literal(dummy_node!(string!($val)))
     }};
 
@@ -43,12 +43,12 @@ macro_rules! string {
 #[allow(unused_macros)]
 macro_rules! int {
     ($int: expr) => {{
-        use ast::Literal;
+        use crate::ast::Literal;
         Literal::Int($int)
     }};
 
     ($int: expr => Expr) => {{
-        use ast::Expr;
+        use crate::ast::Expr;
         Expr::Literal(dummy_node!(int!($int)))
     }};
 
@@ -60,7 +60,7 @@ macro_rules! int {
 #[allow(unused_macros)]
 macro_rules! ident {
     ($ident: expr) => {{
-        use ast::Ident;
+        use crate::ast::Ident;
         Ident($ident.to_string())
     }};
 
@@ -105,7 +105,7 @@ macro_rules! internal_module_path {
 #[allow(unused_macros)]
 macro_rules! bin_expr {
     ($lhs: expr, $op: expr, $rhs: expr) => {{
-        use ast::BinExpr;
+        use crate::ast::BinExpr;
         BinExpr {
             op: $op,
             lhs: $lhs,
@@ -114,7 +114,7 @@ macro_rules! bin_expr {
     }};
 
     (($lhs: expr, $op: expr, $rhs: expr) => Expr) => {{
-        use ast::Expr;
+        use crate::ast::Expr;
         Expr::Bin(dummy_node!(bin_expr!($lhs, $op, $rhs)))
     }};
 

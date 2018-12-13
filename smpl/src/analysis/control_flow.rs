@@ -2,10 +2,10 @@ use petgraph::graph;
 use petgraph::Direction;
 use petgraph::visit::EdgeRef;
 
-use ast;
-use err::ControlFlowErr;
+use crate::ast;
+use crate::err::ControlFlowErr;
 
-use span::Span;
+use crate::span::Span;
 
 use super::smpl_type::{FunctionType, SmplType};
 use super::expr_flow;
@@ -412,7 +412,7 @@ impl CFG {
         instructions: Vec<ast::Stmt>,
         loop_data: Option<(graph::NodeIndex, graph::NodeIndex, LoopId)>,
     ) -> Result<BranchData, ControlFlowErr> {
-        use ast::*;
+        use crate::ast::*;
 
         let mut previous = None;
         let mut head = None;
@@ -674,8 +674,8 @@ impl CFG {
 #[cfg_attr(rustfmt, rustfmt_skip)]
 mod tests {
     use super::*;
-    use parser::*;
-    use parser::parser::*;
+    use crate::parser::*;
+    use crate::parser::parser::*;
     use petgraph::dot::{Config, Dot};
     use petgraph::Direction;
 

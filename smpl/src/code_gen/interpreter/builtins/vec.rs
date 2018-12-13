@@ -7,10 +7,10 @@ use std::cell::RefCell;
 
 use strfmt::strfmt;
 
-use ast::Module;
-use parser::parse_module;
+use crate::ast::Module;
+use crate::parser::parse_module;
 
-use code_gen::interpreter::*;
+use crate::code_gen::interpreter::*;
 
 pub const MOD_VEC: &'static str = "vec_{item_type}";
 pub const VEC_NEW: &'static str = "new";

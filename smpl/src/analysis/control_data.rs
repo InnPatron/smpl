@@ -1,4 +1,4 @@
-use span::Span;
+use crate::span::Span;
 
 use super::typed_ast;
 use super::semantic_data::{BranchingId, LoopId};

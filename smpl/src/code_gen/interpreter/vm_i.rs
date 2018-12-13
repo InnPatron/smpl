@@ -1,6 +1,6 @@
 use failure::Error;
 
-use analysis::{FnId, TypeId};
+use crate::analysis::{FnId, TypeId};
 
 use super::value::Value;
 

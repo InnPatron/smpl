@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use err::{Err, TypeErr};
-use ast::{DeclStmt, Function as AstFunction, Module as AstModule, Struct};
-use ast::{AstNode, BuiltinFunction as AstBuiltinFunction, Ident, UseDecl};
+use crate::err::{Err, TypeErr};
+use crate::ast::{DeclStmt, Function as AstFunction, Module as AstModule, Struct};
+use crate::ast::{AstNode, BuiltinFunction as AstBuiltinFunction, Ident, UseDecl};
 
 use super::feature_checkers::*;
 use super::metadata::*;
@@ -13,7 +13,7 @@ use super::control_flow::CFG;
 use super::fn_analyzer::analyze_fn;
 use super::fn_type_generator::*;
 
-use feature::*;
+use crate::feature::*;
 
 struct RawProgram {
     scopes: HashMap<ModuleId, ScopedData>,

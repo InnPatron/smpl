@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use analysis::{FieldId, TypeId};
-use ast::Ident;
+use crate::analysis::{FieldId, TypeId};
+use crate::ast::Ident;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SmplType {

@@ -1,6 +1,6 @@
-use err::*;
-use feature::*;
-use ast::{AnonymousFn as AstAnonymousFn, BuiltinFnParams, BuiltinFunction as AstBuiltinFunction,
+use crate::err::*;
+use crate::feature::*;
+use crate::ast::{AnonymousFn as AstAnonymousFn, BuiltinFnParams, BuiltinFunction as AstBuiltinFunction,
           Function as AstFunction};
 
 use super::*;

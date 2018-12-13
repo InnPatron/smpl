@@ -2,7 +2,7 @@ use std::fmt;
 use std::slice::Iter;
 use std::borrow::Borrow;
 
-use span::Span;
+use crate::span::Span;
 
 #[derive(Debug)]
 pub struct AstNode<T: ::std::fmt::Debug> {

@@ -1,9 +1,9 @@
 use failure::Error;
 
-use ast::Module;
-use parser::parse_module;
+use crate::ast::Module;
+use crate::parser::parse_module;
 
-use code_gen::interpreter::*;
+use crate::code_gen::interpreter::*;
 
 pub const MOD_ERR: &'static str = "err";
 
@@ -41,7 +41,7 @@ impl std::fmt::Display for RuntimeError {
 pub struct Panic;
 
 impl BuiltinFn for Panic {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+    fn execute(&self, _args: Option<Vec<Value>>) -> Result<Value, Error> {
         Err(RuntimeError(None))?
     }
 }

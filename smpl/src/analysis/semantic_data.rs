@@ -4,10 +4,10 @@ use std::rc::Rc;
 use std::slice::Iter;
 use std::fmt;
 
-use err::Err;
-use ast::*;
-use ast::ModulePath as AstModulePath;
-use feature::PresentFeatures;
+use crate::err::Err;
+use crate::ast::*;
+use crate::ast::ModulePath as AstModulePath;
+use crate::feature::PresentFeatures;
 
 use super::metadata::Metadata;
 use super::smpl_type::*;

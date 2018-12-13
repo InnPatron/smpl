@@ -1,14 +1,14 @@
-use code_gen::StringEmitter;
+use crate::code_gen::StringEmitter;
 
 use petgraph::graph::NodeIndex;
 
-use feature::*;
+use crate::feature::*;
 
-use ast::Ident;
+use crate::ast::Ident;
 
-use analysis::*;
-use analysis::smpl_type::*;
-use analysis::metadata::*;
+use crate::analysis::*;
+use crate::analysis::smpl_type::*;
+use crate::analysis::metadata::*;
 
 pub struct RustBackend {
     mods: Vec<(Ident, ModuleId, String)>,
@@ -19,7 +19,7 @@ pub struct RustBackend {
 
 impl RustBackend {
     fn features() -> FeatureInfo {
-        let mut required = Vec::new();
+        let required = Vec::new();
         let mut denied = Vec::new();
 
         denied.push(FeatureReasoning::with_feature(MOD_ACCESS));
@@ -866,8 +866,8 @@ impl<'a> Passenger<()> for RustFnGen<'a> {
 
 #[allow(non_snake_case)]
 mod RustGenFmt {
-    use ast::{BinOp, UniOp};
-    use analysis::*;
+    use crate::ast::{BinOp, UniOp};
+    use crate::analysis::*;
 
     pub fn field_id(id: FieldId) -> String {
         format!("_field{}", id.raw())
@@ -922,7 +922,7 @@ mod RustGenFmt {
     }
 
     pub fn uni_op(op: &UniOp) -> String {
-        use ast::UniOp::*;
+        use crate::ast::UniOp::*;
 
         match *op {
             Ref => unimplemented!(),
@@ -933,7 +933,7 @@ mod RustGenFmt {
     }
 
     pub fn bin_op(op: &BinOp) -> String {
-        use ast::BinOp::*;
+        use crate::ast::BinOp::*;
         match *op {
             Add => "+".to_string(),
             Sub => "-".to_string(),

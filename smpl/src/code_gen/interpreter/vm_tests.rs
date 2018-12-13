@@ -1,7 +1,7 @@
 use failure::Error;
 
-use parser::parse_module;
-use code_gen::interpreter::*;
+use crate::parser::parse_module;
+use crate::code_gen::interpreter::*;
 
 struct Add;
 

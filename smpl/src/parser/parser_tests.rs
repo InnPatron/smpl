@@ -2,11 +2,11 @@
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod parser_tests {
-    use parser::parser::*;
-    use parser::expr_parser::*;
-    use parser::*;
-    use ast::*;
-    use span::Span;
+    use crate::parser::parser::*;
+    use crate::parser::expr_parser::*;
+    use crate::parser::*;
+    use crate::ast::*;
+    use crate::span::Span;
 
     fn parse_expr_quick(input: &str) -> Expr {
         let mut tokens = buffer_input(input);

@@ -1,7 +1,7 @@
 use super::builtins::*;
 use super::BuiltinMap;
 
-use ast::Module;
+use crate::ast::Module;
 
 pub fn include(mut modules: Vec<Module>) -> Vec<Module> {
     log::include(&mut modules);

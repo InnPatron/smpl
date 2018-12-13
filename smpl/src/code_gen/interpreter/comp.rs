@@ -1,6 +1,6 @@
 use std::ops::{Add, BitAnd, BitOr, Div, Mul, Neg, Not, Sub};
 
-use ast::BinOp;
+use crate::ast::BinOp;
 
 pub fn not<T: Not<Output = T>>(t: T) -> T {
     !t

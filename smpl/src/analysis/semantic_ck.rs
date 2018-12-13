@@ -1,7 +1,7 @@
-use err::Err;
+use crate::err::Err;
 
-use feature::*;
-use ast::Module as AstModule;
+use crate::feature::*;
+use crate::ast::Module as AstModule;
 
 use super::metadata::*;
 use super::semantic_data::*;
@@ -24,11 +24,11 @@ pub fn check_program(modules: Vec<AstModule>) -> Result<Program, Err> {
 #[cfg(test)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 mod tests {
-    use err::*;
+    use crate::err::*;
     use super::*;
-    use parser::*;
-    use analysis::smpl_type::*;
-    use ast::Ident;
+    use crate::parser::*;
+    use crate::analysis::smpl_type::*;
+    use crate::ast::Ident;
 
     #[test]
     fn basic_test_semantic_analysis() {
@@ -70,7 +70,7 @@ fn main() {
     #[test]
     fn call_fn_success() {
         use super::super::typed_ast::*;
-        use analysis::*;
+        use crate::analysis::*;
 
         let input = 
 "mod call_fn_success;
@@ -972,6 +972,6 @@ fn bar() -> int {
 }";
 
         let mod1 = parse_module(mod1).unwrap();
-        let err = check_program(vec![mod1]).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
     }
 }

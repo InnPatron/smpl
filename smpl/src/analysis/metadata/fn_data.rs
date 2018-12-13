@@ -1,5 +1,5 @@
-use ast::Ident;
-use analysis::semantic_data::VarId;
+use crate::ast::Ident;
+use crate::analysis::semantic_data::VarId;
 
 #[derive(Clone, Debug)]
 pub struct FunctionParameter {

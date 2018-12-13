@@ -1,10 +1,10 @@
 use failure::Error;
 
 use crate::{exact_args, min_args};
-use ast::Module;
-use parser::parse_module;
+use crate::ast::Module;
+use crate::parser::parse_module;
 
-use code_gen::interpreter::*;
+use crate::code_gen::interpreter::*;
 
 const MOD_STRING: &'static str = "str";
 
