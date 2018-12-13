@@ -71,6 +71,12 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP, item_type: &str) {
         .unwrap();
 }
 
+#[derive(Fail, Debug)]
+pub enum VecError {
+    #[fail(display = "Index '{}' out of range ('{}')", _0, _1)]
+    IndexOutOfRange(i64, usize)
+}
+
 pub struct New;
 
 impl BuiltinFn for New {
