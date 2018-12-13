@@ -37,7 +37,9 @@ impl BuiltinFn for Print {
             print!("{}", arg);
         }
 
-        ::std::io::stdout().flush();
+        ::std::io::stdout()
+            .flush()
+            .map_err(|e| LoggingError(e))?;
 
         Ok(Value::Unit)
     }
@@ -55,7 +57,9 @@ impl BuiltinFn for Println {
 
         print!("\n");
 
-        ::std::io::stdout().flush();
+        ::std::io::stdout()
+            .flush()
+            .map_err(|e| LoggingError(e))?;
 
         Ok(Value::Unit)
     }
