@@ -42,6 +42,20 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
         .unwrap();
 }
 
+#[derive(Fail, Debug)]
+#[fail(display = "Error converting '{}' to {}'", _0, _1)]
+pub struct ConversionError(String, ConversionTarget);
+
+#[derive(Fail, Debug)]
+pub enum ConversionTarget {
+    #[fail(display = "String")]
+    String,
+    #[fail(display = "Int")]
+    Int,
+    #[fail(display = "Float")]
+    Float,
+}
+
 pub struct IntToFloat;
 
 impl BuiltinFn for IntToFloat {
