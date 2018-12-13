@@ -1,5 +1,6 @@
 use failure::Error;
 
+use crate::{exact_args, min_args};
 use ast::Module;
 use parser::parse_module;
 
@@ -36,7 +37,7 @@ struct Len;
 
 impl BuiltinFn for Len {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
 
         let string = args.pop().unwrap();
         let string = irmatch!(string; Value::String(s) => s);
@@ -49,7 +50,7 @@ struct ToString;
 
 impl BuiltinFn for ToString {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let args = args.expect("str::to_string() expected 1+ args");
+        let args = min_args!(1, args)?;
 
         let mut s = String::new();
 
@@ -65,7 +66,7 @@ struct Append;
 
 impl BuiltinFn for Append {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = min_args!(1, args)?;
 
         let to_append = args.pop().unwrap();
         let to_append = irmatch!(to_append; Value::String(s) => s);
@@ -83,7 +84,7 @@ struct ToLower;
 
 impl BuiltinFn for ToLower {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
 
         let string = args.pop().unwrap();
         let string = irmatch!(string; Value::String(s) => s);
@@ -96,7 +97,7 @@ struct ToUpper;
 
 impl BuiltinFn for ToUpper {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
 
         let string = args.pop().unwrap();
         let string = irmatch!(string; Value::String(s) => s);

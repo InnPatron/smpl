@@ -1,5 +1,6 @@
 use failure::Error;
 
+use crate::exact_args;
 use ast::Module;
 use parser::parse_module;
 
@@ -75,7 +76,7 @@ pub struct Sin;
 
 impl BuiltinFn for Sin {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
@@ -90,7 +91,7 @@ pub struct Cos;
 
 impl BuiltinFn for Cos {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
@@ -105,7 +106,7 @@ pub struct Tan;
 
 impl BuiltinFn for Tan {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
@@ -120,7 +121,7 @@ pub struct Asin;
 
 impl BuiltinFn for Asin {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
@@ -135,7 +136,7 @@ pub struct Acos;
 
 impl BuiltinFn for Acos {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
@@ -150,7 +151,7 @@ pub struct Atan;
 
 impl BuiltinFn for Atan {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
@@ -165,7 +166,7 @@ pub struct Atan2;
 
 impl BuiltinFn for Atan2 {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let args = args.unwrap();
+        let mut args = exact_args!(2, args)?;
         let v = args.get(0).unwrap().clone();
         let a = args.get(1).unwrap().clone();
 
@@ -180,7 +181,7 @@ pub struct ToRadians;
 
 impl BuiltinFn for ToRadians {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
@@ -194,7 +195,7 @@ pub struct ToDegrees;
 
 impl BuiltinFn for ToDegrees {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
@@ -208,7 +209,7 @@ pub struct FPowF;
 
 impl BuiltinFn for FPowF {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let args = args.unwrap();
+        let mut args = exact_args!(2, args)?;
         let b = args.get(0).unwrap().clone();
         let p = args.get(1).unwrap().clone();
 
@@ -223,7 +224,7 @@ pub struct FPowI;
 
 impl BuiltinFn for FPowI {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let args = args.unwrap();
+        let mut args = exact_args!(2, args)?;
         let b = args.get(0).unwrap().clone();
         let p = args.get(1).unwrap().clone();
 
@@ -238,7 +239,7 @@ pub struct IPow;
 
 impl BuiltinFn for IPow {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let args = args.unwrap();
+        let mut args = exact_args!(2, args)?;
         let b = args.get(0).unwrap().clone();
         let p = args.get(1).unwrap().clone();
 
@@ -253,7 +254,7 @@ pub struct Floor;
 
 impl BuiltinFn for Floor {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
@@ -267,7 +268,7 @@ pub struct Ceil;
 
 impl BuiltinFn for Ceil {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
@@ -281,7 +282,7 @@ pub struct Round;
 
 impl BuiltinFn for Round {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {

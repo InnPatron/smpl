@@ -1,5 +1,6 @@
 use failure::Error;
 
+use crate::{no_args, exact_args};
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -81,6 +82,8 @@ pub struct New;
 
 impl BuiltinFn for New {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let _args: Option<Vec<Value>> = no_args!(args)?;
+
         let mut vec = Struct::new();
         vec.set_field(VEC_DATA_KEY.to_string(), Value::Array(Vec::new()));
         vec.set_field(VEC_LEN_KEY.to_string(), Value::Int(0));
@@ -93,7 +96,7 @@ pub struct Len;
 
 impl BuiltinFn for Len {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
         let vec_struct = args.pop().unwrap();
         let vec_struct = irmatch!(vec_struct; Value::Struct(s) => s);
 
@@ -107,7 +110,7 @@ pub struct Contains;
 
 impl BuiltinFn for Contains {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(2, args)?;
 
         let to_search = args.pop().unwrap();
 
@@ -134,7 +137,7 @@ pub struct Insert;
 
 impl BuiltinFn for Insert {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(3, args)?;
 
         let to_insert = args.pop().unwrap();
         let index = args.pop().unwrap();
@@ -166,7 +169,7 @@ pub struct Push;
 
 impl BuiltinFn for Push {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(2, args)?;
 
         let to_insert = args.pop().unwrap();
 
@@ -196,7 +199,7 @@ pub struct Get;
 
 impl BuiltinFn for Get {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(2, args)?;
 
         let index = args.pop().unwrap();
         let smpl_index = irmatch!(index; Value::Int(i) => i) as i64;
@@ -228,7 +231,7 @@ pub struct Remove;
 
 impl BuiltinFn for Remove {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(2, args)?;
 
         let index = args.pop().unwrap();
         let smpl_index = irmatch!(index; Value::Int(i) => i) as i64;

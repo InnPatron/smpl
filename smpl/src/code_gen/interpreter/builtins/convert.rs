@@ -1,5 +1,6 @@
 use failure::Error;
 
+use crate::exact_args;
 use ast::Module;
 use parser::parse_module;
 
@@ -60,7 +61,7 @@ pub struct IntToFloat;
 
 impl BuiltinFn for IntToFloat {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
 
         let a = args.remove(0);
         match a {
@@ -74,7 +75,7 @@ pub struct FloatToInt;
 
 impl BuiltinFn for FloatToInt {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
+        let mut args = exact_args!(1, args)?;
 
         let a = args.remove(0);
         match a {
@@ -88,9 +89,9 @@ pub struct IsFloat;
 
 impl BuiltinFn for IsFloat {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
-        let a = args.remove(0);
+        let mut args = exact_args!(1, args)?;
 
+        let a = args.remove(0);
         match a {
             Value::String(s) => Ok(Value::Bool(s.parse::<f32>().is_ok())),
             _ => unreachable!(),
@@ -102,9 +103,9 @@ pub struct IsInt;
 
 impl BuiltinFn for IsInt {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
-        let a = args.remove(0);
+        let mut args = exact_args!(1, args)?;
 
+        let a = args.remove(0);
         match a {
             Value::String(s) => Ok(Value::Bool(s.parse::<i32>().is_ok())),
             _ => unreachable!(),
@@ -116,9 +117,9 @@ pub struct StringToFloat;
 
 impl BuiltinFn for StringToFloat {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
-        let a = args.remove(0);
+        let mut args = exact_args!(1, args)?;
 
+        let a = args.remove(0);
         match a {
             Value::String(s) => Ok(Value::Float(
                 s.parse::<f32>()
@@ -133,9 +134,9 @@ pub struct StringToInt;
 
 impl BuiltinFn for StringToInt {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
-        let a = args.remove(0);
+        let mut args = exact_args!(1, args)?;
 
+        let a = args.remove(0);
         match a {
             Value::String(s) => Ok(Value::Int(
                 s.parse::<i32>()

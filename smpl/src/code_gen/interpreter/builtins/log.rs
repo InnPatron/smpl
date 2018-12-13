@@ -1,6 +1,7 @@
 use std::io::Write;
 use failure::Error;
 
+use crate::min_args;
 use ast::Module;
 use parser::parse_module;
 
@@ -31,7 +32,7 @@ pub struct Print;
 
 impl BuiltinFn for Print {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let args = args.expect("Print() expects at least one argument");
+        let args = min_args!(1, args)?;
 
         for arg in args {
             print!("{}", arg);
