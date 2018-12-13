@@ -23,6 +23,10 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
         .unwrap();
 }
 
+#[derive(Fail, Debug)]
+#[fail(display = "Logging Error: '{}'", _0)]
+pub struct LoggingError(std::io::Error);
+
 pub struct Print;
 
 impl BuiltinFn for Print {
