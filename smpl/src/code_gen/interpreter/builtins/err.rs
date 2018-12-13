@@ -42,7 +42,7 @@ pub struct Panic;
 
 impl BuiltinFn for Panic {
     fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        panic!();
+        Err(RuntimeError(None))?
     }
 }
 
@@ -54,7 +54,7 @@ impl BuiltinFn for PanicMsg {
         let a = args.remove(0);
 
         match a {
-            Value::String(s) => panic!("{}", s),
+            Value::String(s) => Err(RuntimeError(Some(s)))?,
             _ => unreachable!(),
         }
     }
@@ -68,8 +68,11 @@ impl BuiltinFn for Assert {
         let a = args.remove(0);
 
         let a = irmatch!(a; Value::Bool(a) => a);
-        assert!(a);
 
-        Ok(Value::Unit)
+        if a {
+            Ok(Value::Unit)
+        } else {
+            Err(RuntimeError(Some("Assertion failed".to_string())))?
+        }
     }
 }
