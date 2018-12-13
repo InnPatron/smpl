@@ -4,6 +4,7 @@ mod loader;
 mod comp;
 mod env;
 mod avm;
+mod err;
 
 #[cfg(test)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
