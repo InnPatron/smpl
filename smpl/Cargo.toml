@@ -3,6 +3,7 @@ name = "smpl"
 version = "0.10.0"
 authors = ["Alexander Vo <randomcivvy0121@gmail.com>"]
 workspace = ".."
+edition = "2018"
 
 description = "Core library to compile the SMPL language"
 
