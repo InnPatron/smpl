@@ -122,7 +122,7 @@ impl BuiltinFn for StringToFloat {
         match a {
             Value::String(s) => Ok(Value::Float(
                 s.parse::<f32>()
-                    .expect(&format!("{} was not a valid float.", s)),
+                    .map_err(|_| ConversionError(s, ConversionTarget::Float))?,
             )),
             _ => unreachable!(),
         }
@@ -139,7 +139,7 @@ impl BuiltinFn for StringToInt {
         match a {
             Value::String(s) => Ok(Value::Int(
                 s.parse::<i32>()
-                    .expect(&format!("{} was not a valid int.", s)),
+                    .map_err(|_| ConversionError(s, ConversionTarget::Int))?,
             )),
             _ => unreachable!(),
         }
