@@ -1,4 +1,4 @@
-use failure::Fail;
+use failure::Error;
 
 use ast::Module;
 use parser::parse_module;
@@ -35,7 +35,7 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
 struct Len;
 
 impl BuiltinFn for Len {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
 
         let string = args.pop().unwrap();
@@ -48,7 +48,7 @@ impl BuiltinFn for Len {
 struct ToString;
 
 impl BuiltinFn for ToString {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let args = args.expect("str::to_string() expected 1+ args");
 
         let mut s = String::new();
@@ -64,7 +64,7 @@ impl BuiltinFn for ToString {
 struct Append;
 
 impl BuiltinFn for Append {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
 
         let to_append = args.pop().unwrap();
@@ -82,7 +82,7 @@ impl BuiltinFn for Append {
 struct ToLower;
 
 impl BuiltinFn for ToLower {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
 
         let string = args.pop().unwrap();
@@ -95,7 +95,7 @@ impl BuiltinFn for ToLower {
 struct ToUpper;
 
 impl BuiltinFn for ToUpper {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
 
         let string = args.pop().unwrap();

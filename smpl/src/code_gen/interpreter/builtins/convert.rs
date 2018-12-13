@@ -1,4 +1,4 @@
-use failure::Fail;
+use failure::Error;
 
 use ast::Module;
 use parser::parse_module;
@@ -45,7 +45,7 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
 pub struct IntToFloat;
 
 impl BuiltinFn for IntToFloat {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
 
         let a = args.remove(0);
@@ -59,7 +59,7 @@ impl BuiltinFn for IntToFloat {
 pub struct FloatToInt;
 
 impl BuiltinFn for FloatToInt {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
 
         let a = args.remove(0);
@@ -73,7 +73,7 @@ impl BuiltinFn for FloatToInt {
 pub struct IsFloat;
 
 impl BuiltinFn for IsFloat {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
         let a = args.remove(0);
 
@@ -87,7 +87,7 @@ impl BuiltinFn for IsFloat {
 pub struct IsInt;
 
 impl BuiltinFn for IsInt {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
         let a = args.remove(0);
 
@@ -101,7 +101,7 @@ impl BuiltinFn for IsInt {
 pub struct StringToFloat;
 
 impl BuiltinFn for StringToFloat {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
         let a = args.remove(0);
 
@@ -118,7 +118,7 @@ impl BuiltinFn for StringToFloat {
 pub struct StringToInt;
 
 impl BuiltinFn for StringToInt {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
         let a = args.remove(0);
 

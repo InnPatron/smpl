@@ -1,5 +1,5 @@
 use std::io::Write;
-use failure::Fail;
+use failure::Error;
 
 use ast::Module;
 use parser::parse_module;
@@ -26,7 +26,7 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
 pub struct Print;
 
 impl BuiltinFn for Print {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let args = args.expect("Print() expects at least one argument");
 
         for arg in args {
@@ -42,7 +42,7 @@ impl BuiltinFn for Print {
 pub struct Println;
 
 impl BuiltinFn for Println {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         if let Some(args) = args {
             for arg in args {
                 print!("{}", arg);

@@ -1,4 +1,4 @@
-use failure::Fail;
+use failure::Error;
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -74,7 +74,7 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP, item_type: &str) {
 pub struct New;
 
 impl BuiltinFn for New {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut vec = Struct::new();
         vec.set_field(VEC_DATA_KEY.to_string(), Value::Array(Vec::new()));
         vec.set_field(VEC_LEN_KEY.to_string(), Value::Int(0));
@@ -86,7 +86,7 @@ impl BuiltinFn for New {
 pub struct Len;
 
 impl BuiltinFn for Len {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
         let vec_struct = args.pop().unwrap();
         let vec_struct = irmatch!(vec_struct; Value::Struct(s) => s);
@@ -100,7 +100,7 @@ impl BuiltinFn for Len {
 pub struct Contains;
 
 impl BuiltinFn for Contains {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
 
         let to_search = args.pop().unwrap();
@@ -127,7 +127,7 @@ impl BuiltinFn for Contains {
 pub struct Insert;
 
 impl BuiltinFn for Insert {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
 
         let to_insert = args.pop().unwrap();
@@ -159,7 +159,7 @@ impl BuiltinFn for Insert {
 pub struct Push;
 
 impl BuiltinFn for Push {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
 
         let to_insert = args.pop().unwrap();
@@ -189,7 +189,7 @@ impl BuiltinFn for Push {
 pub struct Get;
 
 impl BuiltinFn for Get {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
 
         let index = args.pop().unwrap();
@@ -210,7 +210,7 @@ impl BuiltinFn for Get {
 pub struct Remove;
 
 impl BuiltinFn for Remove {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
 
         let index = args.pop().unwrap();
