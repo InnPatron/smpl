@@ -1,4 +1,4 @@
-use failure::Fail;
+use failure::Error;
 
 use parser::parse_module;
 use code_gen::interpreter::*;
@@ -24,7 +24,7 @@ macro_rules! setup_and_run {
 }
 
 impl BuiltinFn for Add {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let args = args.unwrap();
         let lhs = args.get(0).unwrap();
         let rhs = args.get(1).unwrap();
@@ -39,7 +39,7 @@ impl BuiltinFn for Add {
 struct VarArgSum;
 
 impl BuiltinFn for VarArgSum {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let args = args.unwrap();
 
         let mut sum = 0;
