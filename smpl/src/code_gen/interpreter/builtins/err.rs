@@ -26,6 +26,18 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
         .unwrap();
 }
 
+#[derive(Fail, Debug)]
+pub struct RuntimeError(Option<String>);
+
+impl std::fmt::Display for RuntimeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self.0 {
+            Some(ref s) => write!(f, "A runtime error occured.\n{}", s),
+            None => write!(f, "A runtime error occured.")
+        }
+    }
+}
+
 pub struct Panic;
 
 impl BuiltinFn for Panic {
