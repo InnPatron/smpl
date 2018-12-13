@@ -1,4 +1,4 @@
-use failure::Fail;
+use failure::Error;
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -39,11 +39,11 @@ impl AVM {
         Ok(vm)
     }
 
-    pub fn eval_fn_sync(&self, handle: FnHandle) -> Result<Value, Box<Fail>> {
+    pub fn eval_fn_sync(&self, handle: FnHandle) -> Result<Value, Error> {
         self.eval_fn_args_sync(handle, None)
     }
 
-    pub fn eval_fn_args_sync(&self, handle: FnHandle, args: Option<Vec<Value>>) -> Result<Value, Box<Fail>> {
+    pub fn eval_fn_args_sync(&self, handle: FnHandle, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut executor = self.eval_fn_args(handle, args)?;
 
         loop {
@@ -55,11 +55,11 @@ impl AVM {
         }
     }
 
-    pub fn eval_fn(&self, handle: FnHandle) -> Result<Executor, Box<Fail>> {
+    pub fn eval_fn(&self, handle: FnHandle) -> Result<Executor, Error> {
         self.eval_fn_args(handle, None)
     }
 
-    pub fn eval_fn_args(&self, handle: FnHandle, args: Option<Vec<Value>>) -> Result<Executor, Box<Fail>> {
+    pub fn eval_fn_args(&self, handle: FnHandle, args: Option<Vec<Value>>) -> Result<Executor, Error> {
         let id = handle.id();
         if self.program.metadata().is_builtin(id) {
             Ok(Executor::builtin_stub(self.builtins
@@ -264,7 +264,7 @@ impl<'a> Executor<'a> {
         }
     }
 
-    pub fn step(&mut self) -> ExecResult<Value, Box<Fail>> {
+    pub fn step(&mut self) -> ExecResult<Value, Error> {
         match self.exec_type {
             ExecutorType::Executor(ref mut internal_executor) => internal_executor.step(),
             ExecutorType::BuiltinStub(ref v) => ExecResult::Ok(v.clone()),

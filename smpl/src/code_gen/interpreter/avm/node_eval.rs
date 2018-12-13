@@ -1,6 +1,6 @@
 use petgraph::graph::NodeIndex;
 
-use failure::Fail;
+use failure::Error;
 
 use analysis::*;
 
@@ -13,7 +13,7 @@ pub enum NodeEval {
 }
 
 /// Performs any Node post-processing
-pub fn eval_node(stack_info: &mut StackInfo, program: &Program, current: NodeIndex) -> Result<NodeEval, Box<Fail>> {
+pub fn eval_node(stack_info: &mut StackInfo, program: &Program, current: NodeIndex) -> Result<NodeEval, Error> {
     let context = &mut stack_info.fn_context;
     let func = context.get_fn(program);
     match *func.cfg().node_weight(current) {

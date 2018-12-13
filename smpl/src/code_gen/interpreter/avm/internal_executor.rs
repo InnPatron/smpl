@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use failure::Fail;
+use failure::Error;
 
 use analysis::*;
 
@@ -21,7 +21,7 @@ pub struct InternalExecutor<'a> {
 }
 
 impl<'a> InternalExecutor<'a> {
-    pub fn step(&mut self) -> ExecResult<Value, Box<Fail>> {
+    pub fn step(&mut self) -> ExecResult<Value, Error> {
         match self.context.top().exec_state {
             ExecutorState::Fetch(node_index) => {
                 let node_fetch = match node_fetch(&mut self.context.top_mut().fn_context, 
