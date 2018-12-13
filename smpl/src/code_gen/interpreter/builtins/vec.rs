@@ -199,7 +199,7 @@ impl BuiltinFn for Get {
         let mut args = args.unwrap();
 
         let index = args.pop().unwrap();
-        let index: usize = irmatch!(index; Value::Int(i) => i) as usize;
+        let smpl_index = irmatch!(index; Value::Int(i) => i) as i64;
 
         let vec_struct = args.pop().unwrap();
         let vec_struct = irmatch!(vec_struct; Value::Struct(s) => s);
@@ -209,7 +209,18 @@ impl BuiltinFn for Get {
         let borrow = data.borrow();
         let data = irmatch!(*borrow; Value::Array(ref a) => a);
 
-        Ok(data.get(index).map(|rc| (*rc.borrow()).clone()).unwrap())
+        let index: usize = if smpl_index < 0 {
+            return Err(VecError::IndexOutOfRange(smpl_index, data.len()))?;
+        } else {
+            smpl_index as usize
+        };
+
+        let item = data
+            .get(index)
+            .map(|rc| (*rc.borrow()).clone())
+            .ok_or(VecError::IndexOutOfRange(smpl_index, data.len()))?;
+
+        Ok(item)
     }
 }
 
@@ -220,7 +231,7 @@ impl BuiltinFn for Remove {
         let mut args = args.unwrap();
 
         let index = args.pop().unwrap();
-        let index: usize = irmatch!(index; Value::Int(i) => i) as usize;
+        let smpl_index = irmatch!(index; Value::Int(i) => i) as i64;
 
         let vec_struct = args.pop().unwrap();
         let vec_struct = irmatch!(vec_struct; Value::Struct(s) => s);
@@ -230,7 +241,17 @@ impl BuiltinFn for Remove {
             let mut borrow = data.borrow_mut();
             let data = irmatch!(*borrow; Value::Array(ref mut a) => a);
 
-            data.remove(index);
+            let index: usize = if smpl_index < 0 {
+                return Err(VecError::IndexOutOfRange(smpl_index, data.len()))?;
+            } else {
+                smpl_index as usize
+            };
+
+            if index >= data.len() {
+                return Err(VecError::IndexOutOfRange(smpl_index, data.len()))?;
+            } else {
+                data.remove(index);
+            }
         }
 
         {
