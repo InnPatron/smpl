@@ -1,3 +1,5 @@
+use failure::Error;
+
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -37,12 +39,12 @@ impl AVM {
         Ok(vm)
     }
 
-    pub fn eval_fn_sync(&self, handle: FnHandle) -> Result<Value, ()> {
+    pub fn eval_fn_sync(&self, handle: FnHandle) -> Result<Value, Error> {
         self.eval_fn_args_sync(handle, None)
     }
 
-    pub fn eval_fn_args_sync(&self, handle: FnHandle, args: Option<Vec<Value>>) -> Result<Value, ()> {
-        let mut executor = self.eval_fn_args(handle, args);
+    pub fn eval_fn_args_sync(&self, handle: FnHandle, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut executor = self.eval_fn_args(handle, args)?;
 
         loop {
             match executor.step() {
@@ -53,19 +55,19 @@ impl AVM {
         }
     }
 
-    pub fn eval_fn(&self, handle: FnHandle) -> Executor {
+    pub fn eval_fn(&self, handle: FnHandle) -> Result<Executor, Error> {
         self.eval_fn_args(handle, None)
     }
 
-    pub fn eval_fn_args(&self, handle: FnHandle, args: Option<Vec<Value>>) -> Executor {
+    pub fn eval_fn_args(&self, handle: FnHandle, args: Option<Vec<Value>>) -> Result<Executor, Error> {
         let id = handle.id();
         if self.program.metadata().is_builtin(id) {
-            Executor::builtin_stub(self.builtins
+            Ok(Executor::builtin_stub(self.builtins
                 .get(&id)
                 .expect("Missing a built-in")
-                .execute(args))
+                .execute(args)?))
         } else {
-            Executor::new_fn_executor(&self.program, &self.builtins, handle, args)
+            Ok(Executor::new_fn_executor(&self.program, &self.builtins, handle, args))
         }
     }
 
@@ -262,7 +264,7 @@ impl<'a> Executor<'a> {
         }
     }
 
-    pub fn step(&mut self) -> ExecResult<Value, ()> {
+    pub fn step(&mut self) -> ExecResult<Value, Error> {
         match self.exec_type {
             ExecutorType::Executor(ref mut internal_executor) => internal_executor.step(),
             ExecutorType::BuiltinStub(ref v) => ExecResult::Ok(v.clone()),

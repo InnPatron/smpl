@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use failure::Error;
+
 use analysis::*;
 
 use code_gen::interpreter::value::Value;
@@ -19,7 +21,7 @@ pub struct InternalExecutor<'a> {
 }
 
 impl<'a> InternalExecutor<'a> {
-    pub fn step(&mut self) -> ExecResult<Value, ()> {
+    pub fn step(&mut self) -> ExecResult<Value, Error> {
         match self.context.top().exec_state {
             ExecutorState::Fetch(node_index) => {
                 let node_fetch = match node_fetch(&mut self.context.top_mut().fn_context, 
@@ -92,10 +94,15 @@ impl<'a> InternalExecutor<'a> {
                                                 .expect("Missing a built-in")
                                                 .execute(args);
 
+                            let v = match result {
+                                Ok(v) => v,
+                                Err(e) => return ExecResult::Err(e),
+                            };
+
                             match self.context.stack_mut().last_mut() {
                                 // Store return value in return store
                                 Some(ref mut top) => {
-                                    top.fn_context.return_store = Some(result);
+                                    top.fn_context.return_store = Some(v);
                                     return ExecResult::Pending;
 
                                 }

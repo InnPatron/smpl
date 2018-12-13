@@ -1,3 +1,6 @@
+use failure::Error;
+
+use crate::{exact_args, min_args};
 use ast::Module;
 use parser::parse_module;
 
@@ -33,21 +36,21 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
 struct Len;
 
 impl BuiltinFn for Len {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
 
         let string = args.pop().unwrap();
         let string = irmatch!(string; Value::String(s) => s);
 
-        Value::Int(string.len() as i32)
+        Ok(Value::Int(string.len() as i32))
     }
 }
 
 struct ToString;
 
 impl BuiltinFn for ToString {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let args = args.expect("str::to_string() expected 1+ args");
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let args = min_args!(1, args)?;
 
         let mut s = String::new();
 
@@ -55,15 +58,15 @@ impl BuiltinFn for ToString {
             s.push_str(&a.to_string());
         }
 
-        Value::String(s)
+        Ok(Value::String(s))
     }
 }
 
 struct Append;
 
 impl BuiltinFn for Append {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = min_args!(1, args)?;
 
         let to_append = args.pop().unwrap();
         let to_append = irmatch!(to_append; Value::String(s) => s);
@@ -73,33 +76,33 @@ impl BuiltinFn for Append {
 
         base.push_str(&to_append);
 
-        Value::String(base)
+        Ok(Value::String(base))
     }
 }
 
 struct ToLower;
 
 impl BuiltinFn for ToLower {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
 
         let string = args.pop().unwrap();
         let string = irmatch!(string; Value::String(s) => s);
 
-        Value::String(string.to_lowercase())
+        Ok(Value::String(string.to_lowercase()))
     }
 }
 
 struct ToUpper;
 
 impl BuiltinFn for ToUpper {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
 
         let string = args.pop().unwrap();
         let string = irmatch!(string; Value::String(s) => s);
 
-        Value::String(string.to_uppercase())
+        Ok(Value::String(string.to_uppercase()))
     }
 }
 

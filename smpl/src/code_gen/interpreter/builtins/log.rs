@@ -1,5 +1,7 @@
 use std::io::Write;
+use failure::Error;
 
+use crate::min_args;
 use ast::Module;
 use parser::parse_module;
 
@@ -22,26 +24,32 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
         .unwrap();
 }
 
+#[derive(Fail, Debug)]
+#[fail(display = "Logging Error: '{}'", _0)]
+pub struct LoggingError(std::io::Error);
+
 pub struct Print;
 
 impl BuiltinFn for Print {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let args = args.expect("Print() expects at least one argument");
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let args = min_args!(1, args)?;
 
         for arg in args {
             print!("{}", arg);
         }
 
-        ::std::io::stdout().flush();
+        ::std::io::stdout()
+            .flush()
+            .map_err(|e| LoggingError(e))?;
 
-        Value::Unit
+        Ok(Value::Unit)
     }
 }
 
 pub struct Println;
 
 impl BuiltinFn for Println {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         if let Some(args) = args {
             for arg in args {
                 print!("{}", arg);
@@ -50,8 +58,10 @@ impl BuiltinFn for Println {
 
         print!("\n");
 
-        ::std::io::stdout().flush();
+        ::std::io::stdout()
+            .flush()
+            .map_err(|e| LoggingError(e))?;
 
-        Value::Unit
+        Ok(Value::Unit)
     }
 }

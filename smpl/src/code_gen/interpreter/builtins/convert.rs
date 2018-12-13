@@ -1,3 +1,6 @@
+use failure::Error;
+
+use crate::exact_args;
 use ast::Module;
 use parser::parse_module;
 
@@ -40,15 +43,29 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
         .unwrap();
 }
 
+#[derive(Fail, Debug)]
+#[fail(display = "Error converting '{}' to {}'", _0, _1)]
+pub struct ConversionError(String, ConversionTarget);
+
+#[derive(Fail, Debug)]
+pub enum ConversionTarget {
+    #[fail(display = "String")]
+    String,
+    #[fail(display = "Int")]
+    Int,
+    #[fail(display = "Float")]
+    Float,
+}
+
 pub struct IntToFloat;
 
 impl BuiltinFn for IntToFloat {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
 
         let a = args.remove(0);
         match a {
-            Value::Int(i) => Value::Float(i as f32),
+            Value::Int(i) => Ok(Value::Float(i as f32)),
             _ => unreachable!(),
         }
     }
@@ -57,12 +74,12 @@ impl BuiltinFn for IntToFloat {
 pub struct FloatToInt;
 
 impl BuiltinFn for FloatToInt {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
 
         let a = args.remove(0);
         match a {
-            Value::Float(f) => Value::Int(f as i32),
+            Value::Float(f) => Ok(Value::Int(f as i32)),
             _ => unreachable!(),
         }
     }
@@ -71,12 +88,12 @@ impl BuiltinFn for FloatToInt {
 pub struct IsFloat;
 
 impl BuiltinFn for IsFloat {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
-        let a = args.remove(0);
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
 
+        let a = args.remove(0);
         match a {
-            Value::String(s) => Value::Bool(s.parse::<f32>().is_ok()),
+            Value::String(s) => Ok(Value::Bool(s.parse::<f32>().is_ok())),
             _ => unreachable!(),
         }
     }
@@ -85,12 +102,12 @@ impl BuiltinFn for IsFloat {
 pub struct IsInt;
 
 impl BuiltinFn for IsInt {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
-        let a = args.remove(0);
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
 
+        let a = args.remove(0);
         match a {
-            Value::String(s) => Value::Bool(s.parse::<i32>().is_ok()),
+            Value::String(s) => Ok(Value::Bool(s.parse::<i32>().is_ok())),
             _ => unreachable!(),
         }
     }
@@ -99,15 +116,15 @@ impl BuiltinFn for IsInt {
 pub struct StringToFloat;
 
 impl BuiltinFn for StringToFloat {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
-        let a = args.remove(0);
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
 
+        let a = args.remove(0);
         match a {
-            Value::String(s) => Value::Float(
+            Value::String(s) => Ok(Value::Float(
                 s.parse::<f32>()
-                    .expect(&format!("{} was not a valid float.", s)),
-            ),
+                    .map_err(|_| ConversionError(s, ConversionTarget::Float))?,
+            )),
             _ => unreachable!(),
         }
     }
@@ -116,15 +133,15 @@ impl BuiltinFn for StringToFloat {
 pub struct StringToInt;
 
 impl BuiltinFn for StringToInt {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
-        let a = args.remove(0);
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
 
+        let a = args.remove(0);
         match a {
-            Value::String(s) => Value::Int(
+            Value::String(s) => Ok(Value::Int(
                 s.parse::<i32>()
-                    .expect(&format!("{} was not a valid int.", s)),
-            ),
+                    .map_err(|_| ConversionError(s, ConversionTarget::Int))?,
+            )),
             _ => unreachable!(),
         }
     }

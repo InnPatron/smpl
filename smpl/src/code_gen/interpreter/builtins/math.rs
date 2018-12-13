@@ -1,3 +1,6 @@
+use failure::Error;
+
+use crate::exact_args;
 use ast::Module;
 use parser::parse_module;
 
@@ -72,12 +75,12 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
 pub struct Sin;
 
 impl BuiltinFn for Sin {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
-            Value::Float(f) => Value::Float(f.sin()),
+            Value::Float(f) => Ok(Value::Float(f.sin())),
             _ => panic!(),
         }
     }
@@ -87,12 +90,12 @@ impl BuiltinFn for Sin {
 pub struct Cos;
 
 impl BuiltinFn for Cos {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
-            Value::Float(f) => Value::Float(f.cos()),
+            Value::Float(f) => Ok(Value::Float(f.cos())),
             _ => panic!(),
         }
     }
@@ -102,12 +105,12 @@ impl BuiltinFn for Cos {
 pub struct Tan;
 
 impl BuiltinFn for Tan {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
-            Value::Float(f) => Value::Float(f.tan()),
+            Value::Float(f) => Ok(Value::Float(f.tan())),
             _ => panic!(),
         }
     }
@@ -117,12 +120,12 @@ impl BuiltinFn for Tan {
 pub struct Asin;
 
 impl BuiltinFn for Asin {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
-            Value::Float(f) => Value::Float(f.asin()),
+            Value::Float(f) => Ok(Value::Float(f.asin())),
             _ => panic!(),
         }
     }
@@ -132,12 +135,12 @@ impl BuiltinFn for Asin {
 pub struct Acos;
 
 impl BuiltinFn for Acos {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
-            Value::Float(f) => Value::Float(f.acos()),
+            Value::Float(f) => Ok(Value::Float(f.acos())),
             _ => panic!(),
         }
     }
@@ -147,12 +150,12 @@ impl BuiltinFn for Acos {
 pub struct Atan;
 
 impl BuiltinFn for Atan {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
-            Value::Float(f) => Value::Float(f.atan()),
+            Value::Float(f) => Ok(Value::Float(f.atan())),
             _ => panic!(),
         }
     }
@@ -162,13 +165,13 @@ impl BuiltinFn for Atan {
 pub struct Atan2;
 
 impl BuiltinFn for Atan2 {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(2, args)?;
         let v = args.get(0).unwrap().clone();
         let a = args.get(1).unwrap().clone();
 
         match (v, a) {
-            (Value::Float(v), Value::Float(a)) => Value::Float(v.atan2(a)),
+            (Value::Float(v), Value::Float(a)) => Ok(Value::Float(v.atan2(a))),
             _ => panic!(),
         }
     }
@@ -177,12 +180,12 @@ impl BuiltinFn for Atan2 {
 pub struct ToRadians;
 
 impl BuiltinFn for ToRadians {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
-            Value::Float(f) => Value::Float(f.to_radians()),
+            Value::Float(f) => Ok(Value::Float(f.to_radians())),
             _ => panic!(),
         }
     }
@@ -191,12 +194,12 @@ impl BuiltinFn for ToRadians {
 pub struct ToDegrees;
 
 impl BuiltinFn for ToDegrees {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
-            Value::Float(f) => Value::Float(f.to_degrees()),
+            Value::Float(f) => Ok(Value::Float(f.to_degrees())),
             _ => panic!(),
         }
     }
@@ -205,13 +208,13 @@ impl BuiltinFn for ToDegrees {
 pub struct FPowF;
 
 impl BuiltinFn for FPowF {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(2, args)?;
         let b = args.get(0).unwrap().clone();
         let p = args.get(1).unwrap().clone();
 
         match (b, p) {
-            (Value::Float(b), Value::Float(p)) => Value::Float(b.powf(p)),
+            (Value::Float(b), Value::Float(p)) => Ok(Value::Float(b.powf(p))),
             _ => panic!(),
         }
     }
@@ -220,13 +223,13 @@ impl BuiltinFn for FPowF {
 pub struct FPowI;
 
 impl BuiltinFn for FPowI {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(2, args)?;
         let b = args.get(0).unwrap().clone();
         let p = args.get(1).unwrap().clone();
 
         match (b, p) {
-            (Value::Float(b), Value::Int(p)) => Value::Float(b.powi(p)),
+            (Value::Float(b), Value::Int(p)) => Ok(Value::Float(b.powi(p))),
             _ => panic!(),
         }
     }
@@ -235,13 +238,13 @@ impl BuiltinFn for FPowI {
 pub struct IPow;
 
 impl BuiltinFn for IPow {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(2, args)?;
         let b = args.get(0).unwrap().clone();
         let p = args.get(1).unwrap().clone();
 
         match (b, p) {
-            (Value::Int(b), Value::Int(p)) => Value::Int(b.pow(p as u32)),
+            (Value::Int(b), Value::Int(p)) => Ok(Value::Int(b.pow(p as u32))),
             _ => panic!(),
         }
     }
@@ -250,12 +253,12 @@ impl BuiltinFn for IPow {
 pub struct Floor;
 
 impl BuiltinFn for Floor {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
-            Value::Float(f) => Value::Float(f.floor()),
+            Value::Float(f) => Ok(Value::Float(f.floor())),
             _ => panic!(),
         }
     }
@@ -264,12 +267,12 @@ impl BuiltinFn for Floor {
 pub struct Ceil;
 
 impl BuiltinFn for Ceil {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
-            Value::Float(f) => Value::Float(f.ceil()),
+            Value::Float(f) => Ok(Value::Float(f.ceil())),
             _ => panic!(),
         }
     }
@@ -278,12 +281,12 @@ impl BuiltinFn for Ceil {
 pub struct Round;
 
 impl BuiltinFn for Round {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
-        let mut args = args.unwrap();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        let mut args = exact_args!(1, args)?;
         let v = args.remove(0);
 
         match v {
-            Value::Float(f) => Value::Float(f.round()),
+            Value::Float(f) => Ok(Value::Float(f.round())),
             _ => panic!(),
         }
     }

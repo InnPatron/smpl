@@ -1,3 +1,5 @@
+use failure::Error;
+
 use ast::Module;
 use parser::parse_module;
 
@@ -24,23 +26,35 @@ pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
         .unwrap();
 }
 
+#[derive(Fail, Debug)]
+pub struct RuntimeError(Option<String>);
+
+impl std::fmt::Display for RuntimeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self.0 {
+            Some(ref s) => write!(f, "A runtime error occured.\n{}", s),
+            None => write!(f, "A runtime error occured.")
+        }
+    }
+}
+
 pub struct Panic;
 
 impl BuiltinFn for Panic {
-    fn execute(&self, _args: Option<Vec<Value>>) -> Value {
-        panic!();
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
+        Err(RuntimeError(None))?
     }
 }
 
 pub struct PanicMsg;
 
 impl BuiltinFn for PanicMsg {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
         let a = args.remove(0);
 
         match a {
-            Value::String(s) => panic!("{}", s),
+            Value::String(s) => Err(RuntimeError(Some(s)))?,
             _ => unreachable!(),
         }
     }
@@ -49,13 +63,16 @@ impl BuiltinFn for PanicMsg {
 pub struct Assert;
 
 impl BuiltinFn for Assert {
-    fn execute(&self, args: Option<Vec<Value>>) -> Value {
+    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut args = args.unwrap();
         let a = args.remove(0);
 
         let a = irmatch!(a; Value::Bool(a) => a);
-        assert!(a);
 
-        Value::Unit
+        if a {
+            Ok(Value::Unit)
+        } else {
+            Err(RuntimeError(Some("Assertion failed".to_string())))?
+        }
     }
 }
