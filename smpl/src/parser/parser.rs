@@ -1,5 +1,6 @@
 use std::iter::{Iterator, Peekable};
 
+use crate::parser_state;
 use crate::span::*;
 use crate::ast::*;
 use super::tokens::*;
@@ -119,10 +120,16 @@ fn annotations(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Annotation>> {
             _ => false,
         }
     })? {
-        let _pound = consume_token!(tokens, Token::Pound);
-        let _lbracket = consume_token!(tokens, Token::LBracket);
+        let _pound = consume_token!(tokens, 
+                                    Token::Pound,
+                                    parser_state!("annotations", "pound"));
+        let _lbracket = consume_token!(tokens, 
+                                       Token::LBracket,
+                                       parser_state!("annotations", "lbracket"));
         annotations.push(Annotation{ keys: kv_list(tokens)? });
-        let _rbracket = consume_token!(tokens, Token::RBracket);
+        let _rbracket = consume_token!(tokens, 
+                                       Token::RBracket,
+                                       parser_state!("annotations", "rbracket"));
     }
 
     Ok(annotations)
@@ -138,7 +145,9 @@ fn kv_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<(Ident, Option<String
                 _ => false
             }
         })? {
-            let _comma = consume_token!(tokens, Token::Comma);
+            let _comma = consume_token!(tokens, 
+                                        Token::Comma,
+                                        parser_state!("kv-list", "comma-separator"));
             if tokens.has_next() && tokens.peek(|tok| {
                 match tok {
                     Token::RBracket => false,
@@ -157,7 +166,9 @@ fn kv_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<(Ident, Option<String
 }
 
 fn kv_pair(tokens: &mut BufferedTokenizer) -> ParseErr<(Ident, Option<String>)> {
-    let (_, ident) = consume_token!(tokens, Token::Identifier(i) => i);
+    let (_, ident) = consume_token!(tokens, 
+                                    Token::Identifier(i) => i, 
+                                    parser_state!("kvpair", "key"));
 
     if tokens.peek(|tok| {
         match tok {
@@ -165,8 +176,12 @@ fn kv_pair(tokens: &mut BufferedTokenizer) -> ParseErr<(Ident, Option<String>)> 
             _ => false,
         }
     })? {
-        let _assign = consume_token!(tokens, Token::Assign);
-        let (_, v) = consume_token!(tokens, Token::StringLiteral(s) => s);
+        let _assign = consume_token!(tokens, 
+                                     Token::Assign,
+                                     parser_state!("kvpair", "assign"));
+        let (_, v) = consume_token!(tokens, 
+                                    Token::StringLiteral(s) => s,
+                                    parser_state!("kvpair", "value"));
         Ok((Ident(ident), Some(v)))
     } else {
         Ok((Ident(ident), None))
@@ -174,9 +189,15 @@ fn kv_pair(tokens: &mut BufferedTokenizer) -> ParseErr<(Ident, Option<String>)> 
 }
 
 fn use_decl(tokens: &mut BufferedTokenizer) -> ParseErr<DeclStmt> {
-    let (uspan, _) = consume_token!(tokens, Token::Use);
-    let (mspan, module) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
-    let _semi = consume_token!(tokens, Token::Semi);
+    let (uspan, _) = consume_token!(tokens, 
+                                    Token::Use,
+                                    parser_state!("use-decl", "use"));
+    let (mspan, module) = consume_token!(tokens, 
+                                         Token::Identifier(i) => Ident(i),
+                                         parser_state!("use-decl", "name"));
+    let _semi = consume_token!(tokens, 
+                               Token::Semi,
+                               parser_state!("use-decl", "semicolon"));
 
     let span = LocationSpan::new(uspan.start(), mspan.end());
 
@@ -199,17 +220,25 @@ pub fn testfn_decl(tokens: &mut BufferedTokenizer) -> ParseErr<Function> {
 fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_builtin: bool) -> ParseErr<DeclStmt> {
     let mut span = Span::dummy();
     if is_builtin {
-        let (bloc, _builtin) = consume_token!(tokens, Token::Builtin);
+        let (bloc, _builtin) = consume_token!(tokens, 
+                                              Token::Builtin,
+                                              parser_state!("fn-decl", "builtin"));
         span = bloc;
     }
 
-    let (fnloc, _) = consume_token!(tokens, Token::Fn);
+    let (fnloc, _) = consume_token!(tokens, 
+                                    Token::Fn,
+                                    parser_state!("fn-decl", "fn"));
     if !is_builtin {
         span = fnloc;
     }
 
-    let (idloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
-    let _lparen = consume_token!(tokens, Token::LParen);
+    let (idloc, ident) = consume_token!(tokens, 
+                                        Token::Identifier(i) => Ident(i),
+                                        parser_state!("fn-decl", "name"));
+    let _lparen = consume_token!(tokens, 
+                                 Token::LParen,
+                                 parser_state!("fn-decl", "parameter lparen"));
 
     let params = if tokens.peek(|tok| {
         match tok {
@@ -217,7 +246,9 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
             _ => false
         }
     })? {
-        let _unchecked = consume_token!(tokens, Token::Unchecked);
+        let _unchecked = consume_token!(tokens, 
+                                        Token::Unchecked,
+                                        parser_state!("fn-decl", "UNCHECKED parameter"));
         BuiltinFnParams::Unchecked
     } else {
         if tokens.peek(|tok| {
@@ -232,7 +263,9 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
         }
     };
         
-    let (rloc, _) = consume_token!(tokens, Token::RParen);
+    let (rloc, _) = consume_token!(tokens, 
+                                   Token::RParen,
+                                   parser_state!("fn-decl", "parameter rparen"));
     span = Span::combine(span, rloc);
 
     let mut return_type = None;
@@ -242,7 +275,9 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
             _ => false,
         }
     })? {
-        let _arrow = consume_token!(tokens, Token::Arrow);
+        let _arrow = consume_token!(tokens, 
+                                    Token::Arrow,
+                                    parser_state!("fn-decl", "return type arrow"));
         return_type = Some(type_annotation(tokens)?);
     }
 
@@ -252,7 +287,9 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
     }
 
     if is_builtin {
-        let (semiloc, _) = consume_token!(tokens, Token::Semi);
+        let (semiloc, _) = consume_token!(tokens, 
+                                          Token::Semi,
+                                          parser_state!("fn-decl", "builtin-semicolon"));
         span = Span::combine(span, semiloc);
     }
 
@@ -304,7 +341,9 @@ pub fn fn_param_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<FnP
                 _ => false
             }
         })? {
-            let _comma = consume_token!(tokens, Token::Comma);
+            let _comma = consume_token!(tokens, 
+                                        Token::Comma,
+                                        parser_state!("fn-param-list", "comma separator"));
             if tokens.has_next() && tokens.peek(|tok| {
                 match tok {
                     Token::RParen => false,
@@ -323,8 +362,12 @@ pub fn fn_param_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<FnP
 }
 
 fn fn_param(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<FnParameter>> {
-    let (idloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
-    let _colon = consume_token!(tokens, Token::Colon);
+    let (idloc, ident) = consume_token!(tokens, 
+                                        Token::Identifier(i) => Ident(i),
+                                        parser_state!("fn-param", "parameter name"));
+    let _colon = consume_token!(tokens, 
+                                Token::Colon,
+                                parser_state!("fn-param", "param type colon"));
     let ann = type_annotation(tokens)?;
 
     let span = Span::combine(idloc, ann.span());
@@ -344,9 +387,15 @@ pub fn teststruct_decl(tokens: &mut BufferedTokenizer) -> ParseErr<Struct> {
 
 fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseErr<AstNode<Struct>> {
 
-    let (structLoc, _) = consume_token!(tokens, Token::Struct);
-    let (nameLoc, structName) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
-    let _lbrace = consume_token!(tokens, Token::LBrace);
+    let (structLoc, _) = consume_token!(tokens, 
+                                        Token::Struct,
+                                        parser_state!("struct-decl", "struct"));
+    let (nameLoc, structName) = consume_token!(tokens, 
+                                               Token::Identifier(i) => Ident(i),
+                                               parser_state!("struct-decl", "name"));
+    let _lbrace = consume_token!(tokens, 
+                                 Token::LBrace,
+                                 parser_state!("struct-decl", "fields lbrace"));
 
     // Check if no struct fields
     let body = if tokens.peek(|tok| {
@@ -363,7 +412,9 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
     };
 
     // Get Keys
-    let (rloc, _) = consume_token!(tokens, Token::RBrace);
+    let (rloc, _) = consume_token!(tokens, 
+                                   Token::RBrace,
+                                   parser_state!("struct-decl", "fields rbrace"));
 
     let overallSpan = LocationSpan::new(structLoc.start(), rloc.start());
 
@@ -385,7 +436,9 @@ fn struct_field_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<StructField
                 _ => false
             }
         })? {
-            let _comma = consume_token!(tokens, Token::Comma);
+            let _comma = consume_token!(tokens, 
+                                        Token::Comma,
+                                        parser_state!("struct-field-list", "comma separator"));
             if tokens.has_next() && tokens.peek(|tok| {
                 match tok {
                     Token::RBrace => false,
@@ -405,8 +458,12 @@ fn struct_field_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<StructField
 
 
 fn struct_field(tokens: &mut BufferedTokenizer) -> ParseErr<StructField> {
-    let (idloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
-    let _colon = consume_token!(tokens, Token::Colon);
+    let (idloc, ident) = consume_token!(tokens, 
+                                        Token::Identifier(i) => Ident(i),
+                                        parser_state!("struct-field", "name"));
+    let _colon = consume_token!(tokens, 
+                                Token::Colon,
+                                parser_state!("struct-field", "field type colon"));
     let ann = type_annotation(tokens)?;
 
     Ok(StructField {
@@ -417,9 +474,15 @@ fn struct_field(tokens: &mut BufferedTokenizer) -> ParseErr<StructField> {
 
 fn module_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Ident>> {
     // Consume MOD
-    let (modloc, _) = consume_token!(tokens, Token::Mod);
-    let (_idloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
-    let (semiloc, _) = consume_token!(tokens, Token::Semi);
+    let (modloc, _) = consume_token!(tokens, 
+                                     Token::Mod,
+                                     parser_state!("mod-decl", "mod"));
+    let (_idloc, ident) = consume_token!(tokens, 
+                                         Token::Identifier(i) => Ident(i),
+                                         parser_state!("mod-decl", "name"));
+    let (semiloc, _) = consume_token!(tokens, 
+                                      Token::Semi,
+                                      parser_state!("mod-decl", "semicolon"));
 
     let span = LocationSpan::new(modloc.start(), semiloc.end());
     Ok(AstNode::new(ident, span))
@@ -461,7 +524,9 @@ pub fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeA
 
 pub fn module_binding(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ModulePath>> {
     let mut path = Vec::new();
-    let (floc, first) =  consume_token!(tokens, Token::Identifier(i) => Ident(i));
+    let (floc, first) =  consume_token!(tokens, 
+                                        Token::Identifier(i) => Ident(i),
+                                        parser_state!("module-binding", "root"));
 
     let mut binding_span = LocationSpan::new(floc.start(), floc.end());
     path.push(AstNode::new(first, floc));
@@ -472,8 +537,12 @@ pub fn module_binding(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Module
             _ => false,
         }
     })? {
-        let _coloncolon = consume_token!(tokens, Token::ColonColon);
-        let (nloc, next) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+        let _coloncolon = consume_token!(tokens, 
+                                         Token::ColonColon,
+                                         parser_state!("module-binding", "segment coloncolon"));
+        let (nloc, next) = consume_token!(tokens, 
+                                          Token::Identifier(i) => Ident(i),
+                                          parser_state!("module-binding", "segment name"));
         path.push(AstNode::new(next, nloc));
         binding_span = LocationSpan::new(floc.start(), nloc.end());
     }
@@ -482,11 +551,19 @@ pub fn module_binding(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Module
 }
 
 fn array_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> {
-    let (lloc, _) = consume_token!(tokens, Token::LBracket);
+    let (lloc, _) = consume_token!(tokens, 
+                                   Token::LBracket,
+                                   parser_state!("array-type", "lbracket"));
     let base_type = Box::new(type_annotation(tokens)?);
-    let _semi = consume_token!(tokens, Token::Semi);
-    let (_, number) = consume_token!(tokens, Token::IntLiteral(i) => i);
-    let (rloc, _) = consume_token!(tokens, Token::RBracket);
+    let _semi = consume_token!(tokens, 
+                               Token::Semi,
+                               parser_state!("array-type", "semicolon"));
+    let (_, number) = consume_token!(tokens, 
+                                     Token::IntLiteral(i) => i,
+                                     parser_state!("array-type", "array size"));
+    let (rloc, _) = consume_token!(tokens, 
+                                   Token::RBracket,
+                                   parser_state!("array-type", "rbracket"));
 
     let array_type_span = LocationSpan::new(lloc.start(), rloc.end());
 
@@ -499,8 +576,12 @@ fn array_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation
 }
 
 fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> {
-    let (fnloc, _) = consume_token!(tokens, Token::Fn);
-    let _lparen = consume_token!(tokens, Token::LParen);
+    let (fnloc, _) = consume_token!(tokens, 
+                                    Token::Fn,
+                                    parser_state!("fn-type", "fn"));
+    let _lparen = consume_token!(tokens, 
+                                 Token::LParen,
+                                 parser_state!("fn-type", "param lparen"));
         
     let mut params = None;
     if tokens.has_next() && tokens.peek(|tok| {
@@ -512,7 +593,9 @@ fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> 
         params = Some(fn_type_params(tokens)?);
     }
 
-    let (rparenloc, _) = consume_token!(tokens, Token::RParen);
+    let (rparenloc, _) = consume_token!(tokens, 
+                                        Token::RParen,
+                                        parser_state!("fn-type", "param rparen"));
 
     let mut fn_type_span = LocationSpan::new(fnloc.start(), rparenloc.end());
 
@@ -523,7 +606,9 @@ fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> 
             _ => false,
         }
     })? {
-        let _arrow = consume_token!(tokens, Token::Arrow);
+        let _arrow = consume_token!(tokens, 
+                                    Token::Arrow,
+                                    parser_state!("fn-type", "return type arrow"));
         let ret = type_annotation(tokens)?;
         let return_span = ret.span();
 
@@ -544,7 +629,9 @@ fn fn_type_params(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<TypeAn
                 _ => false
             }
         })? {
-            let _comma = consume_token!(tokens, Token::Comma);
+            let _comma = consume_token!(tokens, 
+                                        Token::Comma,
+                                        parser_state!("fn-type-params", "comma separator"));
             if tokens.has_next() && tokens.peek(|tok| {
                 match tok {
                     Token::RParen => false,
@@ -565,7 +652,9 @@ fn fn_type_params(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<TypeAn
 pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
 
 
-    let (lloc, _) = consume_token!(tokens, Token::LBrace);
+    let (lloc, _) = consume_token!(tokens, 
+                                   Token::LBrace,
+                                   parser_state!("block", "lbrace"));
 
     let mut stmts = Vec::new();
     // Parse for all statements untile '}'
@@ -579,7 +668,9 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
     }
     
     
-    let (rloc, _) = consume_token!(tokens, Token::RBrace);
+    let (rloc, _) = consume_token!(tokens, 
+                                   Token::RBrace,
+                                   parser_state!("block", "rbrace"));
 
     let span = LocationSpan::new(lloc.start(), rloc.end());
 
@@ -660,7 +751,9 @@ fn stmt(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
         StmtDec::Expr => {
             let expr = piped_expr(tokens, &[Delimiter::Semi])?;
 
-            let _semi = consume_token!(tokens, Token::Semi);
+            let _semi = consume_token!(tokens, 
+                                       Token::Semi,
+                                       parser_state!("stmt-expr", "semicolon"));
 
             Stmt::Expr(expr)
         }
@@ -685,7 +778,8 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
     }
 
     let (base_span, base_ident) = consume_token!(tokens,
-                                                 Token::Identifier(ident) => Ident(ident));
+                                                 Token::Identifier(ident) => Ident(ident),
+                                                 parser_state!("potential-assign", "root"));
 
     // Check if there is a full Access Path
     // If there is module path or function call, parse for expr ';'
@@ -721,7 +815,9 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             let path = expr_module_path(tokens, base_ident, base_span)?;
             let expr = prebase_piped_expr(tokens, path, &[Delimiter::Semi])?;
 
-            let _semi = consume_token!(tokens, Token::Semi);
+            let _semi = consume_token!(tokens, 
+                                       Token::Semi,
+                                       parser_state!("stmt-expr-module-path", "semicolon"));
 
             return Ok(Stmt::Expr(expr));
         }
@@ -748,16 +844,22 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
 
             let expr = prebase_piped_expr(tokens, expr_base, &[Delimiter::Semi])?;
 
-            let _semi = consume_token!(tokens, Token::Semi);
+            let _semi = consume_token!(tokens, 
+                                       Token::Semi,
+                                       parser_state!("stmt-expr-fn-call", "semicolon"));
             
             return Ok(Stmt::Expr(expr));
         }
 
         Dec::Indexing => {
-            let _lbracket = consume_token!(tokens, Token::LBracket);
+            let _lbracket = consume_token!(tokens, 
+                                           Token::LBracket,
+                                           parser_state!("potential_assign-indexing", "lbracket"));
             let indexer = piped_expr(tokens, &[Delimiter::RBracket])?;
             let (indexer, _) = indexer.to_data();
-            let (_rspan, _rbracket) = consume_token!(tokens, Token::RBracket);
+            let (_rspan, _rbracket) = consume_token!(tokens, 
+                                                     Token::RBracket,
+                                                     parser_state!("potential_assign-indexing", "rbracket"));
 
             if tokens.peek(|tok| {
                 match tok {
@@ -790,12 +892,16 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
         },
 
         Dec::DefSingletonAssignment => {
-            let _assignop = consume_token!(tokens, Token::Assign);
+            let _assignop = consume_token!(tokens, 
+                                           Token::Assign,
+                                           parser_state!("assignment", "="));
 
             let value = piped_expr(tokens, &[Delimiter::Semi])?;
             let (value, value_span) = value.to_data();
 
-            let _semi = consume_token!(tokens, Token::Semi);
+            let _semi = consume_token!(tokens, 
+                                       Token::Semi,
+                                       parser_state!("assignment", "semicolon"));
 
             let segment = PathSegment::Ident(AstNode::new(base_ident, base_span));
             let path = vec![segment];
@@ -818,7 +924,9 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             let _span = base_span;
             let expr = piped_expr(tokens, &[Delimiter::Semi])?;
 
-            let _semi = consume_token!(tokens, Token::Semi);
+            let _semi = consume_token!(tokens, 
+                                       Token::Semi,
+                                       parser_state!("expr-stmt-singleton", "semicolon"));
 
             return Ok(Stmt::Expr(expr));
         }
@@ -841,11 +949,15 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
         PathDec::Assign => {
             let path = path;
 
-            let _assign = consume_token!(tokens, Token::Assign);
+            let _assign = consume_token!(tokens, 
+                                         Token::Assign,
+                                         parser_state!("assignment", "="));
 
             let (value, value_span) = piped_expr(tokens, &[Delimiter::Semi])?.to_data();
 
-            let _semi = consume_token!(tokens, Token::Semi);
+            let _semi = consume_token!(tokens, 
+                                       Token::Semi,
+                                       parser_state!("assignment", "semicolon"));
 
             let span = Span::combine(path.span(), value_span);
             let assignment = Assignment {
@@ -862,7 +974,9 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
 
             let expr = piped_expr(tokens, &[Delimiter::Semi])?;
 
-            let _semi = consume_token!(tokens, Token::Semi);
+            let _semi = consume_token!(tokens, 
+                                       Token::Semi,
+                                       parser_state!("stmt-expr-path", "semicolon"));
 
             Ok(Stmt::Expr(expr))
         }
@@ -870,9 +984,13 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
 }
 
 fn local_var_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
-    let (letloc, _) = consume_token!(tokens, Token::Let);
+    let (letloc, _) = consume_token!(tokens, 
+                                     Token::Let,
+                                     parser_state!("local-var-decl", "let"));
 
-    let (iloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+    let (iloc, ident) = consume_token!(tokens, 
+                                       Token::Identifier(i) => Ident(i),
+                                       parser_state!("local-var-decl", "name"));
     let ident = AstNode::new(ident, iloc);
 
     let mut type_anno = None;
@@ -888,15 +1006,21 @@ fn local_var_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>>
         }
     })? {
 
-        let _colon = consume_token!(tokens, Token::Colon);
+        let _colon = consume_token!(tokens, 
+                                    Token::Colon,
+                                    parser_state!("local-var-decl", "type colon"));
         type_anno = Some(type_annotation(tokens)?);
     }
 
-    let _assign = consume_token!(tokens, Token::Assign);
+    let _assign = consume_token!(tokens, 
+                                 Token::Assign,
+                                 parser_state!("local-var-decl", "="));
 
     let init_value = piped_expr(tokens, &[Delimiter::Semi])?.to_data();
 
-    let (semiloc, _) = consume_token!(tokens, Token::Semi);
+    let (semiloc, _) = consume_token!(tokens, 
+                                      Token::Semi,
+                                      parser_state!("local-var-decl", "semicolon"));
 
     let span = LocationSpan::new(letloc.start(), semiloc.end());
 
@@ -917,7 +1041,9 @@ fn if_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
         End,
     }
 
-    let (ifloc, _) = consume_token!(tokens, Token::If);
+    let (ifloc, _) = consume_token!(tokens, 
+                                    Token::If,
+                                    parser_state!("if-stmt", "if"));
 
     let mut end = ifloc;
 
