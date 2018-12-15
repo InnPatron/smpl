@@ -191,17 +191,25 @@ impl std::fmt::Display for Token {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Fail)]
+#[fail(display = "{} {}", error, location)]
 pub struct SpannedError {
     error: TokenizerError,
     location: Location,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Fail)]
 pub enum TokenizerError {
+    #[fail(display = "Unexpected character: '{}'.", _0)]
     UnexpectedChar(char),
+
+    #[fail(display = "Unexpected end of input.")]
     UnexpectedEndOfInput,
+
+    #[fail(display = "Unterminated string literal.")]
     UnterminatedStringLiteral,
+
+    #[fail(display = "Incomplete token: '{}'.", _0)]
     IncompleteToken(Token),
 }
 
