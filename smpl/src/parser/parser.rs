@@ -4,38 +4,42 @@ use crate::span::*;
 use crate::ast::*;
 use super::tokens::*;
 use super::expr_parser::*;
+use super::parser_err::*;
 
-pub type ParseErr<T> = Result<T, String>;
+pub type ParseErr<T> = Result<T, failure::Error>;
 
 #[macro_export]
 macro_rules! consume_token  {
 
     ($input: expr) => {{
+        use crate::parser::parser_err::*;
         let next = $input.next()
-            .ok_or("Unexpected end of input")?
-            .map_err(|e| format!("{:?}", e))?;
+            .ok_or(ParserError::UnexpecedEOI)?
+            .map_err(|e| ParserError::TokenizerError(e))?;
         next.to_data()
     }};
 
     ($input: expr, $token: pat) => {{
+        use crate::parser::parser_err::*;
         let next = $input.next()
-            .ok_or("Unexpected end of input")?
-            .map_err(|e| format!("{:?}", e))?;
+            .ok_or(ParserError::UnexpecedEOI)?
+            .map_err(|e| ParserError::TokenizerError(e))?;
         let data = next.to_data();
         match data.1 {
             $token => data,
-            _ => Err(format!("Unexpected token {:?}", data.1))?,
+            _ => Err(ParserError::UnexpectedToken(data.1))?,
         }
     }};
 
     ($input: expr, $token: pat => $e: expr) => {{
+        use crate::parser::parser_err::*;
         let next = $input.next()
-            .ok_or("Unexpected end of input")?
-            .map_err(|e| format!("{:?}", e))?;
+            .ok_or(ParserError::UnexpecedEOI)?
+            .map_err(|e| ParserError::TokenizerError(e))?;
         let data = next.to_data();
         match data.1 {
             $token => (data.0, $e),
-            _ => Err(format!("Unexpected token {:?}", data.1))?,
+            _ => Err(ParserError::UnexpectedToken(data.1))?,
         }
     }};
 }
