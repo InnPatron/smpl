@@ -114,6 +114,83 @@ pub enum Token {
     Pound,
 }
 
+impl std::fmt::Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        use self::Token::*;
+        match *self {
+            Identifier(ref s) => write!(f, "{}", s),
+            StringLiteral(ref s) => write!(f, "\"{}\"", s),
+            IntLiteral(i) => write!(f, "{}", i),
+            FloatLiteral(fl) => write!(f, "{}", fl),
+            BoolLiteral(b) => write!(f, "{}", b),
+
+            Fn => write!(f, "fn"),
+            Struct => write!(f, "struct"),
+            Mod => write!(f, "mod"),
+            Use => write!(f, "use"),
+            Builtin => write!(f, "builtin"),
+            Unchecked => write!(f, "UNCHECKED"),
+
+            Init => write!(f, "init"),
+
+            Continue => write!(f, "continue"),
+            Break => write!(f, "break"),
+            Return => write!(f, "return"),
+
+            If => write!(f, "if"),
+            Else => write!(f, "else"),
+            Elif => write!(f, "elif"),
+
+            While => write!(f, "while"),
+
+            Let => write!(f, "let"),
+
+            Assign => write!(f, "="),
+
+            Eq => write!(f, "=="),
+            NEq => write!(f, "!="),
+
+            Gte => write!(f, ">="),
+            Gt => write!(f, ">"),
+            Lte => write!(f, "<="),
+            Lt => write!(f, "<"),
+
+            Invert => write!(f, "!"),
+
+            Plus => write!(f, "+"),
+            Minus => write!(f, "-"),
+            Star => write!(f, "*"),
+            Slash => write!(f, "/"),
+            Percent => write!(f, "%"),
+
+            Pipe => write!(f, "|>"),
+
+            Ref => write!(f, "&"),
+
+            LAnd => write!(f, "&&"),
+            LOr => write!(f, "||"),
+
+            LParen => write!(f, "("),
+            RParen => write!(f, ")"),
+            LBrace => write!(f, "{{"),
+            RBrace => write!(f, "}}"),
+            LBracket => write!(f, "["),
+            RBracket => write!(f, "]"),
+
+            Comma => write!(f, ","),
+            Dot => write!(f, "."),
+
+            Arrow => write!(f, "->"),
+
+            Colon => write!(f, ":"),
+            ColonColon => write!(f, "::"),
+            Semi => write!(f, ";"),
+
+            Pound => write!(f, "#"),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct SpannedError {
     error: TokenizerError,
