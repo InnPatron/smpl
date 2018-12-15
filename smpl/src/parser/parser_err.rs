@@ -2,6 +2,12 @@ use crate::ast::Expr;
 
 use super::tokens::{Token, SpannedError};
 
+#[macro_export]
+macro_rules! parser_state {
+    ($state: expr) => {{ ParserState::new_state($state) }};
+    ($state: expr, $substate: expr) => { ParserState::new_state($state).substate($substate) };
+}
+
 #[derive(Debug, Clone, Fail)]
 pub enum ParserError {
     #[fail(display = "Unexpected end of input.")]
