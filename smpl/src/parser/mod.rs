@@ -1,6 +1,7 @@
 use super::ast::Module;
 use crate::err::Err;
 
+mod parser_err;
 mod tokens;
 
 #[cfg(not(test))]
