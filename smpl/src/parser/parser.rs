@@ -11,35 +11,38 @@ pub type ParseErr<T> = Result<T, failure::Error>;
 #[macro_export]
 macro_rules! consume_token  {
 
-    ($input: expr) => {{
+    ($input: expr, $context: expr) => {{
+        use failure::Fail;
         use crate::parser::parser_err::*;
         let next = $input.next()
-            .ok_or(ParserError::UnexpectedEOI)?
-            .map_err(|e| ParserError::TokenizerError(e))?;
+            .ok_or(ParserError::UnexpectedEOI.context($context))?
+            .map_err(|e| ParserError::TokenizerError(e).context($context))?;
         next.to_data()
     }};
 
-    ($input: expr, $token: pat) => {{
+    ($input: expr, $token: pat, $context: expr) => {{
+        use failure::Fail;
         use crate::parser::parser_err::*;
         let next = $input.next()
-            .ok_or(ParserError::UnexpectedEOI)?
-            .map_err(|e| ParserError::TokenizerError(e))?;
+            .ok_or(ParserError::UnexpectedEOI.context($context))?
+            .map_err(|e| ParserError::TokenizerError(e).context($context))?;
         let data = next.to_data();
         match data.1 {
             $token => data,
-            _ => Err(ParserError::UnexpectedToken(data.1))?,
+            _ => Err(ParserError::UnexpectedToken(data.1).context($context))?,
         }
     }};
 
-    ($input: expr, $token: pat => $e: expr) => {{
+    ($input: expr, $token: pat => $e: expr, $context: expr) => {{
+        use failure::Fail;
         use crate::parser::parser_err::*;
         let next = $input.next()
-            .ok_or(ParserError::UnexpectedEOI)?
-            .map_err(|e| ParserError::TokenizerError(e))?;
+            .ok_or(ParserError::UnexpectedEOI.context($context))?
+            .map_err(|e| ParserError::TokenizerError(e).context($context))?;
         let data = next.to_data();
         match data.1 {
             $token => (data.0, $e),
-            _ => Err(ParserError::UnexpectedToken(data.1))?,
+            _ => Err(ParserError::UnexpectedToken(data.1).context($context))?,
         }
     }};
 }
