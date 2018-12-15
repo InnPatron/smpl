@@ -5,7 +5,7 @@ use crate::ast::*;
 use super::tokens::*;
 use super::parser::{module_binding as full_module_binding, ParseErr, fn_param_list, block, type_annotation};
 use super::parser_err::*;
-use crate::consume_token;
+use crate::{consume_token, parser_state};
 
 #[derive(PartialEq, Clone)]
 pub enum Delimiter {
@@ -42,7 +42,9 @@ pub fn prebase_piped_expr(tokens: &mut BufferedTokenizer, expr_base: AstNode<Exp
             }
         })? {
 
-        let _pipe = consume_token!(tokens, Token::Pipe);
+        let _pipe = consume_token!(tokens, 
+                                   Token::Pipe,
+                                   parser_state!("piped-expr", "|>"));
 
         let primary = parse_primary(tokens)?;
         let expr = expr(tokens, primary, &delim_tokens, 0)?;
@@ -126,7 +128,7 @@ fn expr(tokens: &mut BufferedTokenizer,
             break;
         }
 
-        let (_next_span, next) = consume_token!(tokens);
+        let (_next_span, next) = consume_token!(tokens, parser_state!("expr"));
         let main_op = get_op(&next).unwrap();
         let main_prec = bin_op_precedence(&main_op);
 
@@ -225,7 +227,8 @@ fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         PrimaryDec::Ident => parse_ident_leaf(tokens),
 
         PrimaryDec::UniExpr => {
-            let (uspan, uop) = consume_token!(tokens);
+            let (uspan, uop) = consume_token!(tokens, 
+                                              parser_state!("uni-expr", "uni-op"));
             
             let uop = match uop {
                 Token::Plus => return parse_primary(tokens),
@@ -272,11 +275,15 @@ fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         }
 
         PrimaryDec::LParen => {
-            let (lspan, _) = consume_token!(tokens, Token::LParen);
+            let (lspan, _) = consume_token!(tokens, 
+                                            Token::LParen,
+                                            parser_state!("paren-expr", "lparen"));
 
             let inner = piped_expr(tokens, &[Delimiter::RParen])?;
 
-            let (rspan, _) = consume_token!(tokens, Token::RParen);
+            let (rspan, _) = consume_token!(tokens, 
+                                            Token::RParen,
+                                            parser_state!("paren-expr", "rparen"));
 
             let span = LocationSpan::new(lspan.start(), rspan.end());
             let _span = span;
@@ -304,7 +311,8 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
     }
 
     let (base_span, base_ident) = consume_token!(tokens,
-                                                 Token::Identifier(ident) => Ident(ident));
+                                                 Token::Identifier(ident) => Ident(ident),
+                                                 parser_state!("identifier-leaf", "root"));
 
     match tokens.peek(|tok| {
         match tok {
@@ -340,10 +348,14 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         }
 
         IdentLeafDec::Indexing => {
-            let _lbracket = consume_token!(tokens, Token::LBracket);
+            let _lbracket = consume_token!(tokens, 
+                                           Token::LBracket,
+                                           parser_state!("indexing-expr", "lbracket"));
             let indexer = piped_expr(tokens, &[Delimiter::RBracket])?;
             let (indexer, _) = indexer.to_data();
-            let (rspan, _rbracket) = consume_token!(tokens, Token::RBracket);
+            let (rspan, _rbracket) = consume_token!(tokens, 
+                                                    Token::RBracket,
+                                                    parser_state!("indexing-expr", "rbracket"));
 
             if tokens.peek(|tok| {
                 match tok {
@@ -394,7 +406,9 @@ pub fn access_path(tokens: &mut BufferedTokenizer, root: PathSegment)
         }
     })? {
 
-        let _dot = consume_token!(tokens, Token::Dot);
+        let _dot = consume_token!(tokens, 
+                                  Token::Dot,
+                                  parser_state!("access-path", "dot"));
         let path_segment = path_segment(tokens)?;
 
         end = match path_segment {
@@ -419,7 +433,9 @@ fn path_segment(tokens: &mut BufferedTokenizer) -> ParseErr<PathSegment> {
         End,
     }
 
-    let (ispan, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+    let (ispan, ident) = consume_token!(tokens, 
+                                        Token::Identifier(i) => Ident(i),
+                                        parser_state!("path-segment", "name"));
 
     match tokens.peek(|tok| {
         match tok {
@@ -436,12 +452,16 @@ fn path_segment(tokens: &mut BufferedTokenizer) -> ParseErr<PathSegment> {
             // TODO: Convert path indexing segment to use Expr, Expr form instead of Ident form
             // TODO: Allow multiple indexing
             
-            let _lbracket = consume_token!(tokens, Token::LBracket);
+            let _lbracket = consume_token!(tokens, 
+                                           Token::LBracket,
+                                           parser_state!("path-segment-indexing", "lbracket"));
 
             let indexer = piped_expr(tokens, &[Delimiter::RBracket])?;
             let (indexer, _) = indexer.to_data();
 
-            let _rbracket = consume_token!(tokens, Token::RBracket);
+            let _rbracket = consume_token!(tokens,
+                                           Token::RBracket,
+                                           parser_state!("path-segment-indexing", "rbracket"));
 
             return Ok(PathSegment::Indexing(AstNode::new(ident, ispan), 
                                             Box::new(indexer)));
@@ -453,7 +473,9 @@ fn path_segment(tokens: &mut BufferedTokenizer) -> ParseErr<PathSegment> {
 }
 
 pub fn fn_args(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Option<Vec<AstNode<Expr>>>>> {
-    let (lspan, _) = consume_token!(tokens, Token::LParen);
+    let (lspan, _) = consume_token!(tokens, 
+                                    Token::LParen,
+                                    parser_state!("fn-args", "lparen"));
 
     let mut args: Option<Vec<AstNode<Expr>>> = None;
 
@@ -482,11 +504,15 @@ pub fn fn_args(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Option<Vec<As
                 _ => false,
             }
         })? {
-            let _comma = consume_token!(tokens, Token::Comma);
+            let _comma = consume_token!(tokens, 
+                                        Token::Comma,
+                                        parser_state!("fn-args", "comma separator"));
         }
     }
 
-    let (rspan, _) = consume_token!(tokens, Token::RParen);
+    let (rspan, _) = consume_token!(tokens, 
+                                    Token::RParen,
+                                    parser_state!("fn-args", "rparen"));
 
     let span = LocationSpan::new(lspan.start(), rspan.end());
 
@@ -509,9 +535,12 @@ pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: 
             }
         })? {
     
-        let (_cspan, _) = consume_token!(tokens, Token::ColonColon);
+        let (_cspan, _) = consume_token!(tokens, 
+                                         Token::ColonColon,
+                                         parser_state!("expr-module-segment", "coloncolon"));
         let (ispan, ident) = consume_token!(tokens, 
-                                            Token::Identifier(i) => Ident(i));
+                                            Token::Identifier(i) => Ident(i),
+                                            parser_state!("expr-module-segment", "name"));
 
         let span = ispan;
         end = span;     // Widen path span to end of current ident
@@ -555,10 +584,14 @@ pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: 
 }
 
 fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
-    let (linit, _) = consume_token!(tokens, Token::Init);
+    let (linit, _) = consume_token!(tokens, 
+                                    Token::Init,
+                                    parser_state!("struct-init", "init"));
     let (path, _) = full_module_binding(tokens)?.to_data();
 
-    let _lbrace = consume_token!(tokens, Token::LBrace);
+    let _lbrace = consume_token!(tokens, 
+                                 Token::LBrace,
+                                 parser_state!("struct-init", "lbrace"));
 
     let mut init = None;
     if tokens.peek(|tok| {
@@ -571,7 +604,9 @@ fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         init = Some(struct_field_init_list(tokens)?);
     }
 
-    let (lroc, _rbrace) = consume_token!(tokens, Token::RBrace);
+    let (lroc, _rbrace) = consume_token!(tokens, 
+                                         Token::RBrace,
+                                         parser_state!("struct-init", "rbrace"));
 
     let span = LocationSpan::new(linit.start(), lroc.end());
 
@@ -595,7 +630,9 @@ fn struct_field_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<(AstNo
                 _ => false
             }
         })? {
-            let _comma = consume_token!(tokens, Token::Comma);
+            let _comma = consume_token!(tokens, 
+                                        Token::Comma,
+                                        parser_state!("struct-field-init-list", "comma separator"));
             if tokens.has_next() && tokens.peek(|tok| {
                 match tok {
                     Token::RBrace => false,
@@ -614,9 +651,13 @@ fn struct_field_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<(AstNo
 }
 
 fn struct_field_init(tokens: &mut BufferedTokenizer) -> ParseErr<(AstNode<Ident>, Box<Expr>)> {
-    let (iloc, ident) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
+    let (iloc, ident) = consume_token!(tokens, 
+                                       Token::Identifier(i) => Ident(i),
+                                       parser_state!("struct-field-init", "field name"));
 
-    let _colon = consume_token!(tokens, Token::Colon);
+    let _colon = consume_token!(tokens, 
+                                Token::Colon,
+                                parser_state!("struct-field-init", "type colon"));
 
     let field_init = parse_primary(tokens)?;
     let (expr, _) = expr(tokens, 
@@ -637,7 +678,9 @@ fn array_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         Err,
     }
 
-    let (lloc, _) = consume_token!(tokens, Token::LBracket);
+    let (lloc, _) = consume_token!(tokens, 
+                                   Token::LBracket,
+                                   parser_state!("array-init", "lbracket"));
 
     let base_expr = parse_primary(tokens)?;
     let (base_expr, _) = expr(tokens, 
@@ -667,8 +710,12 @@ fn array_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             }
 
             InitDec::Value => {
-                let _semi = consume_token!(tokens, Token::Semi);
-                let (_, number) = consume_token!(tokens, Token::IntLiteral(i) => i);
+                let _semi = consume_token!(tokens, 
+                                           Token::Semi,
+                                           parser_state!("uniform-array-init", "semicolon"));
+                let (_, number) = consume_token!(tokens, 
+                                                 Token::IntLiteral(i) => i,
+                                                 parser_state!("uniform-array-init", "size"));
 
                 if number <= 0 {
                     unimplemented!("Invalid array size: {}", number);
@@ -683,7 +730,9 @@ fn array_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         unimplemented!("Unexpected end of input");
     };
 
-    let (rloc, _) = consume_token!(tokens, Token::RBracket);
+    let (rloc, _) = consume_token!(tokens, 
+                                   Token::RBracket,
+                                   parser_state!("array-init", "rbracket"));
 
     let span = LocationSpan::new(lloc.start(), rloc.end());
 
@@ -703,7 +752,9 @@ fn array_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Expr>> {
                 _ => false
             }
         })? {
-            let _comma = consume_token!(tokens, Token::Comma);
+            let _comma = consume_token!(tokens, 
+                                        Token::Comma,
+                                        parser_state!("array-init-list", "comma separator"));
             if tokens.has_next() && tokens.peek(|tok| {
                 match tok {
                     Token::RBracket => false,
@@ -730,9 +781,13 @@ fn array_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Expr>> {
 
 fn anonymous_fn(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
 
-    let (fnloc, _) = consume_token!(tokens, Token::Fn);
+    let (fnloc, _) = consume_token!(tokens, 
+                                    Token::Fn,
+                                    parser_state!("anonymous-fn", "fn"));
 
-    let _lparen = consume_token!(tokens, Token::LParen);
+    let _lparen = consume_token!(tokens, 
+                                 Token::LParen,
+                                 parser_state!("anonymous-fn", "param lparen"));
 
     let params = if tokens.peek(|tok| {
         match tok {
@@ -746,7 +801,9 @@ fn anonymous_fn(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
     };
         
 
-    let (_rloc, _) = consume_token!(tokens, Token::RParen);
+    let (_rloc, _) = consume_token!(tokens, 
+                                    Token::RParen,
+                                    parser_state!("anonymous-fn", "param rparen"));
 
     let mut return_type = None;
     if tokens.peek(|tok| {
@@ -755,7 +812,9 @@ fn anonymous_fn(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             _ => false,
         }
     })? {
-        let _arrow = consume_token!(tokens, Token::Arrow);
+        let _arrow = consume_token!(tokens, 
+                                    Token::Arrow,
+                                    parser_state!("anonymous-fn", "return type arrow"));
         return_type = Some(type_annotation(tokens)?);
     }
 
