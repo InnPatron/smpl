@@ -14,7 +14,7 @@ macro_rules! consume_token  {
     ($input: expr) => {{
         use crate::parser::parser_err::*;
         let next = $input.next()
-            .ok_or(ParserError::UnexpecedEOI)?
+            .ok_or(ParserError::UnexpectedEOI)?
             .map_err(|e| ParserError::TokenizerError(e))?;
         next.to_data()
     }};
@@ -22,7 +22,7 @@ macro_rules! consume_token  {
     ($input: expr, $token: pat) => {{
         use crate::parser::parser_err::*;
         let next = $input.next()
-            .ok_or(ParserError::UnexpecedEOI)?
+            .ok_or(ParserError::UnexpectedEOI)?
             .map_err(|e| ParserError::TokenizerError(e))?;
         let data = next.to_data();
         match data.1 {
@@ -34,7 +34,7 @@ macro_rules! consume_token  {
     ($input: expr, $token: pat => $e: expr) => {{
         use crate::parser::parser_err::*;
         let next = $input.next()
-            .ok_or(ParserError::UnexpecedEOI)?
+            .ok_or(ParserError::UnexpectedEOI)?
             .map_err(|e| ParserError::TokenizerError(e))?;
         let data = next.to_data();
         match data.1 {
@@ -60,7 +60,7 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
             Token::Mod => true,
             _ => false,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         // Found mod declaration
         name = Some(module_decl(tokens)?);
     }
@@ -78,7 +78,7 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
                 Token::Use => ModDec::Use,
                 _ => ModDec::Err,
             }
-        }).map_err(|e| format!("{:?}", e))? {
+        })? {
             ModDec::Struct => {
                 decls.push(DeclStmt::Struct(struct_decl(tokens, anno)?));
                 anno = Vec::new();
@@ -115,7 +115,7 @@ fn annotations(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Annotation>> {
             Token::Pound => true,
             _ => false,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         let _pound = consume_token!(tokens, Token::Pound);
         let _lbracket = consume_token!(tokens, Token::LBracket);
         annotations.push(Annotation{ keys: kv_list(tokens)? });
@@ -134,14 +134,14 @@ fn kv_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<(Ident, Option<String
                 Token::Comma => true,
                 _ => false
             }
-        }).map_err(|e| format!("{:?}", e))? {
+        })? {
             let _comma = consume_token!(tokens, Token::Comma);
             if tokens.has_next() && tokens.peek(|tok| {
                 match tok {
                     Token::RBracket => false,
                     _ => true,
                 }
-            }).map_err(|e| format!("{:?}", e))? {
+            })? {
                 list.push(kv_pair(tokens)?);
                 continue;
             }
@@ -161,7 +161,7 @@ fn kv_pair(tokens: &mut BufferedTokenizer) -> ParseErr<(Ident, Option<String>)> 
             Token::Assign => true,
             _ => false,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         let _assign = consume_token!(tokens, Token::Assign);
         let (_, v) = consume_token!(tokens, Token::StringLiteral(s) => s);
         Ok((Ident(ident), Some(v)))
@@ -213,7 +213,7 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
             Token::Unchecked => true,
             _ => false
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         let _unchecked = consume_token!(tokens, Token::Unchecked);
         BuiltinFnParams::Unchecked
     } else {
@@ -222,7 +222,7 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
                 Token::RParen => false,
                 _ => true,
             }
-        }).map_err(|e| format!("{:?}", e))? {
+        })? {
             BuiltinFnParams::Checked(Some(fn_param_list(tokens)?))
         } else {
             BuiltinFnParams::Checked(None)
@@ -238,7 +238,7 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
             Token::Arrow => true,
             _ => false,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         let _arrow = consume_token!(tokens, Token::Arrow);
         return_type = Some(type_annotation(tokens)?);
     }
@@ -267,13 +267,13 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
         )
     } else {
         let params = match params {
-            BuiltinFnParams::Unchecked => return Err("Unchecked parameters in non-builtin function".to_string()),
+            BuiltinFnParams::Unchecked => return Err(ParserError::NonbuiltinUncheckedParameters.into()),
             BuiltinFnParams::Checked(p) => p,
         };
 
         let body = match body {
             Some(b) => b,
-            None => return Err("Function has no body".to_string()),
+            None => return Err(ParserError::NoFnBody.into()),
         };
 
         Ok(DeclStmt::Function(
@@ -300,14 +300,14 @@ pub fn fn_param_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<FnP
                 Token::Comma => true,
                 _ => false
             }
-        }).map_err(|e| format!("{:?}", e))? {
+        })? {
             let _comma = consume_token!(tokens, Token::Comma);
             if tokens.has_next() && tokens.peek(|tok| {
                 match tok {
                     Token::RParen => false,
                     _ => true,
                 }
-            }).map_err(|e| format!("{:?}", e))? {
+            })? {
                 list.push(fn_param(tokens)?);
                 continue;
             }
@@ -351,7 +351,7 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
             Token::RBrace => false,
             _ => true,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         let body = struct_field_list(tokens)?;
         StructBody(Some(body))
     } else {
@@ -381,14 +381,14 @@ fn struct_field_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<StructField
                 Token::Comma => true,
                 _ => false
             }
-        }).map_err(|e| format!("{:?}", e))? {
+        })? {
             let _comma = consume_token!(tokens, Token::Comma);
             if tokens.has_next() && tokens.peek(|tok| {
                 match tok {
                     Token::RBrace => false,
                     _ => true,
                 }
-            }).map_err(|e| format!("{:?}", e))? {
+            })? {
                 list.push(struct_field(tokens)?);
                 continue;
             }
@@ -443,7 +443,7 @@ pub fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeA
             _ => TypeAnnDec::Err,
         }
 
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         TypeAnnDec::Module => {
             let (bind, span) = module_binding(tokens)?.to_data();
 
@@ -468,7 +468,7 @@ pub fn module_binding(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Module
             Token::ColonColon => true,
             _ => false,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         let _coloncolon = consume_token!(tokens, Token::ColonColon);
         let (nloc, next) = consume_token!(tokens, Token::Identifier(i) => Ident(i));
         path.push(AstNode::new(next, nloc));
@@ -505,7 +505,7 @@ fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> 
             Token::RParen => false,
             _ => true,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         params = Some(fn_type_params(tokens)?);
     }
 
@@ -519,7 +519,7 @@ fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> 
             Token::Arrow => true,
             _ => false,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         let _arrow = consume_token!(tokens, Token::Arrow);
         let ret = type_annotation(tokens)?;
         let return_span = ret.span();
@@ -540,14 +540,14 @@ fn fn_type_params(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<TypeAn
                 Token::Comma => true,
                 _ => false
             }
-        }).map_err(|e| format!("{:?}", e))? {
+        })? {
             let _comma = consume_token!(tokens, Token::Comma);
             if tokens.has_next() && tokens.peek(|tok| {
                 match tok {
                     Token::RParen => false,
                     _ => true,
                 }
-            }).map_err(|e| format!("{:?}", e))? {
+            })? {
                 list.push(type_annotation(tokens)?);
                 continue;
             }
@@ -571,7 +571,7 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
             Token::RBrace => false,
             _ => true,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         stmts.push(stmt(tokens)?);
     }
     
@@ -624,7 +624,7 @@ fn stmt(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
 
             _ => StmtDec::Expr,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
 
         StmtDec::Continue => {
             Stmt::ExprStmt(continue_stmt(tokens)?)
@@ -697,7 +697,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             Token::Assign => Dec::DefSingletonAssignment,
             _ => Dec::DefSingletonExpr,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
 
         Dec::AccessPath => {
             let span = base_span;
@@ -761,7 +761,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
                     Token::Dot => true,
                     _ => false,
                 }
-            }).map_err(|e| format!("{:?}", e))? {
+            })? {
 
                 // Access path with indexing as root
                 let span = base_span;
@@ -825,7 +825,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
     // Check if it's an assignment or expression
 
     if tokens.has_next() == false {
-        return Err("Unexpected end of input".to_string());
+        return Err(ParserError::UnexpectedEOI.into());
     }
 
     match tokens.peek(|tok| {
@@ -833,7 +833,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             Token::Assign => PathDec::Assign,
             _ => PathDec::Expr,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         
         PathDec::Assign => {
             let path = path;
@@ -875,7 +875,7 @@ fn local_var_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>>
     let mut type_anno = None;
 
     if tokens.has_next() == false {
-        return Err("Unexpected end of input".to_string());
+        return Err(ParserError::UnexpectedEOI.into());
     }
 
     if tokens.peek(|tok| {
@@ -883,7 +883,7 @@ fn local_var_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>>
             Token::Colon => true,
             _ => false,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
 
         let _colon = consume_token!(tokens, Token::Colon);
         type_anno = Some(type_annotation(tokens)?);
@@ -932,7 +932,7 @@ fn if_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
 
                 _ => IfDec::End,
             }
-        }).map_err(|e| format!("{:?}", e))? {
+        })? {
             IfDec::Elif => {
                 let _elif = consume_token!(tokens, Token::Elif);
 
@@ -1006,7 +1006,7 @@ fn return_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
             Token::Semi => true,
             _ => false,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         // No expression
         let (semiloc, _) = consume_token!(tokens, Token::Semi);
         end = semiloc;

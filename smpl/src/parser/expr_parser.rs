@@ -4,6 +4,7 @@ use crate::span::*;
 use crate::ast::*;
 use super::tokens::*;
 use super::parser::{module_binding as full_module_binding, ParseErr, fn_param_list, block, type_annotation};
+use super::parser_err::*;
 use crate::consume_token;
 
 #[derive(PartialEq, Clone)]
@@ -39,7 +40,7 @@ pub fn prebase_piped_expr(tokens: &mut BufferedTokenizer, expr_base: AstNode<Exp
                 Token::Pipe => true,
                 _ => false,
             }
-        }).map_err(|e| format!("{:?}", e))? {
+        })? {
 
         let _pipe = consume_token!(tokens, Token::Pipe);
 
@@ -54,7 +55,7 @@ pub fn prebase_piped_expr(tokens: &mut BufferedTokenizer, expr_base: AstNode<Exp
         let expr_base = match expr_base {
             Expr::FnCall(f) => f,
 
-            e @ _ => return Err(format!("Can only pipe function calls. Found:\n{:?}", e)),
+            e @ _ => return Err(ParserError::InvalidPiping(e).into()),
 
         };
 
@@ -64,10 +65,10 @@ pub fn prebase_piped_expr(tokens: &mut BufferedTokenizer, expr_base: AstNode<Exp
                 let (e, _espan) = e.to_data();
                 match e {
                     Expr::FnCall(f) => Ok(f),
-                    e @ _ => Err(format!("Can only pipe function calls. Found:\n{:?}", e)),
+                    e @ _ => Err(ParserError::InvalidPiping(e).into()),
                 }
             })
-            .collect::<Result<Vec<AstNode<FnCall>>, String>>()?;
+            .collect::<Result<Vec<AstNode<FnCall>>, failure::Error>>()?;
 
         let end = piped_exprs.last().unwrap().span();
         let span = Span::combine(eloc, end);
@@ -119,7 +120,7 @@ fn expr(tokens: &mut BufferedTokenizer,
             } else {
                 PeekResult::Break
             }
-        }).map_err(|e| format!("{:?}", e))?;
+        })?;
 
         if let PeekResult::Break = peek_result {
             break;
@@ -154,7 +155,7 @@ fn expr(tokens: &mut BufferedTokenizer,
                 } else {
                     PeekResult::Break
                 }
-            }).map_err(|e| format!("{:?}", e))?;
+            })?;
 
             let rhs_op_peek = match peek_result {
                 PeekResult::Execute(op) => op,
@@ -219,7 +220,7 @@ fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
 
             _ => PrimaryDec::Err,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
 
         PrimaryDec::Ident => parse_ident_leaf(tokens),
 
@@ -253,7 +254,7 @@ fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             let (next_span, next) = tokens
                 .next()
                 .unwrap()
-                .map_err(|e| format!("{:?}", e))?
+                ?
                 .to_data();
 
             let literal = match next {
@@ -313,7 +314,7 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             Token::LBracket => IdentLeafDec::Indexing,
             _ => IdentLeafDec::Singleton,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
 
         IdentLeafDec::AccessPath => {
             let span = base_span;
@@ -349,7 +350,7 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
                     Token::Dot => true,
                     _ => false,
                 }
-            }).map_err(|e| format!("{:?}", e))? {
+            })? {
 
                 // Access path with indexing as root
                 let span = base_span;
@@ -391,7 +392,7 @@ pub fn access_path(tokens: &mut BufferedTokenizer, root: PathSegment)
             Token::Dot => true,
             _ => false,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
 
         let _dot = consume_token!(tokens, Token::Dot);
         let path_segment = path_segment(tokens)?;
@@ -426,7 +427,7 @@ fn path_segment(tokens: &mut BufferedTokenizer) -> ParseErr<PathSegment> {
             Token::LBracket => SegmentDec::Indexing,
             _ => SegmentDec::End,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
 
         SegmentDec::Dot => (),
         SegmentDec::End => (),
@@ -463,7 +464,7 @@ pub fn fn_args(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Option<Vec<As
 
                 _ => true,
             }
-        }).map_err(|e| format!("{:?}", e))? {
+        })? {
 
         let arg = piped_expr(tokens, &[Delimiter::RParen, Delimiter::Comma])?;
 
@@ -480,7 +481,7 @@ pub fn fn_args(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Option<Vec<As
                 Token::Comma => true,
                 _ => false,
             }
-        }).map_err(|e| format!("{:?}", e))? {
+        })? {
             let _comma = consume_token!(tokens, Token::Comma);
         }
     }
@@ -506,7 +507,7 @@ pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: 
                 Token::ColonColon => true,
                 _ => false,
             }
-        }).map_err(|e| format!("{:?}", e))? {
+        })? {
     
         let (_cspan, _) = consume_token!(tokens, Token::ColonColon);
         let (ispan, ident) = consume_token!(tokens, 
@@ -526,7 +527,7 @@ pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: 
                 Token::LParen => true,
                 _ => false,
             }
-        }).map_err(|e| format!("{:?}", e))? {
+        })? {
 
         // FN call
         let (args, args_span) = fn_args(tokens)?.to_data();
@@ -566,7 +567,7 @@ fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             _ => true,
         }
 
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         init = Some(struct_field_init_list(tokens)?);
     }
 
@@ -593,14 +594,14 @@ fn struct_field_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<(AstNo
                 Token::Comma => true,
                 _ => false
             }
-        }).map_err(|e| format!("{:?}", e))? {
+        })? {
             let _comma = consume_token!(tokens, Token::Comma);
             if tokens.has_next() && tokens.peek(|tok| {
                 match tok {
                     Token::RBrace => false,
                     _ => true,
                 }
-            }).map_err(|e| format!("{:?}", e))? {
+            })? {
                 list.push(struct_field_init(tokens)?);
                 continue;
             }
@@ -653,7 +654,7 @@ fn array_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
                 Token::RBracket => InitDec::SingleList,
                 _ => InitDec::Err
             }
-        }).map_err(|e| format!("{:?}", e))? {
+        })? {
 
             InitDec::SingleList => ArrayInit::InitList(vec![base_expr]),
 
@@ -701,14 +702,14 @@ fn array_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Expr>> {
                 Token::Comma => true,
                 _ => false
             }
-        }).map_err(|e| format!("{:?}", e))? {
+        })? {
             let _comma = consume_token!(tokens, Token::Comma);
             if tokens.has_next() && tokens.peek(|tok| {
                 match tok {
                     Token::RBracket => false,
                     _ => true,
                 }
-            }).map_err(|e| format!("{:?}", e))? {
+            })? {
                 let data = parse_primary(tokens)?;
                 list.push(expr(tokens,
                                data,
@@ -738,7 +739,7 @@ fn anonymous_fn(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             Token::RParen => false,
             _ => true,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         Some(fn_param_list(tokens)?)
     } else {
         None
@@ -753,7 +754,7 @@ fn anonymous_fn(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             Token::Arrow => true,
             _ => false,
         }
-    }).map_err(|e| format!("{:?}", e))? {
+    })? {
         let _arrow = consume_token!(tokens, Token::Arrow);
         return_type = Some(type_annotation(tokens)?);
     }
