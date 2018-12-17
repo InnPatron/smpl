@@ -1066,7 +1066,9 @@ fn if_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
             }
         })? {
             IfDec::Elif => {
-                let _elif = consume_token!(tokens, Token::Elif);
+                let _elif = consume_token!(tokens, 
+                                           Token::Elif,
+                                           parser_state!("if-stmt", "elif"));
 
                 let branch = if_branch(tokens)?;
                 end = branch.block.span();
@@ -1075,7 +1077,9 @@ fn if_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
             }
 
             IfDec::Else => {
-                let _else = consume_token!(tokens, Token::Else);
+                let _else = consume_token!(tokens, 
+                                           Token::Else,
+                                           parser_state!("if-stmt", "else"));
                 let block = block(tokens)?;
 
                 end = block.span();
@@ -1112,7 +1116,9 @@ fn if_branch(tokens: &mut BufferedTokenizer) -> ParseErr<Branch> {
 }
 
 fn while_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
-    let (whileloc, _) = consume_token!(tokens, Token::While);
+    let (whileloc, _) = consume_token!(tokens, 
+                                       Token::While,
+                                       parser_state!("while-stmt", "while"));
 
     let conditional = piped_expr(tokens, &[Delimiter::LBrace])?;
 
@@ -1129,7 +1135,9 @@ fn while_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
 }
 
 fn return_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
-    let (returnloc, _) = consume_token!(tokens, Token::Return);
+    let (returnloc, _) = consume_token!(tokens, 
+                                        Token::Return,
+                                        parser_state!("return-stmt", "return"));
 
     let mut end = returnloc;
 
@@ -1140,7 +1148,9 @@ fn return_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
         }
     })? {
         // No expression
-        let (semiloc, _) = consume_token!(tokens, Token::Semi);
+        let (semiloc, _) = consume_token!(tokens, 
+                                          Token::Semi,
+                                          parser_state!("return-stmt", "semicolon"));
         end = semiloc;
 
         None
@@ -1148,7 +1158,9 @@ fn return_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
         // Expression
         let expr = piped_expr(tokens, &[Delimiter::Semi])?;
 
-        let _semi = consume_token!(tokens, Token::Semi);
+        let _semi = consume_token!(tokens, 
+                                   Token::Semi,
+                                   parser_state!("return-stmt", "semicolon"));
 
         end = expr.span();
 
@@ -1160,8 +1172,12 @@ fn return_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
 }
 
 fn continue_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
-    let (contloc, _) = consume_token!(tokens, Token::Continue);
-    let (semiloc, _) = consume_token!(tokens, Token::Semi);
+    let (contloc, _) = consume_token!(tokens, 
+                                      Token::Continue,
+                                      parser_state!("continue-stmt", "continue"));
+    let (semiloc, _) = consume_token!(tokens, 
+                                      Token::Semi,
+                                      parser_state!("continue-stmt", "semicolon"));
 
     let span = LocationSpan::new(contloc.start(), semiloc.end());
     Ok(AstNode::new(
@@ -1171,8 +1187,12 @@ fn continue_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> 
 }
 
 fn break_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
-    let (contloc, _) = consume_token!(tokens, Token::Break);
-    let (semiloc, _) = consume_token!(tokens, Token::Semi);
+    let (contloc, _) = consume_token!(tokens, 
+                                      Token::Break, 
+                                      parser_state!("break-stmt", "break"));
+    let (semiloc, _) = consume_token!(tokens, 
+                                      Token::Semi,
+                                      parser_state!("break-stmt", "semicolon"));
 
     let span = LocationSpan::new(contloc.start(), semiloc.end());
     Ok(AstNode::new(
