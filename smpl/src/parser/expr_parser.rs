@@ -260,7 +260,7 @@ fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             let (next_span, next) = tokens
                 .next()
                 .unwrap()
-                ?
+                .map_err(|e| parser_error!(e.into(), parser_state!("literal")))?
                 .to_data();
 
             let literal = match next {
