@@ -5,7 +5,7 @@ use crate::ast::*;
 use super::tokens::*;
 use super::parser::{module_binding as full_module_binding, ParseErr, fn_param_list, block, type_annotation};
 use super::parser_err::*;
-use crate::{consume_token, parser_state};
+use crate::{consume_token, parser_state, parser_error};
 
 #[derive(PartialEq, Clone)]
 pub enum Delimiter {
@@ -57,8 +57,9 @@ pub fn prebase_piped_expr(tokens: &mut BufferedTokenizer, expr_base: AstNode<Exp
         let expr_base = match expr_base {
             Expr::FnCall(f) => f,
 
-            e @ _ => return Err(ParserError::InvalidPiping(e).into()),
-
+            e @ _ => return Err(parser_error!(
+                    ParserErrorKind::InvalidPiping(e),
+                    parser_state!("prebase-piped-expr", "pipe-validation")))
         };
 
         let piped_exprs = piped_exprs
@@ -67,10 +68,12 @@ pub fn prebase_piped_expr(tokens: &mut BufferedTokenizer, expr_base: AstNode<Exp
                 let (e, _espan) = e.to_data();
                 match e {
                     Expr::FnCall(f) => Ok(f),
-                    e @ _ => Err(ParserError::InvalidPiping(e).into()),
+                    e @ _ => Err(parser_error!(
+                        ParserErrorKind::InvalidPiping(e),
+                        parser_state!("prebase-piped-expr", "pipe-validation")))
                 }
             })
-            .collect::<Result<Vec<AstNode<FnCall>>, failure::Error>>()?;
+            .collect::<Result<Vec<AstNode<FnCall>>, ParserError>>()?;
 
         let end = piped_exprs.last().unwrap().span();
         let span = Span::combine(eloc, end);

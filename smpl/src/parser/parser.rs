@@ -1,6 +1,6 @@
 use std::iter::{Iterator, Peekable};
 
-use crate::parser_state;
+use crate::{parser_state, parser_error};
 use crate::span::*;
 use crate::ast::*;
 use super::tokens::*;
@@ -310,13 +310,18 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
         )
     } else {
         let params = match params {
-            BuiltinFnParams::Unchecked => return Err(ParserError::NonbuiltinUncheckedParameters.into()),
+            BuiltinFnParams::Unchecked => 
+                return Err(parser_error!(
+                        ParserErrorKind::NonbuiltinUncheckedParameters,
+                        parser_state!("fn-decl", "param-validation"))),
             BuiltinFnParams::Checked(p) => p,
         };
 
         let body = match body {
             Some(b) => b,
-            None => return Err(ParserError::NoFnBody.into()),
+            None => return Err(parser_error!(
+                    ParserErrorKind::NoFnBody,
+                    parser_state!("fn-decl", "body"))),
         };
 
         Ok(DeclStmt::Function(
@@ -939,7 +944,9 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
     // Check if it's an assignment or expression
 
     if tokens.has_next() == false {
-        return Err(ParserError::UnexpectedEOI.into());
+        return Err(parser_error!(
+                ParserErrorKind::UnexpectedEOI.into(),
+                parser_state!("full-path-potential-assign", "=")));
     }
 
     match tokens.peek(|tok| {
@@ -999,7 +1006,9 @@ fn local_var_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>>
     let mut type_anno = None;
 
     if tokens.has_next() == false {
-        return Err(ParserError::UnexpectedEOI.into());
+        return Err(parser_error!(
+                ParserErrorKind::UnexpectedEOI.into(),
+                parser_state!("local-var-decl", "=")));
     }
 
     if tokens.peek(|tok| {
