@@ -7,43 +7,46 @@ use super::tokens::*;
 use super::expr_parser::*;
 use super::parser_err::*;
 
-pub type ParseErr<T> = Result<T, failure::Error>;
+pub type ParseErr<T> = Result<T, ParserError>;
 
 #[macro_export]
 macro_rules! consume_token  {
 
-    ($input: expr, $context: expr) => {{
+    ($input: expr, $state: expr) => {{
         use failure::Fail;
         use crate::parser::parser_err::*;
+        use crate::parser_error;
         let next = $input.next()
-            .ok_or(ParserError::UnexpectedEOI.context($context))?
-            .map_err(|e| ParserError::TokenizerError(e).context($context))?;
+            .ok_or(parser_error!(ParserErrorKind::UnexpectedEOI, $state))?
+            .map_err(|e| parser_error!(ParserErrorKind::TokenizerError(e), $state))?;
         next.to_data()
     }};
 
-    ($input: expr, $token: pat, $context: expr) => {{
+    ($input: expr, $token: pat, $state: expr) => {{
         use failure::Fail;
         use crate::parser::parser_err::*;
+        use crate::parser_error;
         let next = $input.next()
-            .ok_or(ParserError::UnexpectedEOI.context($context))?
-            .map_err(|e| ParserError::TokenizerError(e).context($context))?;
+            .ok_or(parser_error!(ParserErrorKind::UnexpectedEOI, $state))?
+            .map_err(|e| parser_error!(ParserErrorKind::TokenizerError(e), $state))?;
         let data = next.to_data();
         match data.1 {
             $token => data,
-            _ => Err(ParserError::UnexpectedToken(data.1).context($context))?,
+            _ => Err(parser_error!(ParserErrorKind::UnexpectedToken(data.1), $state))?,
         }
     }};
 
-    ($input: expr, $token: pat => $e: expr, $context: expr) => {{
+    ($input: expr, $token: pat => $e: expr, $state: expr) => {{
         use failure::Fail;
         use crate::parser::parser_err::*;
+        use crate::parser_error;
         let next = $input.next()
-            .ok_or(ParserError::UnexpectedEOI.context($context))?
-            .map_err(|e| ParserError::TokenizerError(e).context($context))?;
+            .ok_or(parser_error!(ParserErrorKind::UnexpectedEOI, $state))?
+            .map_err(|e| parser_error!(ParserErrorKind::TokenizerError(e), $state))?;
         let data = next.to_data();
         match data.1 {
             $token => (data.0, $e),
-            _ => Err(ParserError::UnexpectedToken(data.1).context($context))?,
+            _ => Err(parser_error!(ParserErrorKind::UnexpectedToken(data.1), $state))?,
         }
     }};
 }
