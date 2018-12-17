@@ -63,7 +63,7 @@ impl ParserError {
     }
 
     pub fn error_state(&self) -> &ParserState {
-        self.parser_states.0.unwrap()
+        self.parser_states.get(0).unwrap()
     }
 }
 
@@ -94,12 +94,13 @@ pub enum ParserErrorKind {
     TokenizerError(SpannedError),
 }
 
-impl From<SpannedError> for ParserError {
-    fn from(e: SpannedError) -> ParserError {
-        ParserError::TokenizerError(e)
+impl From<SpannedError> for ParserErrorKind {
+    fn from(e: SpannedError) -> ParserErrorKind {
+        ParserErrorKind::TokenizerError(e)
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ParserState {
     state: String,
     substate: Option<String>,
