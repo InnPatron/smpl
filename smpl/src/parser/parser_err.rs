@@ -6,6 +6,16 @@ use crate::ast::Expr;
 use super::tokens::{Token, SpannedError};
 
 #[macro_export]
+macro_rules! parser_error {
+    ($kind: expr, $state: expr) => {{
+        use crate::parser::parser_err::*;
+        ParserError::new($kind)
+            .push_state($state)
+    }}
+}
+
+
+#[macro_export]
 macro_rules! production {
     ($production: expr, $state: expr) => {{ 
         use failure::Fail;
