@@ -51,6 +51,13 @@ macro_rules! consume_token  {
     }};
 }
 
+#[macro_export]
+macro_rules! peek_token {
+    ($tokenizer: expr, $lam: expr, $state: expr) => {
+        ($tokenizer).peek($lam).map_err(|e| parser_error!(e.into(), $state))?
+    }
+}
+
 pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
 
     enum ModDec {
