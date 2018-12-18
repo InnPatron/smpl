@@ -1,6 +1,6 @@
 use std::iter::{Iterator, Peekable};
 
-use crate::{parser_state, parser_error};
+use crate::{parser_state, parser_error, production};
 use crate::span::*;
 use crate::ast::*;
 use super::tokens::*;
@@ -76,7 +76,8 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
         }
     }, parser_state!("module", "mod-decl")) {
         // Found mod declaration
-        name = Some(module_decl(tokens)?);
+        name = Some(production!(module_decl(tokens),
+                                parser_state!("module", "mod-decl")));
     }
 
     let mut decls = Vec::new();
@@ -94,21 +95,24 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
             }
         }, parser_state!("module", "decl-kind")) {
             ModDec::Struct => {
-                decls.push(DeclStmt::Struct(struct_decl(tokens, anno)?));
+                decls.push(DeclStmt::Struct(production!(struct_decl(tokens, anno),
+                    parser_state!("module", "struct-decl"))));
                 anno = Vec::new();
             }
 
             ModDec::Annotation => {
-                anno = annotations(tokens)?;
+                anno = production!(annotations(tokens), parser_state!("module", "annotation"));
             },
 
             ModDec::Function(is_builtin) => {
-                decls.push(fn_decl(tokens, anno, is_builtin)?);
+                decls.push(production!(fn_decl(tokens, anno, is_builtin),
+                    parser_state!("module", "fn-decl")));
                 anno = Vec::new();
             }
 
             ModDec::Use => {
-                decls.push(use_decl(tokens)?);
+                decls.push(production!(use_decl(tokens),
+                    parser_state!("module", "use-decl")));
                 anno = Vec::new();
             }
 
@@ -136,7 +140,10 @@ fn annotations(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Annotation>> {
         let _lbracket = consume_token!(tokens, 
                                        Token::LBracket,
                                        parser_state!("annotations", "lbracket"));
-        annotations.push(Annotation{ keys: kv_list(tokens)? });
+        annotations.push(Annotation { 
+            keys: production!(kv_list(tokens), 
+                              parser_state!("annotations", "kv-list"))
+        });
         let _rbracket = consume_token!(tokens, 
                                        Token::RBracket,
                                        parser_state!("annotations", "rbracket"));
@@ -164,7 +171,9 @@ fn kv_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<(Ident, Option<String
                     _ => true,
                 }
             }, parser_state!("kv-list", "rbracket")) {
-                list.push(kv_pair(tokens)?);
+                list.push(
+                    production!(kv_pair(tokens),
+                        parser_state!("kv-list", "kv-pair")));
                 continue;
             }
         }
@@ -267,7 +276,13 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
                 _ => true,
             }
         }, parser_state!("fn-decl", "rparen")) {
-            BuiltinFnParams::Checked(Some(fn_param_list(tokens)?))
+            BuiltinFnParams::Checked(Some(
+                    production!(
+                        fn_param_list(tokens),
+                        parser_state!("fn-decl", "fn-param-list")
+                        )
+                    )
+                )
         } else {
             BuiltinFnParams::Checked(None)
         }
@@ -288,7 +303,9 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
         let _arrow = consume_token!(tokens, 
                                     Token::Arrow,
                                     parser_state!("fn-decl", "return type arrow"));
-        return_type = Some(type_annotation(tokens)?);
+        return_type = Some(production!(type_annotation(tokens), 
+                                       parser_state!("fn-decl", "return type")
+                                       ));
     }
 
     let mut body: Option<AstNode<Block>> = None;
@@ -347,7 +364,10 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
 }
 
 pub fn fn_param_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<FnParameter>>> {
-    let mut list = vec![fn_param(tokens)?];
+    let mut list = vec![
+        production!(fn_param(tokens),
+                    parser_state!("fn-param-list", "fn-param"))
+    ];
 
     while tokens.has_next() {
         if peek_token!(tokens, |tok| {
@@ -365,7 +385,10 @@ pub fn fn_param_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<FnP
                     _ => true,
                 }
             }, parser_state!("fn-param-list", "rparen")) {
-                list.push(fn_param(tokens)?);
+                list.push(production!(fn_param(tokens),
+                    parser_state!("fn-param-list", "fn-param")
+                    )
+                );
                 continue;
             }
         }
@@ -383,7 +406,8 @@ fn fn_param(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<FnParameter>> {
     let _colon = consume_token!(tokens, 
                                 Token::Colon,
                                 parser_state!("fn-param", "param type colon"));
-    let ann = type_annotation(tokens)?;
+    let ann = production!(type_annotation(tokens),
+        parser_state!("fn-param", "param-type"));
 
     let span = Span::combine(idloc, ann.span());
     let param = FnParameter {
@@ -419,7 +443,8 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
             _ => true,
         }
     }, parser_state!("struct-decl", "fields rbrace")) {
-        let body = struct_field_list(tokens)?;
+        let body = production!(struct_field_list(tokens),
+            parser_state!("struct-decl", "field-list"));
         StructBody(Some(body))
     } else {
         // Empty struct body
@@ -442,7 +467,10 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
 }
 
 fn struct_field_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<StructField>> {
-    let mut list = vec![struct_field(tokens)?];
+    let mut list = vec![
+        production!(struct_field(tokens), 
+                    parser_state!("struct-field-list", "struct-field"))
+    ];
 
     while tokens.has_next() {
         if peek_token!(tokens, |tok| {
@@ -460,7 +488,8 @@ fn struct_field_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<StructField
                     _ => true,
                 }
             }, parser_state!("struct-field-list", "rbrace")) {
-                list.push(struct_field(tokens)?);
+                list.push(production!(struct_field(tokens), 
+                    parser_state!("struct-field-list", "struct-field")));
                 continue;
             }
         }
@@ -479,7 +508,9 @@ fn struct_field(tokens: &mut BufferedTokenizer) -> ParseErr<StructField> {
     let _colon = consume_token!(tokens, 
                                 Token::Colon,
                                 parser_state!("struct-field", "field type colon"));
-    let ann = type_annotation(tokens)?;
+    let ann = production!(type_annotation(tokens),
+        parser_state!("struct-field", "type annotation")
+    );
 
     Ok(StructField {
         name: AstNode::new(ident, idloc),
@@ -526,12 +557,25 @@ pub fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeA
 
     }, parser_state!("type-annotation", "annotation-kind")) {
         TypeAnnDec::Module => {
-            let (bind, span) = module_binding(tokens)?.to_data();
+            let (bind, span) = production!(
+                module_binding(tokens),
+                parser_state!("type-annotation", "module-binding")
+            ).to_data();
 
             Ok(AstNode::new(TypeAnnotation::Path(bind), span))
         },
-        TypeAnnDec::FnType => fn_type(tokens),
-        TypeAnnDec::ArrayType => array_type(tokens),
+
+        TypeAnnDec::FnType => Ok(production!(
+                fn_type(tokens), 
+                parser_state!("type-annotation", "fn-type")
+            )
+        ),
+
+        TypeAnnDec::ArrayType => Ok(production!(
+                array_type(tokens),
+                parser_state!("type-annotation", "array-type")
+            )
+        ),
 
         TypeAnnDec::Err => unimplemented!(),
     }
@@ -569,7 +613,11 @@ fn array_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation
     let (lloc, _) = consume_token!(tokens, 
                                    Token::LBracket,
                                    parser_state!("array-type", "lbracket"));
-    let base_type = Box::new(type_annotation(tokens)?);
+    let base_type = Box::new(production!(
+            type_annotation(tokens),
+            parser_state!("array-type", "base-type")
+        )
+    );
     let _semi = consume_token!(tokens, 
                                Token::Semi,
                                parser_state!("array-type", "semicolon"));
@@ -605,7 +653,11 @@ fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> 
             _ => true,
         }
     }, parser_state!("fn-type", "param rparen")) {
-        params = Some(fn_type_params(tokens)?);
+        params = Some(production!(
+                fn_type_params(tokens),
+                parser_state!("fn-type", "fn-type-params")
+            )
+        );
     }
 
     let (rparenloc, _) = consume_token!(tokens, 
@@ -624,7 +676,10 @@ fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> 
         let _arrow = consume_token!(tokens, 
                                     Token::Arrow,
                                     parser_state!("fn-type", "return type arrow"));
-        let ret = type_annotation(tokens)?;
+        let ret = production!(
+            type_annotation(tokens),
+            parser_state!("fn-type", "return type")
+        );
         let return_span = ret.span();
 
         return_type = Some(Box::new(ret));
@@ -635,7 +690,12 @@ fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> 
 }
 
 fn fn_type_params(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<TypeAnnotation>>> {
-    let mut list = vec![type_annotation(tokens)?];
+    let mut list = vec![
+        production!(
+            type_annotation(tokens),
+            parser_state!("fn-type-params", "param-type")
+        )
+    ];
 
     while tokens.has_next() {
         if peek_token!(tokens, |tok| {
@@ -653,7 +713,10 @@ fn fn_type_params(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<TypeAn
                     _ => true,
                 }
             }, parser_state!("fn-type-params", "rparen")) {
-                list.push(type_annotation(tokens)?);
+                list.push(production!(
+                    type_annotation(tokens),
+                    parser_state!("fn-type-params", "param-type")
+                ));
                 continue;
             }
         }
@@ -679,7 +742,11 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
             _ => true,
         }
     }, parser_state!("block", "rbrace")) {
-        stmts.push(stmt(tokens)?);
+        stmts.push(
+            production!(stmt(tokens),
+                        parser_state!("block", "stmt")
+                        )
+            );
     }
     
     
@@ -736,35 +803,38 @@ fn stmt(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
     }, parser_state!("stmt", "stmt kind")) {
 
         StmtDec::Continue => {
-            Stmt::ExprStmt(continue_stmt(tokens)?)
+            Stmt::ExprStmt(production!(continue_stmt(tokens), parser_state!("stmt", "continue")))
         }
 
         StmtDec::Break => {
-            Stmt::ExprStmt(break_stmt(tokens)?)
+            Stmt::ExprStmt(production!(break_stmt(tokens), parser_state!("stmt", "break")))
         }
 
         StmtDec::Return => {
-            Stmt::ExprStmt(return_stmt(tokens)?)
+            Stmt::ExprStmt(production!(return_stmt(tokens), parser_state!("stmt", "return")))
         }
 
         StmtDec::While => {
-            Stmt::ExprStmt(while_stmt(tokens)?)
+            Stmt::ExprStmt(production!(while_stmt(tokens), parser_state!("stmt", "while")))
         }
 
         StmtDec::If => {
-            Stmt::ExprStmt(if_stmt(tokens)?)
+            Stmt::ExprStmt(production!(if_stmt(tokens), parser_state!("stmt", "if")))
         }
 
         StmtDec::LocalVar => {
-            Stmt::ExprStmt(local_var_decl(tokens)?)
+            Stmt::ExprStmt(production!(local_var_decl(tokens), parser_state!("stmt", "local-var-decl")))
         }
 
         StmtDec::PotentialAssign => {
-            potential_assign(tokens)?
+            production!(potential_assign(tokens), parser_state!("stmt", "potential-assign"))
         }
 
         StmtDec::Expr => {
-            let expr = piped_expr(tokens, &[Delimiter::Semi])?;
+            let expr = production!(
+                piped_expr(tokens, &[Delimiter::Semi]),
+                parser_state!("stmt", "stmt-expr")
+            );
 
             let _semi = consume_token!(tokens, 
                                        Token::Semi,
@@ -815,7 +885,10 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             let span = base_span;
             let root = PathSegment::Ident(AstNode::new(base_ident, span));
             
-            let (path, _span) = access_path(tokens, root)?.to_data();
+            let (path, _span) = production!(
+                access_path(tokens, root),
+                parser_state!("potential-assign", "access-path")
+            ).to_data();
 
             match path {
                 Expr::FieldAccess(path) => path,
@@ -827,8 +900,15 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             // Expecting: expr ';'
             // Module paths are not lvalues
 
-            let path = expr_module_path(tokens, base_ident, base_span)?;
-            let expr = prebase_piped_expr(tokens, path, &[Delimiter::Semi])?;
+            let path = production!(
+                expr_module_path(tokens, base_ident, base_span),
+                parser_state!("stmt-expr-module-path", "module-path")
+            );
+
+            let expr = production!(
+                prebase_piped_expr(tokens, path, &[Delimiter::Semi]),
+                parser_state!("stmt-expr-module-path", "expr")
+            );
 
             let _semi = consume_token!(tokens, 
                                        Token::Semi,
@@ -841,7 +921,10 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             // Expecting: expr ';'
             // Function calls are not lvalues
 
-            let args = fn_args(tokens)?;
+            let args = production!(
+                fn_args(tokens),
+                parser_state!("stmt-expr-fn-call", "fn-args")
+            );
             let (args, arg_span) = args.to_data();
             let args = args.map(|v| v.into_iter().map(|a| a.to_data().0).collect());
 
@@ -857,7 +940,10 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             let expr_base = AstNode::new(fn_call, span);
             let expr_base = AstNode::new(Expr::FnCall(expr_base), span);
 
-            let expr = prebase_piped_expr(tokens, expr_base, &[Delimiter::Semi])?;
+            let expr = production!(
+                prebase_piped_expr(tokens, expr_base, &[Delimiter::Semi]),
+                parser_state!("stmt-expr-fn-call", "expr")
+            );
 
             let _semi = consume_token!(tokens, 
                                        Token::Semi,
@@ -870,7 +956,10 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             let _lbracket = consume_token!(tokens, 
                                            Token::LBracket,
                                            parser_state!("potential_assign-indexing", "lbracket"));
-            let indexer = piped_expr(tokens, &[Delimiter::RBracket])?;
+            let indexer = production!(
+                piped_expr(tokens, &[Delimiter::RBracket]),
+                parser_state!("potential_assign-indexing", "indexer-expr")
+            );
             let (indexer, _) = indexer.to_data();
             let (_rspan, _rbracket) = consume_token!(tokens, 
                                                      Token::RBracket,
@@ -887,7 +976,10 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
                 let span = base_span;
                 let root = PathSegment::Indexing(AstNode::new(base_ident, span), Box::new(indexer));
 
-                let (path, _span) = access_path(tokens, root)?.to_data();
+                let (path, _span) = production!(
+                    access_path(tokens, root),
+                    parser_state!("potential-assign", "access-path")
+                ).to_data();
                 match path {
                     Expr::FieldAccess(path) => path,
                     _ => unreachable!(),
@@ -911,7 +1003,10 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
                                            Token::Assign,
                                            parser_state!("assignment", "="));
 
-            let value = piped_expr(tokens, &[Delimiter::Semi])?;
+            let value = production!(
+                piped_expr(tokens, &[Delimiter::Semi]),
+                parser_state!("assignment", "value")
+            );
             let (value, value_span) = value.to_data();
 
             let _semi = consume_token!(tokens, 
@@ -937,7 +1032,10 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             // Expecting: expr ';'
             // 'ident op' is not a lvalue
             let _span = base_span;
-            let expr = piped_expr(tokens, &[Delimiter::Semi])?;
+            let expr = production!(
+                piped_expr(tokens, &[Delimiter::Semi]),
+                parser_state!("expr-stmt-singleton", "expr")
+            );
 
             let _semi = consume_token!(tokens, 
                                        Token::Semi,
@@ -970,7 +1068,10 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
                                          Token::Assign,
                                          parser_state!("assignment", "="));
 
-            let (value, value_span) = piped_expr(tokens, &[Delimiter::Semi])?.to_data();
+            let (value, value_span) = production!(
+                piped_expr(tokens, &[Delimiter::Semi]),
+                parser_state!("assignment", "expr")
+            ).to_data();
 
             let _semi = consume_token!(tokens, 
                                        Token::Semi,
@@ -989,7 +1090,10 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             let _span = path.span();
             let _path = Expr::FieldAccess(path);
 
-            let expr = piped_expr(tokens, &[Delimiter::Semi])?;
+            let expr = production!(
+                piped_expr(tokens, &[Delimiter::Semi]),
+                parser_state!("stmt-expr-path", "expr")
+            );
 
             let _semi = consume_token!(tokens, 
                                        Token::Semi,
@@ -1028,14 +1132,21 @@ fn local_var_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>>
         let _colon = consume_token!(tokens, 
                                     Token::Colon,
                                     parser_state!("local-var-decl", "type colon"));
-        type_anno = Some(type_annotation(tokens)?);
+        type_anno = Some(production!(
+                type_annotation(tokens),
+                parser_state!("local-var-decl", "type annotation")
+                )
+            );
     }
 
     let _assign = consume_token!(tokens, 
                                  Token::Assign,
                                  parser_state!("local-var-decl", "="));
 
-    let init_value = piped_expr(tokens, &[Delimiter::Semi])?.to_data();
+    let init_value = production!(
+        piped_expr(tokens, &[Delimiter::Semi]),
+        parser_state!("local-var-decl", "value")
+    ).to_data();
 
     let (semiloc, _) = consume_token!(tokens, 
                                       Token::Semi,
@@ -1066,7 +1177,10 @@ fn if_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
 
     let mut end = ifloc;
 
-    let first_branch = if_branch(tokens)?;
+    let first_branch = production!(
+        if_branch(tokens),
+        parser_state!("if-stmt", "first branch")
+    );
     end = first_branch.block.span();
 
     let mut branches = vec![first_branch];
@@ -1086,7 +1200,10 @@ fn if_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
                                            Token::Elif,
                                            parser_state!("if-stmt", "elif"));
 
-                let branch = if_branch(tokens)?;
+                let branch = production!(
+                    if_branch(tokens),
+                    parser_state!("if-stmt", "elif branch")
+                );
                 end = branch.block.span();
 
                 branches.push(branch);
@@ -1096,7 +1213,10 @@ fn if_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
                 let _else = consume_token!(tokens, 
                                            Token::Else,
                                            parser_state!("if-stmt", "else"));
-                let block = block(tokens)?;
+                let block = production!(
+                    block(tokens),
+                    parser_state!("if-stmt", "else-block")
+                );
 
                 end = block.span();
                 default_branch = Some(block);
@@ -1121,7 +1241,10 @@ fn if_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
 fn if_branch(tokens: &mut BufferedTokenizer) -> ParseErr<Branch> {
     let conditional = piped_expr(tokens, &[Delimiter::LBrace])?;
 
-    let block = block(tokens)?;
+    let block = production!(
+        block(tokens),
+        parser_state!("if-branch", "block")
+    );
 
     let branch = Branch {
         conditional: conditional,
@@ -1136,9 +1259,15 @@ fn while_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
                                        Token::While,
                                        parser_state!("while-stmt", "while"));
 
-    let conditional = piped_expr(tokens, &[Delimiter::LBrace])?;
+    let conditional = production!(
+        piped_expr(tokens, &[Delimiter::LBrace]),
+        parser_state!("while-stmt", "condition")
+    );
 
-    let block = block(tokens)?;
+    let block = production!(
+        block(tokens),
+        parser_state!("while-stmt", "block")
+    );
 
     let span = Span::combine(whileloc, block.span());
 
@@ -1172,7 +1301,10 @@ fn return_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
         None
     } else {
         // Expression
-        let expr = piped_expr(tokens, &[Delimiter::Semi])?;
+        let expr = production!(
+            piped_expr(tokens, &[Delimiter::Semi]),
+            parser_state!("return-stmt", "expr")
+        );
 
         let _semi = consume_token!(tokens, 
                                    Token::Semi,
