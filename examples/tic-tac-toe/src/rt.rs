@@ -13,20 +13,16 @@ pub fn include(scripts: &mut Vec<Module>) {
 }
 
 pub fn map_builtins(vm: &mut AVM) {
-    vm.insert_builtin("rt", "user_key", Box::new(UserInput)).unwrap();
+    vm.insert_builtin("rt", "user_key", user_input).unwrap();
 }
 
-pub struct UserInput;
+fn user_input(_args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut input = String::new();
+    let size = io::stdin().read_line(&mut input).unwrap();
 
-impl BuiltinFn for UserInput {
-    fn execute(&self, _args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut input = String::new();
-        let size = io::stdin().read_line(&mut input).unwrap();
-
-        if size < 1 {
-            return Ok(Value::String("_".to_string()));
-        } else {
-            return Ok(Value::String(input.get(0..1).unwrap().to_string()));
-        }
+    if size < 1 {
+        return Ok(Value::String("_".to_string()));
+    } else {
+        return Ok(Value::String(input.get(0..1).unwrap().to_string()));
     }
 }
