@@ -4,9 +4,7 @@ use crate::analysis::{FnId, TypeId};
 
 use super::value::Value;
 
-pub trait BuiltinFn {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error>;
-}
+pub type BuiltinFn = fn(args: Option<Vec<Value>>) -> Result<Value, Error>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModQuery {
