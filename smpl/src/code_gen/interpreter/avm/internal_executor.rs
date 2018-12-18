@@ -17,7 +17,7 @@ use super::node_eval::*;
 pub struct InternalExecutor<'a> {
     pub context: ExecutionContext,
     pub program: &'a Program,
-    pub builtins: &'a HashMap<FnId, Box<BuiltinFn>>,
+    pub builtins: &'a HashMap<FnId, BuiltinFn>,
 }
 
 impl<'a> InternalExecutor<'a> {
@@ -91,8 +91,8 @@ impl<'a> InternalExecutor<'a> {
                         if self.program.metadata().is_builtin(fn_id) {
                             let result = self.builtins
                                                 .get(&fn_id)
-                                                .expect("Missing a built-in")
-                                                .execute(args);
+                                                .expect("Missing a built-in")(args);
+                                                
 
                             let v = match result {
                                 Ok(v) => v,
