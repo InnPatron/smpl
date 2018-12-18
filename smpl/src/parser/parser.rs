@@ -54,7 +54,10 @@ macro_rules! consume_token  {
 #[macro_export]
 macro_rules! peek_token {
     ($tokenizer: expr, $lam: expr, $state: expr) => {
-        ($tokenizer).peek($lam).map_err(|e| parser_error!(e.into(), $state))?
+        ($tokenizer)
+            .peek($lam)
+            .ok_or(parser_error!(ParserErrorKind::UnexpectedEOI, $state))?
+            .map_err(|e| parser_error!(e.into(), $state))?
     }
 }
 
