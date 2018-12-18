@@ -32,7 +32,7 @@ macro_rules! consume_token  {
         let data = next.to_data();
         match data.1 {
             $token => data,
-            _ => Err(parser_error!(ParserErrorKind::UnexpectedToken(data.1), $state))?,
+            _ => Err(parser_error!(ParserErrorKind::UnexpectedToken(data.1), $state, Some(data.0)))?,
         }
     }};
 
@@ -46,7 +46,7 @@ macro_rules! consume_token  {
         let data = next.to_data();
         match data.1 {
             $token => (data.0, $e),
-            _ => Err(parser_error!(ParserErrorKind::UnexpectedToken(data.1), $state))?,
+            _ => Err(parser_error!(ParserErrorKind::UnexpectedToken(data.1), $state, Some(data.0)))?,
         }
     }};
 }
