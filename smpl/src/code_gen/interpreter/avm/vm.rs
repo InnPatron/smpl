@@ -96,8 +96,8 @@ impl BuiltinMap for AVM {
         &mut self,
         module_str: &str,
         name_str: &str,
-        builtin: Box<BuiltinFn>,
-    ) -> Result<Option<Box<BuiltinFn>>, String> {
+        builtin: BuiltinFn,
+    ) -> Result<Option<BuiltinFn>, String> {
         let module = Ident(module_str.to_string());
         let name = Ident(name_str.to_string());
         let mod_id = self.program.universe().module_id(&module);

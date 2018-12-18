@@ -23,6 +23,6 @@ pub trait BuiltinMap {
         &mut self,
         module_str: &str,
         name_str: &str,
-        builtin: Box<BuiltinFn>,
-    ) -> Result<Option<Box<BuiltinFn>>, String>;
+        builtin: BuiltinFn,
+    ) -> Result<Option<BuiltinFn>, String>;
 }
