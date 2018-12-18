@@ -78,3 +78,9 @@ impl Default for Location {
         Location::new(0, 0, 1, 1)
     }
 }
+
+impl std::fmt::Display for Location {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}:{}", self.line, self.column)
+    }
+}

@@ -1,6 +1,7 @@
 use super::ast::Module;
 use crate::err::Err;
 
+mod parser_err;
 mod tokens;
 
 #[cfg(not(test))]
@@ -22,7 +23,7 @@ pub fn parse_module(input: &str) -> Result<Module, Err>{
     let tokenizer = tokens::Tokenizer::new(input);
     let mut tokenizer = tokens::BufferedTokenizer::new(tokenizer);
     
-    parser::module(&mut tokenizer).map_err(|e| Err::ParseErr(e))
+    parser::module(&mut tokenizer).map_err(|e| Err::ParseErr(e.to_string()))
 }
 
 #[cfg(test)]

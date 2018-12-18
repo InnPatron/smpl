@@ -288,6 +288,27 @@ pub enum BinOp {
     InEq,
 }
 
+impl std::fmt::Display for BinOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match *self {
+            BinOp::Add => write!(f, "+"),
+            BinOp::Sub => write!(f, "-"),
+            BinOp::Mul => write!(f, "*"),
+            BinOp::Div => write!(f, "/"),
+            BinOp::Mod => write!(f, "%"),
+
+            BinOp::LogicalAnd => write!(f, "&&"),
+            BinOp::LogicalOr => write!(f, "||"),
+            BinOp::GreaterEq => write!(f, ">="),
+            BinOp::Greater => write!(f, ">"),
+            BinOp::LesserEq => write!(f, "<="),
+            BinOp::Lesser => write!(f, "<"),
+            BinOp::Eq => write!(f, "=="),
+            BinOp::InEq => write!(f, "!="),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct UniExpr {
     pub op: UniOp,

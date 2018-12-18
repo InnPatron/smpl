@@ -114,17 +114,102 @@ pub enum Token {
     Pound,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+impl std::fmt::Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        use self::Token::*;
+        match *self {
+            Identifier(ref s) => write!(f, "{}", s),
+            StringLiteral(ref s) => write!(f, "\"{}\"", s),
+            IntLiteral(i) => write!(f, "{}", i),
+            FloatLiteral(fl) => write!(f, "{}", fl),
+            BoolLiteral(b) => write!(f, "{}", b),
+
+            Fn => write!(f, "fn"),
+            Struct => write!(f, "struct"),
+            Mod => write!(f, "mod"),
+            Use => write!(f, "use"),
+            Builtin => write!(f, "builtin"),
+            Unchecked => write!(f, "UNCHECKED"),
+
+            Init => write!(f, "init"),
+
+            Continue => write!(f, "continue"),
+            Break => write!(f, "break"),
+            Return => write!(f, "return"),
+
+            If => write!(f, "if"),
+            Else => write!(f, "else"),
+            Elif => write!(f, "elif"),
+
+            While => write!(f, "while"),
+
+            Let => write!(f, "let"),
+
+            Assign => write!(f, "="),
+
+            Eq => write!(f, "=="),
+            NEq => write!(f, "!="),
+
+            Gte => write!(f, ">="),
+            Gt => write!(f, ">"),
+            Lte => write!(f, "<="),
+            Lt => write!(f, "<"),
+
+            Invert => write!(f, "!"),
+
+            Plus => write!(f, "+"),
+            Minus => write!(f, "-"),
+            Star => write!(f, "*"),
+            Slash => write!(f, "/"),
+            Percent => write!(f, "%"),
+
+            Pipe => write!(f, "|>"),
+
+            Ref => write!(f, "&"),
+
+            LAnd => write!(f, "&&"),
+            LOr => write!(f, "||"),
+
+            LParen => write!(f, "("),
+            RParen => write!(f, ")"),
+            LBrace => write!(f, "{{"),
+            RBrace => write!(f, "}}"),
+            LBracket => write!(f, "["),
+            RBracket => write!(f, "]"),
+
+            Comma => write!(f, ","),
+            Dot => write!(f, "."),
+
+            Arrow => write!(f, "->"),
+
+            Colon => write!(f, ":"),
+            ColonColon => write!(f, "::"),
+            Semi => write!(f, ";"),
+
+            Pound => write!(f, "#"),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Fail)]
+#[fail(display = "{} {}", error, location)]
 pub struct SpannedError {
     error: TokenizerError,
     location: Location,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Fail)]
 pub enum TokenizerError {
+    #[fail(display = "Unexpected character: '{}'.", _0)]
     UnexpectedChar(char),
+
+    #[fail(display = "Unexpected end of input.")]
     UnexpectedEndOfInput,
+
+    #[fail(display = "Unterminated string literal.")]
     UnterminatedStringLiteral,
+
+    #[fail(display = "Incomplete token: '{}'.", _0)]
     IncompleteToken(Token),
 }
 
@@ -536,18 +621,15 @@ impl<'a> BufferedTokenizer<'a> {
     }
 
     pub fn peek<F, R>(&self, 
-                   closure: F) -> Result<R, SpannedError> 
+                   closure: F) -> Option<Result<R, SpannedError>>
     where F: Fn(&Token) -> R {
 
-        match self.next {
-            Some(ref res_tok) => {
-                match res_tok {
-                    Ok(ref t) => Ok(closure(t.token())),
-                    Err(ref e) => Err((*e).clone()),
-                }
+        self.next.as_ref().map(|ref r| {
+            match r {
+                Ok(ref t) => Ok(closure(t.token())),
+                Err(ref e) => Err((*e).clone()),
             }
-            None => panic!("Check if peek is none first"),
-        }
+        })
     }
 }
 
