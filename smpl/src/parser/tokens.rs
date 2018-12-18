@@ -621,18 +621,15 @@ impl<'a> BufferedTokenizer<'a> {
     }
 
     pub fn peek<F, R>(&self, 
-                   closure: F) -> Result<R, SpannedError> 
+                   closure: F) -> Option<Result<R, SpannedError>>
     where F: Fn(&Token) -> R {
 
-        match self.next {
-            Some(ref res_tok) => {
-                match res_tok {
-                    Ok(ref t) => Ok(closure(t.token())),
-                    Err(ref e) => Err((*e).clone()),
-                }
+        self.next.as_ref().map(|ref r| {
+            match r {
+                Ok(ref t) => Ok(closure(t.token())),
+                Err(ref e) => Err((*e).clone()),
             }
-            None => panic!("Check if peek is none first"),
-        }
+        })
     }
 }
 
