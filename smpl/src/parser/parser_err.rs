@@ -14,12 +14,11 @@ macro_rules! parser_error {
     }}
 }
 
-
 #[macro_export]
 macro_rules! production {
     ($production: expr, $state: expr) => {{ 
-        use failure::Fail;
-        ($production).map_err(|e| e.context($state))
+        use crate::parser::parser_err::*;
+        ($production).map_err(|e| e.push_state($state))?
     }}
 }
 
