@@ -2,6 +2,8 @@
 name = "tic-tac-toe"
 version = "0.1.0"
 authors = ["Alexander Vo <randomcivvy0121@gmail.com>"]
+edition = "2018"
 
 [dependencies]
 smpl = { path = "../../smpl/" }
+failure = "0.1.2"
