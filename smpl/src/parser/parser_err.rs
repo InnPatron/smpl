@@ -3,13 +3,16 @@ use std::fmt;
 use failure::*;
 
 use crate::ast::Expr;
+use crate::span::LocationSpan;
 use super::tokens::{Token, SpannedError};
 
 #[macro_export]
 macro_rules! parser_error {
-    ($kind: expr, $state: expr) => {{
+    ($kind: expr, $state: expr) => {{ parser_error!($kind, $state, None) }};
+
+    ($kind: expr, $state: expr, $location: expr) => {{
         use crate::parser::parser_err::*;
-        ParserError::new($kind)
+        ParserError::new($kind, $location)
             .push_state($state)
     }}
 }
@@ -31,6 +34,7 @@ macro_rules! parser_state {
 #[derive(Debug, Clone)]
 pub struct ParserError {
     kind: ParserErrorKind,
+    location: Option<LocationSpan>,
     parser_states: Vec<ParserState>,
 }
 
@@ -45,9 +49,10 @@ impl Fail for ParserError {
 }
 
 impl ParserError {
-    pub fn new(kind: ParserErrorKind) -> ParserError {
+    pub fn new(kind: ParserErrorKind, location: Option<LocationSpan>) -> ParserError {
         ParserError {
             kind: kind,
+            location: location,
             parser_states: Vec::new(),
         }
     }
