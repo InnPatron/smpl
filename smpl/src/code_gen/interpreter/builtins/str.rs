@@ -21,212 +21,193 @@ pub fn include(modules: &mut Vec<Module>) {
 }
 
 pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
-    vm.insert_builtin(MOD_STRING, STRING_LEN, Box::new(Len))
+    vm.insert_builtin(MOD_STRING, STRING_LEN, len)
         .unwrap();
-    vm.insert_builtin(MOD_STRING, STRING_TO_STRING, Box::new(ToString))
+    vm.insert_builtin(MOD_STRING, STRING_TO_STRING, to_string)
         .unwrap();
-    vm.insert_builtin(MOD_STRING, STRING_APPEND, Box::new(Append))
+    vm.insert_builtin(MOD_STRING, STRING_APPEND, append)
         .unwrap();
-    vm.insert_builtin(MOD_STRING, STRING_TO_LOWER, Box::new(ToLower))
+    vm.insert_builtin(MOD_STRING, STRING_TO_LOWER, to_lower)
         .unwrap();
-    vm.insert_builtin(MOD_STRING, STRING_TO_UPPER, Box::new(ToUpper))
+    vm.insert_builtin(MOD_STRING, STRING_TO_UPPER, to_upper)
         .unwrap();
 }
 
-struct Len;
+fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
 
-impl BuiltinFn for Len {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
+    let string = args.pop().unwrap();
+    let string = irmatch!(string; Value::String(s) => s);
 
-        let string = args.pop().unwrap();
-        let string = irmatch!(string; Value::String(s) => s);
-
-        Ok(Value::Int(string.len() as i32))
-    }
+    Ok(Value::Int(string.len() as i32))
 }
 
-struct ToString;
+fn to_string(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let args = min_args!(1, args)?;
 
-impl BuiltinFn for ToString {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let args = min_args!(1, args)?;
+    let mut s = String::new();
 
-        let mut s = String::new();
-
-        for a in args {
-            s.push_str(&a.to_string());
-        }
-
-        Ok(Value::String(s))
+    for a in args {
+        s.push_str(&a.to_string());
     }
+
+    Ok(Value::String(s))
 }
 
-struct Append;
+fn append(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = min_args!(1, args)?;
 
-impl BuiltinFn for Append {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = min_args!(1, args)?;
+    let to_append = args.pop().unwrap();
+    let to_append = irmatch!(to_append; Value::String(s) => s);
 
-        let to_append = args.pop().unwrap();
-        let to_append = irmatch!(to_append; Value::String(s) => s);
+    let base = args.pop().unwrap();
+    let mut base = irmatch!(base; Value::String(s) => s);
 
-        let base = args.pop().unwrap();
-        let mut base = irmatch!(base; Value::String(s) => s);
+    base.push_str(&to_append);
 
-        base.push_str(&to_append);
-
-        Ok(Value::String(base))
-    }
+    Ok(Value::String(base))
 }
 
-struct ToLower;
+fn to_lower(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
 
-impl BuiltinFn for ToLower {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
+    let string = args.pop().unwrap();
+    let string = irmatch!(string; Value::String(s) => s);
 
-        let string = args.pop().unwrap();
-        let string = irmatch!(string; Value::String(s) => s);
-
-        Ok(Value::String(string.to_lowercase()))
-    }
+    Ok(Value::String(string.to_lowercase()))
 }
 
-struct ToUpper;
 
-impl BuiltinFn for ToUpper {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
+fn to_upper(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
 
-        let string = args.pop().unwrap();
-        let string = irmatch!(string; Value::String(s) => s);
+    let string = args.pop().unwrap();
+    let string = irmatch!(string; Value::String(s) => s);
 
-        Ok(Value::String(string.to_uppercase()))
-    }
+    Ok(Value::String(string.to_uppercase()))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+use super::*;
 
-    #[test]
-    fn interpreter_str_len() {
-        let mut modules = Vec::new();
-        include(&mut modules);
+#[test]
+fn interpreter_str_len() {
+    let mut modules = Vec::new();
+    include(&mut modules);
 
-        let mut vm = AVM::new(modules).unwrap();
-        add(&mut vm);
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm);
 
-        let fn_handle = vm.query_module(MOD_STRING, STRING_LEN).unwrap().unwrap();
+    let fn_handle = vm.query_module(MOD_STRING, STRING_LEN).unwrap().unwrap();
 
-        let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("".to_string())])).unwrap();
-        assert_eq!(Value::Int(0), result);
+    let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("".to_string())])).unwrap();
+    assert_eq!(Value::Int(0), result);
 
-        let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("1".to_string())])).unwrap();
-        assert_eq!(Value::Int(1), result);
+    let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("1".to_string())])).unwrap();
+    assert_eq!(Value::Int(1), result);
 
-        let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("123456789".to_string())])).unwrap();
-        assert_eq!(Value::Int(9), result);
-    }
+    let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("123456789".to_string())])).unwrap();
+    assert_eq!(Value::Int(9), result);
+}
 
-    #[test]
-    fn interpreter_str_to_string() {
-        let mut modules = Vec::new();
-        include(&mut modules);
+#[test]
+fn interpreter_str_to_string() {
+    let mut modules = Vec::new();
+    include(&mut modules);
 
-        let mut vm = AVM::new(modules).unwrap();
-        add(&mut vm);
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm);
 
-        let fn_handle = vm.query_module(MOD_STRING, STRING_TO_STRING)
-            .unwrap()
-            .unwrap();
+    let fn_handle = vm.query_module(MOD_STRING, STRING_TO_STRING)
+        .unwrap()
+        .unwrap();
 
-        let result = vm.eval_fn_args_sync(
-            fn_handle,
-            Some(vec![
-                Value::String("I am ".to_string()),
-                Value::Int(1337),
-                Value::String("!".to_string()),
-            ]),
-        ).unwrap();
-        assert_eq!(Value::String("I am 1337!".to_string()), result);
-    }
+    let result = vm.eval_fn_args_sync(
+        fn_handle,
+        Some(vec![
+            Value::String("I am ".to_string()),
+            Value::Int(1337),
+            Value::String("!".to_string()),
+        ]),
+    ).unwrap();
+    assert_eq!(Value::String("I am 1337!".to_string()), result);
+}
 
-    #[test]
-    fn interpreter_str_append() {
-        let mut modules = Vec::new();
-        include(&mut modules);
+#[test]
+fn interpreter_str_append() {
+    let mut modules = Vec::new();
+    include(&mut modules);
 
-        let mut vm = AVM::new(modules).unwrap();
-        add(&mut vm);
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm);
 
-        let fn_handle = vm.query_module(MOD_STRING, STRING_APPEND).unwrap().unwrap();
+    let fn_handle = vm.query_module(MOD_STRING, STRING_APPEND).unwrap().unwrap();
 
-        let result = vm.eval_fn_args_sync(
-            fn_handle,
-            Some(vec![
-                Value::String("I'll ".to_string()),
-                Value::String("be back.".to_string()),
-            ]),
-        ).unwrap();
-        assert_eq!(Value::String("I'll be back.".to_string()), result);
-    }
+    let result = vm.eval_fn_args_sync(
+        fn_handle,
+        Some(vec![
+            Value::String("I'll ".to_string()),
+            Value::String("be back.".to_string()),
+        ]),
+    ).unwrap();
+    assert_eq!(Value::String("I'll be back.".to_string()), result);
+}
 
-    #[test]
-    fn interpreter_str_to_lower() {
-        let mut modules = Vec::new();
-        include(&mut modules);
+#[test]
+fn interpreter_str_to_lower() {
+    let mut modules = Vec::new();
+    include(&mut modules);
 
-        let mut vm = AVM::new(modules).unwrap();
-        add(&mut vm);
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm);
 
-        let fn_handle = vm.query_module(MOD_STRING, STRING_TO_LOWER)
-            .unwrap()
-            .unwrap();
+    let fn_handle = vm.query_module(MOD_STRING, STRING_TO_LOWER)
+        .unwrap()
+        .unwrap();
 
-        let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("LOUD NOISES".to_string())])).unwrap();
-        assert_eq!(Value::String("loud noises".to_string()), result);
-    }
+    let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("LOUD NOISES".to_string())])).unwrap();
+    assert_eq!(Value::String("loud noises".to_string()), result);
+}
 
-    #[test]
-    fn interpreter_str_to_upper() {
-        let mut modules = Vec::new();
-        include(&mut modules);
+#[test]
+fn interpreter_str_to_upper() {
+    let mut modules = Vec::new();
+    include(&mut modules);
 
-        let mut vm = AVM::new(modules).unwrap();
-        add(&mut vm);
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm);
 
-        let fn_handle = vm.query_module(MOD_STRING, STRING_TO_UPPER)
-            .unwrap()
-            .unwrap();
+    let fn_handle = vm.query_module(MOD_STRING, STRING_TO_UPPER)
+        .unwrap()
+        .unwrap();
 
-        let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("loud noises".to_string())])).unwrap();
-        assert_eq!(Value::String("LOUD NOISES".to_string()), result);
-    }
+    let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("loud noises".to_string())])).unwrap();
+    assert_eq!(Value::String("LOUD NOISES".to_string()), result);
+}
 
-    #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-    fn interpreter_str_intermodule_to_string() {
-        let mod1 =
+#[test]
+#[cfg_attr(rustfmt, rustfmt_skip)]
+fn interpreter_str_intermodule_to_string() {
+    let mod1 =
 "
 mod mod1;
 
 use str;
 
 fn test() -> String {
-    return str::to_string(\"Cannot\", \" touch\", \" this!?\");
+return str::to_string(\"Cannot\", \" touch\", \" this!?\");
 }
 ";
-        let mut modules = vec![parse_module(mod1).unwrap()];
-        include(&mut modules);
+    let mut modules = vec![parse_module(mod1).unwrap()];
+    include(&mut modules);
 
-        let mut vm = AVM::new(modules).unwrap();
-        add(&mut vm);
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm);
 
-        let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
+    let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
-        let result = vm.eval_fn_sync(fn_handle).unwrap();
-        assert_eq!(Value::String("Cannot touch this!?".to_string()), result);
-    }
+    let result = vm.eval_fn_sync(fn_handle).unwrap();
+    assert_eq!(Value::String("Cannot touch this!?".to_string()), result);
+}
 }

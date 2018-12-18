@@ -3,16 +3,14 @@ use failure::Error;
 use crate::parser::parse_module;
 use crate::code_gen::interpreter::*;
 
-struct Add;
-
 macro_rules! setup_and_run {
     ($mod1: expr, $mod_name: expr, $fn_name: expr, $args: expr) => {{
 
         let modules = vec![parse_module($mod1).expect("Failed to parse module")];
         let mut avm = AVM::new(modules).unwrap();
         
-        let _ = avm.insert_builtin($mod_name, "add", Box::new(Add));
-        let _ = avm.insert_builtin($mod_name, "sum", Box::new(VarArgSum));
+        let _ = avm.insert_builtin($mod_name, "add", add);
+        let _ = avm.insert_builtin($mod_name, "sum", var_arg_sum);
 
         let a_fn_handle = avm.query_module($mod_name, $fn_name).unwrap().unwrap();
 
@@ -23,34 +21,28 @@ macro_rules! setup_and_run {
     }}
 }
 
-impl BuiltinFn for Add {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let args = args.unwrap();
-        let lhs = args.get(0).unwrap();
-        let rhs = args.get(1).unwrap();
+fn add(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let args = args.unwrap();
+    let lhs = args.get(0).unwrap();
+    let rhs = args.get(1).unwrap();
 
-        let lhs = irmatch!(lhs; Value::Int(i) => i);
-        let rhs = irmatch!(rhs; Value::Int(i) => i);
+    let lhs = irmatch!(lhs; Value::Int(i) => i);
+    let rhs = irmatch!(rhs; Value::Int(i) => i);
 
-        return Ok(Value::Int(lhs + rhs));
-    }
+    return Ok(Value::Int(lhs + rhs));
 }
 
-struct VarArgSum;
+fn var_arg_sum(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let args = args.unwrap();
 
-impl BuiltinFn for VarArgSum {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let args = args.unwrap();
+    let mut sum = 0;
 
-        let mut sum = 0;
-
-        for arg in args.iter() {
-            let value = irmatch!(arg; Value::Int(i) => i);
-            sum += value;
-        }
-
-        return Ok(Value::Int(sum));
+    for arg in args.iter() {
+        let value = irmatch!(arg; Value::Int(i) => i);
+        sum += value;
     }
+
+    return Ok(Value::Int(sum));
 } 
 
 #[test]
@@ -148,7 +140,7 @@ return mod1::add(1, 2);
     let modules = vec![parse_module(mod1).unwrap(), parse_module(mod2).unwrap()];
 
     let mut avm = AVM::new(modules).unwrap();
-    avm.insert_builtin("mod1", "add", Box::new(Add)).unwrap();
+    avm.insert_builtin("mod1", "add", add).unwrap();
     
     let a_fn_handle = avm.query_module("mod2", "test2").unwrap().unwrap();
 

@@ -35,259 +35,199 @@ pub fn include(modules: &mut Vec<Module>) {
 }
 
 pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
-    vm.insert_builtin(MOD_MATH, MATH_SIN, Box::new(Sin))
+    vm.insert_builtin(MOD_MATH, MATH_SIN, sin)
         .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_COS, Box::new(Cos))
+    vm.insert_builtin(MOD_MATH, MATH_COS, cos)
         .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_TAN, Box::new(Tan))
-        .unwrap();
-
-    vm.insert_builtin(MOD_MATH, MATH_ASIN, Box::new(Asin))
-        .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_ACOS, Box::new(Acos))
-        .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_ATAN, Box::new(Atan))
-        .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_ATAN2, Box::new(Atan2))
+    vm.insert_builtin(MOD_MATH, MATH_TAN, tan)
         .unwrap();
 
-    vm.insert_builtin(MOD_MATH, MATH_TO_RADIANS, Box::new(ToRadians))
+    vm.insert_builtin(MOD_MATH, MATH_ASIN, asin)
         .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_TO_DEGREES, Box::new(ToDegrees))
+    vm.insert_builtin(MOD_MATH, MATH_ACOS, acos)
         .unwrap();
-
-    vm.insert_builtin(MOD_MATH, MATH_FPOWF, Box::new(FPowF))
+    vm.insert_builtin(MOD_MATH, MATH_ATAN, atan)
         .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_FPOWI, Box::new(FPowI))
-        .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_IPOW, Box::new(IPow))
+    vm.insert_builtin(MOD_MATH, MATH_ATAN2, atan2)
         .unwrap();
 
-    vm.insert_builtin(MOD_MATH, MATH_FLOOR, Box::new(Floor))
+    vm.insert_builtin(MOD_MATH, MATH_TO_RADIANS, to_radians)
         .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_CEIL, Box::new(Ceil))
+    vm.insert_builtin(MOD_MATH, MATH_TO_DEGREES, to_degrees)
         .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_ROUND, Box::new(Round))
+
+    vm.insert_builtin(MOD_MATH, MATH_FPOWF, fpowf)
+        .unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_FPOWI, fpowi)
+        .unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_IPOW, ipow)
+        .unwrap();
+
+    vm.insert_builtin(MOD_MATH, MATH_FLOOR, floor)
+        .unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_CEIL, ceil)
+        .unwrap();
+    vm.insert_builtin(MOD_MATH, MATH_ROUND, round)
         .unwrap();
 }
 
 /// In radians
-pub struct Sin;
+fn sin(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
+    let v = args.remove(0);
 
-impl BuiltinFn for Sin {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-        let v = args.remove(0);
-
-        match v {
-            Value::Float(f) => Ok(Value::Float(f.sin())),
-            _ => panic!(),
-        }
+    match v {
+        Value::Float(f) => Ok(Value::Float(f.sin())),
+        _ => panic!(),
     }
 }
 
 /// In radians
-pub struct Cos;
+fn cos(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
+    let v = args.remove(0);
 
-impl BuiltinFn for Cos {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-        let v = args.remove(0);
-
-        match v {
-            Value::Float(f) => Ok(Value::Float(f.cos())),
-            _ => panic!(),
-        }
+    match v {
+        Value::Float(f) => Ok(Value::Float(f.cos())),
+        _ => panic!(),
     }
 }
 
 /// In radians
-pub struct Tan;
+fn tan(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
+    let v = args.remove(0);
 
-impl BuiltinFn for Tan {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-        let v = args.remove(0);
-
-        match v {
-            Value::Float(f) => Ok(Value::Float(f.tan())),
-            _ => panic!(),
-        }
+    match v {
+        Value::Float(f) => Ok(Value::Float(f.tan())),
+        _ => panic!(),
     }
 }
 
 /// In radians
-pub struct Asin;
+fn asin(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
+    let v = args.remove(0);
 
-impl BuiltinFn for Asin {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-        let v = args.remove(0);
-
-        match v {
-            Value::Float(f) => Ok(Value::Float(f.asin())),
-            _ => panic!(),
-        }
+    match v {
+        Value::Float(f) => Ok(Value::Float(f.asin())),
+        _ => panic!(),
     }
 }
 
 /// In radians
-pub struct Acos;
+fn acos(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
+    let v = args.remove(0);
 
-impl BuiltinFn for Acos {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-        let v = args.remove(0);
-
-        match v {
-            Value::Float(f) => Ok(Value::Float(f.acos())),
-            _ => panic!(),
-        }
+    match v {
+        Value::Float(f) => Ok(Value::Float(f.acos())),
+        _ => panic!(),
     }
 }
 
 /// In radians
-pub struct Atan;
+fn atan(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
+    let v = args.remove(0);
 
-impl BuiltinFn for Atan {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-        let v = args.remove(0);
-
-        match v {
-            Value::Float(f) => Ok(Value::Float(f.atan())),
-            _ => panic!(),
-        }
+    match v {
+        Value::Float(f) => Ok(Value::Float(f.atan())),
+        _ => panic!(),
     }
 }
 
 /// In radians
-pub struct Atan2;
+fn atan2(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let args = exact_args!(2, args)?;
+    let v = args.get(0).unwrap().clone();
+    let a = args.get(1).unwrap().clone();
 
-impl BuiltinFn for Atan2 {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let args = exact_args!(2, args)?;
-        let v = args.get(0).unwrap().clone();
-        let a = args.get(1).unwrap().clone();
-
-        match (v, a) {
-            (Value::Float(v), Value::Float(a)) => Ok(Value::Float(v.atan2(a))),
-            _ => panic!(),
-        }
+    match (v, a) {
+        (Value::Float(v), Value::Float(a)) => Ok(Value::Float(v.atan2(a))),
+        _ => panic!(),
     }
 }
 
-pub struct ToRadians;
+fn to_radians(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
+    let v = args.remove(0);
 
-impl BuiltinFn for ToRadians {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-        let v = args.remove(0);
-
-        match v {
-            Value::Float(f) => Ok(Value::Float(f.to_radians())),
-            _ => panic!(),
-        }
+    match v {
+        Value::Float(f) => Ok(Value::Float(f.to_radians())),
+        _ => panic!(),
     }
 }
 
-pub struct ToDegrees;
+fn to_degrees(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
+    let v = args.remove(0);
 
-impl BuiltinFn for ToDegrees {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-        let v = args.remove(0);
-
-        match v {
-            Value::Float(f) => Ok(Value::Float(f.to_degrees())),
-            _ => panic!(),
-        }
+    match v {
+        Value::Float(f) => Ok(Value::Float(f.to_degrees())),
+        _ => panic!(),
     }
 }
 
-pub struct FPowF;
+fn fpowf(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let args = exact_args!(2, args)?;
+    let b = args.get(0).unwrap().clone();
+    let p = args.get(1).unwrap().clone();
 
-impl BuiltinFn for FPowF {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let args = exact_args!(2, args)?;
-        let b = args.get(0).unwrap().clone();
-        let p = args.get(1).unwrap().clone();
-
-        match (b, p) {
-            (Value::Float(b), Value::Float(p)) => Ok(Value::Float(b.powf(p))),
-            _ => panic!(),
-        }
+    match (b, p) {
+        (Value::Float(b), Value::Float(p)) => Ok(Value::Float(b.powf(p))),
+        _ => panic!(),
     }
 }
 
-pub struct FPowI;
+fn fpowi(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let args = exact_args!(2, args)?;
+    let b = args.get(0).unwrap().clone();
+    let p = args.get(1).unwrap().clone();
 
-impl BuiltinFn for FPowI {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let args = exact_args!(2, args)?;
-        let b = args.get(0).unwrap().clone();
-        let p = args.get(1).unwrap().clone();
-
-        match (b, p) {
-            (Value::Float(b), Value::Int(p)) => Ok(Value::Float(b.powi(p))),
-            _ => panic!(),
-        }
+    match (b, p) {
+        (Value::Float(b), Value::Int(p)) => Ok(Value::Float(b.powi(p))),
+        _ => panic!(),
     }
 }
 
-pub struct IPow;
+fn ipow(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let args = exact_args!(2, args)?;
+    let b = args.get(0).unwrap().clone();
+    let p = args.get(1).unwrap().clone();
 
-impl BuiltinFn for IPow {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let args = exact_args!(2, args)?;
-        let b = args.get(0).unwrap().clone();
-        let p = args.get(1).unwrap().clone();
-
-        match (b, p) {
-            (Value::Int(b), Value::Int(p)) => Ok(Value::Int(b.pow(p as u32))),
-            _ => panic!(),
-        }
+    match (b, p) {
+        (Value::Int(b), Value::Int(p)) => Ok(Value::Int(b.pow(p as u32))),
+        _ => panic!(),
     }
 }
 
-pub struct Floor;
+fn floor(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
+    let v = args.remove(0);
 
-impl BuiltinFn for Floor {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-        let v = args.remove(0);
-
-        match v {
-            Value::Float(f) => Ok(Value::Float(f.floor())),
-            _ => panic!(),
-        }
+    match v {
+        Value::Float(f) => Ok(Value::Float(f.floor())),
+        _ => panic!(),
     }
 }
 
-pub struct Ceil;
+fn ceil(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
+    let v = args.remove(0);
 
-impl BuiltinFn for Ceil {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-        let v = args.remove(0);
-
-        match v {
-            Value::Float(f) => Ok(Value::Float(f.ceil())),
-            _ => panic!(),
-        }
+    match v {
+        Value::Float(f) => Ok(Value::Float(f.ceil())),
+        _ => panic!(),
     }
 }
 
-pub struct Round;
+fn round(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
+    let v = args.remove(0);
 
-impl BuiltinFn for Round {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-        let v = args.remove(0);
-
-        match v {
-            Value::Float(f) => Ok(Value::Float(f.round())),
-            _ => panic!(),
-        }
+    match v {
+        Value::Float(f) => Ok(Value::Float(f.round())),
+        _ => panic!(),
     }
 }

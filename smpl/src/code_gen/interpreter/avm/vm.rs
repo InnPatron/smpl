@@ -22,7 +22,7 @@ use super::internal_executor::InternalExecutor;
 
 pub struct AVM {
     program: Program,
-    builtins: HashMap<FnId, Box<BuiltinFn>>,
+    builtins: HashMap<FnId, BuiltinFn>,
 }
 
 impl AVM {
@@ -64,8 +64,9 @@ impl AVM {
         if self.program.metadata().is_builtin(id) {
             Ok(Executor::builtin_stub(self.builtins
                 .get(&id)
-                .expect("Missing a built-in")
-                .execute(args)?))
+                .expect("Missing a built-in")(args)?
+                )
+            )
         } else {
             Ok(Executor::new_fn_executor(&self.program, &self.builtins, handle, args))
         }
@@ -96,8 +97,8 @@ impl BuiltinMap for AVM {
         &mut self,
         module_str: &str,
         name_str: &str,
-        builtin: Box<BuiltinFn>,
-    ) -> Result<Option<Box<BuiltinFn>>, String> {
+        builtin: BuiltinFn,
+    ) -> Result<Option<BuiltinFn>, String> {
         let module = Ident(module_str.to_string());
         let name = Ident(name_str.to_string());
         let mod_id = self.program.universe().module_id(&module);
@@ -223,7 +224,7 @@ pub struct Executor<'a> {
 
 impl<'a> Executor<'a> {
     fn new_fn_executor(program: &'a Program,
-                        builtins: &'a HashMap<FnId, Box<BuiltinFn>>,
+                        builtins: &'a HashMap<FnId, BuiltinFn>,
                         fn_id: FnHandle, args: Option<Vec<Value>>) -> Executor<'a> {
 
         let mut exec_context = ExecutionContext {
