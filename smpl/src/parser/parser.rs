@@ -86,7 +86,7 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
     let mut decls = Vec::new();
     let mut anno = Vec::new();
 
-    while tokens.has_next() {
+    loop {
         match peek_token!(tokens, |tok| {
             match tok {
                 Token::Struct => ModDec::Struct,
@@ -131,7 +131,7 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
 fn annotations(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Annotation>> {
     let mut annotations = Vec::new();
 
-    while tokens.has_next() && peek_token!(tokens, |tok| {
+    while peek_token!(tokens, |tok| {
         match tok {
             Token::Pound => true,
             _ => false,
@@ -158,7 +158,7 @@ fn annotations(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Annotation>> {
 fn kv_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<(Ident, Option<String>)>> {
     let mut list = vec![kv_pair(tokens)?];
 
-    while tokens.has_next() {
+    loop {
         if peek_token!(tokens, |tok| {
             match tok {
                 Token::Comma => true,
@@ -168,7 +168,7 @@ fn kv_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<(Ident, Option<String
             let _comma = consume_token!(tokens, 
                                         Token::Comma,
                                         parser_state!("kv-list", "comma-separator"));
-            if tokens.has_next() && peek_token!(tokens, |tok| {
+            if peek_token!(tokens, |tok| {
                 match tok {
                     Token::RBracket => false,
                     _ => true,
@@ -372,7 +372,7 @@ pub fn fn_param_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<FnP
                     parser_state!("fn-param-list", "fn-param"))
     ];
 
-    while tokens.has_next() {
+    loop {
         if peek_token!(tokens, |tok| {
             match tok {
                 Token::Comma => true,
@@ -382,7 +382,7 @@ pub fn fn_param_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<FnP
             let _comma = consume_token!(tokens, 
                                         Token::Comma,
                                         parser_state!("fn-param-list", "comma separator"));
-            if tokens.has_next() && peek_token!(tokens, |tok| {
+            if peek_token!(tokens, |tok| {
                 match tok {
                     Token::RParen => false,
                     _ => true,
@@ -475,7 +475,7 @@ fn struct_field_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<StructField
                     parser_state!("struct-field-list", "struct-field"))
     ];
 
-    while tokens.has_next() {
+    loop {
         if peek_token!(tokens, |tok| {
             match tok {
                 Token::Comma => true,
@@ -485,7 +485,7 @@ fn struct_field_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<StructField
             let _comma = consume_token!(tokens, 
                                         Token::Comma,
                                         parser_state!("struct-field-list", "comma separator"));
-            if tokens.has_next() && peek_token!(tokens, |tok| {
+            if peek_token!(tokens, |tok| {
                 match tok {
                     Token::RBrace => false,
                     _ => true,
@@ -546,9 +546,6 @@ pub fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeA
         Err,
     }
 
-    if tokens.has_next() == false {
-        unimplemented!("Unexpected End of Input: Expected Type Annotation");
-    }
     match peek_token!(tokens, |tok| {
         match tok {
             Token::Fn => TypeAnnDec::FnType,
@@ -650,7 +647,7 @@ fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> 
                                  parser_state!("fn-type", "param lparen"));
         
     let mut params = None;
-    if tokens.has_next() && peek_token!(tokens, |tok| {
+    if peek_token!(tokens, |tok| {
         match tok {
             Token::RParen => false,
             _ => true,
@@ -670,7 +667,7 @@ fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> 
     let mut fn_type_span = LocationSpan::new(fnloc.start(), rparenloc.end());
 
     let mut return_type = None;
-    if tokens.has_next() && peek_token!(tokens, |tok| {
+    if peek_token!(tokens, |tok| {
         match tok {
             Token::Arrow => true,
             _ => false,
@@ -700,7 +697,7 @@ fn fn_type_params(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<TypeAn
         )
     ];
 
-    while tokens.has_next() {
+    loop {
         if peek_token!(tokens, |tok| {
             match tok {
                 Token::Comma => true,
@@ -710,7 +707,7 @@ fn fn_type_params(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<TypeAn
             let _comma = consume_token!(tokens, 
                                         Token::Comma,
                                         parser_state!("fn-type-params", "comma separator"));
-            if tokens.has_next() && peek_token!(tokens, |tok| {
+            if peek_token!(tokens, |tok| {
                 match tok {
                     Token::RParen => false,
                     _ => true,
@@ -739,7 +736,7 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
 
     let mut stmts = Vec::new();
     // Parse for all statements untile '}'
-    while tokens.has_next() && peek_token!(tokens, |tok| {
+    while peek_token!(tokens, |tok| {
         match tok {
             Token::RBrace => false,
             _ => true,
@@ -1050,13 +1047,6 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
 
     // Found a full path
     // Check if it's an assignment or expression
-
-    if tokens.has_next() == false {
-        return Err(parser_error!(
-                ParserErrorKind::UnexpectedEOI.into(),
-                parser_state!("full-path-potential-assign", "=")));
-    }
-
     match peek_token!(tokens, |tok| {
         match tok {
             Token::Assign => PathDec::Assign,
@@ -1118,12 +1108,6 @@ fn local_var_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>>
     let ident = AstNode::new(ident, iloc);
 
     let mut type_anno = None;
-
-    if tokens.has_next() == false {
-        return Err(parser_error!(
-                ParserErrorKind::UnexpectedEOI.into(),
-                parser_state!("local-var-decl", "=")));
-    }
 
     if peek_token!(tokens, |tok| {
         match tok {
@@ -1189,7 +1173,7 @@ fn if_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
     let mut branches = vec![first_branch];
     let mut default_branch = None;
 
-    while tokens.has_next() {
+    loop {
         match peek_token!(tokens, |tok| {
             match tok {
                 Token::Elif => IfDec::Elif,

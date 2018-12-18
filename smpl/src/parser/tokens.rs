@@ -604,10 +604,6 @@ impl<'a> BufferedTokenizer<'a> {
         }
     }
 
-    pub fn has_next(&self) -> bool {
-        self.next.is_some()
-    }
-
     pub fn next(&mut self) -> Option<Result<SpannedToken, SpannedError>> {
         let to_return = self.next.take();
 

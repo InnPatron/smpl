@@ -37,8 +37,7 @@ pub fn prebase_piped_expr(tokens: &mut BufferedTokenizer, expr_base: AstNode<Exp
 
     let mut piped_exprs = Vec::new();
 
-    while tokens.has_next() &&
-        peek_token!(tokens, |tok| {
+    while peek_token!(tokens, |tok| {
             match tok {
                 Token::Pipe => true,
                 _ => false,
@@ -114,10 +113,6 @@ fn expr(tokens: &mut BufferedTokenizer,
 
     loop {
 
-        if tokens.has_next() == false {
-            return Ok(lhs);
-        }
-
         let peek_result = peek_token!(tokens, |tok| {
 
             if is_delim(tok, delim_tokens) {
@@ -150,11 +145,7 @@ fn expr(tokens: &mut BufferedTokenizer,
         );
 
         loop {
-            if tokens.has_next() == false {
-                break;
-            }
-
-            let peek_result = peek_token!(tokens, |tok| {
+                let peek_result = peek_token!(tokens, |tok| {
 
                 // TODO: Is this delimiter check correct?
                 if is_delim(tok, delim_tokens) {
@@ -457,7 +448,7 @@ pub fn access_path(tokens: &mut BufferedTokenizer, root: PathSegment)
     
     let mut end = start;
     let mut path = vec![root];
-    while tokens.has_next() && peek_token!(tokens, |tok| {
+    while peek_token!(tokens, |tok| {
         match tok {
             Token::Dot => true,
             _ => false,
@@ -543,8 +534,7 @@ pub fn fn_args(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Option<Vec<As
 
     let mut args: Option<Vec<AstNode<Expr>>> = None;
 
-    while tokens.has_next() &&
-        peek_token!(tokens, |tok| {
+    while peek_token!(tokens, |tok| {
             match tok {
                 Token::RParen => false,
 
@@ -594,8 +584,7 @@ pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: 
     let mut path = vec![root];
     let mut end = base_span;
 
-    while tokens.has_next() && 
-        peek_token!(tokens, |tok| {
+    while peek_token!(tokens, |tok| {
             match tok {
                 Token::ColonColon => true,
                 _ => false,
@@ -617,8 +606,7 @@ pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: 
 
     // End of module path
     // Check if FN call
-    if tokens.has_next() &&
-        peek_token!(tokens, |tok| {
+    if peek_token!(tokens, |tok| {
             match tok {
                 Token::LParen => true,
                 _ => false,
@@ -704,7 +692,7 @@ fn struct_field_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<(AstNo
         )
     ];
 
-    while tokens.has_next() {
+    loop {
         if peek_token!(tokens, |tok| {
             match tok {
                 Token::Comma => true,
@@ -714,7 +702,7 @@ fn struct_field_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<(AstNo
             let _comma = consume_token!(tokens, 
                                         Token::Comma,
                                         parser_state!("struct-field-init-list", "comma separator"));
-            if tokens.has_next() && peek_token!(tokens, |tok| {
+            if peek_token!(tokens, |tok| {
                 match tok {
                     Token::RBrace => false,
                     _ => true,
@@ -783,7 +771,7 @@ fn array_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         parser_state!("array-init", "base-expr")
     ).to_data();
 
-    let init = if tokens.has_next() {
+    let init = {
         match peek_token!(tokens, |tok| {
             match tok {
                 Token::Comma => InitDec::List,
@@ -823,9 +811,8 @@ fn array_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
 
             InitDec::Err => unimplemented!("Unexpected token"),
         }
-    } else {
-        unimplemented!("Unexpected end of input");
     };
+    
 
     let (rloc, _) = consume_token!(tokens, 
                                    Token::RBracket,
@@ -842,7 +829,7 @@ fn array_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Expr>> {
     // First element already consumed, check for rest of list
     let mut list = Vec::new(); 
 
-    while tokens.has_next() {
+    loop {
         if peek_token!(tokens, |tok| {
             match tok {
                 Token::Comma => true,
@@ -852,7 +839,7 @@ fn array_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Expr>> {
             let _comma = consume_token!(tokens, 
                                         Token::Comma,
                                         parser_state!("array-init-list", "comma separator"));
-            if tokens.has_next() && peek_token!(tokens, |tok| {
+            if peek_token!(tokens, |tok| {
                 match tok {
                     Token::RBracket => false,
                     _ => true,
