@@ -18,11 +18,11 @@ pub fn include(modules: &mut Vec<Module>) {
 }
 
 pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
-    vm.insert_builtin(MOD_ERR, ERR_PANIC, Box::new(Panic))
+    vm.insert_builtin(MOD_ERR, ERR_PANIC, panic)
         .unwrap();
-    vm.insert_builtin(MOD_ERR, ERR_PANIC_MSG, Box::new(PanicMsg))
+    vm.insert_builtin(MOD_ERR, ERR_PANIC_MSG, panic_msg)
         .unwrap();
-    vm.insert_builtin(MOD_ERR, ERR_ASSERT, Box::new(Assert))
+    vm.insert_builtin(MOD_ERR, ERR_ASSERT, assert)
         .unwrap();
 }
 
@@ -38,41 +38,31 @@ impl std::fmt::Display for RuntimeError {
     }
 }
 
-pub struct Panic;
 
-impl BuiltinFn for Panic {
-    fn execute(&self, _args: Option<Vec<Value>>) -> Result<Value, Error> {
-        Err(RuntimeError(None))?
+fn panic(_args: Option<Vec<Value>>) -> Result<Value, Error> {
+    Err(RuntimeError(None))?
+}
+
+
+fn panic_msg(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = args.unwrap();
+    let a = args.remove(0);
+
+    match a {
+        Value::String(s) => Err(RuntimeError(Some(s)))?,
+        _ => unreachable!(),
     }
 }
 
-pub struct PanicMsg;
+fn assert(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = args.unwrap();
+    let a = args.remove(0);
 
-impl BuiltinFn for PanicMsg {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
-        let a = args.remove(0);
+    let a = irmatch!(a; Value::Bool(a) => a);
 
-        match a {
-            Value::String(s) => Err(RuntimeError(Some(s)))?,
-            _ => unreachable!(),
-        }
-    }
-}
-
-pub struct Assert;
-
-impl BuiltinFn for Assert {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = args.unwrap();
-        let a = args.remove(0);
-
-        let a = irmatch!(a; Value::Bool(a) => a);
-
-        if a {
-            Ok(Value::Unit)
-        } else {
-            Err(RuntimeError(Some("Assertion failed".to_string())))?
-        }
+    if a {
+        Ok(Value::Unit)
+    } else {
+        Err(RuntimeError(Some("Assertion failed".to_string())))?
     }
 }

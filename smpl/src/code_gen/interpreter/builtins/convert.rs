@@ -24,22 +24,22 @@ pub fn include(modules: &mut Vec<Module>) {
 }
 
 pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
-    vm.insert_builtin(MOD_CONVERT, CONVERT_INT_TO_FLOAT, Box::new(IntToFloat))
+    vm.insert_builtin(MOD_CONVERT, CONVERT_INT_TO_FLOAT, int_to_float)
         .unwrap();
-    vm.insert_builtin(MOD_CONVERT, CONVERT_FLOAT_TO_INT, Box::new(FloatToInt))
+    vm.insert_builtin(MOD_CONVERT, CONVERT_FLOAT_TO_INT, float_to_int)
         .unwrap();
 
-    vm.insert_builtin(MOD_CONVERT, CONVERT_IS_FLOAT, Box::new(IsFloat))
+    vm.insert_builtin(MOD_CONVERT, CONVERT_IS_FLOAT, is_float)
         .unwrap();
-    vm.insert_builtin(MOD_CONVERT, CONVERT_IS_INT, Box::new(IsInt))
+    vm.insert_builtin(MOD_CONVERT, CONVERT_IS_INT, is_int)
         .unwrap();
 
     vm.insert_builtin(
         MOD_CONVERT,
         CONVERT_STRING_TO_FLOAT,
-        Box::new(StringToFloat),
+        string_to_float
     ).unwrap();
-    vm.insert_builtin(MOD_CONVERT, CONVERT_STRING_TO_INT, Box::new(StringToInt))
+    vm.insert_builtin(MOD_CONVERT, CONVERT_STRING_TO_INT, string_to_int)
         .unwrap();
 }
 
@@ -57,92 +57,69 @@ pub enum ConversionTarget {
     Float,
 }
 
-pub struct IntToFloat;
+fn int_to_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
 
-impl BuiltinFn for IntToFloat {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-
-        let a = args.remove(0);
-        match a {
-            Value::Int(i) => Ok(Value::Float(i as f32)),
-            _ => unreachable!(),
-        }
+    let a = args.remove(0);
+    match a {
+        Value::Int(i) => Ok(Value::Float(i as f32)),
+        _ => unreachable!(),
     }
 }
 
-pub struct FloatToInt;
+fn float_to_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
 
-impl BuiltinFn for FloatToInt {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-
-        let a = args.remove(0);
-        match a {
-            Value::Float(f) => Ok(Value::Int(f as i32)),
-            _ => unreachable!(),
-        }
+    let a = args.remove(0);
+    match a {
+        Value::Float(f) => Ok(Value::Int(f as i32)),
+        _ => unreachable!(),
     }
 }
 
-pub struct IsFloat;
 
-impl BuiltinFn for IsFloat {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
+fn is_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
 
-        let a = args.remove(0);
-        match a {
-            Value::String(s) => Ok(Value::Bool(s.parse::<f32>().is_ok())),
-            _ => unreachable!(),
-        }
+    let a = args.remove(0);
+    match a {
+        Value::String(s) => Ok(Value::Bool(s.parse::<f32>().is_ok())),
+        _ => unreachable!(),
     }
 }
 
-pub struct IsInt;
+fn is_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
 
-impl BuiltinFn for IsInt {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-
-        let a = args.remove(0);
-        match a {
-            Value::String(s) => Ok(Value::Bool(s.parse::<i32>().is_ok())),
-            _ => unreachable!(),
-        }
+    let a = args.remove(0);
+    match a {
+        Value::String(s) => Ok(Value::Bool(s.parse::<i32>().is_ok())),
+        _ => unreachable!(),
     }
 }
 
-pub struct StringToFloat;
+fn string_to_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
 
-impl BuiltinFn for StringToFloat {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-
-        let a = args.remove(0);
-        match a {
-            Value::String(s) => Ok(Value::Float(
-                s.parse::<f32>()
-                    .map_err(|_| ConversionError(s, ConversionTarget::Float))?,
-            )),
-            _ => unreachable!(),
-        }
+    let a = args.remove(0);
+    match a {
+        Value::String(s) => Ok(Value::Float(
+            s.parse::<f32>()
+                .map_err(|_| ConversionError(s, ConversionTarget::Float))?,
+        )),
+        _ => unreachable!(),
     }
 }
 
-pub struct StringToInt;
+fn string_to_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
 
-impl BuiltinFn for StringToInt {
-    fn execute(&self, args: Option<Vec<Value>>) -> Result<Value, Error> {
-        let mut args = exact_args!(1, args)?;
-
-        let a = args.remove(0);
-        match a {
-            Value::String(s) => Ok(Value::Int(
-                s.parse::<i32>()
-                    .map_err(|_| ConversionError(s, ConversionTarget::Int))?,
-            )),
-            _ => unreachable!(),
-        }
+    let a = args.remove(0);
+    match a {
+        Value::String(s) => Ok(Value::Int(
+            s.parse::<i32>()
+                .map_err(|_| ConversionError(s, ConversionTarget::Int))?,
+        )),
+        _ => unreachable!(),
     }
 }
