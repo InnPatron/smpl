@@ -30,7 +30,12 @@ const VEC_FMT_ITEM_USE: &'static str = "item_mod_use";
 
 const VEC_DECLARATION: &'static str = include_str!("vec.smpl");
 
-pub fn include(modules: &mut Vec<Module>, item_type_mod: Option<&str>, item_type: &str) {
+// Returns the correct include function for a given type
+pub fn include(item_type_mod: Option<&str>, item_type: &str) -> 
+    Box<dyn Fn(&mut Vec<Module>) -> Result<(), crate::err::Err>>{
+
+    let item_type = item_type.to_string();
+
     let item_mod_use = match item_type_mod {
         Some(str) => format!("use {};", str),
         None => "".to_string(),
@@ -40,14 +45,17 @@ pub fn include(modules: &mut Vec<Module>, item_type_mod: Option<&str>, item_type
         Some(str) => format!("{}::", str),
         None => "".to_string(),
     };
+    Box::new( move |modules| {
+        let mut vars = HashMap::new();
+        vars.insert(VEC_FMT_ITEM_TYPE.to_string(), &item_type);
+        vars.insert(VEC_FMT_ITEM_TYPE_MOD.to_string(), &item_type_mod);
+        vars.insert(VEC_FMT_ITEM_USE.to_string(), &item_mod_use);
 
-    let mut vars = HashMap::new();
-    vars.insert(VEC_FMT_ITEM_TYPE.to_string(), item_type);
-    vars.insert(VEC_FMT_ITEM_TYPE_MOD.to_string(), &item_type_mod);
-    vars.insert(VEC_FMT_ITEM_USE.to_string(), &item_mod_use);
+        let decl = strfmt(&VEC_DECLARATION, &vars).unwrap();
+        modules.push(parse_module(&decl).unwrap());
 
-    let decl = strfmt(&VEC_DECLARATION, &vars).unwrap();
-    modules.push(parse_module(&decl).unwrap());
+        Ok(())
+    })
 }
 
 pub fn add(vm: &mut dyn BuiltinMap, item_type: &str) {
