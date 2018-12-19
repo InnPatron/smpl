@@ -58,26 +58,32 @@ pub fn include(item_type_mod: Option<&str>, item_type: &str) ->
     })
 }
 
-pub fn add(vm: &mut dyn BuiltinMap, item_type: &str) {
-    let mut vars = HashMap::new();
-    vars.insert(VEC_FMT_ITEM_TYPE.to_string(), item_type);
+pub fn add(item_type: &str) ->
+    Box< dyn Fn(&mut dyn BuiltinMap) -> ()> {
 
-    let mod_name = strfmt(MOD_VEC, &vars).unwrap();
+    let item_type = item_type.to_string();
 
-    vm.insert_builtin(&mod_name, VEC_NEW, new)
-        .unwrap();
-    vm.insert_builtin(&mod_name, VEC_LEN, len)
-        .unwrap();
-    vm.insert_builtin(&mod_name, VEC_CONTAINS, contains)
-        .unwrap();
-    vm.insert_builtin(&mod_name, VEC_PUSH, push)
-        .unwrap();
-    vm.insert_builtin(&mod_name, VEC_INSERT, insert)
-        .unwrap();
-    vm.insert_builtin(&mod_name, VEC_GET, get)
-        .unwrap();
-    vm.insert_builtin(&mod_name, VEC_REMOVE, remove)
-        .unwrap();
+    Box::new(move |mapper| {
+        let mut vars = HashMap::new();
+        vars.insert(VEC_FMT_ITEM_TYPE.to_string(), &item_type);
+
+        let mod_name = strfmt(MOD_VEC, &vars).unwrap();
+
+        mapper.insert_builtin(&mod_name, VEC_NEW, new)
+            .unwrap();
+        mapper.insert_builtin(&mod_name, VEC_LEN, len)
+            .unwrap();
+        mapper.insert_builtin(&mod_name, VEC_CONTAINS, contains)
+            .unwrap();
+        mapper.insert_builtin(&mod_name, VEC_PUSH, push)
+            .unwrap();
+        mapper.insert_builtin(&mod_name, VEC_INSERT, insert)
+            .unwrap();
+        mapper.insert_builtin(&mod_name, VEC_GET, get)
+            .unwrap();
+        mapper.insert_builtin(&mod_name, VEC_REMOVE, remove)
+            .unwrap();
+    })
 }
 
 #[derive(Fail, Debug)]
