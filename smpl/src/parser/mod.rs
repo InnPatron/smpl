@@ -1,12 +1,15 @@
 use super::ast::Module;
 use crate::err::Err;
 
+#[macro_use]
 mod parser_err;
 mod tokens;
 
 #[cfg(not(test))]
+#[macro_use]
 mod parser;
 #[cfg(test)]
+#[macro_use]
 pub mod parser;
 
 #[cfg(not(test))]

@@ -6,7 +6,6 @@ use crate::ast::Expr;
 use crate::span::LocationSpan;
 use super::tokens::{Token, SpannedError};
 
-#[macro_export]
 macro_rules! parser_error {
     ($kind: expr, $state: expr) => {{ parser_error!($kind, $state, None) }};
 
@@ -17,7 +16,6 @@ macro_rules! parser_error {
     }}
 }
 
-#[macro_export]
 macro_rules! production {
     ($production: expr, $state: expr) => {{ 
         use crate::parser::parser_err::*;
@@ -25,7 +23,6 @@ macro_rules! production {
     }}
 }
 
-#[macro_export]
 macro_rules! parser_state {
     ($state: expr) => {{ ParserState::new_state($state) }};
     ($state: expr, $substate: expr) => { ParserState::new_state($state).substate($substate) };

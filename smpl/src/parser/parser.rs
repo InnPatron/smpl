@@ -1,6 +1,5 @@
 use std::iter::{Iterator, Peekable};
 
-use crate::{parser_state, parser_error, production};
 use crate::span::*;
 use crate::ast::*;
 use super::tokens::*;
@@ -9,13 +8,11 @@ use super::parser_err::*;
 
 pub type ParseErr<T> = Result<T, ParserError>;
 
-#[macro_export]
 macro_rules! consume_token  {
 
     ($input: expr, $state: expr) => {{
         use failure::Fail;
         use crate::parser::parser_err::*;
-        use crate::parser_error;
         let next = $input.next()
             .ok_or(parser_error!(ParserErrorKind::UnexpectedEOI, $state))?
             .map_err(|e| parser_error!(ParserErrorKind::TokenizerError(e), $state))?;
@@ -25,7 +22,6 @@ macro_rules! consume_token  {
     ($input: expr, $token: pat, $state: expr) => {{
         use failure::Fail;
         use crate::parser::parser_err::*;
-        use crate::parser_error;
         let next = $input.next()
             .ok_or(parser_error!(ParserErrorKind::UnexpectedEOI, $state))?
             .map_err(|e| parser_error!(ParserErrorKind::TokenizerError(e), $state))?;
@@ -39,7 +35,6 @@ macro_rules! consume_token  {
     ($input: expr, $token: pat => $e: expr, $state: expr) => {{
         use failure::Fail;
         use crate::parser::parser_err::*;
-        use crate::parser_error;
         let next = $input.next()
             .ok_or(parser_error!(ParserErrorKind::UnexpectedEOI, $state))?
             .map_err(|e| parser_error!(ParserErrorKind::TokenizerError(e), $state))?;
@@ -51,7 +46,6 @@ macro_rules! consume_token  {
     }};
 }
 
-#[macro_export]
 macro_rules! peek_token {
     ($tokenizer: expr, $lam: expr, $state: expr) => {
         ($tokenizer)

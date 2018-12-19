@@ -5,7 +5,6 @@ use crate::ast::*;
 use super::tokens::*;
 use super::parser::{module_binding as full_module_binding, ParseErr, fn_param_list, block, type_annotation};
 use super::parser_err::*;
-use crate::{consume_token, parser_state, parser_error, peek_token, production};
 
 #[derive(PartialEq, Clone)]
 pub enum Delimiter {
