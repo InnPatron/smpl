@@ -23,7 +23,7 @@ pub fn include(modules: &mut Vec<Module>) {
     modules.push(parse_module(CONVERT_DECLARATION).unwrap());
 }
 
-pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
+pub fn add(vm: &mut dyn BuiltinMap) {
     vm.insert_builtin(MOD_CONVERT, CONVERT_INT_TO_FLOAT, int_to_float)
         .unwrap();
     vm.insert_builtin(MOD_CONVERT, CONVERT_FLOAT_TO_INT, float_to_int)

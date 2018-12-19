@@ -17,7 +17,7 @@ pub fn include(modules: &mut Vec<Module>) {
     modules.push(parse_module(LOG_DECLARATION).unwrap());
 }
 
-pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
+pub fn add(vm: &mut dyn BuiltinMap) {
     vm.insert_builtin(MOD_LOG, LOG_PRINT, print)
         .unwrap();
     vm.insert_builtin(MOD_LOG, LOG_PRINTLN, println)

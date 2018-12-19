@@ -20,7 +20,7 @@ pub fn include(modules: &mut Vec<Module>) {
     modules.push(parse_module(STRING_DECLARATION).unwrap());
 }
 
-pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
+pub fn add(vm: &mut dyn BuiltinMap) {
     vm.insert_builtin(MOD_STRING, STRING_LEN, len)
         .unwrap();
     vm.insert_builtin(MOD_STRING, STRING_TO_STRING, to_string)
