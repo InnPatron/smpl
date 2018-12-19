@@ -4,9 +4,6 @@ use super::BuiltinMap;
 use crate::ast::Module;
 use crate::err::Err;
 
-pub type Include = fn(&mut Vec<Module>) -> Result<(), Err>;
-pub type Load = fn(&mut dyn BuiltinMap);
-
 macro_rules! option_action {
     ($options: expr, $field: ident, $action: expr) => {{
         if $options.$field {
@@ -15,10 +12,10 @@ macro_rules! option_action {
     }}
 }
 
-#[derive(Clone)]
 pub struct Loader {
     std_options: StdOptions,
-    modules: Vec<(Include, Option<Load>)>,
+    modules: Vec<(Box<dyn Fn(&mut Vec<Module>) -> Result<(), Err>>, 
+                  Option<Box<dyn Fn(&mut dyn BuiltinMap) -> ()>>)>,
 }
 
 impl Loader {
@@ -29,7 +26,8 @@ impl Loader {
         }
     }
 
-    pub fn add_module(mut self, inc: Include, load: Option<Load>) -> Loader {
+    pub fn add_module(mut self, inc: Box<dyn Fn(&mut Vec<Module>) -> Result<(), Err> >, 
+                  load: Option< Box< dyn Fn(&mut dyn BuiltinMap) -> ()> >) -> Loader {
         self.modules.push((inc, load));
         self
     }
@@ -44,7 +42,7 @@ impl Loader {
         option_action!(options, math, math::include(&mut v));
         option_action!(options, str, str::include(&mut v));
 
-        for &(includer, _) in self.modules.iter() {
+        for &(ref includer, _) in self.modules.iter() {
             includer(&mut v)?;
         }
 
@@ -61,7 +59,7 @@ impl Loader {
         option_action!(options, math, math::add(m));
         option_action!(options, str, str::add(m));
 
-        for &(_, loader) in self.modules.iter() {
+        for &(_, ref loader) in self.modules.iter() {
             if let Some(loader) = loader {
                 loader(m);
             }
