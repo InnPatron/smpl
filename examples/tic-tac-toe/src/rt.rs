@@ -5,14 +5,17 @@ use failure::Error;
 use smpl::Module;
 use smpl::parse_module;
 use smpl::interpreter::*;
+use smpl::Err;
 
 const RT: &'static str = include_str!("rt.smpl");
 
-pub fn include(scripts: &mut Vec<Module>) {
-    scripts.push(parse_module(RT).unwrap());
+pub fn include(scripts: &mut Vec<Module>) -> Result<(), Err> {
+    scripts.push(parse_module(RT)?);
+
+    Ok(())
 }
 
-pub fn map_builtins(vm: &mut AVM) {
+pub fn map_builtins(vm: &mut dyn BuiltinMap) {
     vm.insert_builtin("rt", "user_key", user_input).unwrap();
 }
 
