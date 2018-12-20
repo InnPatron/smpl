@@ -12,7 +12,6 @@ mod vm_tests;
 
 pub mod builtins;
 
-pub use self::loader::{Loader, StdOptions};
 pub use self::value::*;
 pub use self::vm_i::*;
 pub use self::avm::{AVM, Executor, ExecResult};

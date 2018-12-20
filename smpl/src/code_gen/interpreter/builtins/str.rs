@@ -20,7 +20,7 @@ pub fn include(modules: &mut Vec<Module>) {
     modules.push(parse_module(STRING_DECLARATION).unwrap());
 }
 
-pub fn add(vm: &mut dyn BuiltinMap) {
+pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
     vm.insert_builtin(MOD_STRING, STRING_LEN, len)
         .unwrap();
     vm.insert_builtin(MOD_STRING, STRING_TO_STRING, to_string)
@@ -93,8 +93,11 @@ use super::*;
 
 #[test]
 fn interpreter_str_len() {
-    let loader = Loader::new(StdOptions::std());
-    let mut vm = AVM::new(&loader).unwrap();
+    let mut modules = Vec::new();
+    include(&mut modules);
+
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm);
 
     let fn_handle = vm.query_module(MOD_STRING, STRING_LEN).unwrap().unwrap();
 
@@ -110,8 +113,11 @@ fn interpreter_str_len() {
 
 #[test]
 fn interpreter_str_to_string() {
-    let loader = Loader::new(StdOptions::std());
-    let mut vm = AVM::new(&loader).unwrap();
+    let mut modules = Vec::new();
+    include(&mut modules);
+
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm);
 
     let fn_handle = vm.query_module(MOD_STRING, STRING_TO_STRING)
         .unwrap()
@@ -130,8 +136,11 @@ fn interpreter_str_to_string() {
 
 #[test]
 fn interpreter_str_append() {
-    let loader = Loader::new(StdOptions::std());
-    let mut vm = AVM::new(&loader).unwrap();
+    let mut modules = Vec::new();
+    include(&mut modules);
+
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm);
 
     let fn_handle = vm.query_module(MOD_STRING, STRING_APPEND).unwrap().unwrap();
 
@@ -147,8 +156,11 @@ fn interpreter_str_append() {
 
 #[test]
 fn interpreter_str_to_lower() {
-    let loader = Loader::new(StdOptions::std());
-    let mut vm = AVM::new(&loader).unwrap();
+    let mut modules = Vec::new();
+    include(&mut modules);
+
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm);
 
     let fn_handle = vm.query_module(MOD_STRING, STRING_TO_LOWER)
         .unwrap()
@@ -160,8 +172,11 @@ fn interpreter_str_to_lower() {
 
 #[test]
 fn interpreter_str_to_upper() {
-    let loader = Loader::new(StdOptions::std());
-    let mut vm = AVM::new(&loader).unwrap();
+    let mut modules = Vec::new();
+    include(&mut modules);
+
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm);
 
     let fn_handle = vm.query_module(MOD_STRING, STRING_TO_UPPER)
         .unwrap()
@@ -184,15 +199,11 @@ fn test() -> String {
 return str::to_string(\"Cannot\", \" touch\", \" this!?\");
 }
 ";
-    let loader = Loader::new(StdOptions::std())
-        .add_module(
-            Box::new(move |modules| {
-                modules.push(parse_module(&mod1).unwrap());
-                Ok(())
-            }),
-            None
-        );
-    let mut vm = AVM::new(&loader).unwrap();
+    let mut modules = vec![parse_module(mod1).unwrap()];
+    include(&mut modules);
+
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm);
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 

@@ -26,15 +26,15 @@ pub struct AVM {
 }
 
 impl AVM {
-    pub fn new(loader: &loader::Loader) -> Result<AVM, Err> {
-        let modules = loader.include()?;
+    pub fn new(user_modules: Vec<Module>) -> Result<AVM, Err> {
+        let modules = loader::include(user_modules);
         let program = check_program(modules)?;
         let mut vm = AVM {
             program: program,
             builtins: HashMap::new(),
         };
 
-        loader.load(&mut vm);
+        loader::load(&mut vm);
 
         Ok(vm)
     }

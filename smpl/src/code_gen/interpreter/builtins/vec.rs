@@ -30,12 +30,7 @@ const VEC_FMT_ITEM_USE: &'static str = "item_mod_use";
 
 const VEC_DECLARATION: &'static str = include_str!("vec.smpl");
 
-// Returns the correct include function for a given type
-pub fn include(item_type_mod: Option<&str>, item_type: &str) -> 
-    Box<dyn Fn(&mut Vec<Module>) -> Result<(), crate::err::Err>>{
-
-    let item_type = item_type.to_string();
-
+pub fn include(modules: &mut Vec<Module>, item_type_mod: Option<&str>, item_type: &str) {
     let item_mod_use = match item_type_mod {
         Some(str) => format!("use {};", str),
         None => "".to_string(),
@@ -45,45 +40,36 @@ pub fn include(item_type_mod: Option<&str>, item_type: &str) ->
         Some(str) => format!("{}::", str),
         None => "".to_string(),
     };
-    Box::new( move |modules| {
-        let mut vars = HashMap::new();
-        vars.insert(VEC_FMT_ITEM_TYPE.to_string(), &item_type);
-        vars.insert(VEC_FMT_ITEM_TYPE_MOD.to_string(), &item_type_mod);
-        vars.insert(VEC_FMT_ITEM_USE.to_string(), &item_mod_use);
 
-        let decl = strfmt(&VEC_DECLARATION, &vars).unwrap();
-        modules.push(parse_module(&decl).unwrap());
+    let mut vars = HashMap::new();
+    vars.insert(VEC_FMT_ITEM_TYPE.to_string(), item_type);
+    vars.insert(VEC_FMT_ITEM_TYPE_MOD.to_string(), &item_type_mod);
+    vars.insert(VEC_FMT_ITEM_USE.to_string(), &item_mod_use);
 
-        Ok(())
-    })
+    let decl = strfmt(&VEC_DECLARATION, &vars).unwrap();
+    modules.push(parse_module(&decl).unwrap());
 }
 
-pub fn add(item_type: &str) ->
-    Box< dyn Fn(&mut dyn BuiltinMap) -> ()> {
+pub fn add<MAP: BuiltinMap>(vm: &mut MAP, item_type: &str) {
+    let mut vars = HashMap::new();
+    vars.insert(VEC_FMT_ITEM_TYPE.to_string(), item_type);
 
-    let item_type = item_type.to_string();
+    let mod_name = strfmt(MOD_VEC, &vars).unwrap();
 
-    Box::new(move |mapper| {
-        let mut vars = HashMap::new();
-        vars.insert(VEC_FMT_ITEM_TYPE.to_string(), &item_type);
-
-        let mod_name = strfmt(MOD_VEC, &vars).unwrap();
-
-        mapper.insert_builtin(&mod_name, VEC_NEW, new)
-            .unwrap();
-        mapper.insert_builtin(&mod_name, VEC_LEN, len)
-            .unwrap();
-        mapper.insert_builtin(&mod_name, VEC_CONTAINS, contains)
-            .unwrap();
-        mapper.insert_builtin(&mod_name, VEC_PUSH, push)
-            .unwrap();
-        mapper.insert_builtin(&mod_name, VEC_INSERT, insert)
-            .unwrap();
-        mapper.insert_builtin(&mod_name, VEC_GET, get)
-            .unwrap();
-        mapper.insert_builtin(&mod_name, VEC_REMOVE, remove)
-            .unwrap();
-    })
+    vm.insert_builtin(&mod_name, VEC_NEW, new)
+        .unwrap();
+    vm.insert_builtin(&mod_name, VEC_LEN, len)
+        .unwrap();
+    vm.insert_builtin(&mod_name, VEC_CONTAINS, contains)
+        .unwrap();
+    vm.insert_builtin(&mod_name, VEC_PUSH, push)
+        .unwrap();
+    vm.insert_builtin(&mod_name, VEC_INSERT, insert)
+        .unwrap();
+    vm.insert_builtin(&mod_name, VEC_GET, get)
+        .unwrap();
+    vm.insert_builtin(&mod_name, VEC_REMOVE, remove)
+        .unwrap();
 }
 
 #[derive(Fail, Debug)]
@@ -271,15 +257,11 @@ fn vec_new() {
 let v = vec_int::new();
 }
 ";
-    let loader = Loader::new(StdOptions::std())
-        .add_module(include(None, "int"), Some(add("int")))
-        .add_module(
-            Box::new(move |modules| {
-                modules.push(parse_module(mod1).unwrap());
-                Ok(())
-            }), None
-        );
-    let mut vm = AVM::new(&loader).unwrap();
+    let mut modules = vec![parse_module(mod1).unwrap()];
+    include(&mut modules, None, "int");
+
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm, "int");
 
     let fn_handle = vm.query_module("mod1", "vec_new").unwrap().unwrap();
 
@@ -303,16 +285,11 @@ v = vec_int::push(v, 456);
 return vec_int::len(v);
 }
 ";
-    let loader = Loader::new(StdOptions::std())
-        .add_module(include(None, "int"), Some(add("int")))
-        .add_module(
-            Box::new(move |modules| {
-                modules.push(parse_module(mod1).unwrap());
-                Ok(())
-            }), None
-        );
+    let mut modules = vec![parse_module(mod1).unwrap()];
+    include(&mut modules, None, "int");
 
-    let mut vm = AVM::new(&loader).unwrap();
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm, "int");
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -339,16 +316,11 @@ let b = vec_int::get(v, 1);
 return a * b;
 }
 ";
-    let loader = Loader::new(StdOptions::std())
-        .add_module(include(None, "int"), Some(add("int")))
-        .add_module(
-            Box::new(move |modules| {
-                modules.push(parse_module(mod1).unwrap());
-                Ok(())
-            }), None
-        );
+    let mut modules = vec![parse_module(mod1).unwrap()];
+    include(&mut modules, None, "int");
 
-    let mut vm = AVM::new(&loader).unwrap();
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm, "int");
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -375,16 +347,11 @@ v = vec_int::remove(v, 1);
 return vec_int::get(v, 1);
 }
 ";
-    let loader = Loader::new(StdOptions::std())
-        .add_module(include(None, "int"), Some(add("int")))
-        .add_module(
-            Box::new(move |modules| {
-                modules.push(parse_module(mod1).unwrap());
-                Ok(())
-            }), None
-        );
+    let mut modules = vec![parse_module(mod1).unwrap()];
+    include(&mut modules, None, "int");
 
-    let mut vm = AVM::new(&loader).unwrap();
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm, "int");
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -412,16 +379,11 @@ let a = vec_int::get(v, 0);
 return a;
 }
 ";
-    let loader = Loader::new(StdOptions::std())
-        .add_module(include(None, "int"), Some(add("int")))
-        .add_module(
-            Box::new(move |modules| {
-                modules.push(parse_module(mod1).unwrap());
-                Ok(())
-            }), None
-        );
+    let mut modules = vec![parse_module(mod1).unwrap()];
+    include(&mut modules, None, "int");
 
-    let mut vm = AVM::new(&loader).unwrap();
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm, "int");
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -463,16 +425,11 @@ v = vec_int::push(v, 7);
 return vec_int::contains(v, 20);
 }
 ";
-    let loader = Loader::new(StdOptions::std())
-        .add_module(include(None, "int"), Some(add("int")))
-        .add_module(
-            Box::new(move |modules| {
-                modules.push(parse_module(mod1).unwrap());
-                Ok(())
-            }), None
-        );
+    let mut modules = vec![parse_module(mod1).unwrap()];
+    include(&mut modules, None, "int");
 
-    let mut vm = AVM::new(&loader).unwrap();
+    let mut vm = AVM::new(modules).unwrap();
+    add(&mut vm, "int");
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 

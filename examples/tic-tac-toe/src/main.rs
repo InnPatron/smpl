@@ -2,15 +2,14 @@ use std::process;
 
 mod rt;
 
-use smpl::interpreter::*;
+use smpl::interpreter::AVM;
+
+
 
 fn main() {
-    let mut options = StdOptions::no_std();
-    options.log = true;
-
-    let loader = Loader::new(options)
-        .add_module(Box::new(rt::include), Some(Box::new(rt::map_builtins)));
-    let mut vm = match AVM::new(&loader) {
+    let mut scripts = Vec::new();
+    rt::include(&mut scripts);
+    let mut vm = match AVM::new(scripts) {
         Ok(vm) => vm,
 
         Err(e) => {

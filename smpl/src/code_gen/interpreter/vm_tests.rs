@@ -6,20 +6,12 @@ use crate::code_gen::interpreter::*;
 macro_rules! setup_and_run {
     ($mod1: expr, $mod_name: expr, $fn_name: expr, $args: expr) => {{
 
-        let options = StdOptions::std();
-        let loader = Loader::new(options)
-            .add_module(Box::new(move |modules| {
-                            let new_mod = parse_module($mod1).expect("Failed to parse module");
-                            modules.push(new_mod);
-                            Ok(())
-                        }),
-                        Some(Box::new(|mapper: &mut dyn BuiltinMap| {
-                            mapper.insert_builtin($mod_name, "add", add);
-                            mapper.insert_builtin($mod_name, "sum", var_arg_sum);
-                        })));
-
-        let mut avm = AVM::new(&loader).unwrap();
+        let modules = vec![parse_module($mod1).expect("Failed to parse module")];
+        let mut avm = AVM::new(modules).unwrap();
         
+        let _ = avm.insert_builtin($mod_name, "add", add);
+        let _ = avm.insert_builtin($mod_name, "sum", var_arg_sum);
+
         let a_fn_handle = avm.query_module($mod_name, $fn_name).unwrap().unwrap();
 
         let a_result = avm.eval_fn_args_sync(a_fn_handle, $args)
@@ -145,20 +137,10 @@ return mod1::add(1, 2);
 }
 ";
 
-    let loader = Loader::new(StdOptions::std())
-        .add_module(
-            Box::new(move |modules| {
-                modules.push(parse_module(mod1).unwrap());
-                modules.push(parse_module(mod2).unwrap());
+    let modules = vec![parse_module(mod1).unwrap(), parse_module(mod2).unwrap()];
 
-                Ok(())
-            }),
-            Some(Box::new(move |mapper: &mut dyn BuiltinMap| {
-                mapper.insert_builtin("mod1", "add", add).unwrap();
-            }))
-        );
-
-    let mut avm = AVM::new(&loader).unwrap();
+    let mut avm = AVM::new(modules).unwrap();
+    avm.insert_builtin("mod1", "add", add).unwrap();
     
     let a_fn_handle = avm.query_module("mod2", "test2").unwrap().unwrap();
 
