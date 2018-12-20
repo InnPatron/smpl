@@ -1,6 +1,7 @@
 use crate::analysis::TypeId;
 use crate::span::Span;
 use crate::ast::*;
+use crate::err::Error;
 
 #[derive(Clone, Debug)]
 pub enum AnalysisError {
@@ -16,6 +17,12 @@ pub enum AnalysisError {
     UnresolvedFns(Vec<AstNode<Function>>),
     UncheckedFunctionBinding(Ident),
     MissingModName,
+}
+
+impl From<AnalysisError> for Error {
+    fn from(e: AnalysisError) -> Error {
+        Error::AnalysisError(format!("{:?}", e))
+    }
 }
 
 #[derive(Clone, Debug)]
