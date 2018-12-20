@@ -95,7 +95,7 @@ use super::*;
 
 macro_rules! wrap_input {
     ($input: expr) => {{ 
-        UnparsedModule::anonymous($input.to_string())
+        UnparsedModule::anonymous($input)
     }}
 }
 

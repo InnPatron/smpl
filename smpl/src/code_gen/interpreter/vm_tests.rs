@@ -7,7 +7,7 @@ use crate::code_gen::interpreter::*;
 macro_rules! setup_and_run {
     ($mod1: expr, $mod_name: expr, $fn_name: expr, $args: expr) => {{
 
-        let module = UnparsedModule::anonymous($mod1.to_string());
+        let module = UnparsedModule::anonymous($mod1);
 
         let modules = vec![parse_module(module).expect("Failed to parse module")];
         let mut avm = AVM::new(modules).unwrap();
@@ -26,7 +26,7 @@ macro_rules! setup_and_run {
 
 macro_rules! wrap_input {
     ($input: expr) => {{ 
-        UnparsedModule::anonymous($input.to_string())
+        UnparsedModule::anonymous($input)
     }}
 }
 
