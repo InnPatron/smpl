@@ -1,6 +1,6 @@
 use failure::Error;
 
-use crate::ast::Module;
+use crate::module::*;
 use crate::parser::parse_module;
 
 use crate::code_gen::interpreter::*;
@@ -13,8 +13,9 @@ pub const ERR_ASSERT: &'static str = "assert";
 
 pub const ERR_DECLARATION: &'static str = include_str!("err.smpl");
 
-pub fn include(modules: &mut Vec<Module>) {
-    modules.push(parse_module(ERR_DECLARATION).unwrap());
+pub fn include(modules: &mut Vec<ParsedModule>) {
+    let input = UnparsedModule::anonymous(ERR_DECLARATION);
+    modules.push(parse_module(input).unwrap());
 }
 
 pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {

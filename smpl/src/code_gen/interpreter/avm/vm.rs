@@ -6,7 +6,7 @@ use std::rc::Rc;
 use petgraph::graph::NodeIndex;
 
 use crate::analysis::*;
-
+use crate::module::*;
 use crate::ast::{Ident, Module};
 
 use crate::err::Error as SMPLError;
@@ -26,7 +26,7 @@ pub struct AVM {
 }
 
 impl AVM {
-    pub fn new(user_modules: Vec<Module>) -> Result<AVM, SMPLError> {
+    pub fn new(user_modules: Vec<ParsedModule>) -> Result<AVM, SMPLError> {
         let modules = loader::include(user_modules);
         let program = check_program(modules)?;
         let mut vm = AVM {

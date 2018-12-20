@@ -1,7 +1,7 @@
 use failure::Error;
 
 use crate::{exact_args, min_args};
-use crate::ast::Module;
+use crate::module::*;
 use crate::parser::parse_module;
 
 use crate::code_gen::interpreter::*;
@@ -16,8 +16,9 @@ const STRING_TO_UPPER: &'static str = "to_upper";
 
 const STRING_DECLARATION: &'static str = include_str!("str.smpl");
 
-pub fn include(modules: &mut Vec<Module>) {
-    modules.push(parse_module(STRING_DECLARATION).unwrap());
+pub fn include(modules: &mut Vec<ParsedModule>) {
+    let input = UnparsedModule::anonymous(STRING_DECLARATION);
+    modules.push(parse_module(input).unwrap());
 }
 
 pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
@@ -89,7 +90,14 @@ fn to_upper(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
 #[cfg(test)]
 mod tests {
+use crate::module::*;
 use super::*;
+
+macro_rules! wrap_input {
+    ($input: expr) => {{ 
+        UnparsedModule::anonymous($input)
+    }}
+}
 
 #[test]
 fn interpreter_str_len() {
@@ -199,7 +207,7 @@ fn test() -> String {
 return str::to_string(\"Cannot\", \" touch\", \" this!?\");
 }
 ";
-    let mut modules = vec![parse_module(mod1).unwrap()];
+    let mut modules = vec![parse_module(wrap_input!(mod1)).unwrap()];
     include(&mut modules);
 
     let mut vm = AVM::new(modules).unwrap();

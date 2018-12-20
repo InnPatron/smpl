@@ -1,19 +1,22 @@
 use crate::feature::*;
-use crate::ast::Module as AstModule;
+use crate::module::ParsedModule;
 
 use super::error::AnalysisError;
 use super::metadata::*;
 use super::semantic_data::*;
 use super::mod_resolver;
 
-pub fn check_program(modules: Vec<AstModule>) -> Result<Program, AnalysisError> {
+pub fn check_program(modules: Vec<ParsedModule>) -> Result<Program, AnalysisError> {
     let metadata = Metadata::new();
     let universe = Universe::std();
     let features = PresentFeatures::new();
 
     let mut program = Program::new(universe, metadata, features);
 
-    mod_resolver::check_modules(&mut program, modules)?;
+    mod_resolver::check_modules(&mut program, modules
+                                .into_iter()            // TODO: Remove so mod_resolver can handle sources
+                                .map(|m| m.module)
+                                .collect())?;
 
     Metadata::find_main(&mut program)?;
 
@@ -28,6 +31,13 @@ mod tests {
     use crate::parser::*;
     use crate::analysis::smpl_type::*;
     use crate::ast::Ident;
+    use crate::module::UnparsedModule;
+
+    macro_rules! wrap_input {
+        ($input: expr) => {{ 
+            UnparsedModule::anonymous($input)
+        }}
+    }
 
     #[test]
     fn basic_test_semantic_analysis() {
@@ -50,7 +60,8 @@ fn main() {
     }
 }
 ";
-        let program = parse_module(program).unwrap();
+
+        let program = parse_module(wrap_input!(program)).unwrap();
         let program = check_program(vec![program]).unwrap();
 
         let universe = program.universe();
@@ -83,7 +94,7 @@ fn main() {
 	arg_usage(5, false);
 }";
         
-        let program = parse_module(input).unwrap();
+        let program = parse_module(wrap_input!(input)).unwrap();
         let program = check_program(vec![program]).unwrap();
 
         let (main, _) = program.metadata().main().unwrap();
@@ -138,7 +149,7 @@ fn test() {
     }
 }";
 
-        let program = parse_module(input).unwrap();
+        let program = parse_module(wrap_input!(input)).unwrap();
         match check_program(vec![program]) {
             Ok(_) => panic!("Passed analysis. Expected AnalysisError::UnknownBinding"),
             Err(e) => {
@@ -235,7 +246,7 @@ fn test() -> int {
         let input = vec![input_0, input_1, input_2, input_3, input_4, input_5, input_6];
 
         for i in 0..input.len() {
-            let program = parse_module(input[i]).unwrap();
+            let program = parse_module(wrap_input!(input[i])).unwrap();
             match check_program(vec![program]) {
                 Ok(_) => panic!("Passed analysis. Expected AnalysisError::ControlFlowError(ControlFlowError::MissingReturn. Test {}", i),
                 Err(e) => {
@@ -339,7 +350,7 @@ fn test() -> int {
         let input = vec![input_0, input_1, input_2, input_3, input_4, input_5, input_6];
 
         for i in 0..input.len() {
-            let program = parse_module(input[i]).unwrap();
+            let program = parse_module(wrap_input!(input[i])).unwrap();
             check_program(vec![program]).expect(&format!("Test  {} failed.", i));
         }
     }
@@ -357,7 +368,7 @@ fn B() {
 
 }";
 
-        let program = parse_module(input).unwrap();
+        let program = parse_module(wrap_input!(input)).unwrap();
         check_program(vec![program]).unwrap();
     }
 
@@ -374,7 +385,7 @@ struct B{
     field: int,
 }";
 
-        let program = parse_module(input).unwrap();
+        let program = parse_module(wrap_input!(input)).unwrap();
         check_program(vec![program]).unwrap();
     }
 
@@ -405,8 +416,8 @@ fn test() {
 }
 ";
 
-        let mod1 = parse_module(mod1).unwrap();
-        let mod2 = parse_module(mod2).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let mod2 = parse_module(wrap_input!(mod2)).unwrap();
         check_program(vec![mod1, mod2]).unwrap();
     }
 
@@ -423,7 +434,7 @@ fn test() {
 
 ";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
     }
 
@@ -437,7 +448,7 @@ fn test() {
 }
 ";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {
             Ok(_) => panic!("Expected TypeError::HeterogenousArray. Passed checks."),
             Err(e) => {
@@ -465,7 +476,7 @@ fn test() {
 }
 ";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {
             Ok(_) => panic!("Expected TypeError::LhsRhsInEq. Passed checks."),
             Err(e) => {
@@ -499,7 +510,7 @@ fn test() {
 }
 ";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
     }
 
@@ -522,7 +533,7 @@ fn test() {
     a.t[3] = 10;
 }";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
     }
 
@@ -545,7 +556,7 @@ fn foo() {
 }
 ";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
     }
 
@@ -574,8 +585,8 @@ fn main() {
 }
 ";
 
-        let mod1 = parse_module(mod1).unwrap();
-        let mod2 = parse_module(mod2).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let mod2 = parse_module(wrap_input!(mod2)).unwrap();
         check_program(vec![mod1, mod2]).unwrap();
     }
 
@@ -600,7 +611,7 @@ fn main() {
 }
 ";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
     }
 
@@ -621,7 +632,7 @@ fn main() {
     test_function(t);
 }";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
     }
 
@@ -642,7 +653,7 @@ fn main() {
     test_function(1, 2, 3);
 }";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
     }
 
@@ -658,7 +669,7 @@ fn main() {
     let t = test_function;
 }";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {
             Ok(_) => panic!("Found Ok. Expected AnalysisError::UncheckedFunctionBinding"),
             Err(e) => {
@@ -686,7 +697,7 @@ fn main() {
     let t = init T { i: test_function };
 }";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {
             Ok(_) => panic!("Found Ok. Expected AnalysisError::UncheckedFunctionBinding"),
             Err(e) => {
@@ -717,7 +728,7 @@ fn main() {
     test_function(t);
 }";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
     }
 
@@ -736,7 +747,7 @@ fn recurse(i: int) -> int {
 }
 ";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
     }
 
@@ -763,7 +774,7 @@ fn recurse_b(i: int) -> int {
 }
 ";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
     }
 
@@ -782,7 +793,7 @@ struct TypeB {
 }
 ";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {
             Ok(_) => panic!(),
             Err(e) => match e {
@@ -812,7 +823,7 @@ struct Foo {
 
 struct Data { }
 ";
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
     }
 
@@ -828,7 +839,7 @@ fn test() {
     };
 }";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
     }
     
@@ -846,7 +857,7 @@ fn test() -> int {
     return func(10);
 }";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
     }
 
@@ -868,7 +879,7 @@ fn test() -> int {
     return test2(func);
 }";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
     }
 
@@ -886,7 +897,7 @@ fn test() -> int {
     return inc(0) |> inc() |> inc() |> inc();
 }";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
     }
 
@@ -897,7 +908,7 @@ fn test() -> int {
 #[test, foo = \"bar\"]
 struct Foo { }";
 
-        let mod1 = parse_module(input).unwrap();
+        let mod1 = parse_module(wrap_input!(input)).unwrap();
         let program = check_program(vec![mod1]).unwrap();
         let module_id = program.universe().module_id(&Ident("mod1".to_string())).unwrap();
         let module = program.universe().get_module(module_id);
@@ -915,7 +926,7 @@ struct Foo { }";
 
 fn foo() { }";
 
-        let mod1 = parse_module(input).unwrap();
+        let mod1 = parse_module(wrap_input!(input)).unwrap();
         let program = check_program(vec![mod1]).unwrap();
         let module_id = program.universe().module_id(&Ident("mod1".to_string())).unwrap();
         let module = program.universe().get_module(module_id);
@@ -938,7 +949,7 @@ fn test() {
     };
 }";
         
-        let mod1 = parse_module(input).unwrap();
+        let mod1 = parse_module(wrap_input!(input)).unwrap();
         let err = check_program(vec![mod1]);
 
         match err {
@@ -970,7 +981,7 @@ fn bar() -> int {
     return f(3, 5);
 }";
 
-        let mod1 = parse_module(mod1).unwrap();
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _err = check_program(vec![mod1]).unwrap();
     }
 }

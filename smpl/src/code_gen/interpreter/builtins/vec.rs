@@ -7,7 +7,7 @@ use std::cell::RefCell;
 
 use strfmt::strfmt;
 
-use crate::ast::Module;
+use crate::module::*;
 use crate::parser::parse_module;
 
 use crate::code_gen::interpreter::*;
@@ -30,7 +30,7 @@ const VEC_FMT_ITEM_USE: &'static str = "item_mod_use";
 
 const VEC_DECLARATION: &'static str = include_str!("vec.smpl");
 
-pub fn include(modules: &mut Vec<Module>, item_type_mod: Option<&str>, item_type: &str) {
+pub fn include(modules: &mut Vec<ParsedModule>, item_type_mod: Option<&str>, item_type: &str) {
     let item_mod_use = match item_type_mod {
         Some(str) => format!("use {};", str),
         None => "".to_string(),
@@ -46,8 +46,10 @@ pub fn include(modules: &mut Vec<Module>, item_type_mod: Option<&str>, item_type
     vars.insert(VEC_FMT_ITEM_TYPE_MOD.to_string(), &item_type_mod);
     vars.insert(VEC_FMT_ITEM_USE.to_string(), &item_mod_use);
 
+    
     let decl = strfmt(&VEC_DECLARATION, &vars).unwrap();
-    modules.push(parse_module(&decl).unwrap());
+    let input = UnparsedModule::anonymous(&decl);
+    modules.push(parse_module(input).unwrap());
 }
 
 pub fn add<MAP: BuiltinMap>(vm: &mut MAP, item_type: &str) {
@@ -244,7 +246,14 @@ fn remove(args: Option<Vec<Value>>) -> Result<Value, Error> {
 #[cfg_attr(rustfmt, rustfmt_skip)]
 mod tests {
 
+use crate::module::*;
 use super::*;
+
+macro_rules! wrap_input {
+    ($input: expr) => {{ 
+        UnparsedModule::anonymous($input)
+    }}
+}
 
 #[test]
 fn interpreter_vec_new() {
@@ -257,7 +266,7 @@ fn vec_new() {
 let v = vec_int::new();
 }
 ";
-    let mut modules = vec![parse_module(mod1).unwrap()];
+    let mut modules = vec![parse_module(wrap_input!(mod1)).unwrap()];
     include(&mut modules, None, "int");
 
     let mut vm = AVM::new(modules).unwrap();
@@ -285,7 +294,7 @@ v = vec_int::push(v, 456);
 return vec_int::len(v);
 }
 ";
-    let mut modules = vec![parse_module(mod1).unwrap()];
+    let mut modules = vec![parse_module(wrap_input!(mod1)).unwrap()];
     include(&mut modules, None, "int");
 
     let mut vm = AVM::new(modules).unwrap();
@@ -316,7 +325,7 @@ let b = vec_int::get(v, 1);
 return a * b;
 }
 ";
-    let mut modules = vec![parse_module(mod1).unwrap()];
+    let mut modules = vec![parse_module(wrap_input!(mod1)).unwrap()];
     include(&mut modules, None, "int");
 
     let mut vm = AVM::new(modules).unwrap();
@@ -347,7 +356,7 @@ v = vec_int::remove(v, 1);
 return vec_int::get(v, 1);
 }
 ";
-    let mut modules = vec![parse_module(mod1).unwrap()];
+    let mut modules = vec![parse_module(wrap_input!(mod1)).unwrap()];
     include(&mut modules, None, "int");
 
     let mut vm = AVM::new(modules).unwrap();
@@ -379,7 +388,7 @@ let a = vec_int::get(v, 0);
 return a;
 }
 ";
-    let mut modules = vec![parse_module(mod1).unwrap()];
+    let mut modules = vec![parse_module(wrap_input!(mod1)).unwrap()];
     include(&mut modules, None, "int");
 
     let mut vm = AVM::new(modules).unwrap();
@@ -425,7 +434,7 @@ v = vec_int::push(v, 7);
 return vec_int::contains(v, 20);
 }
 ";
-    let mut modules = vec![parse_module(mod1).unwrap()];
+    let mut modules = vec![parse_module(wrap_input!(mod1)).unwrap()];
     include(&mut modules, None, "int");
 
     let mut vm = AVM::new(modules).unwrap();

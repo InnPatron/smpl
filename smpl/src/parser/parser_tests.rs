@@ -7,6 +7,7 @@ mod parser_tests {
     use crate::parser::*;
     use crate::ast::*;
     use crate::span::Span;
+    use crate::module::*;
 
     fn parse_expr_quick(input: &str) -> Expr {
         let mut tokens = buffer_input(input);
@@ -22,6 +23,12 @@ mod parser_tests {
         stmt
     }
 
+    macro_rules! wrap_input {
+        ($input: expr) => {{ 
+            UnparsedModule::anonymous($input)
+        }}
+    }
+
     #[test]
     fn parse_programs() {
         {
@@ -31,7 +38,7 @@ mod parser_tests {
 
     }
 }";
-            parse_module(input).unwrap();
+            parse_module(wrap_input!(input)).unwrap();
         }
 
         {
@@ -79,7 +86,7 @@ fn if_complex() -> i32 {
 		return 2;
 	}
 }";
-            let ast = parse_module(input).unwrap();
+            let ast = parse_module(wrap_input!(input)).unwrap().module;
             assert_eq!(ast.1.len(), 5);
         }
     }
@@ -464,7 +471,7 @@ struct TestStruct {
 "#[test, foo = \"bar\"]
 struct Foo { }";
 
-        let _input = parse_module(input).unwrap();
+        let _input = parse_module(wrap_input!(input)).unwrap();
     }
 
     #[test]
@@ -474,6 +481,6 @@ struct Foo { }";
 
 fn foo() { }";
 
-        let _input = parse_module(input).unwrap();
+        let _input = parse_module(wrap_input!(input)).unwrap();
     }
 }
