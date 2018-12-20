@@ -90,7 +90,14 @@ fn to_upper(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
 #[cfg(test)]
 mod tests {
+use crate::module::*;
 use super::*;
+
+macro_rules! wrap_input {
+    ($input: expr) => {{ 
+        UnparsedModule::anonymous($input.to_string())
+    }}
+}
 
 #[test]
 fn interpreter_str_len() {
@@ -200,7 +207,7 @@ fn test() -> String {
 return str::to_string(\"Cannot\", \" touch\", \" this!?\");
 }
 ";
-    let mut modules = vec![parse_module(mod1).unwrap()];
+    let mut modules = vec![parse_module(wrap_input!(mod1)).unwrap()];
     include(&mut modules);
 
     let mut vm = AVM::new(modules).unwrap();

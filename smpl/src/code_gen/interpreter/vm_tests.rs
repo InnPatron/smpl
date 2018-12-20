@@ -1,12 +1,15 @@
 use failure::Error;
 
+use crate::module::*;
 use crate::parser::parse_module;
 use crate::code_gen::interpreter::*;
 
 macro_rules! setup_and_run {
     ($mod1: expr, $mod_name: expr, $fn_name: expr, $args: expr) => {{
 
-        let modules = vec![parse_module($mod1).expect("Failed to parse module")];
+        let module = UnparsedModule::anonymous($mod1.to_string());
+
+        let modules = vec![parse_module(module).expect("Failed to parse module")];
         let mut avm = AVM::new(modules).unwrap();
         
         let _ = avm.insert_builtin($mod_name, "add", add);
@@ -18,6 +21,12 @@ macro_rules! setup_and_run {
             .expect("AVM eval error");
 
         a_result
+    }}
+}
+
+macro_rules! wrap_input {
+    ($input: expr) => {{ 
+        UnparsedModule::anonymous($input.to_string())
     }}
 }
 
@@ -137,7 +146,8 @@ return mod1::add(1, 2);
 }
 ";
 
-    let modules = vec![parse_module(mod1).unwrap(), parse_module(mod2).unwrap()];
+    let modules = vec![parse_module(wrap_input!(mod1)).unwrap(), 
+        parse_module(wrap_input!(mod2)).unwrap()];
 
     let mut avm = AVM::new(modules).unwrap();
     avm.insert_builtin("mod1", "add", add).unwrap();
