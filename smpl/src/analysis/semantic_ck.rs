@@ -1,19 +1,22 @@
 use crate::feature::*;
-use crate::ast::Module as AstModule;
+use crate::module::ParsedModule;
 
 use super::error::AnalysisError;
 use super::metadata::*;
 use super::semantic_data::*;
 use super::mod_resolver;
 
-pub fn check_program(modules: Vec<AstModule>) -> Result<Program, AnalysisError> {
+pub fn check_program(modules: Vec<ParsedModule>) -> Result<Program, AnalysisError> {
     let metadata = Metadata::new();
     let universe = Universe::std();
     let features = PresentFeatures::new();
 
     let mut program = Program::new(universe, metadata, features);
 
-    mod_resolver::check_modules(&mut program, modules)?;
+    mod_resolver::check_modules(&mut program, modules
+                                .into_iter()            // TODO: Remove so mod_resolver can handle sources
+                                .map(|m| m.module)
+                                .collect())?;
 
     Metadata::find_main(&mut program)?;
 

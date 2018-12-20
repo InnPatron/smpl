@@ -28,7 +28,7 @@ pub struct AVM {
 impl AVM {
     pub fn new(user_modules: Vec<ParsedModule>) -> Result<AVM, SMPLError> {
         let modules = loader::include(user_modules);
-        let program = check_program(modules.into_iter().map(|m| m.module).collect())?;
+        let program = check_program(modules)?;
         let mut vm = AVM {
             program: program,
             builtins: HashMap::new(),
