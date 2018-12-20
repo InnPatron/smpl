@@ -4,12 +4,12 @@ use petgraph::graph::NodeIndex;
 
 use crate::feature::*;
 use crate::ast;
-use crate::err::*;
 
 use crate::span::Span;
 
 use super::metadata::FnLayout;
 
+use super::error::*;
 use super::fn_type_generator::*;
 use super::smpl_type::*;
 use super::linear_cfg_traversal::*;
@@ -37,7 +37,7 @@ pub fn analyze_fn(
     global_scope: &ScopedData,
     fn_id: FnId,
     module_id: ModuleId,
-) -> Result<(), Err> {
+) -> Result<(), AnalysisError> {
     let fn_return_type;
     let fn_return_type_id;
     let unknown_type = {
@@ -107,7 +107,7 @@ pub fn analyze_fn(
 }
 
 // TODO: maybe add reverse traverser?
-fn return_trace(cfg: &CFG) -> Result<(), Err> {
+fn return_trace(cfg: &CFG) -> Result<(), AnalysisError> {
     let end = cfg.end();
     let scope_exit = cfg.previous(end);
 
@@ -138,7 +138,7 @@ fn return_trace(cfg: &CFG) -> Result<(), Err> {
     unreachable!();
 }
 
-fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, Err> {
+fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, AnalysisError> {
     use super::control_data::Node;
 
     match *cfg.node_weight(id) {
@@ -148,7 +148,7 @@ fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, E
 
         Node::ExitScope => Ok(Some(vec![cfg.previous(id)])),
 
-        _ => return Err(ControlFlowErr::MissingReturn.into()),
+        _ => return Err(ControlFlowError::MissingReturn.into()),
     }
 }
 
@@ -158,7 +158,7 @@ fn resolve_bin_op(
     lhs: TypeId,
     rhs: TypeId,
     span: Span,
-) -> Result<TypeId, Err> {
+) -> Result<TypeId, AnalysisError> {
     use crate::ast::BinOp::*;
 
     let lh_type = universe.get_type(lhs);
@@ -169,7 +169,7 @@ fn resolve_bin_op(
             (&SmplType::Int, &SmplType::Int) => Ok(universe.int()),
             (&SmplType::Float, &SmplType::Float) => Ok(universe.float()),
 
-            _ => Err(TypeErr::BinOp {
+            _ => Err(TypeError::BinOp {
                 op: op.clone(),
                 expected: vec![universe.int(), universe.float()],
                 lhs: lhs,
@@ -180,7 +180,7 @@ fn resolve_bin_op(
 
         LogicalAnd | LogicalOr => match (&*lh_type, &*rh_type) {
             (&SmplType::Bool, &SmplType::Bool) => Ok(universe.boolean()),
-            _ => Err(TypeErr::BinOp {
+            _ => Err(TypeError::BinOp {
                 op: op.clone(),
                 expected: vec![universe.boolean()],
                 lhs: lhs,
@@ -193,7 +193,7 @@ fn resolve_bin_op(
             (&SmplType::Int, &SmplType::Int) => Ok(universe.boolean()),
             (&SmplType::Float, &SmplType::Float) => Ok(universe.boolean()),
 
-            _ => Err(TypeErr::BinOp {
+            _ => Err(TypeError::BinOp {
                 op: op.clone(),
                 expected: vec![universe.int(), universe.float()],
                 lhs: lhs,
@@ -206,7 +206,7 @@ fn resolve_bin_op(
             if *lh_type == *rh_type {
                 Ok(universe.boolean())
             } else {
-                Err(TypeErr::LhsRhsInEq(lhs, rhs, span).into())
+                Err(TypeError::LhsRhsInEq(lhs, rhs, span).into())
             }
         }
     }
@@ -217,7 +217,7 @@ fn resolve_uni_op(
     op: &ast::UniOp,
     tmp_type_id: TypeId,
     span: Span,
-) -> Result<TypeId, Err> {
+) -> Result<TypeId, AnalysisError> {
     use crate::ast::UniOp::*;
 
     let tmp_type = universe.get_type(tmp_type_id);
@@ -225,7 +225,7 @@ fn resolve_uni_op(
     match *op {
         Negate => match &*tmp_type {
             &SmplType::Int | &SmplType::Float => Ok(tmp_type_id),
-            _ => Err(TypeErr::UniOp {
+            _ => Err(TypeError::UniOp {
                 op: op.clone(),
                 expected: vec![universe.int(), universe.float()],
                 expr: tmp_type_id,
@@ -235,7 +235,7 @@ fn resolve_uni_op(
 
         LogicalInvert => match &*tmp_type {
             &SmplType::Bool => Ok(tmp_type_id),
-            _ => Err(TypeErr::UniOp {
+            _ => Err(TypeError::UniOp {
                 op: op.clone(),
                 expected: vec![universe.boolean()],
                 expr: tmp_type_id,
@@ -253,7 +253,7 @@ impl<'a> FnAnalyzer<'a> {
         expr: &Expr,
         field_access: &FieldAccess,
         span: Span,
-    ) -> Result<TypeId, Err> {
+    ) -> Result<TypeId, AnalysisError> {
         let path = field_access.path();
         let path_iter = path.path().iter();
 
@@ -276,7 +276,7 @@ impl<'a> FnAnalyzer<'a> {
             match *indexing_type {
                 SmplType::Int => (),
                 _ => {
-                    return Err(TypeErr::InvalidIndex {
+                    return Err(TypeError::InvalidIndex {
                         found: indexing_type_id,
                         span: expr.get_tmp(e).span(),
                     }.into());
@@ -288,7 +288,7 @@ impl<'a> FnAnalyzer<'a> {
                     current_type_id = a.base_type;
                 }
                 _ => {
-                    return Err(TypeErr::NotAnArray {
+                    return Err(TypeError::NotAnArray {
                         found: var_type_id,
                         span: expr.get_tmp(e).span(),
                     }.into());
@@ -306,7 +306,7 @@ impl<'a> FnAnalyzer<'a> {
                 SmplType::Struct(ref struct_type) => match *field {
                     PathSegment::Ident(ref field) => {
                         let name = field.name();
-                        let field_id = struct_type.field_id(name).ok_or(TypeErr::UnknownField {
+                        let field_id = struct_type.field_id(name).ok_or(TypeError::UnknownField {
                             name: name.clone(),
                             struct_type: current_type_id,
                             span: span,
@@ -319,7 +319,7 @@ impl<'a> FnAnalyzer<'a> {
 
                     PathSegment::Indexing(ref field, ref indexing) => {
                         let name = field.name();
-                        let field_id = struct_type.field_id(name).ok_or(TypeErr::UnknownField {
+                        let field_id = struct_type.field_id(name).ok_or(TypeError::UnknownField {
                             name: name.clone(),
                             struct_type: current_type_id,
                             span: span,
@@ -338,7 +338,7 @@ impl<'a> FnAnalyzer<'a> {
                             SmplType::Int => (),
 
                             _ => {
-                                return Err(TypeErr::InvalidIndex {
+                                return Err(TypeError::InvalidIndex {
                                     found: indexing_type_id,
                                     span: expr.get_tmp(*indexing).span(),
                                 }.into());
@@ -351,7 +351,7 @@ impl<'a> FnAnalyzer<'a> {
                             }
 
                             _ => {
-                                return Err(TypeErr::NotAnArray {
+                                return Err(TypeError::NotAnArray {
                                     found: field_type_id,
                                     span: span,
                                 }.into());
@@ -361,7 +361,7 @@ impl<'a> FnAnalyzer<'a> {
                 },
 
                 _ => {
-                    return Err(TypeErr::FieldAccessOnNonStruct {
+                    return Err(TypeError::FieldAccessOnNonStruct {
                         path: field_access.raw_path().clone(),
                         index: index,
                         invalid_type: current_type_id,
@@ -380,7 +380,7 @@ impl<'a> FnAnalyzer<'a> {
         Ok(accessed_field_type_id)
     }
 
-    fn resolve_expr(&mut self, expr: &Expr) -> Result<TypeId, Err> {
+    fn resolve_expr(&mut self, expr: &Expr) -> Result<TypeId, AnalysisError> {
         let mut expr_type = None;
 
         for tmp_id in expr.execution_order() {
@@ -410,7 +410,7 @@ impl<'a> FnAnalyzer<'a> {
                     match *unknown_type {
                         SmplType::Struct(ref t) => struct_type = t,
                         _ => {
-                            return Err(TypeErr::NotAStruct {
+                            return Err(TypeError::NotAStruct {
                                 type_name: type_name.clone(),
                                 found: struct_type_id,
                                 span: tmp.span(),
@@ -421,7 +421,7 @@ impl<'a> FnAnalyzer<'a> {
                     // Check if the struct is an 'opaque' type (i.e. cannot be initialized by SMPL
                     // code)
                     if self.program.metadata().is_opaque(struct_type_id) {
-                        return Err(TypeErr::InitOpaqueType {
+                        return Err(TypeError::InitOpaqueType {
                             struct_type: struct_type_id,
                             span: tmp.span(),
                         }.into());
@@ -431,13 +431,13 @@ impl<'a> FnAnalyzer<'a> {
                     if let Err(unknown_fields) = init.set_field_init(self.program.universe()) {
                         // TODO: Allow for multiple errors
                         /*let ident = struct_type.get_ident(id);
-                                return Err(TypeErr::UnknownField {
+                                return Err(TypeError::UnknownField {
                                     name: ident.clone(),
                                     struct_type: struct_type_id,
                                 }.into());
                                 */
                         // No field initializations but the struct type has fields
-                        return Err(TypeErr::StructNotFullyInitialized {
+                        return Err(TypeError::StructNotFullyInitialized {
                             type_name: type_name.clone(),
                             struct_type: struct_type_id,
                             missing_fields: unknown_fields,
@@ -449,7 +449,7 @@ impl<'a> FnAnalyzer<'a> {
                         Some(init_list) => {
                             if init_list.len() != struct_type.fields.len() {
                                 // Missing fields -> struct is not fully initialized
-                                return Err(TypeErr::StructNotFullyInitialized {
+                                return Err(TypeError::StructNotFullyInitialized {
                                     type_name: type_name.clone(),
                                     struct_type: struct_type_id,
                                     missing_fields: {
@@ -479,7 +479,7 @@ impl<'a> FnAnalyzer<'a> {
                                 if self.program.universe().get_type(tmp_type_id)
                                     != self.program.universe().get_type(field_type_id)
                                 {
-                                    return Err(TypeErr::UnexpectedType {
+                                    return Err(TypeError::UnexpectedType {
                                         found: tmp_type_id,
                                         expected: field_type_id,
                                         span: tmp.span(),
@@ -491,7 +491,7 @@ impl<'a> FnAnalyzer<'a> {
                         None => {
                             if struct_type.fields.len() != 0 {
                                 // Missing fields -> struct is not fully initialized
-                                return Err(TypeErr::StructNotFullyInitialized {
+                                return Err(TypeError::StructNotFullyInitialized {
                                     type_name: type_name.clone(),
                                     struct_type: struct_type_id,
                                     missing_fields: {
@@ -523,7 +523,7 @@ impl<'a> FnAnalyzer<'a> {
                             .metadata_mut()
                             .is_builtin_params_unchecked(fn_id)
                         {
-                            return Err(Err::UncheckedFunctionBinding(var.ident().clone()));
+                            return Err(AnalysisError::UncheckedFunctionBinding(var.ident().clone()));
                         }
 
                         let fn_type_id = if self.program.metadata().is_builtin(fn_id) {
@@ -644,7 +644,7 @@ impl<'a> FnAnalyzer<'a> {
                             ParamType::Checked(ref params) => match arg_type_ids {
                                 Some(arg_type_ids) => {
                                     if params.len() != arg_type_ids.len() {
-                                        return Err(TypeErr::Arity {
+                                        return Err(TypeError::Arity {
                                             fn_type: fn_type_id,
                                             found_args: arg_type_ids.len(),
                                             expected_param: params.len(),
@@ -661,7 +661,7 @@ impl<'a> FnAnalyzer<'a> {
                                         let param_type = self.program.universe().get_type(*param);
                                         if arg_type != param_type {
                                             return Err(
-                                                TypeErr::ArgMismatch {
+                                                TypeError::ArgMismatch {
                                                     fn_type_id: fn_type_id,
                                                     index: index,
                                                     arg: *arg,
@@ -675,7 +675,7 @@ impl<'a> FnAnalyzer<'a> {
 
                                 None => {
                                     if params.len() != 0 {
-                                        return Err(TypeErr::Arity {
+                                        return Err(TypeError::Arity {
                                             fn_type: fn_type_id,
                                             found_args: 0,
                                             expected_param: params.len(),
@@ -724,7 +724,7 @@ impl<'a> FnAnalyzer<'a> {
                                     .get_type(expected_element_type_id.unwrap());
 
                                 if expected_element_type != current_element_type {
-                                    return Err(TypeErr::HeterogenousArray {
+                                    return Err(TypeError::HeterogenousArray {
                                         expected: expected_element_type_id.unwrap(),
                                         found: element_type_id,
                                         index: i,
@@ -782,7 +782,7 @@ impl<'a> FnAnalyzer<'a> {
                             }
 
                             _ => {
-                                return Err(TypeErr::NotAnArray {
+                                return Err(TypeError::NotAnArray {
                                     found: tmp_type_id,
                                     span: tmp.span(),
                                 }.into());
@@ -802,7 +802,7 @@ impl<'a> FnAnalyzer<'a> {
                         match *tmp_type {
                             SmplType::Int => (),
                             _ => {
-                                return Err(TypeErr::InvalidIndex {
+                                return Err(TypeError::InvalidIndex {
                                     found: tmp_type_id,
                                     span: tmp.span(),
                                 }.into());
@@ -863,52 +863,52 @@ impl<'a> FnAnalyzer<'a> {
     }
 }
 
-impl<'a> Passenger<Err> for FnAnalyzer<'a> {
-    fn start(&mut self, _id: NodeIndex) -> Result<(), Err> {
+impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
+    fn start(&mut self, _id: NodeIndex) -> Result<(), AnalysisError> {
         Ok(())
     }
 
-    fn end(&mut self, _id: NodeIndex) -> Result<(), Err> {
+    fn end(&mut self, _id: NodeIndex) -> Result<(), AnalysisError> {
         Ok(())
     }
 
-    fn branch_split(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), Err> {
+    fn branch_split(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), AnalysisError> {
         Ok(())
     }
 
-    fn branch_merge(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), Err> {
+    fn branch_merge(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), AnalysisError> {
         Ok(())
     }
 
-    fn loop_head(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), Err> {
+    fn loop_head(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), AnalysisError> {
         Ok(())
     }
 
-    fn loop_foot(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), Err> {
+    fn loop_foot(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), AnalysisError> {
         Ok(())
     }
 
-    fn cont(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), Err> {
+    fn cont(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), AnalysisError> {
         Ok(())
     }
 
-    fn br(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), Err> {
+    fn br(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), AnalysisError> {
         Ok(())
     }
 
-    fn enter_scope(&mut self, _id: NodeIndex) -> Result<(), Err> {
+    fn enter_scope(&mut self, _id: NodeIndex) -> Result<(), AnalysisError> {
         self.scope_stack.push(self.current_scope.clone());
         Ok(())
     }
 
-    fn exit_scope(&mut self, _id: NodeIndex) -> Result<(), Err> {
+    fn exit_scope(&mut self, _id: NodeIndex) -> Result<(), AnalysisError> {
         let popped = self.scope_stack.pop()
                                      .expect("If CFG was generated properly and the graph is being walked correctly, there should be a scope to pop");
         self.current_scope = popped;
         Ok(())
     }
 
-    fn local_var_decl(&mut self, _id: NodeIndex, var_decl: &LocalVarDeclData) -> Result<(), Err> {
+    fn local_var_decl(&mut self, _id: NodeIndex, var_decl: &LocalVarDeclData) -> Result<(), AnalysisError> {
         let var_decl = &var_decl.decl;
 
         let expr_type_id = self.resolve_expr(var_decl.init_expr())?;
@@ -931,7 +931,7 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         if var_type == expr_type {
             self.current_scope.insert_var(name, var_id, var_type_id);
         } else {
-            return Err(TypeErr::LhsRhsInEq(var_type_id, expr_type_id, var_decl.span()).into());
+            return Err(TypeError::LhsRhsInEq(var_type_id, expr_type_id, var_decl.span()).into());
         }
 
         // Local variable types metadata
@@ -940,7 +940,7 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn assignment(&mut self, _id: NodeIndex, assignment: &AssignmentData) -> Result<(), Err> {
+    fn assignment(&mut self, _id: NodeIndex, assignment: &AssignmentData) -> Result<(), AnalysisError> {
         let assignment = &assignment.assignment;
         let assignee = assignment.assignee();
 
@@ -957,17 +957,17 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         let assignment_span = Span::combine(assignment.access_span(), assignment.value().span());
 
         if assignee_type != expr_type {
-            return Err(TypeErr::LhsRhsInEq(assignee_type_id, expr_type_id, assignment_span).into());
+            return Err(TypeError::LhsRhsInEq(assignee_type_id, expr_type_id, assignment_span).into());
         }
 
         Ok(())
     }
 
-    fn expr(&mut self, _id: NodeIndex, expr: &ExprData) -> Result<(), Err> {
+    fn expr(&mut self, _id: NodeIndex, expr: &ExprData) -> Result<(), AnalysisError> {
         self.resolve_expr(&expr.expr).map(|_| ())
     }
 
-    fn ret(&mut self, _id: NodeIndex, rdata: &ReturnData) -> Result<(), Err> {
+    fn ret(&mut self, _id: NodeIndex, rdata: &ReturnData) -> Result<(), AnalysisError> {
         let expr = rdata.expr.as_ref();
         let span = rdata.span.clone();
         let expr_type_id = match expr {
@@ -977,7 +977,7 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         };
 
         if self.program.universe().get_type(expr_type_id) != self.fn_return_type {
-            return Err(TypeErr::InEqFnReturn {
+            return Err(TypeError::InEqFnReturn {
                 expr: expr_type_id,
                 fn_return: self.fn_return_type_id,
                 return_span: span,
@@ -987,12 +987,12 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn loop_condition(&mut self, _id: NodeIndex, condition: &ExprData) -> Result<(), Err> {
+    fn loop_condition(&mut self, _id: NodeIndex, condition: &ExprData) -> Result<(), AnalysisError> {
         let condition = &condition.expr;
         let expr_type_id = self.resolve_expr(condition)?;
 
         if *self.program.universe().get_type(expr_type_id) != SmplType::Bool {
-            return Err(TypeErr::UnexpectedType {
+            return Err(TypeError::UnexpectedType {
                 found: expr_type_id,
                 expected: self.program.universe().boolean(),
                 span: condition.span(),
@@ -1002,22 +1002,22 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn loop_start_true_path(&mut self, _id: NodeIndex) -> Result<(), Err> {
+    fn loop_start_true_path(&mut self, _id: NodeIndex) -> Result<(), AnalysisError> {
         // Do nothing
         Ok(())
     }
 
-    fn loop_end_true_path(&mut self, _id: NodeIndex) -> Result<(), Err> {
+    fn loop_end_true_path(&mut self, _id: NodeIndex) -> Result<(), AnalysisError> {
         // Do nothing
         Ok(())
     }
 
-    fn branch_condition(&mut self, _id: NodeIndex, condition: &ExprData) -> Result<(), Err> {
+    fn branch_condition(&mut self, _id: NodeIndex, condition: &ExprData) -> Result<(), AnalysisError> {
         let condition = &condition.expr;
         let expr_type_id = self.resolve_expr(condition)?;
 
         if *self.program.universe().get_type(expr_type_id) != SmplType::Bool {
-            return Err(TypeErr::UnexpectedType {
+            return Err(TypeError::UnexpectedType {
                 found: expr_type_id,
                 expected: self.program.universe().boolean(),
                 span: condition.span(),
@@ -1027,22 +1027,22 @@ impl<'a> Passenger<Err> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn branch_start_true_path(&mut self, _id: NodeIndex) -> Result<(), Err> {
+    fn branch_start_true_path(&mut self, _id: NodeIndex) -> Result<(), AnalysisError> {
         // Do nothing
         Ok(())
     }
 
-    fn branch_start_false_path(&mut self, _id: NodeIndex) -> Result<(), Err> {
+    fn branch_start_false_path(&mut self, _id: NodeIndex) -> Result<(), AnalysisError> {
         // Do nothing
         Ok(())
     }
 
-    fn branch_end_true_path(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), Err> {
+    fn branch_end_true_path(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), AnalysisError> {
         // Do nothing
         Ok(())
     }
 
-    fn branch_end_false_path(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), Err> {
+    fn branch_end_false_path(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), AnalysisError> {
         // Do nothing
         Ok(())
     }

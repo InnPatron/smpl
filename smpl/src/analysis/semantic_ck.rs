@@ -1,13 +1,12 @@
-use crate::err::Err;
-
 use crate::feature::*;
 use crate::ast::Module as AstModule;
 
+use super::error::AnalysisError;
 use super::metadata::*;
 use super::semantic_data::*;
 use super::mod_resolver;
 
-pub fn check_program(modules: Vec<AstModule>) -> Result<Program, Err> {
+pub fn check_program(modules: Vec<AstModule>) -> Result<Program, AnalysisError> {
     let metadata = Metadata::new();
     let universe = Universe::std();
     let features = PresentFeatures::new();

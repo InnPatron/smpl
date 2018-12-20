@@ -11,6 +11,7 @@ mod expr_flow;
 mod fn_analyzer;
 mod linear_cfg_traversal;
 mod mod_resolver;
+mod error;
 pub mod metadata;
 
 pub use self::semantic_ck::check_program;

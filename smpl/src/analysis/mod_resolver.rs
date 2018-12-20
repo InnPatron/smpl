@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::err::{Err, TypeErr};
 use crate::ast::{DeclStmt, Function as AstFunction, Module as AstModule, Struct};
 use crate::ast::{AstNode, BuiltinFunction as AstBuiltinFunction, Ident, UseDecl};
 
+use super::error::{AnalysisError, TypeError};
 use super::feature_checkers::*;
 use super::metadata::*;
 use super::smpl_type::*;
@@ -34,7 +34,7 @@ struct ReservedType(TypeId, AstNode<Struct>);
 struct ReservedFn(FnId, TypeId, AstNode<AstFunction>);
 struct ReservedBuiltinFn(FnId, TypeId, AstNode<AstBuiltinFunction>);
 
-pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(), Err> {
+pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(), AnalysisError> {
     let mut raw_data = raw_mod_data(program, modules)?;
 
     let mut mapped_raw = HashMap::new();
@@ -192,7 +192,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(
     Ok(())
 }
 
-fn cyclic_type_check(program: &Program, root_id: TypeId) -> Result<(), Err> {
+fn cyclic_type_check(program: &Program, root_id: TypeId) -> Result<(), AnalysisError> {
     let mut visited_structs = HashSet::new();
     let mut to_visit = Vec::new();
 
@@ -203,7 +203,7 @@ fn cyclic_type_check(program: &Program, root_id: TypeId) -> Result<(), Err> {
         to_visit = Vec::new();
         for type_id in depth.into_iter() {
             if visited_structs.contains(&type_id) {
-                return Err(TypeErr::CyclicType(root_id).into());
+                return Err(TypeError::CyclicType(root_id).into());
             }
 
             match *program.universe().get_type(type_id) {
@@ -240,7 +240,7 @@ fn generate_struct_type(
     program: &mut Program,
     scope: &ScopedData,
     struct_def: &Struct,
-) -> Result<(StructType, Vec<FieldId>), Err> {
+) -> Result<(StructType, Vec<FieldId>), AnalysisError> {
     let (universe, _metadata, _features) = program.analysis_context();
 
     let mut fields = HashMap::new();
@@ -271,7 +271,7 @@ fn generate_struct_type(
 fn map_usings(
     raw_modules: &HashMap<ModuleId, RawModData>,
     raw_prog: &mut RawProgram,
-) -> Result<(), Err> {
+) -> Result<(), AnalysisError> {
     for (id, raw_mod) in raw_modules {
         let mut dependencies = Vec::new();
         for use_decl in raw_mod.uses.iter() {
@@ -279,7 +279,7 @@ fn map_usings(
             let import_id = raw_prog
                 .raw_map
                 .get(import_name)
-                .ok_or(Err::UnresolvedUses(vec![use_decl.clone()]))?;
+                .ok_or(AnalysisError::UnresolvedUses(vec![use_decl.clone()]))?;
 
             dependencies.push(import_id.clone());
             // Get imported module's types and functions
@@ -347,7 +347,7 @@ fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
     }
 }
 
-fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> Result<HashMap<ModuleId, RawModData>, Err> {
+fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> Result<HashMap<ModuleId, RawModData>, AnalysisError> {
     let universe = program.universe_mut();
     let mut mod_map = HashMap::new();
     for module in modules {
@@ -386,7 +386,7 @@ fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> Result<HashMa
         }
 
         let raw = RawModData {
-            name: module.0.ok_or(Err::MissingModName)?,
+            name: module.0.ok_or(AnalysisError::MissingModName)?,
             id: universe.new_module_id(),
             reserved_structs: struct_reserve,
             reserved_fns: fn_reserve,
