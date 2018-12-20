@@ -7,7 +7,7 @@ use std::cell::RefCell;
 
 use strfmt::strfmt;
 
-use crate::ast::Module;
+use crate::module::*;
 use crate::parser::parse_module;
 
 use crate::code_gen::interpreter::*;
@@ -30,7 +30,7 @@ const VEC_FMT_ITEM_USE: &'static str = "item_mod_use";
 
 const VEC_DECLARATION: &'static str = include_str!("vec.smpl");
 
-pub fn include(modules: &mut Vec<Module>, item_type_mod: Option<&str>, item_type: &str) {
+pub fn include(modules: &mut Vec<ParsedModule>, item_type_mod: Option<&str>, item_type: &str) {
     let item_mod_use = match item_type_mod {
         Some(str) => format!("use {};", str),
         None => "".to_string(),
@@ -46,8 +46,10 @@ pub fn include(modules: &mut Vec<Module>, item_type_mod: Option<&str>, item_type
     vars.insert(VEC_FMT_ITEM_TYPE_MOD.to_string(), &item_type_mod);
     vars.insert(VEC_FMT_ITEM_USE.to_string(), &item_mod_use);
 
+    
     let decl = strfmt(&VEC_DECLARATION, &vars).unwrap();
-    modules.push(parse_module(&decl).unwrap());
+    let input = UnparsedModule::anonymous(decl);
+    modules.push(parse_module(input).unwrap());
 }
 
 pub fn add<MAP: BuiltinMap>(vm: &mut MAP, item_type: &str) {

@@ -1,7 +1,7 @@
 use failure::Error;
 
 use crate::exact_args;
-use crate::ast::Module;
+use crate::module::*;
 use crate::parser::parse_module;
 
 use crate::code_gen::interpreter::*;
@@ -19,8 +19,9 @@ pub const CONVERT_STRING_TO_INT: &'static str = "string_to_int";
 
 pub const CONVERT_DECLARATION: &'static str = include_str!("convert.smpl");
 
-pub fn include(modules: &mut Vec<Module>) {
-    modules.push(parse_module(CONVERT_DECLARATION).unwrap());
+pub fn include(modules: &mut Vec<ParsedModule>) {
+    let input = UnparsedModule::anonymous(CONVERT_DECLARATION.to_string());
+    modules.push(parse_module(input).unwrap());
 }
 
 pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {

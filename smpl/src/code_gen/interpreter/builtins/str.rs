@@ -1,7 +1,7 @@
 use failure::Error;
 
 use crate::{exact_args, min_args};
-use crate::ast::Module;
+use crate::module::*;
 use crate::parser::parse_module;
 
 use crate::code_gen::interpreter::*;
@@ -16,8 +16,9 @@ const STRING_TO_UPPER: &'static str = "to_upper";
 
 const STRING_DECLARATION: &'static str = include_str!("str.smpl");
 
-pub fn include(modules: &mut Vec<Module>) {
-    modules.push(parse_module(STRING_DECLARATION).unwrap());
+pub fn include(modules: &mut Vec<ParsedModule>) {
+    let input = UnparsedModule::anonymous(STRING_DECLARATION.to_string());
+    modules.push(parse_module(input).unwrap());
 }
 
 pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {

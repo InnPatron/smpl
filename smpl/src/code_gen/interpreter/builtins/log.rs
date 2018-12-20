@@ -2,7 +2,7 @@ use std::io::Write;
 use failure::Error;
 
 use crate::min_args;
-use crate::ast::Module;
+use crate::module::*;
 use crate::parser::parse_module;
 
 use crate::code_gen::interpreter::*;
@@ -13,8 +13,9 @@ pub const LOG_PRINTLN: &'static str = "println";
 
 pub const LOG_DECLARATION: &'static str = include_str!("log.smpl");
 
-pub fn include(modules: &mut Vec<Module>) {
-    modules.push(parse_module(LOG_DECLARATION).unwrap());
+pub fn include(modules: &mut Vec<ParsedModule>) {
+    let input = UnparsedModule::anonymous(LOG_DECLARATION.to_string());
+    modules.push(parse_module(input).unwrap());
 }
 
 pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {

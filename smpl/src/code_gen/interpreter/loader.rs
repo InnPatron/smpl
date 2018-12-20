@@ -1,9 +1,9 @@
 use super::builtins::*;
 use super::BuiltinMap;
 
-use crate::ast::Module;
+use crate::module::*;
 
-pub fn include(mut modules: Vec<Module>) -> Vec<Module> {
+pub fn include(mut modules: Vec<ParsedModule>) -> Vec<ParsedModule> {
     log::include(&mut modules);
     convert::include(&mut modules);
     math::include(&mut modules);
