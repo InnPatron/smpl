@@ -7,27 +7,27 @@ pub enum ModuleSource {
     File(PathBuf),
 }
 
-pub struct UnparsedModule {
+pub struct UnparsedModule<'a> {
     pub source: ModuleSource,
-    pub module: String,
+    pub module: &'a str,
 }
 
-impl UnparsedModule {
-    pub fn file(path: PathBuf, data: String) -> UnparsedModule {
+impl<'a> UnparsedModule<'a> {
+    pub fn file(path: PathBuf, data: &str) -> UnparsedModule {
         UnparsedModule {
             source: ModuleSource::File(path),
             module: data,
         }
     }
 
-    pub fn anonymous(data: String) -> UnparsedModule {
+    pub fn anonymous(data: &str) -> UnparsedModule {
         UnparsedModule {
             source: ModuleSource::Anonymous(None),
             module: data,
         }
     }
 
-    pub fn anonymous_hint(hint: String, data: String) -> UnparsedModule {
+    pub fn anonymous_hint(hint: String, data: &str) -> UnparsedModule {
         UnparsedModule {
             source: ModuleSource::Anonymous(Some(hint)),
             module: data,
