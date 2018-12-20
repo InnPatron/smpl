@@ -23,7 +23,7 @@ pub fn check_program(modules: Vec<AstModule>) -> Result<Program, AnalysisError> 
 #[cfg(test)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 mod tests {
-    use crate::err::*;
+    use super::super::error::*;
     use super::*;
     use crate::parser::*;
     use crate::analysis::smpl_type::*;
@@ -140,14 +140,14 @@ fn test() {
 
         let program = parse_module(input).unwrap();
         match check_program(vec![program]) {
-            Ok(_) => panic!("Passed analysis. Expected Err::UnknownBinding"),
+            Ok(_) => panic!("Passed analysis. Expected AnalysisError::UnknownBinding"),
             Err(e) => {
                 match e {
-                    Err::UnknownBinding(ident) => {
+                    AnalysisError::UnknownBinding(ident) => {
                         assert_eq!(ident, ident!("a"));
                     }
 
-                    e @ _ => panic!("Expected Err::UnknownBinding. Found {:?}", e),
+                    e @ _ => panic!("Expected AnalysisError::UnknownBinding. Found {:?}", e),
                 }
             }
         }
@@ -237,18 +237,18 @@ fn test() -> int {
         for i in 0..input.len() {
             let program = parse_module(input[i]).unwrap();
             match check_program(vec![program]) {
-                Ok(_) => panic!("Passed analysis. Expected Err::ControlFlowErr(ControlFlowErr::MissingReturn. Test {}", i),
+                Ok(_) => panic!("Passed analysis. Expected AnalysisError::ControlFlowError(ControlFlowError::MissingReturn. Test {}", i),
                 Err(e) => {
                     match e {
-                        Err::ControlFlowErr(e) => {
+                        AnalysisError::ControlFlowError(e) => {
                             match e {
-                                ControlFlowErr::MissingReturn => (),
+                                ControlFlowError::MissingReturn => (),
 
-                                e @ _ => panic!("Expected ControlFlowErr::MissingReturn. Test {}. Found {:?}", i, e),
+                                e @ _ => panic!("Expected ControlFlowError::MissingReturn. Test {}. Found {:?}", i, e),
                             }
                         }
 
-                        e @ _ => panic!("Expected Err::ControlFlowErr. Test {}. Found {:?}", i, e),
+                        e @ _ => panic!("Expected AnalysisError::ControlFlowError. Test {}. Found {:?}", i, e),
                     }
                 }
             }
@@ -439,17 +439,17 @@ fn test() {
 
         let mod1 = parse_module(mod1).unwrap();
         match check_program(vec![mod1]) {
-            Ok(_) => panic!("Expected TypeErr::HeterogenousArray. Passed checks."),
+            Ok(_) => panic!("Expected TypeError::HeterogenousArray. Passed checks."),
             Err(e) => {
                 match e {
-                    Err::TypeErr(e) => {
+                    AnalysisError::TypeError(e) => {
                         match e {
-                            TypeErr::HeterogenousArray{..} => (),
-                            e @ _ => panic!("Expected TypeErr::HeterogenousArray. Found {:?}", e),
+                            TypeError::HeterogenousArray{..} => (),
+                            e @ _ => panic!("Expected TypeError::HeterogenousArray. Found {:?}", e),
                         }
                     }
 
-                    e @ _ => panic!("Expected TypeErr::HeterogenousArray. Found {:?}", e),
+                    e @ _ => panic!("Expected TypeError::HeterogenousArray. Found {:?}", e),
                 }
             }
         }
@@ -467,17 +467,17 @@ fn test() {
 
         let mod1 = parse_module(mod1).unwrap();
         match check_program(vec![mod1]) {
-            Ok(_) => panic!("Expected TypeErr::LhsRhsInEq. Passed checks."),
+            Ok(_) => panic!("Expected TypeError::LhsRhsInEq. Passed checks."),
             Err(e) => {
                 match e {
-                    Err::TypeErr(e) => {
+                    AnalysisError::TypeError(e) => {
                         match e {
-                            TypeErr::LhsRhsInEq(..) => (),
-                            e @ _ => panic!("Expected TypeErr::LhsRhsInEq. Found {:?}", e),
+                            TypeError::LhsRhsInEq(..) => (),
+                            e @ _ => panic!("Expected TypeError::LhsRhsInEq. Found {:?}", e),
                         }
                     }
 
-                    e @ _ => panic!("Expected TypeErr::LhsRhsInEq. Found {:?}", e),
+                    e @ _ => panic!("Expected TypeError::LhsRhsInEq. Found {:?}", e),
                 }
             }
         }
@@ -660,11 +660,11 @@ fn main() {
 
         let mod1 = parse_module(mod1).unwrap();
         match check_program(vec![mod1]) {
-            Ok(_) => panic!("Found Ok. Expected Err::UncheckedFunctionBinding"),
+            Ok(_) => panic!("Found Ok. Expected AnalysisError::UncheckedFunctionBinding"),
             Err(e) => {
                 match e {
-                    Err::UncheckedFunctionBinding(..) => (),
-                    _ => panic!("Expected Err::UncheckedFunctionBinding. Found {:?}", e),
+                    AnalysisError::UncheckedFunctionBinding(..) => (),
+                    _ => panic!("Expected AnalysisError::UncheckedFunctionBinding. Found {:?}", e),
                 }
             }
         }
@@ -688,11 +688,11 @@ fn main() {
 
         let mod1 = parse_module(mod1).unwrap();
         match check_program(vec![mod1]) {
-            Ok(_) => panic!("Found Ok. Expected Err::UncheckedFunctionBinding"),
+            Ok(_) => panic!("Found Ok. Expected AnalysisError::UncheckedFunctionBinding"),
             Err(e) => {
                 match e {
-                    Err::UncheckedFunctionBinding(..) => (),
-                    _ => panic!("Expected Err::UncheckedFunctionBinding. Found {:?}", e),
+                    AnalysisError::UncheckedFunctionBinding(..) => (),
+                    _ => panic!("Expected AnalysisError::UncheckedFunctionBinding. Found {:?}", e),
                 }
             }
         }
@@ -786,9 +786,9 @@ struct TypeB {
         match check_program(vec![mod1]) {
             Ok(_) => panic!(),
             Err(e) => match e {
-                Err::TypeErr(e) => {
+                AnalysisError::TypeError(e) => {
                     match e {
-                        TypeErr::CyclicType(_) => (),
+                        TypeError::CyclicType(_) => (),
                         _ => panic!(),
                     }
                 }
@@ -945,9 +945,9 @@ fn test() {
             Ok(_) => panic!("Expected err"),
             Err(err) => {
                 match err {
-                    Err::TypeErr(t) => {
+                    AnalysisError::TypeError(t) => {
                         match t {
-                            TypeErr::InitOpaqueType {..} => (),
+                            TypeError::InitOpaqueType {..} => (),
                             _ => panic!("{:?}", t),
                         }
                     },
