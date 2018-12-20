@@ -2,14 +2,14 @@ use std::io;
 
 use failure::Error;
 
-use smpl::Module;
+use smpl::{ParsedModule, UnparsedModule};
 use smpl::parse_module;
 use smpl::interpreter::*;
 
 const RT: &'static str = include_str!("rt.smpl");
 
-pub fn include(scripts: &mut Vec<Module>) {
-    scripts.push(parse_module(RT).unwrap());
+pub fn include(scripts: &mut Vec<ParsedModule>) {
+    scripts.push(parse_module(UnparsedModule::anonymous(RT)).unwrap());
 }
 
 pub fn map_builtins(vm: &mut AVM) {
