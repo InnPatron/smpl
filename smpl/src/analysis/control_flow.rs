@@ -3,10 +3,10 @@ use petgraph::Direction;
 use petgraph::visit::EdgeRef;
 
 use crate::ast;
-use crate::err::ControlFlowErr;
 
 use crate::span::Span;
 
+use super::error::ControlFlowError;
 use super::smpl_type::{FunctionType, SmplType};
 use super::expr_flow;
 use super::typed_ast;
@@ -352,7 +352,7 @@ impl CFG {
         universe: &Universe,
         body: ast::AstNode<ast::Block>,
         fn_type: &FunctionType,
-    ) -> Result<Self, ControlFlowErr> {
+    ) -> Result<Self, ControlFlowError> {
         let mut cfg = {
             let mut graph = graph::Graph::new();
             let start = graph.add_node(Node::Start);
@@ -411,7 +411,7 @@ impl CFG {
         cfg: &mut CFG,
         instructions: Vec<ast::Stmt>,
         loop_data: Option<(graph::NodeIndex, graph::NodeIndex, LoopId)>,
-    ) -> Result<BranchData, ControlFlowErr> {
+    ) -> Result<BranchData, ControlFlowError> {
         use crate::ast::*;
 
         let mut previous = None;
@@ -592,7 +592,7 @@ impl CFG {
                             cfg.graph.add_edge(break_id, foot, Edge::Normal);
                         } else {
                             // Found a break statement not inside a loop.
-                            return Err(ControlFlowErr::BadBreak(span));
+                            return Err(ControlFlowError::BadBreak(span));
                         }
                     }
 
@@ -608,7 +608,7 @@ impl CFG {
                             cfg.graph.add_edge(continue_id, loop_head, Edge::BackEdge);
                         } else {
                             // Found a continue statement not inside a loop.
-                            return Err(ControlFlowErr::BadContinue(span));
+                            return Err(ControlFlowError::BadContinue(span));
                         }
                     }
 

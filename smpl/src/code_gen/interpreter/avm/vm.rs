@@ -9,7 +9,7 @@ use crate::analysis::*;
 
 use crate::ast::{Ident, Module};
 
-use crate::err::Err;
+use crate::err::Error as SMPLError;
 
 use crate::code_gen::interpreter::value::Value;
 use crate::code_gen::interpreter::env::Env;
@@ -26,7 +26,7 @@ pub struct AVM {
 }
 
 impl AVM {
-    pub fn new(user_modules: Vec<Module>) -> Result<AVM, Err> {
+    pub fn new(user_modules: Vec<Module>) -> Result<AVM, SMPLError> {
         let modules = loader::include(user_modules);
         let program = check_program(modules)?;
         let mut vm = AVM {

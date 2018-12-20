@@ -8,8 +8,8 @@ pub use self::fn_data::*;
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::{Annotation, Ident};
-use crate::err::Err;
 use crate::analysis::semantic_data::{FnId, ModuleId, Program, TypeId};
+use super::error::AnalysisError;
 
 #[derive(Clone, Debug)]
 pub struct Metadata {
@@ -112,7 +112,7 @@ impl Metadata {
         self.fn_param_ids.get(&fn_id).unwrap().as_slice()
     }
 
-    pub fn find_main(program: &mut Program) -> Result<(), Err> {
+    pub fn find_main(program: &mut Program) -> Result<(), AnalysisError> {
         use crate::ast::{AstNode, ModulePath};
         use crate::span::Span;
 
@@ -127,7 +127,7 @@ impl Metadata {
                 if m.main.is_none() {
                     m.main = Some((id, *mod_id))
                 } else {
-                    return Err(Err::MultipleMainFns);
+                    return Err(AnalysisError::MultipleMainFns);
                 }
             }
         }

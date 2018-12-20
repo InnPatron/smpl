@@ -1,9 +1,9 @@
-use crate::err::*;
 use crate::feature::*;
 use crate::ast::{AnonymousFn as AstAnonymousFn, BuiltinFnParams, BuiltinFunction as AstBuiltinFunction,
           Function as AstFunction};
 
 use super::*;
+use super::error::*;
 use super::smpl_type::*;
 use super::metadata::*;
 use super::feature_checkers::*;
@@ -14,7 +14,7 @@ pub fn generate_anonymous_fn_type(
     scope: &ScopedData,
     fn_id: FnId,
     fn_def: &AstAnonymousFn,
-) -> Result<FunctionType, Err> {
+) -> Result<FunctionType, AnalysisError> {
     let (universe, metadata, features) = program.analysis_context();
     let ret_type = match fn_def.return_type {
         Some(ref path) => {
@@ -64,7 +64,7 @@ pub fn generate_fn_type(
     scope: &ScopedData,
     fn_id: FnId,
     fn_def: &AstFunction,
-) -> Result<FunctionType, Err> {
+) -> Result<FunctionType, AnalysisError> {
     let (universe, metadata, features) = program.analysis_context();
     let ret_type = match fn_def.return_type {
         Some(ref path) => {
@@ -114,7 +114,7 @@ pub fn generate_builtin_fn_type(
     scope: &ScopedData,
     fn_id: FnId,
     fn_def: &AstBuiltinFunction,
-) -> Result<FunctionType, Err> {
+) -> Result<FunctionType, AnalysisError> {
     let (universe, metadata, features) = program.analysis_context();
     let ret_type = match fn_def.return_type {
         Some(ref path) => {

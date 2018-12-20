@@ -4,11 +4,11 @@ use std::rc::Rc;
 use std::slice::Iter;
 use std::fmt;
 
-use crate::err::Err;
 use crate::ast::*;
 use crate::ast::ModulePath as AstModulePath;
 use crate::feature::PresentFeatures;
 
+use super::error::AnalysisError;
 use super::metadata::Metadata;
 use super::smpl_type::*;
 use super::control_flow::CFG;
@@ -453,12 +453,12 @@ impl ScopedData {
         &'a self,
         universe: &'c Universe,
         type_annotation: TypeAnnotationRef<'b>,
-    ) -> Result<TypeId, Err> {
+    ) -> Result<TypeId, AnalysisError> {
         match type_annotation {
             TypeAnnotationRef::Path(path) => self.type_map
                 .get(&path.clone().into())
                 .map(|id| id.clone())
-                .ok_or(Err::UnknownType(type_annotation.into())),
+                .ok_or(AnalysisError::UnknownType(type_annotation.into())),
 
             TypeAnnotationRef::Array(base_type, size) => {
                 let base_type = base_type.data();
@@ -506,7 +506,7 @@ impl ScopedData {
         self.type_map.insert(path, id)
     }
 
-    pub fn binding_info(&self, name: &Ident) -> Result<BindingInfo, Err> {
+    pub fn binding_info(&self, name: &Ident) -> Result<BindingInfo, AnalysisError> {
         match self.var_map.get(name) {
             Some(v_id) => Ok(BindingInfo::Var(
                 v_id.clone(),
@@ -517,15 +517,15 @@ impl ScopedData {
                 self.fn_map
                     .get(&p)
                     .map(|f| BindingInfo::Fn(f.clone()))
-                    .ok_or(Err::UnknownBinding(name.clone()))
+                    .ok_or(AnalysisError::UnknownBinding(name.clone()))
             }
         }
     }
 
-    pub fn var_info(&self, name: &Ident) -> Result<(VarId, TypeId), Err> {
+    pub fn var_info(&self, name: &Ident) -> Result<(VarId, TypeId), AnalysisError> {
         let var_id = self.var_map
             .get(name)
-            .ok_or(Err::UnknownBinding(name.clone()))?
+            .ok_or(AnalysisError::UnknownBinding(name.clone()))?
             .clone();
         let type_id = self.var_type_map.get(&var_id).unwrap().clone();
 
@@ -540,11 +540,11 @@ impl ScopedData {
         }
     }
 
-    pub fn get_fn(&self, path: &AstModulePath) -> Result<FnId, Err> {
+    pub fn get_fn(&self, path: &AstModulePath) -> Result<FnId, AnalysisError> {
         self.fn_map
             .get(&path.clone().into())
             .map(|id| id.clone())
-            .ok_or(Err::UnknownFn(path.clone()))
+            .ok_or(AnalysisError::UnknownFn(path.clone()))
     }
 
     pub fn all_types(&self) -> Vec<(&ModulePath, &TypeId)> {
