@@ -17,6 +17,7 @@ mod ast;
 mod analysis;
 mod code_gen;
 mod span;
+mod module;
 
 pub use self::err::Error;
 
