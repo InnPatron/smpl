@@ -18,7 +18,7 @@ mod analysis;
 mod code_gen;
 mod span;
 
-pub use self::err::Err;
+pub use self::err::Error;
 
 pub use self::parser::parse_module;
 pub use self::ast::Module;
