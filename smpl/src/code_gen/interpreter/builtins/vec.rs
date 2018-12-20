@@ -48,7 +48,7 @@ pub fn include(modules: &mut Vec<ParsedModule>, item_type_mod: Option<&str>, ite
 
     
     let decl = strfmt(&VEC_DECLARATION, &vars).unwrap();
-    let input = UnparsedModule::anonymous(decl);
+    let input = UnparsedModule::anonymous(&decl);
     modules.push(parse_module(input).unwrap());
 }
 

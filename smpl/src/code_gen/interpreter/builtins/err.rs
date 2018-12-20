@@ -14,7 +14,7 @@ pub const ERR_ASSERT: &'static str = "assert";
 pub const ERR_DECLARATION: &'static str = include_str!("err.smpl");
 
 pub fn include(modules: &mut Vec<ParsedModule>) {
-    let input = UnparsedModule::anonymous(ERR_DECLARATION.to_string());
+    let input = UnparsedModule::anonymous(ERR_DECLARATION);
     modules.push(parse_module(input).unwrap());
 }
 

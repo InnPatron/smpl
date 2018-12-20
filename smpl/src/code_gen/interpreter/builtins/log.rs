@@ -14,7 +14,7 @@ pub const LOG_PRINTLN: &'static str = "println";
 pub const LOG_DECLARATION: &'static str = include_str!("log.smpl");
 
 pub fn include(modules: &mut Vec<ParsedModule>) {
-    let input = UnparsedModule::anonymous(LOG_DECLARATION.to_string());
+    let input = UnparsedModule::anonymous(LOG_DECLARATION);
     modules.push(parse_module(input).unwrap());
 }
 

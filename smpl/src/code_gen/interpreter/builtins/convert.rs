@@ -20,7 +20,7 @@ pub const CONVERT_STRING_TO_INT: &'static str = "string_to_int";
 pub const CONVERT_DECLARATION: &'static str = include_str!("convert.smpl");
 
 pub fn include(modules: &mut Vec<ParsedModule>) {
-    let input = UnparsedModule::anonymous(CONVERT_DECLARATION.to_string());
+    let input = UnparsedModule::anonymous(CONVERT_DECLARATION);
     modules.push(parse_module(input).unwrap());
 }
 

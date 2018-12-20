@@ -17,7 +17,7 @@ const STRING_TO_UPPER: &'static str = "to_upper";
 const STRING_DECLARATION: &'static str = include_str!("str.smpl");
 
 pub fn include(modules: &mut Vec<ParsedModule>) {
-    let input = UnparsedModule::anonymous(STRING_DECLARATION.to_string());
+    let input = UnparsedModule::anonymous(STRING_DECLARATION);
     modules.push(parse_module(input).unwrap());
 }
 

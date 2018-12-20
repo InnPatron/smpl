@@ -31,7 +31,7 @@ pub const MATH_ROUND: &'static str = "round";
 pub const MATH_DECLARATION: &'static str = include_str!("math.smpl");
 
 pub fn include(modules: &mut Vec<ParsedModule>) {
-    let input = UnparsedModule::anonymous(MATH_DECLARATION.to_string());
+    let input = UnparsedModule::anonymous(MATH_DECLARATION);
     modules.push(parse_module(input).unwrap());
 }
 
