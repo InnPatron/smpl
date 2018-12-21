@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ast::{DeclStmt, Function as AstFunction, Module as AstModule, Struct};
 use crate::ast::{AstNode, BuiltinFunction as AstBuiltinFunction, Ident, UseDecl};
+use crate::module::{ParsedModule, ModuleSource};
 
 use super::error::{AnalysisError, TypeError};
 use super::feature_checkers::*;
@@ -34,19 +35,32 @@ struct ReservedType(TypeId, AstNode<Struct>);
 struct ReservedFn(FnId, TypeId, AstNode<AstFunction>);
 struct ReservedBuiltinFn(FnId, TypeId, AstNode<AstBuiltinFunction>);
 
-pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(), AnalysisError> {
-    let mut raw_data = raw_mod_data(program, modules)?;
+pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Result<(), AnalysisError> {
+    let mut sources = Vec::new();
+    let mut ast_modules = Vec::new();
+
+    for m in modules.into_iter() {
+        sources.push(m.source);
+        ast_modules.push(m.module);
+    }
+    let mut raw_data = raw_mod_data(program, ast_modules)?;
 
     let mut mapped_raw = HashMap::new();
     let mut scopes = HashMap::new();
 
-    // Map reserved data
-    for (mod_id, raw) in raw_data.iter() {
+    // Map reserved data and map module IDs to sources
+    for ((mod_id, raw), source) in raw_data.iter().zip(sources.into_iter()) {
+
+        // Map reserved data
         let mut scope = program.universe().std_scope();
         map_internal_data(&mut scope, raw);
 
         mapped_raw.insert(raw.name.data().clone(), mod_id.clone());
         scopes.insert(mod_id.clone(), scope);
+
+
+        // Map Module IDs to sources
+        program.metadata_mut().insert_mod_source(mod_id.clone(), source);
     }
 
     let mut raw_program = RawProgram {
@@ -348,7 +362,7 @@ fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
 }
 
 fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> Result<HashMap<ModuleId, RawModData>, AnalysisError> {
-    let universe = program.universe_mut();
+    let (universe, metadata, _) = program.analysis_context();
     let mut mod_map = HashMap::new();
     for module in modules {
         let mut struct_reserve = HashMap::new();
