@@ -13,10 +13,7 @@ pub fn check_program(modules: Vec<ParsedModule>) -> Result<Program, AnalysisErro
 
     let mut program = Program::new(universe, metadata, features);
 
-    mod_resolver::check_modules(&mut program, modules
-                                .into_iter()            // TODO: Remove so mod_resolver can handle sources
-                                .map(|m| m.module)
-                                .collect())?;
+    mod_resolver::check_modules(&mut program, modules)?;
 
     Metadata::find_main(&mut program)?;
 

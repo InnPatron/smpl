@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ast::{DeclStmt, Function as AstFunction, Module as AstModule, Struct};
 use crate::ast::{AstNode, BuiltinFunction as AstBuiltinFunction, Ident, UseDecl};
+use crate::module::{ParsedModule, ModuleSource};
 
 use super::error::{AnalysisError, TypeError};
 use super::feature_checkers::*;
@@ -34,8 +35,15 @@ struct ReservedType(TypeId, AstNode<Struct>);
 struct ReservedFn(FnId, TypeId, AstNode<AstFunction>);
 struct ReservedBuiltinFn(FnId, TypeId, AstNode<AstBuiltinFunction>);
 
-pub fn check_modules(program: &mut Program, modules: Vec<AstModule>) -> Result<(), AnalysisError> {
-    let mut raw_data = raw_mod_data(program, modules)?;
+pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Result<(), AnalysisError> {
+    let mut sources = Vec::new();
+    let mut ast_modules = Vec::new();
+
+    for m in modules.into_iter() {
+        sources.push(m.source);
+        ast_modules.push(m.module);
+    }
+    let mut raw_data = raw_mod_data(program, ast_modules)?;
 
     let mut mapped_raw = HashMap::new();
     let mut scopes = HashMap::new();
@@ -348,7 +356,7 @@ fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
 }
 
 fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> Result<HashMap<ModuleId, RawModData>, AnalysisError> {
-    let universe = program.universe_mut();
+    let (universe, metadata, _) = program.analysis_context();
     let mut mod_map = HashMap::new();
     for module in modules {
         let mut struct_reserve = HashMap::new();
