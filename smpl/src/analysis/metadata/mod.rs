@@ -7,6 +7,7 @@ pub use self::fn_data::*;
 
 use std::collections::{HashMap, HashSet};
 
+use crate::module::ModuleSource;
 use crate::ast::{Annotation, Ident};
 use crate::analysis::semantic_data::{FnId, ModuleId, Program, TypeId};
 use super::error::AnalysisError;
@@ -26,6 +27,8 @@ pub struct Metadata {
 
     struct_annotations: HashMap<TypeId, HashMap<String, Option<String>>>,
     fn_annotations: HashMap<FnId, HashMap<String, Option<String>>>,
+
+    module_sources: HashMap<ModuleId, ModuleSource>,
 }
 
 impl Metadata {
@@ -41,6 +44,7 @@ impl Metadata {
             unchecked_builtins_params: HashSet::new(),
             struct_annotations: HashMap::new(),
             fn_annotations: HashMap::new(),
+            module_sources: HashMap::new(),
         }
     }
 
@@ -173,5 +177,15 @@ impl Metadata {
 
     pub fn is_opaque(&self, type_id: TypeId) -> bool {
         self.get_struct_annotations(type_id).map_or(false, |map| map.contains_key(attribute_keys::OPAQUE))
+    }
+
+    pub fn insert_mod_source(&mut self, id: ModuleId, source: ModuleSource) {
+        if self.module_sources.insert(id, source).is_some() {
+            panic!("Module should only have one source");
+        }
+    }
+
+    pub fn mod_source(&self, id: ModuleId) -> &ModuleSource {
+        self.module_sources.get(&id).expect("module should have a source")
     }
 }
