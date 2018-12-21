@@ -48,13 +48,19 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
     let mut mapped_raw = HashMap::new();
     let mut scopes = HashMap::new();
 
-    // Map reserved data
-    for (mod_id, raw) in raw_data.iter() {
+    // Map reserved data and map module IDs to sources
+    for ((mod_id, raw), source) in raw_data.iter().zip(sources.into_iter()) {
+
+        // Map reserved data
         let mut scope = program.universe().std_scope();
         map_internal_data(&mut scope, raw);
 
         mapped_raw.insert(raw.name.data().clone(), mod_id.clone());
         scopes.insert(mod_id.clone(), scope);
+
+
+        // Map Module IDs to sources
+        program.metadata_mut().insert_mod_source(mod_id.clone(), source);
     }
 
     let mut raw_program = RawProgram {
