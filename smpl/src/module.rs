@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use crate::ast::Module;
 
+#[derive(Debug, Clone)]
 pub enum ModuleSource {
     Anonymous(Option<String>),
     File(PathBuf),
