@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use crate::analysis::ModuleId;
 use crate::ast::Module;
 
 #[derive(Debug, Clone)]
@@ -39,6 +40,7 @@ impl<'a> UnparsedModule<'a> {
 pub struct ParsedModule {
     pub source: ModuleSource,
     pub module: Module,
+    pub id: ModuleId,
 }
 
 impl ParsedModule {
@@ -46,6 +48,7 @@ impl ParsedModule {
         ParsedModule {
             source: source,
             module: data,
+            id: ModuleId::new(),
         }
     }
 }
