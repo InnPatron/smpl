@@ -51,4 +51,8 @@ impl ParsedModule {
             id: ModuleId::new(),
         }
     }
+
+    pub fn id(&self) -> ModuleId {
+        self.id
+    }
 }
