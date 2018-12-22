@@ -36,20 +36,19 @@ struct ReservedFn(FnId, TypeId, AstNode<AstFunction>);
 struct ReservedBuiltinFn(FnId, TypeId, AstNode<AstBuiltinFunction>);
 
 pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Result<(), AnalysisError> {
-    let mut sources = Vec::new();
-    let mut ast_modules = Vec::new();
-
-    for m in modules.into_iter() {
-        sources.push(m.source);
-        ast_modules.push(m.module);
-    }
-    let mut raw_data = raw_mod_data(program, ast_modules)?;
+    
+    let (mut raw_data, sources) = raw_mod_data(program, modules)?;
 
     let mut mapped_raw = HashMap::new();
     let mut scopes = HashMap::new();
 
-    // Map reserved data and map module IDs to sources
-    for ((mod_id, raw), source) in raw_data.iter().zip(sources.into_iter()) {
+    // Map module IDs to sources
+    for (mod_id, source) in sources.into_iter() {
+        program.metadata_mut().insert_mod_source(mod_id.clone(), source);
+    }
+
+    // Map reserved data
+    for (mod_id, raw) in raw_data.iter() {
 
         // Map reserved data
         let mut scope = program.universe().std_scope();
@@ -57,10 +56,6 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
 
         mapped_raw.insert(raw.name.data().clone(), mod_id.clone());
         scopes.insert(mod_id.clone(), scope);
-
-
-        // Map Module IDs to sources
-        program.metadata_mut().insert_mod_source(mod_id.clone(), source);
     }
 
     let mut raw_program = RawProgram {
@@ -361,16 +356,21 @@ fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
     }
 }
 
-fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> Result<HashMap<ModuleId, RawModData>, AnalysisError> {
+fn raw_mod_data(program: &mut Program, modules: Vec<ParsedModule>) 
+    -> Result<(HashMap<ModuleId, RawModData>, Vec<(ModuleId, ModuleSource)>), AnalysisError> {
+
     let (universe, metadata, _) = program.analysis_context();
     let mut mod_map = HashMap::new();
+    let mut source_map = Vec::new();
+
     for module in modules {
         let mut struct_reserve = HashMap::new();
         let mut fn_reserve = HashMap::new();
         let mut builtin_fn_reserve = HashMap::new();
         let mut uses = Vec::new();
 
-        for decl_stmt in module.1.into_iter() {
+        let ast_module = module.module;
+        for decl_stmt in ast_module.1.into_iter() {
             match decl_stmt {
                 DeclStmt::Struct(d) => {
                     struct_reserve.insert(
@@ -400,16 +400,18 @@ fn raw_mod_data(program: &mut Program, modules: Vec<AstModule>) -> Result<HashMa
         }
 
         let raw = RawModData {
-            name: module.0.ok_or(AnalysisError::MissingModName)?,
-            id: universe.new_module_id(),
+            name: ast_module.0.ok_or(AnalysisError::MissingModName)?,
+            id: module.id,
             reserved_structs: struct_reserve,
             reserved_fns: fn_reserve,
             reserved_builtins: builtin_fn_reserve,
             uses: uses,
         };
 
-        mod_map.insert(raw.id.clone(), raw);
+        let id = raw.id;
+        mod_map.insert(id, raw);
+        source_map.push((id, module.source));
     }
 
-    Ok(mod_map)
+    Ok((mod_map, source_map))
 }

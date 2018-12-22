@@ -18,3 +18,4 @@ irmatch = "0.2.0"
 strfmt = "0.1.6"
 failure = "0.1.2"
 failure_derive = "0.1.2"
+uuid = { version = "0.7", features = ["v4"] }

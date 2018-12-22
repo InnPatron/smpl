@@ -4,6 +4,8 @@ use std::rc::Rc;
 use std::slice::Iter;
 use std::fmt;
 
+use uuid::Uuid;
+
 use crate::ast::*;
 use crate::ast::ModulePath as AstModulePath;
 use crate::feature::PresentFeatures;
@@ -272,10 +274,6 @@ impl Universe {
 
     pub fn new_branching_id(&self) -> BranchingId {
         BranchingId(self.inc_counter())
-    }
-
-    pub fn new_module_id(&self) -> ModuleId {
-        ModuleId(self.inc_counter())
     }
 
     pub fn all_types(&self) -> Vec<(TypeId, Rc<SmplType>)> {
@@ -726,7 +724,7 @@ impl ::std::fmt::Display for BranchingId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ModuleId(u64);
+pub struct ModuleId(Uuid);
 
 impl ::std::fmt::Display for ModuleId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -735,7 +733,11 @@ impl ::std::fmt::Display for ModuleId {
 }
 
 impl ModuleId {
-    pub fn raw(&self) -> u64 {
+    pub fn new() -> ModuleId {
+        ModuleId(Uuid::new_v4())
+    }
+
+    pub fn raw(&self) -> Uuid {
         self.0
     }
 }
