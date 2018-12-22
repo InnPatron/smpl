@@ -9,10 +9,12 @@ use crate::analysis::*;
 use crate::module::*;
 use crate::ast::{Ident, Module};
 
-use crate::err::Error as SMPLError;
+use crate::err::Error as StaticError;
 
+use crate::code_gen::interpreter::module::VmModule;
 use crate::code_gen::interpreter::value::Value;
 use crate::code_gen::interpreter::env::Env;
+use crate::code_gen::interpreter::err::VmError;
 
 use crate::code_gen::interpreter::BuiltinMap;
 use crate::code_gen::interpreter::loader;
@@ -26,17 +28,50 @@ pub struct AVM {
 }
 
 impl AVM {
-    pub fn new(user_modules: Vec<ParsedModule>) -> Result<AVM, SMPLError> {
-        let modules = loader::include(user_modules);
+    pub fn new(modules: Vec<VmModule>) -> Result<AVM, VmError> {
+
+        let mut builtins = Vec::new();
+        let modules = modules
+            .into_iter()
+            .map(|vmmod| {
+                builtins.push((vmmod.id(), vmmod.builtins));
+                vmmod.parsed
+            })
+            .collect();
+
         let program = check_program(modules)?;
+
         let mut vm = AVM {
             program: program,
             builtins: HashMap::new(),
         };
 
-        loader::load(&mut vm);
+        for (mod_id, map) in builtins.into_iter() {
+            for (name, builtin) in map.into_iter() {
+                vm.map_builtin(mod_id, name, builtin);
+            }
+        }
 
         Ok(vm)
+    }
+
+    fn map_builtin(&mut self, mod_id: ModuleId, fn_name: String, builtin: BuiltinFn) -> Result<(), VmError> {
+
+        let fn_id = self.program
+            .metadata()
+            .module_fn(mod_id, 
+                       Ident(fn_name.clone()))
+            .ok_or(VmError::NotAFn(mod_id, fn_name.clone()))?;
+
+        if self.program.metadata().is_builtin(fn_id) {
+            if self.builtins.insert(fn_id, builtin).is_none() {
+                Ok(())
+            } else {
+                Err(VmError::BuiltinCollision(mod_id, fn_name))
+            }
+        } else {
+            Err(VmError::NotABuiltin(mod_id, fn_name))
+        }
     }
 
     pub fn eval_fn_sync(&self, handle: FnHandle) -> Result<Value, Error> {
