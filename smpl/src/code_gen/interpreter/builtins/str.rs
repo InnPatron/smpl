@@ -97,11 +97,9 @@ macro_rules! wrap_input {
 
 #[test]
 fn interpreter_str_len() {
-    let mut modules = Vec::new();
-    include(&mut modules);
+    let modules = vec![vm_module()];
 
     let mut vm = AVM::new(modules).unwrap();
-    add(&mut vm);
 
     let fn_handle = vm.query_module(MOD_STRING, STRING_LEN).unwrap().unwrap();
 
@@ -117,11 +115,9 @@ fn interpreter_str_len() {
 
 #[test]
 fn interpreter_str_to_string() {
-    let mut modules = Vec::new();
-    include(&mut modules);
+    let modules = vec![vm_module()];
 
     let mut vm = AVM::new(modules).unwrap();
-    add(&mut vm);
 
     let fn_handle = vm.query_module(MOD_STRING, STRING_TO_STRING)
         .unwrap()
@@ -140,11 +136,9 @@ fn interpreter_str_to_string() {
 
 #[test]
 fn interpreter_str_append() {
-    let mut modules = Vec::new();
-    include(&mut modules);
+    let modules = vec![vm_module()];
 
     let mut vm = AVM::new(modules).unwrap();
-    add(&mut vm);
 
     let fn_handle = vm.query_module(MOD_STRING, STRING_APPEND).unwrap().unwrap();
 
@@ -160,11 +154,9 @@ fn interpreter_str_append() {
 
 #[test]
 fn interpreter_str_to_lower() {
-    let mut modules = Vec::new();
-    include(&mut modules);
+    let modules = vec![vm_module()];
 
     let mut vm = AVM::new(modules).unwrap();
-    add(&mut vm);
 
     let fn_handle = vm.query_module(MOD_STRING, STRING_TO_LOWER)
         .unwrap()
@@ -176,11 +168,9 @@ fn interpreter_str_to_lower() {
 
 #[test]
 fn interpreter_str_to_upper() {
-    let mut modules = Vec::new();
-    include(&mut modules);
+    let modules = vec![vm_module()];
 
     let mut vm = AVM::new(modules).unwrap();
-    add(&mut vm);
 
     let fn_handle = vm.query_module(MOD_STRING, STRING_TO_UPPER)
         .unwrap()
@@ -203,11 +193,9 @@ fn test() -> String {
 return str::to_string(\"Cannot\", \" touch\", \" this!?\");
 }
 ";
-    let mut modules = vec![parse_module(wrap_input!(mod1)).unwrap()];
-    include(&mut modules);
+    let modules = vec![vm_module(), VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
     let mut vm = AVM::new(modules).unwrap();
-    add(&mut vm);
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 

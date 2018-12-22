@@ -255,11 +255,10 @@ fn vec_new() {
 let v = vec_int::new();
 }
 ";
-    let mut modules = vec![parse_module(wrap_input!(mod1)).unwrap()];
-    include(&mut modules, None, "int");
+    let mut modules = vec![vm_module(None, "int"), 
+        VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
     let mut vm = AVM::new(modules).unwrap();
-    add(&mut vm, "int");
 
     let fn_handle = vm.query_module("mod1", "vec_new").unwrap().unwrap();
 
@@ -283,11 +282,10 @@ v = vec_int::push(v, 456);
 return vec_int::len(v);
 }
 ";
-    let mut modules = vec![parse_module(wrap_input!(mod1)).unwrap()];
-    include(&mut modules, None, "int");
+    let mut modules = vec![vm_module(None, "int"), 
+        VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
     let mut vm = AVM::new(modules).unwrap();
-    add(&mut vm, "int");
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -314,11 +312,10 @@ let b = vec_int::get(v, 1);
 return a * b;
 }
 ";
-    let mut modules = vec![parse_module(wrap_input!(mod1)).unwrap()];
-    include(&mut modules, None, "int");
+    let mut modules = vec![vm_module(None, "int"), 
+        VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
     let mut vm = AVM::new(modules).unwrap();
-    add(&mut vm, "int");
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -345,11 +342,10 @@ v = vec_int::remove(v, 1);
 return vec_int::get(v, 1);
 }
 ";
-    let mut modules = vec![parse_module(wrap_input!(mod1)).unwrap()];
-    include(&mut modules, None, "int");
+    let mut modules = vec![vm_module(None, "int"), 
+        VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
     let mut vm = AVM::new(modules).unwrap();
-    add(&mut vm, "int");
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -377,11 +373,10 @@ let a = vec_int::get(v, 0);
 return a;
 }
 ";
-    let mut modules = vec![parse_module(wrap_input!(mod1)).unwrap()];
-    include(&mut modules, None, "int");
+    let mut modules = vec![vm_module(None, "int"), 
+        VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
     let mut vm = AVM::new(modules).unwrap();
-    add(&mut vm, "int");
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -423,11 +418,10 @@ v = vec_int::push(v, 7);
 return vec_int::contains(v, 20);
 }
 ";
-    let mut modules = vec![parse_module(wrap_input!(mod1)).unwrap()];
-    include(&mut modules, None, "int");
+    let mut modules = vec![vm_module(None, "int"), 
+        VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
     let mut vm = AVM::new(modules).unwrap();
-    add(&mut vm, "int");
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 

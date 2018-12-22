@@ -8,13 +8,14 @@ macro_rules! setup_and_run {
     ($mod1: expr, $mod_name: expr, $fn_name: expr, $args: expr) => {{
 
         let module = UnparsedModule::anonymous($mod1);
+        let parsed = parse_module(module).expect("Failed to parse module");
+        let module = VmModule::new(parsed)
+            .add_builtin("add", add)
+            .add_builtin("sum", var_arg_sum);
 
-        let modules = vec![parse_module(module).expect("Failed to parse module")];
+        let modules = vec![module, builtins::math::vm_module()];
         let mut avm = AVM::new(modules).unwrap();
         
-        let _ = avm.insert_builtin($mod_name, "add", add);
-        let _ = avm.insert_builtin($mod_name, "sum", var_arg_sum);
-
         let a_fn_handle = avm.query_module($mod_name, $fn_name).unwrap().unwrap();
 
         let a_result = avm.eval_fn_args_sync(a_fn_handle, $args)
@@ -146,11 +147,16 @@ return mod1::add(1, 2);
 }
 ";
 
-    let modules = vec![parse_module(wrap_input!(mod1)).unwrap(), 
-        parse_module(wrap_input!(mod2)).unwrap()];
+    let m1 = parse_module(wrap_input!(mod1)).unwrap();
+    let m2 = parse_module(wrap_input!(mod2)).unwrap();
+
+    let m1 = VmModule::new(m1)
+        .add_builtin("add", add);
+    let m2 = VmModule::new(m2);
+
+    let modules = vec![m1, m2];
 
     let mut avm = AVM::new(modules).unwrap();
-    avm.insert_builtin("mod1", "add", add).unwrap();
     
     let a_fn_handle = avm.query_module("mod2", "test2").unwrap().unwrap();
 
