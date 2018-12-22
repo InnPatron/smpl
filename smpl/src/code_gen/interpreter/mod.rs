@@ -19,12 +19,3 @@ pub use self::vm_i::*;
 pub use self::avm::{AVM, Executor, ExecResult};
 
 pub use self::vm_i::BuiltinFn;
-
-pub trait BuiltinMap {
-    fn insert_builtin(
-        &mut self,
-        module_str: &str,
-        name_str: &str,
-        builtin: BuiltinFn,
-    ) -> Result<Option<BuiltinFn>, String>;
-}
