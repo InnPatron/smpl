@@ -19,29 +19,19 @@ pub const CONVERT_STRING_TO_INT: &'static str = "string_to_int";
 
 pub const CONVERT_DECLARATION: &'static str = include_str!("convert.smpl");
 
-pub fn include(modules: &mut Vec<ParsedModule>) {
+pub fn vm_module() -> VmModule {
     let input = UnparsedModule::anonymous(CONVERT_DECLARATION);
-    modules.push(parse_module(input).unwrap());
-}
+    let parsed = parse_module(input).unwrap();
 
-pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
-    vm.insert_builtin(MOD_CONVERT, CONVERT_INT_TO_FLOAT, int_to_float)
-        .unwrap();
-    vm.insert_builtin(MOD_CONVERT, CONVERT_FLOAT_TO_INT, float_to_int)
-        .unwrap();
+    let mut module = VmModule::new(parsed)
+        .add_builtin(CONVERT_INT_TO_FLOAT, int_to_float)
+        .add_builtin(CONVERT_FLOAT_TO_INT, float_to_int)
+        .add_builtin(CONVERT_IS_FLOAT, is_float)
+        .add_builtin(CONVERT_IS_INT, is_int)
+        .add_builtin(CONVERT_STRING_TO_FLOAT, string_to_float)
+        .add_builtin(CONVERT_STRING_TO_INT, string_to_int);
 
-    vm.insert_builtin(MOD_CONVERT, CONVERT_IS_FLOAT, is_float)
-        .unwrap();
-    vm.insert_builtin(MOD_CONVERT, CONVERT_IS_INT, is_int)
-        .unwrap();
-
-    vm.insert_builtin(
-        MOD_CONVERT,
-        CONVERT_STRING_TO_FLOAT,
-        string_to_float
-    ).unwrap();
-    vm.insert_builtin(MOD_CONVERT, CONVERT_STRING_TO_INT, string_to_int)
-        .unwrap();
+    module
 }
 
 #[derive(Fail, Debug)]

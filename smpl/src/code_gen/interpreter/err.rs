@@ -1,5 +1,29 @@
 use failure::Fail;
 
+use crate::err::Error as StaticError;
+use crate::analysis::ModuleId;
+use crate::analysis::error::AnalysisError;
+
+#[derive(Debug)]
+pub enum VmError {
+    StaticError(StaticError),
+    BuiltinCollision(ModuleId, String),
+    NotABuiltin(ModuleId, String),
+    NotAFn(ModuleId, String),
+}
+
+impl From<StaticError> for VmError {
+    fn from(e: StaticError) -> VmError {
+        VmError::StaticError(e)
+    }
+}
+
+impl From<AnalysisError> for VmError {
+    fn from(e: AnalysisError) -> VmError {
+        VmError::StaticError(e.into())
+    }
+}
+
 #[derive(Fail, Debug)]
 pub enum InternalError {
     #[fail(display = "Invalid number of arguments. Found {}. {}", _0, _1)]

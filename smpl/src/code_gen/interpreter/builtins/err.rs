@@ -13,18 +13,16 @@ pub const ERR_ASSERT: &'static str = "assert";
 
 pub const ERR_DECLARATION: &'static str = include_str!("err.smpl");
 
-pub fn include(modules: &mut Vec<ParsedModule>) {
+pub fn vm_module() -> VmModule {
     let input = UnparsedModule::anonymous(ERR_DECLARATION);
-    modules.push(parse_module(input).unwrap());
-}
+    let parsed = parse_module(input).unwrap();
 
-pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
-    vm.insert_builtin(MOD_ERR, ERR_PANIC, panic)
-        .unwrap();
-    vm.insert_builtin(MOD_ERR, ERR_PANIC_MSG, panic_msg)
-        .unwrap();
-    vm.insert_builtin(MOD_ERR, ERR_ASSERT, assert)
-        .unwrap();
+    let mut module = VmModule::new(parsed)
+        .add_builtin(ERR_PANIC, panic)
+        .add_builtin(ERR_PANIC_MSG, panic_msg)
+        .add_builtin(ERR_ASSERT, assert);
+
+    module
 }
 
 #[derive(Fail, Debug)]
