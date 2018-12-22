@@ -8,12 +8,9 @@ use smpl::interpreter::*;
 
 const RT: &'static str = include_str!("rt.smpl");
 
-pub fn include(scripts: &mut Vec<ParsedModule>) {
-    scripts.push(parse_module(UnparsedModule::anonymous(RT)).unwrap());
-}
-
-pub fn map_builtins(vm: &mut AVM) {
-    vm.insert_builtin("rt", "user_key", user_input).unwrap();
+pub fn vm_module() -> VmModule {
+    VmModule::new(parse_module(UnparsedModule::anonymous(RT)).unwrap())
+        .add_builtin("user_key", user_input)
 }
 
 fn user_input(_args: Option<Vec<Value>>) -> Result<Value, Error> {
