@@ -6,6 +6,8 @@ extern crate strfmt;
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
+#[macro_use]
+extern crate derive_builder;
 
 mod feature;
 mod err;
