@@ -9,12 +9,10 @@ macro_rules! setup_and_run {
 
         let module = UnparsedModule::anonymous($mod1);
         let parsed = parse_module(module).expect("Failed to parse module");
-        let module = VmModule::new(parsed)
-            .add_builtin("add", add)
-            .add_builtin("sum", var_arg_sum);
+        let module = VmModule::new(parsed);
 
-        let modules = vec![module, builtins::math::vm_module()];
-        let mut avm = AVM::new(modules).unwrap();
+        let modules = vec![module];
+        let mut avm = AVM::new(Std::std(), modules).unwrap();
         
         let a_fn_handle = avm.query_module($mod_name, $fn_name).unwrap().unwrap();
 
@@ -22,7 +20,62 @@ macro_rules! setup_and_run {
             .expect("AVM eval error");
 
         a_result
-    }}
+    }};
+
+    ($mod1: expr, $mod_name: expr, $fn_name: expr, $args: expr, add) => {{
+
+        let module = UnparsedModule::anonymous($mod1);
+        let parsed = parse_module(module).expect("Failed to parse module");
+        let module = VmModule::new(parsed)
+            .add_builtin("add", add);
+
+        let modules = vec![module];
+        let mut avm = AVM::new(Std::std(), modules).unwrap();
+        
+        let a_fn_handle = avm.query_module($mod_name, $fn_name).unwrap().unwrap();
+
+        let a_result = avm.eval_fn_args_sync(a_fn_handle, $args)
+            .expect("AVM eval error");
+
+        a_result
+    }};
+
+    ($mod1: expr, $mod_name: expr, $fn_name: expr, $args: expr, sum) => {{
+
+        let module = UnparsedModule::anonymous($mod1);
+        let parsed = parse_module(module).expect("Failed to parse module");
+        let module = VmModule::new(parsed)
+            .add_builtin("sum", var_arg_sum);
+
+        let modules = vec![module];
+        let mut avm = AVM::new(Std::std(), modules).unwrap();
+        
+        let a_fn_handle = avm.query_module($mod_name, $fn_name).unwrap().unwrap();
+
+        let a_result = avm.eval_fn_args_sync(a_fn_handle, $args)
+            .expect("AVM eval error");
+
+        a_result
+    }};
+
+    ($mod1: expr, $mod_name: expr, $fn_name: expr, $args: expr, add, sum) => {{
+
+        let module = UnparsedModule::anonymous($mod1);
+        let parsed = parse_module(module).expect("Failed to parse module");
+        let module = VmModule::new(parsed)
+            .add_builtin("add", add)
+            .add_builtin("sum", var_arg_sum);
+
+        let modules = vec![module];
+        let mut avm = AVM::new(Std::std(), modules).unwrap();
+        
+        let a_fn_handle = avm.query_module($mod_name, $fn_name).unwrap().unwrap();
+
+        let a_result = avm.eval_fn_args_sync(a_fn_handle, $args)
+            .expect("AVM eval error");
+
+        a_result
+    }};
 }
 
 macro_rules! wrap_input {
@@ -104,7 +157,7 @@ return add(a, b);
 }",
         "mod1",
         "test",
-        Some(vec![Value::Int(5), Value::Int(7)]));
+        Some(vec![Value::Int(5), Value::Int(7)]), add);
 
     assert_eq!(Value::Int(12), result);
 }
@@ -121,7 +174,7 @@ return sum(a, b, 100, 2);
 }",
         "mod1",
         "test",
-        Some(vec![Value::Int(5), Value::Int(7)]));
+        Some(vec![Value::Int(5), Value::Int(7)]), sum);
 
     assert_eq!(Value::Int(114), result);
 }
@@ -156,7 +209,7 @@ return mod1::add(1, 2);
 
     let modules = vec![m1, m2];
 
-    let mut avm = AVM::new(modules).unwrap();
+    let mut avm = AVM::new(Std::no_std(), modules).unwrap();
     
     let a_fn_handle = avm.query_module("mod2", "test2").unwrap().unwrap();
 
@@ -400,7 +453,7 @@ fn bar() -> int {
 }",
     "mod1",
     "bar",
-    None);
+    None, add);
 
     assert_eq!(Value::Int(8), result);
 }

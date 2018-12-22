@@ -5,6 +5,7 @@ mod env;
 mod avm;
 mod err;
 mod module;
+mod std_options;
 
 #[cfg(test)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -12,6 +13,7 @@ mod vm_tests;
 
 pub mod builtins;
 
+pub use self::std_options::{Std, StdBuilder};
 pub use self::module::VmModule;
 pub use self::value::*;
 pub use self::vm_i::*;

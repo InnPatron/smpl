@@ -19,3 +19,4 @@ strfmt = "0.1.6"
 failure = "0.1.2"
 failure_derive = "0.1.2"
 uuid = { version = "0.7", features = ["v4"] }
+derive_builder = "0.7.0"

@@ -97,9 +97,7 @@ macro_rules! wrap_input {
 
 #[test]
 fn interpreter_str_len() {
-    let modules = vec![vm_module()];
-
-    let mut vm = AVM::new(modules).unwrap();
+    let mut vm = AVM::new(Std::std(), Vec::new()).unwrap();
 
     let fn_handle = vm.query_module(MOD_STRING, STRING_LEN).unwrap().unwrap();
 
@@ -115,9 +113,8 @@ fn interpreter_str_len() {
 
 #[test]
 fn interpreter_str_to_string() {
-    let modules = vec![vm_module()];
 
-    let mut vm = AVM::new(modules).unwrap();
+    let mut vm = AVM::new(Std::std(), Vec::new()).unwrap();
 
     let fn_handle = vm.query_module(MOD_STRING, STRING_TO_STRING)
         .unwrap()
@@ -136,9 +133,8 @@ fn interpreter_str_to_string() {
 
 #[test]
 fn interpreter_str_append() {
-    let modules = vec![vm_module()];
 
-    let mut vm = AVM::new(modules).unwrap();
+    let mut vm = AVM::new(Std::std(), Vec::new()).unwrap();
 
     let fn_handle = vm.query_module(MOD_STRING, STRING_APPEND).unwrap().unwrap();
 
@@ -154,9 +150,8 @@ fn interpreter_str_append() {
 
 #[test]
 fn interpreter_str_to_lower() {
-    let modules = vec![vm_module()];
 
-    let mut vm = AVM::new(modules).unwrap();
+    let mut vm = AVM::new(Std::std(), Vec::new()).unwrap();
 
     let fn_handle = vm.query_module(MOD_STRING, STRING_TO_LOWER)
         .unwrap()
@@ -168,9 +163,8 @@ fn interpreter_str_to_lower() {
 
 #[test]
 fn interpreter_str_to_upper() {
-    let modules = vec![vm_module()];
 
-    let mut vm = AVM::new(modules).unwrap();
+    let mut vm = AVM::new(Std::std(), Vec::new()).unwrap();
 
     let fn_handle = vm.query_module(MOD_STRING, STRING_TO_UPPER)
         .unwrap()
@@ -193,9 +187,9 @@ fn test() -> String {
 return str::to_string(\"Cannot\", \" touch\", \" this!?\");
 }
 ";
-    let modules = vec![vm_module(), VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
+    let modules = vec![VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
-    let mut vm = AVM::new(modules).unwrap();
+    let mut vm = AVM::new(Std::std(), modules).unwrap();
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 

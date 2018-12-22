@@ -2,14 +2,15 @@ use std::process;
 
 mod rt;
 
-use smpl::interpreter::AVM;
+use smpl::interpreter::*;
 
 fn main() {
-    let mut scripts = vec![
+    let scripts = vec![
         rt::vm_module(), 
-        smpl::interpreter::builtins::log::vm_module()
     ];
-    let mut vm = match AVM::new(scripts) {
+
+    let std = StdBuilder::default().log(true).build().unwrap();
+    let mut vm = match AVM::new(std, scripts) {
         Ok(vm) => vm,
 
         Err(e) => {

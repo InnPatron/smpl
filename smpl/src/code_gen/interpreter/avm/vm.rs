@@ -12,6 +12,7 @@ use crate::ast::{Ident, Module};
 use crate::err::Error as StaticError;
 
 use crate::code_gen::interpreter::module::VmModule;
+use crate::code_gen::interpreter::std_options::Std;
 use crate::code_gen::interpreter::value::Value;
 use crate::code_gen::interpreter::env::Env;
 use crate::code_gen::interpreter::err::VmError;
@@ -26,7 +27,9 @@ pub struct AVM {
 }
 
 impl AVM {
-    pub fn new(modules: Vec<VmModule>) -> Result<AVM, VmError> {
+    pub fn new(std: Std, mut modules: Vec<VmModule>) -> Result<AVM, VmError> {
+
+        std.include(&mut modules);
 
         let mut builtins = Vec::new();
         let modules = modules
@@ -46,7 +49,7 @@ impl AVM {
 
         for (mod_id, map) in builtins.into_iter() {
             for (name, builtin) in map.into_iter() {
-                vm.map_builtin(mod_id, name, builtin);
+                vm.map_builtin(mod_id, name, builtin)?;
             }
         }
 
