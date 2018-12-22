@@ -16,8 +16,6 @@ use crate::code_gen::interpreter::value::Value;
 use crate::code_gen::interpreter::env::Env;
 use crate::code_gen::interpreter::err::VmError;
 
-use crate::code_gen::interpreter::BuiltinMap;
-use crate::code_gen::interpreter::loader;
 use crate::code_gen::interpreter::vm_i::*;
 
 use super::internal_executor::InternalExecutor;
