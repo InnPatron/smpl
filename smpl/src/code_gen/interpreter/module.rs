@@ -2,10 +2,11 @@ use std::collections::HashMap;
 
 use crate::code_gen::interpreter::BuiltinFn;
 use crate::module::ParsedModule;
+use crate::analysis::ModuleId;
 
 pub struct VmModule {
-    parsed: ParsedModule,
-    builtins: HashMap<String, BuiltinFn>,
+    pub parsed: ParsedModule,
+    pub builtins: HashMap<String, BuiltinFn>,
 }
 
 impl VmModule {
@@ -30,5 +31,9 @@ impl VmModule {
             // TODO: Error
             Err(())
         }
+    }
+
+    pub fn id(&self) -> ModuleId {
+        self.parsed.id()
     }
 }
