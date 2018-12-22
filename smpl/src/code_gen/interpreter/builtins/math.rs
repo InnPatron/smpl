@@ -30,46 +30,32 @@ pub const MATH_ROUND: &'static str = "round";
 
 pub const MATH_DECLARATION: &'static str = include_str!("math.smpl");
 
-pub fn include(modules: &mut Vec<ParsedModule>) {
+pub fn vm_module() -> VmModule {
     let input = UnparsedModule::anonymous(MATH_DECLARATION);
-    modules.push(parse_module(input).unwrap());
-}
+    let parsed = parse_module(input).unwrap();
 
-pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
-    vm.insert_builtin(MOD_MATH, MATH_SIN, sin)
-        .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_COS, cos)
-        .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_TAN, tan)
-        .unwrap();
+    let mut module = VmModule::new(parsed)
+        .add_builtin(MATH_SIN, sin)
+        .add_builtin(MATH_COS, cos)
+        .add_builtin(MATH_TAN, tan)
 
-    vm.insert_builtin(MOD_MATH, MATH_ASIN, asin)
-        .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_ACOS, acos)
-        .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_ATAN, atan)
-        .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_ATAN2, atan2)
-        .unwrap();
+        .add_builtin(MATH_ASIN, asin)
+        .add_builtin(MATH_ACOS, acos)
+        .add_builtin(MATH_ATAN, atan)
+        .add_builtin(MATH_ATAN2, atan2)
 
-    vm.insert_builtin(MOD_MATH, MATH_TO_RADIANS, to_radians)
-        .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_TO_DEGREES, to_degrees)
-        .unwrap();
+        .add_builtin(MATH_TO_RADIANS, to_radians)
+        .add_builtin(MATH_TO_DEGREES, to_degrees)
 
-    vm.insert_builtin(MOD_MATH, MATH_FPOWF, fpowf)
-        .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_FPOWI, fpowi)
-        .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_IPOW, ipow)
-        .unwrap();
+        .add_builtin(MATH_FPOWF, fpowf)
+        .add_builtin(MATH_FPOWI, fpowi)
+        .add_builtin(MATH_IPOW, ipow)
 
-    vm.insert_builtin(MOD_MATH, MATH_FLOOR, floor)
-        .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_CEIL, ceil)
-        .unwrap();
-    vm.insert_builtin(MOD_MATH, MATH_ROUND, round)
-        .unwrap();
+        .add_builtin(MATH_FLOOR, floor)
+        .add_builtin(MATH_CEIL, ceil)
+        .add_builtin(MATH_ROUND, round);
+
+    module
 }
 
 /// In radians

@@ -16,22 +16,18 @@ const STRING_TO_UPPER: &'static str = "to_upper";
 
 const STRING_DECLARATION: &'static str = include_str!("str.smpl");
 
-pub fn include(modules: &mut Vec<ParsedModule>) {
+pub fn vm_module() -> VmModule {
     let input = UnparsedModule::anonymous(STRING_DECLARATION);
-    modules.push(parse_module(input).unwrap());
-}
+    let parsed = parse_module(input).unwrap();
 
-pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
-    vm.insert_builtin(MOD_STRING, STRING_LEN, len)
-        .unwrap();
-    vm.insert_builtin(MOD_STRING, STRING_TO_STRING, to_string)
-        .unwrap();
-    vm.insert_builtin(MOD_STRING, STRING_APPEND, append)
-        .unwrap();
-    vm.insert_builtin(MOD_STRING, STRING_TO_LOWER, to_lower)
-        .unwrap();
-    vm.insert_builtin(MOD_STRING, STRING_TO_UPPER, to_upper)
-        .unwrap();
+    let mut module = VmModule::new(parsed)
+        .add_builtin(STRING_LEN, len)
+        .add_builtin(STRING_TO_STRING, to_string)
+        .add_builtin(STRING_APPEND, append)
+        .add_builtin(STRING_TO_LOWER, to_lower)
+        .add_builtin(STRING_TO_UPPER, to_upper);
+
+    module
 }
 
 fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {

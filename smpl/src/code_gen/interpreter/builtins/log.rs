@@ -13,16 +13,15 @@ pub const LOG_PRINTLN: &'static str = "println";
 
 pub const LOG_DECLARATION: &'static str = include_str!("log.smpl");
 
-pub fn include(modules: &mut Vec<ParsedModule>) {
+pub fn vm_module() -> VmModule {
     let input = UnparsedModule::anonymous(LOG_DECLARATION);
-    modules.push(parse_module(input).unwrap());
-}
+    let parsed = parse_module(input).unwrap();
 
-pub fn add<MAP: BuiltinMap>(vm: &mut MAP) {
-    vm.insert_builtin(MOD_LOG, LOG_PRINT, print)
-        .unwrap();
-    vm.insert_builtin(MOD_LOG, LOG_PRINTLN, println)
-        .unwrap();
+    let mut module = VmModule::new(parsed)
+        .add_builtin(LOG_PRINT, print)
+        .add_builtin(LOG_PRINTLN, println);
+
+    module
 }
 
 #[derive(Fail, Debug)]

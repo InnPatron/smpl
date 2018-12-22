@@ -30,7 +30,7 @@ const VEC_FMT_ITEM_USE: &'static str = "item_mod_use";
 
 const VEC_DECLARATION: &'static str = include_str!("vec.smpl");
 
-pub fn include(modules: &mut Vec<ParsedModule>, item_type_mod: Option<&str>, item_type: &str) {
+pub fn vm_module(item_type_mod: Option<&str>, item_type: &str) -> VmModule {
     let item_mod_use = match item_type_mod {
         Some(str) => format!("use {};", str),
         None => "".to_string(),
@@ -46,32 +46,21 @@ pub fn include(modules: &mut Vec<ParsedModule>, item_type_mod: Option<&str>, ite
     vars.insert(VEC_FMT_ITEM_TYPE_MOD.to_string(), &item_type_mod);
     vars.insert(VEC_FMT_ITEM_USE.to_string(), &item_mod_use);
 
-    
     let decl = strfmt(&VEC_DECLARATION, &vars).unwrap();
     let input = UnparsedModule::anonymous(&decl);
-    modules.push(parse_module(input).unwrap());
-}
+    let parsed = parse_module(input).unwrap();
 
-pub fn add<MAP: BuiltinMap>(vm: &mut MAP, item_type: &str) {
-    let mut vars = HashMap::new();
-    vars.insert(VEC_FMT_ITEM_TYPE.to_string(), item_type);
 
-    let mod_name = strfmt(MOD_VEC, &vars).unwrap();
+    let mut module = VmModule::new(parsed)
+        .add_builtin(VEC_NEW, new)
+        .add_builtin(VEC_LEN, len)
+        .add_builtin(VEC_CONTAINS, contains)
+        .add_builtin(VEC_PUSH, push)
+        .add_builtin(VEC_INSERT, insert)
+        .add_builtin(VEC_GET, get)
+        .add_builtin(VEC_REMOVE, remove);
 
-    vm.insert_builtin(&mod_name, VEC_NEW, new)
-        .unwrap();
-    vm.insert_builtin(&mod_name, VEC_LEN, len)
-        .unwrap();
-    vm.insert_builtin(&mod_name, VEC_CONTAINS, contains)
-        .unwrap();
-    vm.insert_builtin(&mod_name, VEC_PUSH, push)
-        .unwrap();
-    vm.insert_builtin(&mod_name, VEC_INSERT, insert)
-        .unwrap();
-    vm.insert_builtin(&mod_name, VEC_GET, get)
-        .unwrap();
-    vm.insert_builtin(&mod_name, VEC_REMOVE, remove)
-        .unwrap();
+    module
 }
 
 #[derive(Fail, Debug)]
