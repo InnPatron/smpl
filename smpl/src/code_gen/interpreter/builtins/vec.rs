@@ -258,7 +258,7 @@ let v = vec_int::new();
     let mut modules = vec![vm_module(None, "int"), 
         VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
-    let mut vm = AVM::new(modules).unwrap();
+    let mut vm = AVM::new(Std::no_std(), modules).unwrap();
 
     let fn_handle = vm.query_module("mod1", "vec_new").unwrap().unwrap();
 
@@ -285,7 +285,7 @@ return vec_int::len(v);
     let mut modules = vec![vm_module(None, "int"), 
         VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
-    let mut vm = AVM::new(modules).unwrap();
+    let mut vm = AVM::new(Std::no_std(), modules).unwrap();
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -315,7 +315,7 @@ return a * b;
     let mut modules = vec![vm_module(None, "int"), 
         VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
-    let mut vm = AVM::new(modules).unwrap();
+    let mut vm = AVM::new(Std::no_std(), modules).unwrap();
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -345,7 +345,7 @@ return vec_int::get(v, 1);
     let mut modules = vec![vm_module(None, "int"), 
         VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
-    let mut vm = AVM::new(modules).unwrap();
+    let mut vm = AVM::new(Std::no_std(), modules).unwrap();
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -376,7 +376,7 @@ return a;
     let mut modules = vec![vm_module(None, "int"), 
         VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
-    let mut vm = AVM::new(modules).unwrap();
+    let mut vm = AVM::new(Std::no_std(), modules).unwrap();
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
@@ -421,7 +421,7 @@ return vec_int::contains(v, 20);
     let mut modules = vec![vm_module(None, "int"), 
         VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
-    let mut vm = AVM::new(modules).unwrap();
+    let mut vm = AVM::new(Std::no_std(), modules).unwrap();
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
