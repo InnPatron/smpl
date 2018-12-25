@@ -1330,3 +1330,61 @@ fn break_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
         span)
     )
 }
+
+fn type_param_list(tokens: &mut BufferedTokenizer) -> ParseErr<TypeParams> {
+    let _lparen = consume_token!(tokens,
+                                 Token::LParen,
+                                 parser_state!("type_param_list", "lparen"));
+
+    type_param_list_post_lparen(tokens)
+}
+
+fn type_param_list_post_lparen(tokens: &mut BufferedTokenizer) -> ParseErr<TypeParams> {
+    let _type = consume_token!(tokens,
+                                 Token::Type,
+                                 parser_state!("type-param-list", "type"));
+
+    let mut type_params = vec![consume_token!(tokens, 
+                                              Token::Identifier(ident) => Ident(ident),
+                                              parser_state!("type-param-list", "type-param"))];
+
+    loop {
+        if peek_token!(tokens, |tok| {
+            match tok {
+                Token::Comma => true,
+                _ => false
+            }
+        }, parser_state!("type-param-list", "comma-separator")) {
+            let _comma = consume_token!(tokens, 
+                                        Token::Comma,
+                                        parser_state!("type-param-list", "comma-separator"));
+            if peek_token!(tokens, |tok| {
+                match tok {
+                    Token::RParen => false,
+                    _ => true,
+                }
+            }, parser_state!("type-param-list", "rparen?")) {
+                type_params.push(
+                    consume_token!(tokens,
+                                   Token::Identifier(ident) => Ident(ident),
+                                   parser_state!("type-param-list", "type-param")));
+                continue;
+            }
+        }
+
+        break;
+    }
+
+    let _rparen = consume_token!(tokens,
+                                 Token::RParen,
+                                 parser_state!("type-param-list", "rparen"));
+
+    let type_params = type_params
+        .into_iter()
+        .map(|(span, ident)| AstNode::new(ident, span))
+        .collect::<Vec<_>>();
+
+    Ok(TypeParams { params: type_params })
+}
+
+
