@@ -55,6 +55,7 @@ pub enum Token {
     Use,
     Builtin,
     Unchecked,
+    Type,
 
     Init,
 
@@ -130,6 +131,8 @@ impl std::fmt::Display for Token {
             Use => write!(f, "use"),
             Builtin => write!(f, "builtin"),
             Unchecked => write!(f, "UNCHECKED"),
+
+            Type => write!(f, "type"),
 
             Init => write!(f, "init"),
 
@@ -464,6 +467,7 @@ impl<'input> Tokenizer<'input> {
             "let" => Token::Let,
             "builtin" => Token::Builtin,
             "UNCHECKED" => Token::Unchecked,
+            "type" => Token::Type,
             "continue" => Token::Continue,
             "break" => Token::Break,
             "return" => Token::Return,
