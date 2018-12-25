@@ -483,4 +483,24 @@ fn foo() { }";
 
         let _input = parse_module(wrap_input!(input)).unwrap();
     }
+
+    #[test]
+    fn parse_struct_decl_type_param() {
+        let input =
+"struct Foo(type Bar, Baz) {
+    b: Bar,
+}";
+        
+        let _input = parse_module(wrap_input!(input)).unwrap();
+    }
+
+    #[test]
+    fn parse_fn_decl_type_param() {
+        let input =
+"fn foo(type Bar, Baz)(a: Bar, b: Baz) -> Baz {
+    return a;
+}";
+        
+        let _input = parse_module(wrap_input!(input)).unwrap();
+    }
 }
