@@ -124,6 +124,7 @@ pub struct Struct {
     pub name: AstNode<Ident>,
     pub body: StructBody,
     pub annotations: Vec<Annotation>,
+    pub type_params: Option<TypeParams>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

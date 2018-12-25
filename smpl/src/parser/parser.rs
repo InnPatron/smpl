@@ -429,6 +429,20 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
     let (nameLoc, structName) = consume_token!(tokens, 
                                                Token::Identifier(i) => Ident(i),
                                                parser_state!("struct-decl", "name"));
+
+    let type_params = if peek_token!(tokens, |tok| {
+        match tok {
+            Token::LParen => true,
+
+            _ => false,
+        }
+    }, parser_state!("struct-decl", "type-parameters?")) {
+
+        Some(type_param_list(tokens)?)
+    } else {
+        None
+    };
+
     let _lbrace = consume_token!(tokens, 
                                  Token::LBrace,
                                  parser_state!("struct-decl", "fields lbrace"));
@@ -459,6 +473,7 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
             name: AstNode::new(structName, nameLoc),
             body: body,
             annotations: anns,
+            type_params: type_params,
         }, overallSpan)
     )
 }
