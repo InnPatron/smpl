@@ -254,7 +254,25 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
                                         parser_state!("fn-decl", "name"));
     let _lparen = consume_token!(tokens, 
                                  Token::LParen,
-                                 parser_state!("fn-decl", "parameter lparen"));
+                                 parser_state!("fn-decl", "(type?) parameter lparen"));
+
+    let type_params = if peek_token!(tokens, |tok| {
+        match tok {
+            Token::Type => true,
+            _ => false,
+        }
+    }, parser_state!("fn-decl", "type parameters?")) {
+        let params = Some(type_param_list_post_lparen(tokens)?);
+
+        // Consume next lparen for actual parameters
+        let _lparen = consume_token!(tokens,
+                                     Token::LParen,
+                                     parser_state!("fn-decl", "parameter lparen"));
+
+        params
+    } else {
+        None
+    };
 
     let params = if peek_token!(tokens, |tok| {
         match tok {
@@ -325,6 +343,7 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
                     params: params,
                     return_type: return_type,
                     annotations: annotations,
+                    type_params: type_params,
                 },
                 span)
             )
@@ -353,6 +372,7 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
                     return_type: return_type,
                     body: body,
                     annotations: annotations,
+                    type_params: type_params,
                 },
                 span)
             )

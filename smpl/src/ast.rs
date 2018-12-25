@@ -96,6 +96,7 @@ pub struct BuiltinFunction {
     pub params: BuiltinFnParams,
     pub return_type: Option<AstNode<TypeAnnotation>>,
     pub annotations: Vec<Annotation>,
+    pub type_params: Option<TypeParams>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -111,6 +112,7 @@ pub struct Function {
     pub return_type: Option<AstNode<TypeAnnotation>>,
     pub body: AstNode<Block>,
     pub annotations: Vec<Annotation>,
+    pub type_params: Option<TypeParams>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
