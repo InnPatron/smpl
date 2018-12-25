@@ -451,3 +451,10 @@ pub enum PathSegment {
 pub struct Annotation {
     pub keys: Vec<(Ident, Option<String>)>,
 }
+
+// TODO: May need to manually implement PartialEq
+// Shouldn't matter b/c this is purely for syntactic comparison
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeParams {
+    pub params: Vec<AstNode<Ident>>,
+}
