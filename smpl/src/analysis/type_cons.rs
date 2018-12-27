@@ -1,5 +1,8 @@
-use super::semantic_data::TypeId;
+use std::collections::HashMap;
+
+use super::semantic_data::{FieldId, TypeId};
 use super::smpl_type::*;
+use super::error::ApplicationError;
 
 pub enum TypeCons {
 
@@ -22,36 +25,57 @@ pub enum TypeCons {
     Unit,
 }
 
+pub enum TypeArg {
+    Type(TypeId),
+    Number(i64),
+}
+
 impl TypeCons {
-    fn apply(&self, mut args: Vec<TypeId>, numeric: Option<Vec<i64>>) -> Result<SmplType, ()> {
+    fn apply(&self, mut args: Option<Vec<TypeArg>>) -> Result<SmplType, ApplicationError> {
 
         match *self {
             TypeCons::Array => {
-                if args.len() != 1 {
-                    unimplemented!("Invalid Array application");
+                let mut args = args.ok_or(ApplicationError::Arity {
+                    expected: 2,
+                    found: 0
+                })?;
+
+                if args.len() != 2 {
+                    return Err(ApplicationError::Arity {
+                        expected: 2,
+                        found: args.len()
+                    });
                 }
 
-                let size = if let Some(mut numeric) = numeric {
-                    if numeric.len() != 1 {
-                        unimplemented!("Invalid Array application");
-                    } else {
-                        let size = numeric.pop().unwrap();
+                let array_size = args.pop().unwrap();
+                let element_type = args.pop().unwrap();
 
-                        if size <= 0 {
-                            unimplemented!("Invalid Array application");
-                        }
-                        size
-                    }
-
-                } else {
-                    unimplemented!("Invalid Array application");
+                let element_type = match element_type {
+                    TypeArg::Type(id) => id,
+                    TypeArg::Number(_) => return Err(ApplicationError::ExpectedType { 
+                        param_position: 0
+                    }),
                 };
 
-                let element_type = args.pop().unwrap();
+                let array_size = match array_size {
+                    TypeArg::Type(_) => return Err(ApplicationError::ExpectedNumber { 
+                        param_position: 1
+                    }),
+
+                    TypeArg::Number(num) =>  num
+                };
+
+                if array_size <= 0 {
+                    return Err(ApplicationError::InvalidNumber {
+                        param_position: 1,
+                        found: array_size,
+                    });
+                }
+
 
                 let array_type = ArrayType { 
                     base_type: element_type,
-                    size: size as u64
+                    size: array_size as u64
                 };
 
                 Ok(SmplType::Array(array_type))
