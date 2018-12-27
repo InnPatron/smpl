@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::ast::Ident;
+
 use super::semantic_data::{FieldId, TypeId};
 use super::smpl_type::*;
 use super::error::ApplicationError;
@@ -14,8 +16,10 @@ pub enum TypeCons {
     Array,
 
     Record {
+        name: Ident,
         type_params: Vec<TypeId>,
-        fields: Vec<TypeId>,
+        fields: HashMap<FieldId, TypeId>,
+        field_map: HashMap<Ident, FieldId>,
     },
 
     Int,
@@ -79,6 +83,77 @@ impl TypeCons {
                 };
 
                 Ok(SmplType::Array(array_type))
+            }
+
+            TypeCons::Record {
+                name: ref name,
+                type_params: ref type_params,
+                fields: ref fields,
+                field_map: ref field_map,
+            } => {
+                if type_params.len() > 0 {
+                    let mut args = args.ok_or(ApplicationError::Arity {
+                        expected: type_params.len(),
+                        found: 0
+                    })?;
+
+                    if args.len() != type_params.len() {
+                        return Err(ApplicationError::Arity {
+                            expected: type_params.len(),
+                            found: args.len()
+                        });
+                    }
+
+                    // Map parameters to arguments
+                    let mut param_to_arg_map = HashMap::new();
+                    for (pos, (param, arg)) in type_params.iter().zip(args).enumerate() {
+                        match arg {
+                            TypeArg::Type(id) => param_to_arg_map.insert(param, id),
+
+                            TypeArg::Number(_) => {
+                                return Err(ApplicationError::ExpectedType {
+                                    param_position: pos
+                                });
+                            }
+                        };
+                    }
+
+                    // Apply type arguments to the record type
+                    let applied_fields = fields
+                        .iter()
+                        .map(|(field_id, field_type_id)| {
+
+                            let type_id = param_to_arg_map.get(field_type_id)
+                                .unwrap_or(field_type_id);
+
+                            (field_id.clone(), type_id.clone())
+                        })
+                    .collect::<HashMap<_,_>>();
+
+                    let struct_type = StructType {
+                        name: name.clone(),
+                        fields: applied_fields.clone(),
+                        field_map: field_map.clone(),
+                    };
+
+                    Ok(SmplType::Struct(struct_type))
+
+                } else {
+                    if let Some(args) = args {
+                        Err(ApplicationError::Arity {
+                            expected: 0,
+                            found: args.len(),
+                        })
+                    } else {
+                        let struct_type = StructType {
+                            name: name.clone(),
+                            fields: fields.clone(),
+                            field_map: field_map.clone(),
+                        };
+
+                        Ok(SmplType::Struct(struct_type))
+                    }
+                }
             }
 
             _ => unimplemented!(),
