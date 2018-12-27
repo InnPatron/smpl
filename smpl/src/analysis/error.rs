@@ -144,7 +144,10 @@ impl From<TypeError> for AnalysisError {
 
 #[derive(Clone, Debug)]
 pub enum ApplicationError {
-    Arity { expected: usize, found: usize }
+    Arity { expected: usize, found: usize },
+    ExpectedNumber { param_position: usize },
+    ExpectedType { param_position: usize },
+    InvalidNumber { param_position: usize, found: i64 }
 }
 
 impl From<ApplicationError> for TypeError {
