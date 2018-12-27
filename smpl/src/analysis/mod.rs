@@ -11,6 +11,7 @@ mod expr_flow;
 mod fn_analyzer;
 mod linear_cfg_traversal;
 mod mod_resolver;
+mod type_cons;
 pub mod error;
 pub mod metadata;
 
