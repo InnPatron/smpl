@@ -131,11 +131,24 @@ pub enum TypeError {
     InitOpaqueType {
         struct_type: TypeId,
         span: Span,
-    }
+    },
+
+    ApplicationError(ApplicationError),
 }
 
 impl From<TypeError> for AnalysisError {
     fn from(err: TypeError) -> AnalysisError {
         AnalysisError::TypeError(err)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum ApplicationError {
+    Arity { expected: usize, found: usize }
+}
+
+impl From<ApplicationError> for TypeError {
+    fn from(err: ApplicationError) -> TypeError {
+        TypeError::ApplicationError(err)
     }
 }
