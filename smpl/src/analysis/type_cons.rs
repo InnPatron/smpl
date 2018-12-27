@@ -229,7 +229,31 @@ impl TypeCons {
 
             }
 
-            _ => unimplemented!(),
+            ref tc @ TypeCons::Int  | 
+                ref tc @ TypeCons::Float | 
+                ref tc @ TypeCons::String | 
+                ref tc @ TypeCons::Bool | 
+                ref tc @ TypeCons::Unit => {
+            
+                if let Some(args) = args {
+                    return Err(ApplicationError::Arity {
+                        expected: 0,
+                        found: args.len(),
+                    });
+                } else {
+                    let t = match tc {
+                        TypeCons::Int => SmplType::Int,
+                        TypeCons::Float => SmplType::Float,
+                        TypeCons::String => SmplType::String,
+                        TypeCons::Bool => SmplType::Bool,
+                        TypeCons::Unit => SmplType::Unit,
+
+                        _ => unreachable!(),
+                    };
+
+                    Ok(t)
+                }
+            }
         }
     }
 }
