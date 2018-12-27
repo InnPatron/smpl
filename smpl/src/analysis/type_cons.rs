@@ -11,6 +11,7 @@ pub enum TypeCons {
     Function { 
         type_params: Vec<TypeId>,
         parameters: Vec<TypeId>,
+        return_type: TypeId,
     },
 
     Array,
@@ -154,6 +155,78 @@ impl TypeCons {
                         Ok(SmplType::Struct(struct_type))
                     }
                 }
+            }
+
+            TypeCons::Function {
+                    type_params: ref type_params,
+                    parameters: ref params,
+                    return_type: ref return_type,
+            } => {
+                if type_params.len() > 0 {
+                    let mut args = args.ok_or(ApplicationError::Arity {
+                        expected: type_params.len(),
+                        found: 0
+                    })?;
+
+                    if args.len() != type_params.len() {
+                        return Err(ApplicationError::Arity {
+                            expected: type_params.len(),
+                            found: args.len()
+                        });
+                    }
+
+                    // Map parameters to arguments
+                    let mut param_to_arg_map = HashMap::new();
+                    for (pos, (param, arg)) in type_params.iter().zip(args).enumerate() {
+                        match arg {
+                            TypeArg::Type(id) => param_to_arg_map.insert(param, id),
+
+                            TypeArg::Number(_) => {
+                                return Err(ApplicationError::ExpectedType {
+                                    param_position: pos
+                                });
+                            }
+                        };
+                    }
+
+                    // Apply type arguments to the function_type type
+                    let applied_params = params
+                        .iter()
+                        .map(|param_type_id| {
+                            param_to_arg_map.get(param_type_id)
+                                .unwrap_or(param_type_id)
+                                .clone()
+                        })
+                    .collect::<Vec<_>>();
+
+                    let applied_return = param_to_arg_map.get(return_type)
+                        .unwrap_or(return_type);
+
+                    let param_type = ParamType::Checked(applied_params);
+                    let fn_type = FunctionType {
+                        params: param_type,
+                        return_type: applied_return.clone(),
+                    };
+
+                    Ok(SmplType::Function(fn_type))
+
+                } else {
+                    if let Some(args) = args {
+                        Err(ApplicationError::Arity {
+                            expected: 0,
+                            found: args.len(),
+                        })
+                    } else {
+                        let param_type = ParamType::Checked(params.clone());
+                        let fn_type = FunctionType {
+                            params: param_type,
+                            return_type: return_type.clone(),
+                        };
+
+                        Ok(SmplType::Function(fn_type))
+                    }
+                }
+
             }
 
             _ => unimplemented!(),
