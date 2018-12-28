@@ -133,6 +133,10 @@ pub enum TypeError {
         span: Span,
     },
 
+    ParameterNamingConflict {
+        ident: Ident
+    },
+
     ApplicationError(ApplicationError),
 }
 
