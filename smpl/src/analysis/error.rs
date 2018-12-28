@@ -137,6 +137,10 @@ pub enum TypeError {
         ident: Ident
     },
 
+    FieldNamingConflict {
+        ident: Ident
+    },
+
     ApplicationError(ApplicationError),
 }
 
