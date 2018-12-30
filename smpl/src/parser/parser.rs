@@ -1422,4 +1422,57 @@ fn type_param_list_post_lparen(tokens: &mut BufferedTokenizer) -> ParseErr<TypeP
     Ok(TypeParams { params: type_params })
 }
 
+fn type_arg_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<TypeAnnotation>> {
+    let _lparen = consume_token!(tokens,
+                                 Token::LParen,
+                                 parser_state!("type-arg-list", "lparen"));
 
+    type_arg_list_post_lparen(tokens)
+}
+
+fn type_arg_list_post_lparen(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<TypeAnnotation>> {
+    let _type = consume_token!(tokens,
+                                 Token::Type,
+                                 parser_state!("type-arg-list", "type"));
+
+    let mut type_args = vec![production!(type_annotation(tokens),
+                                           parser_state!("type-arg-list", "type-arg"))];
+
+    loop {
+        if peek_token!(tokens, |tok| {
+            match tok {
+                Token::Comma => true,
+                _ => false
+            }
+        }, parser_state!("type-arg-list", "comma-separator")) {
+            let _comma = consume_token!(tokens, 
+                                        Token::Comma,
+                                        parser_state!("type-arg-list", "comma-separator"));
+            if peek_token!(tokens, |tok| {
+                match tok {
+                    Token::RParen => false,
+                    _ => true,
+                }
+            }, parser_state!("type-arg-list", "rparen?")) {
+                type_args.push(
+                    production!(type_annotation(tokens),
+                                parser_state!("type-arg-list", "type-arg"))
+                    );
+                continue;
+            }
+        }
+
+        break;
+    }
+
+    let _rparen = consume_token!(tokens,
+                                 Token::RParen,
+                                 parser_state!("type-arg-list", "rparen"));
+
+    let type_args = type_args 
+        .into_iter()
+        .map(|node| node.to_data().0)
+        .collect::<Vec<_>>();
+
+    Ok(type_args)
+}
