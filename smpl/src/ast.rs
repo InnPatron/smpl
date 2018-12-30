@@ -257,15 +257,6 @@ pub struct FnCall {
     pub args: Option<Vec<Expr>>,
 }
 
-impl FnCall {
-    pub fn new(path: ModulePath, args: Option<Vec<Expr>>) -> FnCall {
-        FnCall {
-            path: path,
-            args: args,
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct BinExpr {
     pub op: BinOp,
