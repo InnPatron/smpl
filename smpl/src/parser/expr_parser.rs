@@ -540,6 +540,11 @@ pub fn fn_args(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Option<Vec<As
                                     Token::LParen,
                                     parser_state!("fn-args", "lparen"));
 
+    fn_args_post_lparen(tokens, lspan)
+}
+
+pub fn fn_args_post_lparen(tokens: &mut BufferedTokenizer, lspan: Span) -> ParseErr<AstNode<Option<Vec<AstNode<Expr>>>>> {
+    
     let mut args: Option<Vec<AstNode<Expr>>> = None;
 
     while peek_token!(tokens, |tok| {
