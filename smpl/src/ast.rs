@@ -175,7 +175,7 @@ impl PartialEq for ExprStmt {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructInit {
-    pub struct_name: ModulePath,
+    pub struct_name: TypedPath,
     pub field_init: Option<Vec<(AstNode<Ident>, Box<Expr>)>>,
 }
 
@@ -253,7 +253,7 @@ pub struct FnCallChain {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
-    pub path: ModulePath,
+    pub path: TypedPath,
     pub args: Option<Vec<Expr>>,
 }
 
@@ -365,8 +365,14 @@ impl fmt::Display for Ident {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum TypedPath {
+    NillArity(ModulePath),
+    Parameterized(ModulePath, Vec<TypeAnnotation>),
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum TypeAnnotation {
-    Path(ModulePath),
+    Path(TypedPath),
     Array(Box<AstNode<TypeAnnotation>>, u64),
     FnType(
         Option<Vec<AstNode<TypeAnnotation>>>,
@@ -389,7 +395,7 @@ impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeAnnotationRef<'a> {
-    Path(&'a ModulePath),
+    Path(&'a TypedPath),
     Array(&'a AstNode<TypeAnnotation>, &'a u64),
     FnType(
         Option<&'a [AstNode<TypeAnnotation>]>,
