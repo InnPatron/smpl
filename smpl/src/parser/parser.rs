@@ -591,6 +591,21 @@ pub fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeA
                 parser_state!("type-annotation", "module-binding")
             ).to_data();
 
+            let bind = if peek_token!(tokens, |tok| {
+                match tok {
+                    Token::LParen => true,
+                    _ => false,
+                }
+            }, parser_state!("type-annotation", "type-arguments")) {
+                let _type = consume_token!(tokens, 
+                                           Token::Type,
+                                           parser_state!("type-annotation", "type"));
+
+                unimplemented!()
+            } else {
+                TypedPath::NillArity(bind)
+            };
+
             Ok(AstNode::new(TypeAnnotation::Path(bind), span))
         },
 
