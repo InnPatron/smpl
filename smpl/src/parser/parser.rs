@@ -895,7 +895,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
     enum Dec {
         AccessPath,
         ModulePath,
-        FnCall,
+        FnCallOrTypeArgFnCall,
         Indexing,
         DefSingletonAssignment,
         DefSingletonExpr,
@@ -918,7 +918,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
         match tok {
             Token::Dot => Dec::AccessPath,
             Token::ColonColon => Dec::ModulePath,
-            Token::LParen => Dec::FnCall,
+            Token::LParen => Dec::FnCallOrTypeArgFnCall,
             Token::LBracket => Dec::Indexing,
             Token::Assign => Dec::DefSingletonAssignment,
             _ => Dec::DefSingletonExpr,
@@ -961,24 +961,45 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             return Ok(Stmt::Expr(expr));
         }
 
-        Dec::FnCall => {
+        Dec::FnCallOrTypeArgFnCall => {
             // Expecting: expr ';'
             // Function calls are not lvalues
 
+            let (lspan, _lparen) = consume_token!(tokens,
+                                                  Token::LParen,
+                                                  parser_state!("stmt-expr-potential-fn-call", "lparen"));
+
+            let type_args = if peek_token!(tokens, |tok| {
+                match tok {
+                    Token::Type => true,
+                    _ => false
+                }
+            }, parser_state!("stmt-expr-potential-fn-call", "type-args?")) {
+                Some(production!(
+                    type_arg_list_post_lparen(tokens),
+                    parser_state!("stmt-expr-fn-call", "type-args")
+                ))
+            } else {
+                None
+            };
+
             let args = production!(
-                fn_args(tokens),
+                fn_args_post_lparen(tokens, lspan),
                 parser_state!("stmt-expr-fn-call", "fn-args")
             );
             let (args, arg_span) = args.to_data();
             let args = args.map(|v| v.into_iter().map(|a| a.to_data().0).collect());
 
-            let called = ModulePath(vec![AstNode::new(base_ident, base_span)]);
-
-            let fn_call = FnCall {
-                path: called,
-                args: args,
+            let fn_path = ModulePath(vec![AstNode::new(base_ident, base_span)]);
+            let fn_path = match type_args {
+                Some(args) => TypedPath::Parameterized(fn_path, args),
+                None => TypedPath::NillArity(fn_path),
             };
 
+            let fn_call = FnCall {
+                path: fn_path,
+                args: args,
+            };
 
             let span = Span::combine(base_span, arg_span);
             let expr_base = AstNode::new(fn_call, span);
