@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::ast::{Struct, Ident, ModulePath, TypeAnnotation};
+use crate::ast::{Struct, Ident, ModulePath, TypeAnnotation, TypeAnnotationRef};
 
 use super::semantic_data::{FieldId, TypeId, Program, ScopedData};
 use super::smpl_type::*;
@@ -245,6 +245,78 @@ impl TypeCons {
             }
         }
     }
+}
+
+pub fn type_cons_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
+    program: &'a mut Program,
+    scope: &'b ScopedData,
+    anno: T,
+    type_params: &'d HashMap<&'d Ident, TypeId>
+    ) -> Result<TypeId, AnalysisError> {
+
+    match anno.into() {
+        TypeAnnotationRef::Path(module_path) => {
+            if module_path.0.len() == 1 {
+                // Check if path refers to type parameter
+            } else {
+                // Get type id from Scope
+            }
+
+            unimplemented!()
+        },
+
+        TypeAnnotationRef::Array(element_type, size) => {
+            let element_type_cons = type_cons_from_annotation(program,
+                                                              scope,
+                                                              element_type.data(),
+                                                              type_params)?;
+            let cons = TypeCons::Array {
+                element_type: element_type_cons,
+                size: size.clone(),
+            };
+
+            // TODO: Insert type constructor in the universe
+            unimplemented!()
+        },
+
+        TypeAnnotationRef::FnType(args, ret_type) => {
+
+            let arg_type_cons = match args.map(|slice|{
+                slice.iter().map(|arg| type_cons_from_annotation(program,
+                                                                 scope,
+                                                                 arg.data(),
+                                                                 type_params)
+                                 )
+                    .collect::<Result<Vec<_>, _>>()
+            }) {
+                Some(args) => Some(args?),
+                None => None,
+            };
+
+            let return_type_cons = match ret_type.map(|ret_type| {
+                type_cons_from_annotation(program,
+                                          scope,
+                                          ret_type.data(),
+                                          type_params)
+            }) {
+                Some(ret) => Some(ret?),
+                None => None,
+            };
+
+            let cons = TypeCons::Function {
+                type_params: type_params
+                    .values()
+                    .map(|type_id| type_id.clone())
+                    .collect(),
+                parameters: arg_type_cons.unwrap_or(Vec::new()),
+                return_type: return_type_cons.unwrap_or(program.universe().unit()),
+            };
+
+            // TODO: Insert type constructor in the universe
+            unimplemented!()
+        },
+    }
+
 }
 
 // TODO: Store type constructors in Program
