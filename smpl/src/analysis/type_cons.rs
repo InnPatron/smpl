@@ -14,7 +14,10 @@ pub enum TypeCons {
         return_type: TypeId,
     },
 
-    Array,
+    Array {
+        element_type: TypeId,
+        size: u64,
+    },
 
     Record {
         name: Ident,
@@ -39,20 +42,22 @@ impl TypeCons {
     fn apply(&self, mut args: Option<Vec<TypeArg>>) -> Result<SmplType, ApplicationError> {
 
         match *self {
-            TypeCons::Array => {
+            TypeCons::Array {
+                element_type: element_type,
+                size: size,
+            } => {
                 let mut args = args.ok_or(ApplicationError::Arity {
-                    expected: 2,
+                    expected: 1,
                     found: 0
                 })?;
 
-                if args.len() != 2 {
+                if args.len() != 1 {
                     return Err(ApplicationError::Arity {
-                        expected: 2,
+                        expected: 1,
                         found: args.len()
                     });
                 }
 
-                let array_size = args.pop().unwrap();
                 let element_type = args.pop().unwrap();
 
                 let element_type = match element_type {
@@ -62,25 +67,9 @@ impl TypeCons {
                     }),
                 };
 
-                let array_size = match array_size {
-                    TypeArg::Type(_) => return Err(ApplicationError::ExpectedNumber { 
-                        param_position: 1
-                    }),
-
-                    TypeArg::Number(num) =>  num
-                };
-
-                if array_size <= 0 {
-                    return Err(ApplicationError::InvalidNumber {
-                        param_position: 1,
-                        found: array_size,
-                    });
-                }
-
-
                 let array_type = ArrayType { 
                     base_type: element_type,
-                    size: array_size as u64
+                    size: size as u64
                 };
 
                 Ok(SmplType::Array(array_type))
