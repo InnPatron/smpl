@@ -3,7 +3,7 @@ use std::iter::{Iterator, Peekable};
 use crate::span::*;
 use crate::ast::*;
 use super::tokens::*;
-use super::parser::{module_binding as full_module_binding, ParseErr, fn_param_list, block, type_annotation};
+use super::parser::{module_binding as full_module_binding, ParseErr, fn_param_list, block, type_annotation, type_arg_list_post_lparen};
 use super::parser_err::*;
 
 #[derive(PartialEq, Clone)]
@@ -345,7 +345,7 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         AccessPath,
         ModulePath,
         Singleton,
-        FnCall,
+        FnCallOrTypeArgFnCall,
         Indexing,
     }
 
@@ -357,7 +357,7 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         match tok {
             Token::Dot => IdentLeafDec::AccessPath,
             Token::ColonColon => IdentLeafDec::ModulePath,
-            Token::LParen => IdentLeafDec::FnCall,
+            Token::LParen => IdentLeafDec::FnCallOrTypeArgFnCall,
             Token::LBracket => IdentLeafDec::Indexing,
             _ => IdentLeafDec::Singleton,
         }
@@ -378,18 +378,42 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
                 )
             ),
 
-        IdentLeafDec::FnCall => {
+        IdentLeafDec::FnCallOrTypeArgFnCall => {
+            
+            let (lspan, _lparen) = consume_token!(tokens,
+                                                  Token::LParen,
+                                                  parser_state!("fn-call", "lparen"));
+
+            let type_args = if peek_token!(tokens, |tok| {
+                match tok {
+                    Token::Type => true,
+                    _ => false
+                }
+            }, parser_state!("fn-call", "type-args?")) {
+                Some(production!(
+                    type_arg_list_post_lparen(tokens),
+                    parser_state!("fn-call", "type-args")
+                ))
+            } else {
+                None
+            };
+
             let args = production!(
-                fn_args(tokens),
+                fn_args_post_lparen(tokens, lspan),
                 parser_state!("fn-call", "fn-args")
             );
+
             let (args, arg_span) = args.to_data();
             let args = args.map(|v| v.into_iter().map(|a| a.to_data().0).collect());
 
-            let called = ModulePath(vec![AstNode::new(base_ident, base_span)]);
+            let fn_path = ModulePath(vec![AstNode::new(base_ident, base_span)]);
+            let fn_path = match type_args {
+                Some(args) => TypedPath::Parameterized(fn_path, args),
+                None => TypedPath::NillArity(fn_path),
+            };
 
             let fn_call = FnCall {
-                path: called,
+                path: fn_path,
                 args: args,
             };
 
