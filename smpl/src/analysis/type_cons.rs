@@ -255,8 +255,8 @@ pub fn type_cons_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>
     ) -> Result<TypeId, AnalysisError> {
 
     match anno.into() {
-        TypeAnnotationRef::Path(module_path) => {
-            if module_path.0.len() == 1 {
+        TypeAnnotationRef::Path(typed_path) => {
+            if typed_path.module_path().0.len() == 1 {
                 // Check if path refers to type parameter
             } else {
                 // Get type id from Scope
