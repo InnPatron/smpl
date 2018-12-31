@@ -361,6 +361,22 @@ pub enum TypedPath {
     Parameterized(ModulePath, Vec<TypeAnnotation>),
 }
 
+impl TypedPath {
+    pub fn module_path(&self) -> &ModulePath {
+        match *self {
+            TypedPath::NillArity(ref p) => p,
+            TypedPath::Parameterized(ref p, _) => p,
+        }
+    }
+
+    pub fn annotations(&self) -> Option<&[TypeAnnotation]> {
+        match *self {
+            TypedPath::NillArity(_) => None,
+            TypedPath::Parameterized(_, ref anno) => Some(anno),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeAnnotation {
     Path(TypedPath),
