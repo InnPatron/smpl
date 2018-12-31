@@ -378,6 +378,50 @@ impl TypedPath {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum TypedPathRef<'a> {
+    NillArity(&'a ModulePath),
+    Parameterized(&'a ModulePath, &'a[TypeAnnotation]),
+}
+
+impl<'a> TypedPathRef<'a> {
+    pub fn module_path(&self) -> &ModulePath {
+        match *self {
+            TypedPathRef::NillArity(p) => p,
+            TypedPathRef::Parameterized(p, _) => p,
+        }
+    }
+
+    pub fn annotations(&self) -> Option<&[TypeAnnotation]> {
+        match *self {
+            TypedPathRef::NillArity(_) => None,
+            TypedPathRef::Parameterized(_, anno) => Some(anno),
+        }
+    }
+}
+
+impl<'a> From<&'a TypedPath> for TypedPathRef<'a> {
+    fn from(f: &'a TypedPath) -> TypedPathRef<'a> {
+        match *f {
+            TypedPath::NillArity(ref mp) => TypedPathRef::NillArity(mp),
+            TypedPath::Parameterized(ref mp, ref anno) => TypedPathRef::Parameterized(mp, anno),
+        }
+    }
+}
+
+impl<'a> From<TypedPathRef<'a>> for TypedPath {
+    fn from(f: TypedPathRef<'a>) -> TypedPath {
+        match f {
+            TypedPathRef::NillArity(mp) => TypedPath::NillArity(mp.clone()),
+            TypedPathRef::Parameterized(mp, anno) => TypedPath::Parameterized(mp.clone(), 
+                                                                              anno
+                                                                              .iter()
+                                                                              .map(|a| a.clone())
+                                                                              .collect()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum TypeAnnotation {
     Path(TypedPath),
     Array(Box<AstNode<TypeAnnotation>>, u64),
@@ -390,7 +434,7 @@ pub enum TypeAnnotation {
 impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
     fn from(t: &TypeAnnotation) -> TypeAnnotationRef {
         match t {
-            &TypeAnnotation::Path(ref p) => TypeAnnotationRef::Path(p),
+            &TypeAnnotation::Path(ref p) => TypeAnnotationRef::Path(p.into()),
             &TypeAnnotation::Array(ref t, ref s) => TypeAnnotationRef::Array(t, s),
             &TypeAnnotation::FnType(ref p, ref r) => TypeAnnotationRef::FnType(
                 p.as_ref().map(|v| v.as_slice()),
@@ -400,9 +444,27 @@ impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
     }
 }
 
+impl<'a> From<TypedPathRef<'a>> for TypeAnnotationRef<'a> {
+    fn from(p: TypedPathRef<'a>) -> TypeAnnotationRef {
+        TypeAnnotationRef::Path(p)
+    }
+}
+
+impl<'a> From<&'a ModulePath> for TypedPathRef<'a> {
+    fn from(mp: &'a ModulePath) -> TypedPathRef<'a> {
+        TypedPathRef::NillArity(mp)
+    }
+}
+
+impl<'a> From<&'a ModulePath> for TypeAnnotationRef<'a> {
+    fn from(mp: &'a ModulePath) -> TypeAnnotationRef<'a> {
+        TypeAnnotationRef::Path(mp.into())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeAnnotationRef<'a> {
-    Path(&'a TypedPath),
+    Path(TypedPathRef<'a>),
     Array(&'a AstNode<TypeAnnotation>, &'a u64),
     FnType(
         Option<&'a [AstNode<TypeAnnotation>]>,
@@ -413,7 +475,7 @@ pub enum TypeAnnotationRef<'a> {
 impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
     fn from(tr: TypeAnnotationRef) -> TypeAnnotation {
         match tr {
-            TypeAnnotationRef::Path(p) => TypeAnnotation::Path(p.clone()),
+            TypeAnnotationRef::Path(p) => TypeAnnotation::Path(p.into()),
             TypeAnnotationRef::Array(t, s) => TypeAnnotation::Array(Box::new(t.clone()), s.clone()),
             TypeAnnotationRef::FnType(p, r) => TypeAnnotation::FnType(
                 p.map(|params| params.iter().map(|param| param.clone()).collect()),
@@ -429,12 +491,6 @@ pub struct ModulePath(pub Vec<AstNode<Ident>>);
 impl ModulePath {
     pub fn iter<'a>(&'a self) -> Box<Iterator<Item = &Ident> + 'a> {
         Box::new(self.0.iter().map(|node| &node.data))
-    }
-}
-
-impl<'a> From<&'a ModulePath> for TypeAnnotationRef<'a> {
-    fn from(p: &ModulePath) -> TypeAnnotationRef {
-        TypeAnnotationRef::Path(p)
     }
 }
 
