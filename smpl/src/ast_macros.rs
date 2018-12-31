@@ -89,7 +89,7 @@ macro_rules! type_path {
     ($($segment: expr),*) => {{
         let mut v = Vec::new();
         $(v.push(dummy_node!(ident!($segment)));)*;
-        ModulePath(v)
+        TypedPath::NillArity(ModulePath(v))
     }};
 }
 
