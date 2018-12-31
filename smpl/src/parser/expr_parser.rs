@@ -643,7 +643,7 @@ pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: 
     }
 
     // End of module path
-    // Check if FN call
+    // Check if FN call or type application
     if tokens.has_next() &&
         peek_token!(tokens, |tok| {
             match tok {
@@ -652,18 +652,46 @@ pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: 
             }
         }, parser_state!("expr-module-path", "fn-call?")) {
 
-        // FN call
-        let (args, args_span) = production!(
-            fn_args(tokens),
-            parser_state!("expr-module-path", "fn-call")
-        ).to_data();
+        let (lspan, _) = consume_token!(
+            tokens,
+            Token::LParen,
+            parser_state!("expr-fn-call-or-type-app", "lparen"));
+
+        let (path, args, args_span) = if peek_token!(tokens, |tok| {
+            match tok {
+                Token::Type => true,
+                _ => false,
+            }
+        }, parser_state!("expr-fn-call-or-type-app", "type?")) {
+            let type_args = production!(
+                type_arg_list_post_lparen(tokens),
+                parser_state!("expr-module-path", "type-args"));
+
+            // TODO: May be type-application on a binding, not a function call
+            // Also fix in the expression statement position too
+            // i.e. let function = foo(type int);
+            let (args, args_span) = production!(
+                fn_args(tokens),
+                parser_state!("expr-module-path", "fn-call")
+            ).to_data();
+
+            (TypedPath::Parameterized(ModulePath(path), type_args), args, args_span)
+
+        } else {
+            let (args, args_span) = production!(
+                fn_args_post_lparen(tokens, lspan),
+                parser_state!("expr-module-path", "fn-call")
+            ).to_data();
+
+            (TypedPath::NillArity(ModulePath(path)), args, args_span)
+        };
 
         let start = base_span;
 
         let span = Span::combine(start, args_span);
 
         let fn_call = FnCall {
-            path: ModulePath(path), 
+            path: path, 
             args: args.map(|v| v.into_iter().map(|e| e.to_data().0).collect::<Vec<_>>()),
         };
 
