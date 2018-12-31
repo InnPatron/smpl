@@ -503,4 +503,24 @@ fn foo() { }";
         
         let _input = parse_module(wrap_input!(input)).unwrap();
     }
+
+    #[test]
+    fn parse_struct_init_type_arg() {
+        let input =
+"fn foo(a: Bar, b: Baz) {
+    init Bar(type Baq, Qux) { fi: fo };
+}";
+        
+        let _input = parse_module(wrap_input!(input)).unwrap();
+    }
+
+    #[test]
+    fn parse_fn_call_type_arg() {
+        let input =
+"fn foo(a: Bar, b: Baz) {
+    typed(type Bar)();
+}";
+        
+        let _input = parse_module(wrap_input!(input)).unwrap();
+    }
 }
