@@ -453,8 +453,8 @@ impl ScopedData {
         type_annotation: TypeAnnotationRef<'b>,
     ) -> Result<TypeId, AnalysisError> {
         match type_annotation {
-            TypeAnnotationRef::Path(path) => self.type_map
-                .get(&path.clone().into())
+            TypeAnnotationRef::Path(ref path) => self.type_map
+                .get(&path.module_path().clone().into())
                 .map(|id| id.clone())
                 .ok_or(AnalysisError::UnknownType(type_annotation.into())),
 
