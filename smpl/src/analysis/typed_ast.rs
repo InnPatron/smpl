@@ -350,7 +350,7 @@ pub enum ArrayInit {
 
 #[derive(Debug, Clone)]
 pub struct StructInit {
-    struct_type_name: ast::ModulePath,
+    struct_type_name: ast::TypedPath,
     field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>,
     struct_type: Cell<Option<TypeId>>,
     mapped_field_init: RefCell<Option<Vec<(FieldId, Typed<TmpId>)>>>,
@@ -358,7 +358,7 @@ pub struct StructInit {
 
 impl StructInit {
     pub fn new(
-        struct_type_name: ast::ModulePath,
+        struct_type_name: ast::TypedPath,
         field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>,
     ) -> StructInit {
         StructInit {
@@ -370,7 +370,7 @@ impl StructInit {
     }
 
     pub fn type_name(&self) -> &ast::ModulePath {
-        &self.struct_type_name
+        self.struct_type_name.module_path()
     }
 
     pub fn set_struct_type(&self, id: TypeId) {
@@ -518,13 +518,13 @@ impl Binding {
 
 #[derive(Debug, Clone)]
 pub struct FnCall {
-    path: ast::ModulePath,
+    path: ast::TypedPath,
     args: Option<Vec<Typed<TmpId>>>,
     fn_nomer: Cell<Option<BindingId>>,
 }
 
 impl FnCall {
-    pub fn new(path: ast::ModulePath, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
+    pub fn new(path: ast::TypedPath, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
         FnCall {
             path: path,
             args: args,
@@ -533,7 +533,7 @@ impl FnCall {
     }
 
     pub fn path(&self) -> &ast::ModulePath {
-        &self.path
+        &self.path.module_path()
     }
 
     pub fn args(&self) -> Option<&Vec<Typed<TmpId>>> {
