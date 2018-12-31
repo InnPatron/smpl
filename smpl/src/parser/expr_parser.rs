@@ -3,7 +3,7 @@ use std::iter::{Iterator, Peekable};
 use crate::span::*;
 use crate::ast::*;
 use super::tokens::*;
-use super::parser::{module_binding as full_module_binding, ParseErr, fn_param_list, block, type_annotation, type_arg_list_post_lparen};
+use super::parser::{module_binding as full_module_binding, ParseErr, fn_param_list, block, type_annotation, type_arg_list, type_arg_list_post_lparen};
 use super::parser_err::*;
 
 #[derive(PartialEq, Clone)]
@@ -717,6 +717,18 @@ fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         parser_state!("struct init", "struct-type")
     ).to_data();
 
+    let type_args = if peek_token!(tokens, |tok| {
+        match tok {
+            Token::LParen => true,
+            _ => false,
+        }
+    }, parser_state!("struct-init", "type-app?")) {
+        Some(production!(type_arg_list(tokens),
+                         parser_state!("struct-init", "type-app")))
+    } else {
+        None
+    };
+
     let _lbrace = consume_token!(tokens, 
                                  Token::LBrace,
                                  parser_state!("struct-init", "lbrace"));
@@ -742,8 +754,14 @@ fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
 
     let span = LocationSpan::new(linit.start(), lroc.end());
 
+    let struct_path = match type_args {
+        Some(args) => TypedPath::Parameterized(path, args),
+
+        None => TypedPath::NillArity(path),
+    };
+
     let struct_init = StructInit {
-        struct_name: path,
+        struct_name: struct_path,
         field_init: init,
     };
 
