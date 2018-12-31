@@ -969,25 +969,37 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
                                                   Token::LParen,
                                                   parser_state!("stmt-expr-potential-fn-call", "lparen"));
 
-            let type_args = if peek_token!(tokens, |tok| {
+            let (type_args, args, args_span) = if peek_token!(tokens, |tok| {
                 match tok {
                     Token::Type => true,
                     _ => false
                 }
             }, parser_state!("stmt-expr-potential-fn-call", "type-args?")) {
-                Some(production!(
+                let type_args = production!(
                     type_arg_list_post_lparen(tokens),
                     parser_state!("stmt-expr-fn-call", "type-args")
-                ))
+                );
+
+                // TODO: May be type-application on a binding, not a function call
+                // Also fix in the expression position too
+                // i.e. let function = foo(type int);
+                let (args, args_span) = production!(
+                    fn_args(tokens),
+                    parser_state!("expr-module-path", "fn-call")
+                ).to_data();
+
+                (Some(type_args), args, args_span)
+
             } else {
-                None
+                let (args, args_span) = production!(
+                    fn_args_post_lparen(tokens, lspan),
+                    parser_state!("stmt-expr-fn-call", "fn-args")
+                ).to_data();
+
+                (None, args, args_span)
             };
 
-            let args = production!(
-                fn_args_post_lparen(tokens, lspan),
-                parser_state!("stmt-expr-fn-call", "fn-args")
-            );
-            let (args, arg_span) = args.to_data();
+            
             let args = args.map(|v| v.into_iter().map(|a| a.to_data().0).collect());
 
             let fn_path = ModulePath(vec![AstNode::new(base_ident, base_span)]);
@@ -1001,7 +1013,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
                 args: args,
             };
 
-            let span = Span::combine(base_span, arg_span);
+            let span = Span::combine(base_span, args_span);
             let expr_base = AstNode::new(fn_call, span);
             let expr_base = AstNode::new(Expr::FnCall(expr_base), span);
 
