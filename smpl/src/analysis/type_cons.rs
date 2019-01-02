@@ -6,6 +6,7 @@ use super::semantic_data::{FieldId, TypeId, Program, ScopedData};
 use super::smpl_type::*;
 use super::error::{AnalysisError, TypeError, ApplicationError};
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum TypeCons {
 
     Function { 

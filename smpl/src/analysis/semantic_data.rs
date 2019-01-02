@@ -10,6 +10,7 @@ use crate::ast::*;
 use crate::ast::ModulePath as AstModulePath;
 use crate::feature::PresentFeatures;
 
+use super::type_cons::*;
 use super::error::AnalysisError;
 use super::metadata::Metadata;
 use super::smpl_type::*;
@@ -70,6 +71,7 @@ impl Program {
 #[derive(Clone, Debug)]
 pub struct Universe {
     type_constructor: TypeConstructor,
+    type_cons_map: HashMap<TypeId, TypeCons>,
     types: HashMap<TypeId, Rc<SmplType>>,
     fn_map: HashMap<FnId, Rc<Function>>,
     builtin_fn_map: HashMap<FnId, BuiltinFunction>,
@@ -86,19 +88,21 @@ pub struct Universe {
 
 impl Universe {
     pub fn std() -> Universe {
-        let unit = (TypeId(0), internal_module_path!(UNIT_TYPE), SmplType::Unit);
-        let int = (TypeId(1), internal_module_path!(INT_TYPE), SmplType::Int);
+        let unit = (TypeId(0), internal_module_path!(UNIT_TYPE), SmplType::Unit, TypeCons::Unit);
+        let int = (TypeId(1), internal_module_path!(INT_TYPE), SmplType::Int, TypeCons::Int);
         let float = (
             TypeId(2),
             internal_module_path!(FLOAT_TYPE),
             SmplType::Float,
+            TypeCons::Float,
         );
         let string = (
             TypeId(3),
             internal_module_path!(STRING_TYPE),
             SmplType::String,
+            TypeCons::String,
         );
-        let boolean = (TypeId(4), internal_module_path!(BOOL_TYPE), SmplType::Bool);
+        let boolean = (TypeId(4), internal_module_path!(BOOL_TYPE), SmplType::Bool, TypeCons::Bool);
 
         let type_map = vec![
             unit.clone(),
@@ -110,10 +114,15 @@ impl Universe {
 
         Universe {
             type_constructor: TypeConstructor::new(),
+            type_cons_map: type_map
+                .clone()
+                .into_iter()
+                .map(|(id, _, _, tc)| (id, tc))
+                .collect(), 
             types: type_map
                 .clone()
                 .into_iter()
-                .map(|(id, _, t)| (id, Rc::new(t)))
+                .map(|(id, _, t, _)| (id, Rc::new(t)))
                 .collect(),
             fn_map: HashMap::new(),
             builtin_fn_map: HashMap::new(),
@@ -123,7 +132,7 @@ impl Universe {
             std_scope: ScopedData {
                 type_map: type_map
                     .into_iter()
-                    .map(|(id, path, _)| (path, id))
+                    .map(|(id, path, _, _)| (path, id))
                     .collect(),
                 var_map: HashMap::new(),
                 var_type_map: HashMap::new(),
