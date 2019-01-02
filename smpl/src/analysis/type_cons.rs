@@ -11,8 +11,8 @@ pub enum TypeCons {
 
     Function { 
         type_params: Vec<TypeId>,
-        parameters: Vec<TypeId>,
-        return_type: TypeId,
+        parameters: Vec<TypeApp>,
+        return_type: TypeApp,
     },
 
     Array {
@@ -23,7 +23,7 @@ pub enum TypeCons {
     Record {
         name: Ident,
         type_params: Vec<TypeId>,
-        fields: HashMap<FieldId, TypeId>,
+        fields: HashMap<FieldId, TypeApp>,
         field_map: HashMap<Ident, FieldId>,
     },
 
@@ -32,6 +32,12 @@ pub enum TypeCons {
     String,
     Bool,
     Unit,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeApp {
+    type_cons: Box<TypeCons>,
+    args: Option<Vec<TypeApp>>
 }
 
 pub fn type_cons_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
