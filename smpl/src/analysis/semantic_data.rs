@@ -230,6 +230,12 @@ impl Universe {
         }
     }
 
+    pub fn insert_type_cons(&mut self, id: TypeId, cons: TypeCons) {
+        if self.type_cons_map.insert(id, cons).is_some() {
+            panic!("Duplicate type constructor for type id");
+        }
+    }
+
     pub fn get_type(&self, id: TypeId) -> Rc<SmplType> {
         match self.types
             .get(&id)
@@ -239,6 +245,10 @@ impl Universe {
             Some(t) => t,
             None => panic!("Type with TypeId {} does not exist.", id.0),
         }
+    }
+
+    pub fn get_type_cons(&self, id: TypeId) -> Option<&TypeCons> {
+        self.type_cons_map.get(&id)
     }
 
     pub fn get_fn(&self, id: FnId) -> Rc<Function> {
