@@ -137,6 +137,7 @@ impl Universe {
                 var_map: HashMap::new(),
                 var_type_map: HashMap::new(),
                 fn_map: HashMap::new(),
+                type_param_map: HashMap::new(),
             },
             unit: unit.0,
             int: int.0,
@@ -458,6 +459,7 @@ pub struct ScopedData {
     var_map: HashMap<Ident, VarId>,
     var_type_map: HashMap<VarId, TypeId>,
     fn_map: HashMap<ModulePath, FnId>,
+    type_param_map: HashMap<Ident, TypeParamId>,
 }
 
 impl ScopedData {
@@ -566,6 +568,14 @@ impl ScopedData {
             .get(&path.clone().into())
             .map(|id| id.clone())
             .ok_or(AnalysisError::UnknownFn(path.clone()))
+    }
+
+    pub fn insert_type_param(&mut self, ident: Ident, id: TypeParamId) -> bool {
+        self.type_param_map.insert(ident, id).is_some()
+    }
+
+    pub fn type_param(&self, ident: &Ident) -> Option<TypeParamId> {
+        self.type_param_map.get(ident).map(|id| id.clone())
     }
 
     pub fn all_types(&self) -> Vec<(&ModulePath, &TypeId)> {
