@@ -491,7 +491,7 @@ impl ScopedData {
                 Ok(type_id)
             }
 
-            TypeAnnotationRef::FnType(params, return_t) => {
+            TypeAnnotationRef::FnType(_, params, return_t) => {
                 let param_types = match params {
                     Some(ref v) => {
                         let mut new_params = Vec::new();

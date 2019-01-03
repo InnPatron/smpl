@@ -426,6 +426,7 @@ pub enum TypeAnnotation {
     Path(TypedPath),
     Array(Box<AstNode<TypeAnnotation>>, u64),
     FnType(
+        Option<TypeParams>,
         Option<Vec<AstNode<TypeAnnotation>>>,
         Option<Box<AstNode<TypeAnnotation>>>,
     ),
@@ -436,7 +437,8 @@ impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
         match t {
             &TypeAnnotation::Path(ref p) => TypeAnnotationRef::Path(p.into()),
             &TypeAnnotation::Array(ref t, ref s) => TypeAnnotationRef::Array(t, s),
-            &TypeAnnotation::FnType(ref p, ref r) => TypeAnnotationRef::FnType(
+            &TypeAnnotation::FnType(ref tp, ref p, ref r) => TypeAnnotationRef::FnType(
+                tp.as_ref(),
                 p.as_ref().map(|v| v.as_slice()),
                 r.as_ref().map(|r| r.borrow()),
             ),
@@ -467,6 +469,7 @@ pub enum TypeAnnotationRef<'a> {
     Path(TypedPathRef<'a>),
     Array(&'a AstNode<TypeAnnotation>, &'a u64),
     FnType(
+        Option<&'a TypeParams>,
         Option<&'a [AstNode<TypeAnnotation>]>,
         Option<&'a AstNode<TypeAnnotation>>,
     ),
@@ -477,7 +480,8 @@ impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
         match tr {
             TypeAnnotationRef::Path(p) => TypeAnnotation::Path(p.into()),
             TypeAnnotationRef::Array(t, s) => TypeAnnotation::Array(Box::new(t.clone()), s.clone()),
-            TypeAnnotationRef::FnType(p, r) => TypeAnnotation::FnType(
+            TypeAnnotationRef::FnType(tp, p, r) => TypeAnnotation::FnType(
+                tp.map(|tp| tp.clone()),
                 p.map(|params| params.iter().map(|param| param.clone()).collect()),
                 r.map(|r| Box::new(r.clone())),
             ),
