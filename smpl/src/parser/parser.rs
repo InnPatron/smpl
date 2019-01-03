@@ -688,8 +688,28 @@ fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> 
                                     parser_state!("fn-type", "fn"));
     let _lparen = consume_token!(tokens, 
                                  Token::LParen,
+                                 parser_state!("fn-type", "(type?)param lparen"));
+
+    let type_params = if peek_token!(tokens, |tok| {
+        match tok {
+            Token::Type => true,
+            _ => false,
+        }
+    }, parser_state!("fn-type", "type?")) {
+        let type_params = production!(
+                type_param_list_post_lparen(tokens),
+                parser_state!("fn-type", "type-params"));
+
+        // Consume parameter lparen
+        let _lparen = consume_token!(tokens, 
+                                 Token::LParen,
                                  parser_state!("fn-type", "param lparen"));
-        
+
+        Some(type_params)
+    } else {
+        None
+    };
+
     let mut params = None;
     if peek_token!(tokens, |tok| {
         match tok {
@@ -730,7 +750,7 @@ fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> 
         fn_type_span = Span::combine(fn_type_span, return_span);
     }
 
-    Ok(AstNode::new(TypeAnnotation::FnType(params, return_type), fn_type_span))
+    Ok(AstNode::new(TypeAnnotation::FnType(type_params, params, return_type), fn_type_span))
 }
 
 fn fn_type_params(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<TypeAnnotation>>> {
