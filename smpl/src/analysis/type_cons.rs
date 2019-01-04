@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ast::{Struct, Ident, ModulePath, TypeAnnotation, TypeAnnotationRef};
 
-use super::semantic_data::{FieldId, TypeId, Program, ScopedData};
+use super::semantic_data::{FieldId, TypeId, TypeParamId, Program, ScopedData, Universe};
 use super::smpl_type::*;
 use super::error::{AnalysisError, TypeError, ApplicationError};
 
@@ -10,19 +10,19 @@ use super::error::{AnalysisError, TypeError, ApplicationError};
 pub enum TypeCons {
 
     Function { 
-        type_params: Vec<TypeId>,
+        type_params: Option<Vec<TypeParamId>>,
         parameters: Vec<TypeApp>,
         return_type: TypeApp,
     },
 
-    Array {
-        element_type: TypeId,
-        size: u64,
+    Array { 
+        element_type: TypeApp,
+        size: u64 
     },
 
     Record {
         name: Ident,
-        type_params: Vec<TypeId>,
+        type_params: Option<Vec<TypeParamId>>,
         fields: HashMap<FieldId, TypeApp>,
         field_map: HashMap<Ident, FieldId>,
     },
@@ -35,50 +35,134 @@ pub enum TypeCons {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TypeApp {
-    type_cons: Box<TypeCons>,
-    args: Option<Vec<TypeApp>>
+pub enum TypeApp {
+    Applied {
+        type_cons: Box<TypeCons>,
+        args: Option<Vec<TypeApp>>
+    },
+
+    Param(TypeParamId),
 }
 
-pub fn type_cons_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
-    program: &'a mut Program,
+pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
+    universe: &'a mut Universe,
     scope: &'b ScopedData,
     anno: T,
-    type_params: &'d HashMap<&'d Ident, TypeId>
-    ) -> Result<TypeId, AnalysisError> {
+    ) -> Result<TypeApp, AnalysisError> {
 
     match anno.into() {
         TypeAnnotationRef::Path(typed_path) => {
+            // Check if path refers to type parameter
+            // Assume naming conflicts detected at type parameter declaration
             if typed_path.module_path().0.len() == 1 {
-                // Check if path refers to type parameter
-            } else {
-                // Get type id from Scope
+
+                let ident = typed_path.module_path().0.get(0).unwrap().data();
+                let type_param = scope.type_param(ident);
+                
+                // Found a type parameter
+                if let Some(tp_id) = type_param {
+
+                    // Do not allow type arguments on a type parameter
+                    if typed_path.annotations().is_some() {
+                        return Err(TypeError::ParameterizedParameter {
+                            ident: typed_path
+                                .module_path()
+                                .0
+                                .get(0)
+                                .unwrap()
+                                .data()
+                                .clone()
+                        }.into());
+                    }
+
+
+                    return Ok(TypeApp::Param(tp_id));
+                }
             }
 
-            unimplemented!()
+            // Not a type parameter
+            let type_cons_path = super::semantic_data::ModulePath::new(
+                typed_path
+                .module_path()
+                .0
+                .clone()
+                .into_iter()
+                .map(|node| node.data().clone())
+                .collect()
+            );
+            let type_cons = scope.type_cons(universe, &type_cons_path)?;
+
+            let type_args = typed_path.annotations().map(|ref vec| {
+                vec
+                    .iter()
+                    .map(|anno| type_app_from_annotation(universe, scope, anno))
+                    .collect::<Result<Vec<_>,_>>()
+            });
+
+            let type_args = match type_args {
+                Some(dat) => Some(dat?),
+
+                None => None,
+            };
+
+            Ok(TypeApp::Applied {
+                type_cons: Box::new(type_cons),
+                args: type_args
+            })
         },
 
         TypeAnnotationRef::Array(element_type, size) => {
-            let element_type_cons = type_cons_from_annotation(program,
+            let element_type_app = type_app_from_annotation(universe,
                                                               scope,
-                                                              element_type.data(),
-                                                              type_params)?;
+                                                              element_type.data())?;
             let cons = TypeCons::Array {
-                element_type: element_type_cons,
-                size: size.clone(),
+                element_type: element_type_app,
+                size: *size,
             };
-
-            // TODO: Insert type constructor in the universe
-            unimplemented!()
+            
+            Ok(TypeApp::Applied {
+                type_cons: Box::new(cons),
+                args: None,
+            })
         },
 
-        TypeAnnotationRef::FnType(args, ret_type) => {
+        TypeAnnotationRef::FnType(tp, args, ret_type) => {
+
+            let (local_type_params, new_scope) = match tp.map(|local_type_params| {
+                let mut new_scope = scope.clone();
+                let mut local_param_ids = Vec::new();
+                let local_type_param_id = universe.new_type_param_id();
+
+                // Insert local type parameters into the current scope
+                for p in local_type_params.params.iter() {
+                    if new_scope.insert_type_param(p.data().clone(), local_type_param_id) {
+                        return Err(TypeError::TypeParameterNamingConflict { 
+                            ident: p.data().clone()
+                        });
+                    }
+
+                    local_param_ids.push(local_type_param_id);
+                }
+
+                Ok((local_param_ids, new_scope))
+            }) {
+                Some(data) => {
+                    let data = data?;
+
+                    (Some(data.0), Some(data.1))
+                },
+
+                None => (None, None),
+            };
+
+            let scope = new_scope
+                .as_ref()
+                .unwrap_or(scope);
 
             let arg_type_cons = match args.map(|slice|{
-                slice.iter().map(|arg| type_cons_from_annotation(program,
+                slice.iter().map(|arg| type_app_from_annotation(universe,
                                                                  scope,
-                                                                 arg.data(),
-                                                                 type_params)
+                                                                 arg.data())
                                  )
                     .collect::<Result<Vec<_>, _>>()
             }) {
@@ -87,29 +171,29 @@ pub fn type_cons_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>
             };
 
             let return_type_cons = match ret_type.map(|ret_type| {
-                type_cons_from_annotation(program,
+                type_app_from_annotation(universe,
                                           scope,
-                                          ret_type.data(),
-                                          type_params)
+                                          ret_type.data())
             }) {
                 Some(ret) => Some(ret?),
                 None => None,
             };
 
             let cons = TypeCons::Function {
-                type_params: type_params
-                    .values()
-                    .map(|type_id| type_id.clone())
-                    .collect(),
+                type_params: local_type_params,
                 parameters: arg_type_cons.unwrap_or(Vec::new()),
-                return_type: return_type_cons.unwrap_or(program.universe().unit()),
+                return_type: return_type_cons.unwrap_or(TypeApp::Applied {
+                    type_cons: Box::new(TypeCons::Unit),
+                    args: None,
+                }),
             };
 
-            // TODO: Insert type constructor in the universe
-            unimplemented!()
+            Ok(TypeApp::Applied {
+                type_cons: Box::new(cons),
+                args: None,
+            })
         },
     }
-
 }
 
 // TODO: Store type constructors in Program
@@ -117,20 +201,30 @@ pub fn generate_struct_type_cons(
     program: &mut Program,
     scope: &ScopedData,
     struct_def: &Struct,
-) -> Result<Vec<FieldId>, AnalysisError> {
+) -> Result<(TypeCons, Vec<FieldId>), AnalysisError> {
     let (universe, _metadata, _features) = program.analysis_context();
 
     // Check no parameter naming conflicts
+    let mut new_scope = scope.clone();
     let mut type_parameter_map = HashMap::new();
     match struct_def.type_params {
         Some(ref params) => {
             for p in params.params.iter() {
+
+                // Check for type parameter naming conflict
                 if type_parameter_map.contains_key(p.data()) {
+
+                    // Naming conflict
                     return Err(TypeError::ParameterNamingConflict {
                         ident: p.data().clone(),
                     }.into());
                 } else {
-                    type_parameter_map.insert(p.data(), universe.new_type_id());
+
+                    let type_param_id = universe.new_type_param_id();
+                    // Insert type parameter into scope
+                    new_scope.insert_type_param(p.data().clone(), type_param_id);
+                    // Insert type parameter into set
+                    type_parameter_map.insert(p.data(), type_param_id);
                 }
             }
         }
@@ -139,6 +233,7 @@ pub fn generate_struct_type_cons(
     }
 
     // Generate the constructor
+    let scope = new_scope;
     let mut fields = HashMap::new();
     let mut field_map = HashMap::new();
     let mut order = Vec::new();
@@ -146,22 +241,16 @@ pub fn generate_struct_type_cons(
         for field in body.iter() {
             let f_id = universe.new_field_id();
             let f_name = field.name.data().clone();
-            let f_type_path = &field.field_type;
-            let path_data = f_type_path.data();
 
-            let field_type = match struct_def.type_params {
+            let field_type_annotation = field.field_type.data();
 
-                // TODO: Recursively generate type constructor generators for fields
-                Some(ref params) => {
-                    unimplemented!()
-                }
-
-                // No type parameters, behave as if concrete type constructor
-                None => scope.type_id(universe, path_data.into())?,
-            };
+            // TODO: Insert type parameters into scope
+            let field_type_app = type_app_from_annotation(universe,
+                                                          &scope,
+                                                          field_type_annotation)?;
 
             // Map field to type constructor
-            fields.insert(f_id, field_type);
+            fields.insert(f_id, field_type_app);
 
             if field_map.contains_key(&f_name) {
                 return Err(TypeError::FieldNamingConflict {
@@ -175,17 +264,23 @@ pub fn generate_struct_type_cons(
         }
     }
 
-    // TODO: Insert type constructor
+    let type_params = type_parameter_map
+        .values()
+        .map(|id| id.clone())
+        .collect::<Vec<_>>();
+
+    let type_params = if type_params.len() > 0 {
+        Some(type_params)
+    } else {
+        None
+    };
+
     let type_cons = TypeCons::Record {
         name: struct_def.name.data().clone(),
         fields: fields,
         field_map: field_map,
-        type_params: type_parameter_map
-            .values()
-            .map(|id| id.clone())
-            .collect(),
+        type_params: type_params,
     };
-    
 
-    Ok(order)
+    Ok((type_cons, order))
 }
