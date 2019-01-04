@@ -34,6 +34,25 @@ pub enum TypeCons {
     Unit,
 }
 
+impl TypeCons {
+    fn type_params(&self) -> Option<&[TypeParamId]> {
+        match *self {
+
+            TypeCons::Function {
+                type_params: ref type_params,
+                ..
+            } => type_params.as_ref().map(|v| v.as_slice()),
+
+            TypeCons::Record {
+                type_params: ref type_params,
+                ..
+            } => type_params.as_ref().map(|v| v.as_slice()),
+
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeApp {
     Applied {
@@ -42,6 +61,146 @@ pub enum TypeApp {
     },
 
     Param(TypeParamId),
+}
+
+impl TypeApp {
+
+    pub fn apply(&self) -> Result<TypeApp, TypeError> {
+        let mut param_map = HashMap::new();
+
+        self.apply_internal(&param_map)
+    }
+
+    fn apply_internal(&self, param_map: &HashMap<TypeParamId, TypeApp>) -> Result<TypeApp, TypeError> {
+        match *self {
+            TypeApp::Applied {
+                type_cons: ref type_cons,
+                args: ref type_args,
+            } => {
+                let new_param_map = match (type_cons.type_params(), type_args) {
+
+                    (Some(ref type_params), Some(ref type_args)) => {
+                        if type_params.len() != type_args.len() {
+                            return Err(ApplicationError::Arity { 
+                                expected: type_params.len(), 
+                                found: type_args.len(),
+                            }.into());
+                        }
+
+                        let mut param_map = param_map.clone();
+                        
+                        for (param_id, type_arg) in type_params.iter().zip(type_args.iter()) {
+                            param_map.insert(param_id.clone(), type_arg.clone());
+                        }
+
+                        Some(param_map)
+                    },
+
+                    (Some(ref type_params), None) => {
+                        return Err(ApplicationError::Arity { 
+                            expected: type_params.len(), 
+                            found: 0,
+                        }.into());
+                    },
+
+                    (None, Some(ref type_args)) => {
+                        return Err(ApplicationError::Arity { 
+                            expected: 0, 
+                            found: type_args.len(),
+                        }.into());
+                    },
+
+                    (None, None) => None,
+
+                };
+
+                let param_map = new_param_map
+                    .as_ref()
+                    .unwrap_or(param_map);
+
+                match **type_cons {
+                    TypeCons::Function { 
+                        type_params: ref type_params,
+                        parameters: ref parameters,
+                        return_type: ref return_type,
+                    } => {
+                        let parameters = parameters
+                            .iter()
+                            .map(|app| app.apply_internal(param_map))
+                            .collect::<Result<Vec<_>, _>>()?;
+
+                        let return_type = return_type.apply_internal(param_map)?;
+
+                        let type_cons = TypeCons::Function {
+                            type_params: type_params.clone(),
+                            parameters: parameters,
+                            return_type: return_type,
+                        };
+                        Ok(TypeApp::Applied {
+                            type_cons: Box::new(type_cons),
+                            args: None,
+                        })
+                    },
+
+                    TypeCons::Array { 
+                        element_type: ref element_type,
+                        size: size,
+                    } => {
+
+                        let type_cons = TypeCons::Array {
+                            element_type: element_type.apply_internal(param_map)?,
+                            size: size
+                        };
+
+                        Ok(TypeApp::Applied {
+                            type_cons: Box::new(type_cons),
+                            args: None
+                        })
+                    },
+
+                    TypeCons::Record {
+                        name: ref name,
+                        type_params: ref type_params,
+                        fields: ref fields,
+                        field_map: ref field_map,
+                    } => {
+                        let type_cons = TypeCons::Record {
+                            name: name.clone(),
+                            type_params: type_params.clone(),
+                            fields: fields
+                                .iter()
+                                .map(|(k, v)| {
+                                    match v.apply_internal(param_map) {
+                                        Ok(v) => Ok((k.clone(), v)),
+                                        Err(e) => Err(e),
+                                    }
+                                 })
+                                .collect::<Result<HashMap<_,_>, _>>()?,
+
+                            field_map: field_map.clone(),
+                        };
+
+                        Ok(TypeApp::Applied {
+                            type_cons: Box::new(type_cons),
+                            args: None,
+                        })
+                    },
+
+                    _ => Ok(self.clone()),
+                }
+            }
+
+            TypeApp::Param(ref param_id) => {
+                if let Some(type_app) = param_map.get(param_id) {
+                    // Equivalence relation between type parameters
+                    type_app.apply_internal(param_map)
+                } else {
+                    // Final equivalence to another type parameter
+                    Ok(TypeApp::Param(param_id.clone()))
+                }
+            }
+        }
+    }
 }
 
 pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
