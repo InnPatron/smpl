@@ -131,9 +131,15 @@ impl Universe {
             id_counter: Cell::new(5),
             std_scope: ScopedData {
                 type_map: type_map
+                    .clone()
                     .into_iter()
                     .map(|(id, path, _, _)| (path, id))
                     .collect(),
+                type_cons_map: type_map
+                    .clone()
+                    .into_iter()
+                    .map(|(id, path, _, _)| (path, id))
+                    .collect(), 
                 var_map: HashMap::new(),
                 var_type_map: HashMap::new(),
                 fn_map: HashMap::new(),
@@ -456,6 +462,7 @@ impl Module {
 #[derive(Clone, Debug)]
 pub struct ScopedData {
     type_map: HashMap<ModulePath, TypeId>,
+    type_cons_map: HashMap<ModulePath, TypeId>,
     var_map: HashMap<Ident, VarId>,
     var_type_map: HashMap<VarId, TypeId>,
     fn_map: HashMap<ModulePath, FnId>,
@@ -523,6 +530,21 @@ impl ScopedData {
                 ))
             }
         }
+    }
+
+    pub fn type_cons<'a, 'b, 'c>(
+        &'a self,
+        universe: &'b Universe,
+        path: &'c ModulePath,
+    ) -> Result<TypeCons, AnalysisError> {
+        self.type_cons_map
+            .get(path)
+            .map(|id| universe.get_type_cons(id.clone()).unwrap().clone())
+            .ok_or(unimplemented!())
+    }
+
+    pub fn insert_type_cons(&mut self, path: ModulePath, id: TypeId) -> Option<TypeId> {
+        self.type_cons_map.insert(path, id)
     }
 
     pub fn insert_type(&mut self, path: ModulePath, id: TypeId) -> Option<TypeId> {
