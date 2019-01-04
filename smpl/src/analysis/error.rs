@@ -141,6 +141,14 @@ pub enum TypeError {
         ident: Ident
     },
 
+    TypeParameterNamingConflict {
+        ident: Ident
+    },
+
+    ParameterizedParameter {
+        ident: Ident,
+    },
+
     ApplicationError(ApplicationError),
 }
 
