@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::ast::{Struct, Ident, ModulePath, TypeAnnotation, TypeAnnotationRef};
+use crate::ast::{Struct, Ident, ModulePath, TypeAnnotation, TypeAnnotationRef, TypeParams};
 
 use super::semantic_data::{FieldId, TypeId, TypeParamId, Program, ScopedData, Universe};
 use super::smpl_type::*;
@@ -450,18 +450,10 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
     }
 }
 
-// TODO: Store type constructors in Program
-pub fn generate_struct_type_cons(
-    program: &mut Program,
-    scope: &ScopedData,
-    struct_def: &Struct,
-) -> Result<(TypeCons, Vec<FieldId>), AnalysisError> {
-    let (universe, _metadata, _features) = program.analysis_context();
-
-    // Check no parameter naming conflicts
-    let mut new_scope = scope.clone();
+fn type_param_map(universe: &Universe, type_params: Option<&TypeParams>, mut new_scope: ScopedData) 
+    -> Result<(ScopedData, HashMap<Ident, TypeParamId>), AnalysisError> {
     let mut type_parameter_map = HashMap::new();
-    match struct_def.type_params {
+    match type_params {
         Some(ref params) => {
             for p in params.params.iter() {
 
@@ -478,7 +470,7 @@ pub fn generate_struct_type_cons(
                     // Insert type parameter into scope
                     new_scope.insert_type_param(p.data().clone(), type_param_id);
                     // Insert type parameter into set
-                    type_parameter_map.insert(p.data(), type_param_id);
+                    type_parameter_map.insert(p.data().clone(), type_param_id);
                 }
             }
         }
@@ -486,8 +478,23 @@ pub fn generate_struct_type_cons(
         None => (),
     }
 
+    Ok((new_scope, type_parameter_map))
+}
+
+// TODO: Store type constructors in Program
+pub fn generate_struct_type_cons(
+    program: &mut Program,
+    scope: &ScopedData,
+    struct_def: &Struct,
+) -> Result<(TypeCons, Vec<FieldId>), AnalysisError> {
+    let (universe, _metadata, _features) = program.analysis_context();
+
+    // Check no parameter naming conflicts
+    let (scope, type_parameter_map) =  type_param_map(universe,
+                                                      struct_def.type_params.as_ref(), 
+                                                      scope.clone())?;
+
     // Generate the constructor
-    let scope = new_scope;
     let mut fields = HashMap::new();
     let mut field_map = HashMap::new();
     let mut order = Vec::new();
