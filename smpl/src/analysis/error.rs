@@ -150,6 +150,8 @@ pub enum TypeError {
     },
 
     ApplicationError(ApplicationError),
+
+    UninstantiatedType,
 }
 
 impl From<TypeError> for AnalysisError {
