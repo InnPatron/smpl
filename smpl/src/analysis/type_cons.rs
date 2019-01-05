@@ -51,6 +51,78 @@ impl TypeCons {
             _ => None,
         }
     }
+
+    pub fn instantiated_equality(lhs: &TypeCons, rhs: &TypeCons) -> Result<bool, TypeError> {
+        use self::TypeCons::*;
+        match (lhs, rhs) {
+
+            (Function { 
+                type_params: _,
+                parameters: ref lhs_params,
+                return_type: ref lhs_return,
+            }, Function { 
+                type_params: _,
+                parameters: ref rhs_params,
+                return_type: ref rhs_return,
+            }) => {
+
+                if !TypeApp::instantiated_equality(lhs_return, rhs_return)? {
+                    return Ok(false);
+                }
+
+                for (lhs, rhs) in lhs_params.iter().zip(rhs_params.iter()) {
+                    if !TypeApp::instantiated_equality(lhs, rhs)? {
+                        return Ok(false);
+                    }
+                }
+
+                Ok(true)
+            },
+
+            (Array {
+                element_type: ref lhs_element,
+                size: lhs_size,
+            }, Array {
+                element_type: ref rhs_element,
+                size: rhs_size,
+            }) => {
+                Ok((lhs_size == rhs_size) &&
+                   TypeApp::instantiated_equality(lhs_element, rhs_element)?)
+            },
+
+            (Record {
+                name: ref lhs_name,
+                type_params: _,
+                fields: ref lhs_fields,
+                field_map: ref lhs_field_map,
+            }, Record {
+                name: ref rhs_name,
+                type_params: _,
+                fields: ref rhs_fields,
+                field_map: ref rhs_field_map,
+            }) => {
+                if !(lhs_name == rhs_name) {
+                    return Ok(false);
+                }
+
+                for (lhs, rhs) in lhs_fields.values().zip(rhs_fields.values()) {
+                    if !TypeApp::instantiated_equality(lhs, rhs)? {
+                        return Ok(false);
+                    }
+                }
+
+                Ok(true)
+            },
+
+            (Int, Int) => Ok(true),
+            (Float, Float) => Ok(true),
+            (String, String) => Ok(true),
+            (Bool, Bool) => Ok(true),
+            (Unit, Unit) => Ok(true),
+
+            _ => Ok(false),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -199,6 +271,29 @@ impl TypeApp {
                     Ok(TypeApp::Param(param_id.clone()))
                 }
             }
+        }
+    }
+
+    pub fn instantiated_equality(lhs: &TypeApp, rhs: &TypeApp) -> Result<bool, TypeError> {
+        match (lhs, rhs) {
+            (TypeApp::Applied {
+                type_cons: ref lhs_type_cons,
+                args: ref lhs_args,
+            }, TypeApp::Applied {
+                type_cons: ref rhs_type_cons,
+                args: ref rhs_args,
+            }) => {
+                let type_cons_result = TypeCons::instantiated_equality(lhs_type_cons, rhs_type_cons)?;
+                match (lhs_args, rhs_args) {
+                    (None, None) => {
+                        TypeCons::instantiated_equality(lhs_type_cons, rhs_type_cons)
+                    },
+
+                    _ => Err(TypeError::UninstantiatedType),
+                }
+            },
+
+            _ => Err(TypeError::UninstantiatedType),
         }
     }
 }
