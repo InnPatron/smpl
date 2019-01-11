@@ -1,5 +1,4 @@
 pub mod smpl_type;
-mod fn_type_generator;
 mod feature_checkers;
 mod semantic_ck;
 mod semantic_data;
