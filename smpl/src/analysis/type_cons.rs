@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::feature::*;
-use crate::ast::{Struct, Ident, ModulePath, TypeAnnotation, TypeAnnotationRef, TypeParams, Function, BuiltinFnParams, BuiltinFunction};
+use crate::ast::{Struct, Ident, ModulePath, TypeAnnotation, TypeAnnotationRef, TypeParams, Function, BuiltinFnParams, BuiltinFunction, AnonymousFn};
 
 use super::metadata::*;
 use super::semantic_data::{FieldId, TypeId, TypeParamId, Program, ScopedData, Universe, FnId};
@@ -723,4 +723,77 @@ pub fn generate_builtin_fn_type(
     };
 
     Ok(type_cons)
+}
+
+pub fn generate_anonymous_fn_type(
+    program: &mut Program,
+    scope: &ScopedData,
+    fn_id: FnId,
+    fn_def: &AnonymousFn,
+) -> Result<(ScopedData, TypeCons), AnalysisError> {
+    let (universe, metadata, features) = program.analysis_context();
+
+    // Check no parameter naming conflicts
+    // TODO: Allow type parameters on anonymous functions?
+    let scope = scope.clone();
+
+    let ret_type = match fn_def.return_type {
+        Some(ref anno) => {
+            let anno = anno.data();
+            let type_app = type_app_from_annotation(universe,
+                                                    &scope,
+                                                    anno)?;
+            // TODO: Function signature scanner?
+            type_app
+        }
+        None => {
+            TypeApp::Applied {
+                type_cons: Box::new(TypeCons::Unit),
+                args: None
+            }
+        }
+    };
+
+    let params = match fn_def.params {
+        Some(ref params) => {
+            let mut typed_params = Vec::new();
+            let mut param_metadata = Vec::new();
+            for param in params.iter() {
+
+                let param = param.data();
+                let param_anno = param.param_type.data();
+
+                let param_type = type_app_from_annotation(universe,
+                                                          &scope,
+                                                          param_anno)?;
+
+                typed_params.push(param_type);
+
+                param_metadata.push(FunctionParameter::new(
+                    param.name.data().clone(),
+                    universe.new_var_id(),
+                ));
+
+                // TODO: Function signature scanner?
+            }
+
+            metadata.insert_function_param_ids(fn_id, param_metadata);
+
+            typed_params
+        }
+        None => {
+            metadata.insert_function_param_ids(fn_id, Vec::with_capacity(0));
+            Vec::with_capacity(0)
+        }
+    };
+
+    let type_params = None;
+
+    let type_cons = TypeCons::Function { 
+        type_params: type_params,
+        parameters: params,
+        return_type: ret_type,
+    };
+
+    Ok((scope, type_cons))
 }
