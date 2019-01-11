@@ -7,7 +7,7 @@ use crate::ast;
 use crate::span::Span;
 
 use super::error::ControlFlowError;
-use super::smpl_type::{FunctionType, SmplType};
+use super::type_cons::*;
 use super::expr_flow;
 use super::typed_ast;
 use super::semantic_data::{LoopId, Universe};
@@ -351,7 +351,7 @@ impl CFG {
     pub fn generate(
         universe: &Universe,
         body: ast::AstNode<ast::Block>,
-        fn_type: &FunctionType,
+        fn_type: &TypeCons,
     ) -> Result<Self, ControlFlowError> {
         let mut cfg = {
             let mut graph = graph::Graph::new();
@@ -383,18 +383,27 @@ impl CFG {
         }
 
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
-        if *universe.get_type(fn_type.return_type) == SmplType::Unit {
-            // TODO: Figure out how to get last line of function
-            append_node!(
-                cfg,
-                head,
-                previous,
-                Node::Return(ReturnData {
-                    expr: None,
-                    span: Span::dummy(),
-                })
-            );
-        }
+            
+            if let TypeCons::Function {
+                return_type: ref return_type,
+                ..
+            } = fn_type {
+                if let TypeApp::Applied { type_cons: ref return_type_cons, .. } = return_type {
+                    if **return_type_cons == TypeCons::Unit {
+                        // TODO: Figure out how to get last line of function
+                        append_node!(
+                            cfg,
+                            head,
+                            previous,
+                            Node::Return(ReturnData {
+                                expr: None,
+                                span: Span::dummy(),
+                            })
+                        );
+                    }
+                }
+            }
+
 
         append_node!(cfg, head, previous, Node::ExitScope);
         append_node_index!(cfg, head, previous, cfg.end);
