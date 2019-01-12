@@ -1,7 +1,7 @@
-use crate::analysis::TypeId;
 use crate::span::Span;
 use crate::ast::*;
 use crate::err::Error;
+use crate::analysis::type_cons::TypeApp;
 
 #[derive(Clone, Debug)]
 pub enum AnalysisError {
@@ -40,22 +40,22 @@ impl From<ControlFlowError> for AnalysisError {
 
 #[derive(Clone, Debug)]
 pub enum TypeError {
-    CyclicType(TypeId),
-    LhsRhsInEq(TypeId, TypeId, Span),
+    CyclicType(TypeApp),
+    LhsRhsInEq(TypeApp, TypeApp, Span),
     InEqFnReturn {
-        expr: TypeId,
-        fn_return: TypeId,
+        expr: TypeApp,
+        fn_return: TypeApp,
         return_span: Span,
     },
 
     UnexpectedType {
-        found: TypeId,
-        expected: TypeId,
+        found: TypeApp,
+        expected: TypeApp,
         span: Span,
     },
 
     Arity {
-        fn_type: TypeId,
+        fn_type: TypeApp,
         found_args: usize,
         expected_param: usize,
         span: Span,
@@ -63,73 +63,73 @@ pub enum TypeError {
 
     BinOp {
         op: BinOp,
-        expected: Vec<TypeId>,
-        lhs: TypeId,
-        rhs: TypeId,
+        expected: Vec<TypeApp>,
+        lhs: TypeApp,
+        rhs: TypeApp,
         span: Span,
     },
 
     UniOp {
         op: UniOp,
-        expected: Vec<TypeId>,
-        expr: TypeId,
+        expected: Vec<TypeApp>,
+        expr: TypeApp,
         span: Span,
     },
 
     ArgMismatch {
-        fn_type_id: TypeId,
+        fn_type_id: TypeApp,
         index: usize,
-        arg: TypeId,
-        param: TypeId,
+        arg: TypeApp,
+        param: TypeApp,
         span: Span,
     },
 
     FieldAccessOnNonStruct {
         path: Path,
         index: usize,
-        invalid_type: TypeId,
-        root_type: TypeId,
+        invalid_type: TypeApp,
+        root_type: TypeApp,
         span: Span,
     },
 
     NotAStruct {
         type_name: ModulePath,
-        found: TypeId,
+        found: TypeApp,
         span: Span,
     },
 
     StructNotFullyInitialized {
         type_name: ModulePath,
-        struct_type: TypeId,
+        struct_type: TypeApp,
         missing_fields: Vec<Ident>,
         span: Span,
     },
 
     UnknownField {
         name: Ident,
-        struct_type: TypeId,
+        struct_type: TypeApp,
         span: Span,
     },
 
     HeterogenousArray {
-        expected: TypeId,
-        found: TypeId,
+        expected: TypeApp,
+        found: TypeApp,
         index: usize,
         span: Span,
     },
 
     NotAnArray {
-        found: TypeId,
+        found: TypeApp,
         span: Span,
     },
 
     InvalidIndex {
-        found: TypeId,
+        found: TypeApp,
         span: Span,
     },
 
     InitOpaqueType {
-        struct_type: TypeId,
+        struct_type: TypeApp,
         span: Span,
     },
 
