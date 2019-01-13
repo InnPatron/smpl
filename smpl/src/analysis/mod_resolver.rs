@@ -7,12 +7,11 @@ use crate::module::{ParsedModule, ModuleSource};
 use super::error::{AnalysisError, TypeError};
 use super::feature_checkers::*;
 use super::metadata::*;
-use super::smpl_type::*;
 use super::semantic_data::*;
 use super::semantic_data::Module;
 use super::control_flow::CFG;
 use super::fn_analyzer::analyze_fn;
-use super::fn_type_generator::*;
+use super::type_cons_gen::*;
 
 use crate::feature::*;
 
@@ -32,8 +31,8 @@ struct RawModData {
 }
 
 struct ReservedType(TypeId, AstNode<Struct>);
-struct ReservedFn(FnId, TypeId, AstNode<AstFunction>);
-struct ReservedBuiltinFn(FnId, TypeId, AstNode<AstBuiltinFunction>);
+struct ReservedFn(FnId, AstNode<AstFunction>);
+struct ReservedBuiltinFn(FnId, AstNode<AstBuiltinFunction>);
 
 pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Result<(), AnalysisError> {
     
@@ -71,7 +70,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_type) in raw_mod.reserved_structs.iter() {
             let type_id = reserved_type.0;
-            let (struct_type, field_ordering) = generate_struct_type(
+            let (struct_type, field_ordering) = generate_struct_type_cons(
                 program,
                 raw_program.scopes.get(mod_id).unwrap(),
                 reserved_type.1.data(),
@@ -79,7 +78,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
 
             program
                 .universe_mut()
-                .insert_type(type_id, SmplType::Struct(struct_type));
+                .insert_type_cons(type_id, struct_type);
 
             type_roots.push(type_id);
 
@@ -96,19 +95,19 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;
-            let type_id = reserved_fn.1;
-            let fn_decl = reserved_fn.2.data();
-            let fn_type = generate_fn_type(
+            let fn_decl = reserved_fn.1.data();
+            // TODO: Store new function scope storing the type parameters
+            let (scope, fn_type) = generate_fn_type(
                 program,
                 raw_program.scopes.get(mod_id).unwrap(),
                 fn_id,
-                reserved_fn.2.data(),
+                reserved_fn.1.data(),
             )?;
             let cfg = CFG::generate(program.universe(), fn_decl.body.clone(), &fn_type)?;
 
             program
                 .universe_mut()
-                .insert_fn(fn_id, type_id, fn_type, cfg);
+                .insert_fn(fn_id, fn_type, cfg);
             program.metadata_mut().insert_module_fn(
                 mod_id.clone(),
                 fn_decl.name.data().clone(),
@@ -116,25 +115,24 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
             );
             program
                 .metadata_mut()
-                .set_fn_annotations(fn_id, &reserved_fn.2.data().annotations);
+                .set_fn_annotations(fn_id, &reserved_fn.1.data().annotations);
         }
 
         for (_, reserved_builtin) in raw_mod.reserved_builtins.iter() {
             let fn_id = reserved_builtin.0;
-            let type_id = reserved_builtin.1;
-            let fn_decl = reserved_builtin.2.data();
+            let fn_decl = reserved_builtin.1.data();
             let fn_type = generate_builtin_fn_type(
                 program,
                 raw_program.scopes.get(mod_id).unwrap(),
                 fn_id,
-                reserved_builtin.2.data(),
+                reserved_builtin.1.data(),
             )?;
 
             program.features_mut().add_feature(BUILTIN_FN);
 
             program
                 .universe_mut()
-                .insert_builtin_fn(fn_id, type_id, fn_type);
+                .insert_builtin_fn(fn_id, fn_type);
 
             program.metadata_mut().insert_builtin(fn_id);
             program.metadata_mut().insert_module_fn(
@@ -144,13 +142,15 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
             );
             program
                 .metadata_mut()
-                .set_fn_annotations(fn_id, &reserved_builtin.2.data().annotations);
+                .set_fn_annotations(fn_id, &reserved_builtin.1.data().annotations);
         }
     }
 
+    // TODO: Cyclic type check
+    /*
     for root in type_roots.into_iter() {
         cyclic_type_check(program, root)?;
-        let struct_type = program.universe().get_type(root);
+        let struct_type = program.universe().get_type_cons(root);
         let struct_type = irmatch!(*struct_type; SmplType::Struct(ref s) => s);
         for field_type in struct_type
             .fields
@@ -161,6 +161,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
             field_type_scanner(universe, features, field_type);
         }
     }
+    */
 
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
@@ -201,6 +202,8 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
     Ok(())
 }
 
+// TODO: Cyclic type check
+/*
 fn cyclic_type_check(program: &Program, root_id: TypeId) -> Result<(), AnalysisError> {
     let mut visited_structs = HashSet::new();
     let mut to_visit = Vec::new();
@@ -244,38 +247,7 @@ fn cyclic_type_check(program: &Program, root_id: TypeId) -> Result<(), AnalysisE
 
     Ok(())
 }
-
-fn generate_struct_type(
-    program: &mut Program,
-    scope: &ScopedData,
-    struct_def: &Struct,
-) -> Result<(StructType, Vec<FieldId>), AnalysisError> {
-    let (universe, _metadata, _features) = program.analysis_context();
-
-    let mut fields = HashMap::new();
-    let mut field_map = HashMap::new();
-    let mut order = Vec::new();
-    if let Some(ref body) = struct_def.body.0 {
-        for field in body.iter() {
-            let f_id = universe.new_field_id();
-            let f_name = field.name.data().clone();
-            let f_type_path = &field.field_type;
-            let path_data = f_type_path.data();
-            let field_type = scope.type_id(universe, path_data.into())?;
-            fields.insert(f_id, field_type);
-            field_map.insert(f_name, f_id);
-            order.push(f_id);
-        }
-    }
-
-    let struct_t = StructType {
-        name: struct_def.name.data().clone(),
-        fields: fields,
-        field_map: field_map,
-    };
-
-    Ok((struct_t, order))
-}
+*/
 
 fn map_usings(
     raw_modules: &HashMap<ModuleId, RawModData>,
@@ -323,7 +295,7 @@ fn map_usings(
             // Bring imported types into scope
             for (path, imported) in all_types.into_iter() {
                 if current_module_scope
-                    .insert_type(path.clone().into(), imported)
+                    .insert_type_cons(path.clone().into(), imported)
                     .is_some()
                 {
                     panic!("Should not have overrwritten {}. Paths should be unique by prefixing with the originating module.", path);
@@ -344,15 +316,15 @@ fn map_usings(
 
 fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
     for (_ident, r) in raw.reserved_structs.iter() {
-        scope.insert_type(r.1.data().name.data().clone().into(), r.0.clone());
+        scope.insert_type_cons(r.1.data().name.data().clone().into(), r.0.clone());
     }
 
     for (_ident, r) in raw.reserved_fns.iter() {
-        scope.insert_fn(r.2.data().name.data().clone().into(), r.0.clone());
+        scope.insert_fn(r.1.data().name.data().clone().into(), r.0.clone());
     }
 
     for (_ident, r) in raw.reserved_builtins.iter() {
-        scope.insert_fn(r.2.data().name.data().clone().into(), r.0.clone());
+        scope.insert_fn(r.1.data().name.data().clone().into(), r.0.clone());
     }
 }
 
@@ -382,14 +354,14 @@ fn raw_mod_data(program: &mut Program, modules: Vec<ParsedModule>)
                 DeclStmt::Function(d) => {
                     fn_reserve.insert(
                         d.data().name.data().clone(),
-                        ReservedFn(universe.new_fn_id(), universe.new_type_id(), d),
+                        ReservedFn(universe.new_fn_id(), d),
                     );
                 }
 
                 DeclStmt::BuiltinFunction(d) => {
                     builtin_fn_reserve.insert(
                         d.data().name.data().clone(),
-                        ReservedBuiltinFn(universe.new_fn_id(), universe.new_type_id(), d),
+                        ReservedBuiltinFn(universe.new_fn_id(), d),
                     );
                 }
 
