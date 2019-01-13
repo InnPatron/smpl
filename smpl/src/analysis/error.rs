@@ -77,7 +77,7 @@ pub enum TypeError {
     },
 
     ArgMismatch {
-        fn_type_id: TypeApp,
+        fn_type: TypeApp,
         index: usize,
         arg: TypeApp,
         param: TypeApp,
