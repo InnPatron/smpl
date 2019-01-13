@@ -688,7 +688,6 @@ mod tests {
     use petgraph::dot::{Config, Dot};
     use petgraph::Direction;
 
-    use super::super::smpl_type::*;
     use super::super::semantic_data::Universe;
 
     macro_rules! edges {
@@ -703,6 +702,23 @@ mod tests {
         }
     }
 
+    fn expected_app(tc: TypeCons) -> TypeApp {
+        TypeApp::Applied {
+            type_cons: Box::new(tc),
+            args: None
+        }
+    }
+
+    fn fn_type_cons(params: Vec<TypeApp>, return_type: TypeApp) -> TypeCons {
+        let tc = TypeCons::Function {
+            parameters: params,
+            return_type: return_type,
+            type_params: None,
+        };
+
+        tc
+    }
+
     #[test]
     fn linear_cfg_generation() {
         let input = "fn test(arg: int) {
@@ -711,10 +727,7 @@ let b: int = 3;
 }";
         let mut input = buffer_input(input);
         let universe = Universe::std();
-        let fn_type = FunctionType {
-            params: ParamType::Checked(vec![universe.int()]),
-            return_type: universe.unit(),
-        };
+        let fn_type = fn_type_cons(vec![expected_app(TypeCons::Int)], expected_app(TypeCons::Unit));
         let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
 
@@ -783,10 +796,7 @@ if (test) {
         let mut input = buffer_input(input);
 
         let universe = Universe::std();
-        let fn_type = FunctionType {
-            params: ParamType::Checked(vec![universe.int()]),
-            return_type: universe.unit(),
-        };
+        let fn_type = fn_type_cons(vec![expected_app(TypeCons::Int)], expected_app(TypeCons::Unit));
         let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
 
@@ -933,10 +943,7 @@ if (test) {
 }";
         let mut input = buffer_input(input);
         let universe = Universe::std();
-        let fn_type = FunctionType {
-            params: ParamType::Checked(vec![universe.int()]),
-            return_type: universe.unit(),
-        };
+        let fn_type = fn_type_cons(vec![expected_app(TypeCons::Int)], expected_app(TypeCons::Unit));
         
         let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
@@ -1096,10 +1103,7 @@ if (test) {
 }";
         let mut input = buffer_input(input);
         let universe = Universe::std();
-        let fn_type = FunctionType {
-            params: ParamType::Checked(vec![universe.int()]),
-            return_type: universe.unit(),
-        };
+        let fn_type = fn_type_cons(vec![expected_app(TypeCons::Int)], expected_app(TypeCons::Unit));
         
         let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();

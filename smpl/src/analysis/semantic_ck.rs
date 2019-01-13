@@ -26,7 +26,6 @@ mod tests {
     use super::super::error::*;
     use super::*;
     use crate::parser::*;
-    use crate::analysis::smpl_type::*;
     use crate::ast::Ident;
     use crate::module::UnparsedModule;
 
@@ -60,18 +59,6 @@ fn main() {
 
         let program = parse_module(wrap_input!(program)).unwrap();
         let program = check_program(vec![program]).unwrap();
-
-        let universe = program.universe();
-
-        let (main, _) = program.metadata().main().unwrap();
-        let main = universe.get_fn(main);
-        let main_type = universe.get_type(main.type_id());
-        if let SmplType::Function(ref fn_type) = *main_type {
-            assert_eq!(SmplType::Unit, *universe.get_type(fn_type.return_type));
-        } else {
-            panic!("main()'s TypeId was not mapped to a SmplType::Function");
-        }
-
     }
 
     #[test]
