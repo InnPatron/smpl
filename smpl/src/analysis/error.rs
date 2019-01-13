@@ -9,7 +9,7 @@ pub enum AnalysisError {
     TypeError(TypeError),
     ParseError(String),
     MultipleMainFns,
-    UnknownType(TypeAnnotation),
+    UnknownType(ModulePath),
     UnknownBinding(Ident),
     UnknownFn(ModulePath),
     UnresolvedUses(Vec<AstNode<UseDecl>>),

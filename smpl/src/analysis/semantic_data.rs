@@ -356,11 +356,10 @@ impl ScopedData {
         &'a self,
         universe: &'b Universe,
         path: &'c ModulePath,
-    ) -> Result<TypeCons, AnalysisError> {
+    ) -> Option<TypeCons> {
         self.type_cons_map
             .get(path)
             .map(|id| universe.get_type_cons(id.clone()).unwrap().clone())
-            .ok_or(unimplemented!())
     }
 
     pub fn insert_type_cons(&mut self, path: ModulePath, id: TypeId) -> Option<TypeId> {

@@ -566,7 +566,8 @@ impl<'a> FnAnalyzer<'a> {
                     let type_name = init.type_name();
                     let tmp_type_name = type_name.clone().into();
                     let struct_type_cons = self.current_scope
-                        .type_cons(self.program.universe(), &tmp_type_name)?;
+                        .type_cons(self.program.universe(), &tmp_type_name)
+                        .ok_or(AnalysisError::UnknownType(type_name.clone()))?;
 
                     // Check if type is a struct.
                     let (fields, field_map) = match struct_type_cons {

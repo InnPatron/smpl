@@ -354,7 +354,9 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                 .map(|node| node.data().clone())
                 .collect()
             );
-            let type_cons = scope.type_cons(universe, &type_cons_path)?;
+            let type_cons = scope
+                .type_cons(universe, &type_cons_path)
+                .ok_or(AnalysisError::UnknownType(typed_path.module_path().clone()))?;
 
             let type_args = typed_path.annotations().map(|ref vec| {
                 vec
