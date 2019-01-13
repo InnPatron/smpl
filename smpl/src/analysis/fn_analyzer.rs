@@ -569,13 +569,20 @@ impl<'a> FnAnalyzer<'a> {
                         .type_cons(self.program.universe(), &tmp_type_name)
                         .ok_or(AnalysisError::UnknownType(type_name.clone()))?;
 
+                    // TODO: Take into account type arguments
+                    let struct_type_app = TypeApp::Applied {
+                        type_cons: Box::new(struct_type_cons.clone()),
+                        args: None,
+                    };
+
                     // Check if type is a struct.
-                    let (fields, field_map) = match struct_type_cons {
+                    let (struct_type_id, fields, field_map) = match struct_type_cons {
                         TypeCons::Record {
+                            type_id: struct_type_id,
                             fields: ref fields,
                             field_map: ref field_map,
                             ..
-                        } => (fields, field_map),
+                        } => (struct_type_id, fields, field_map),
 
                         _ => {
                             return Err(TypeError::NotAStruct {
@@ -586,23 +593,14 @@ impl<'a> FnAnalyzer<'a> {
                         }
                     };
 
-                    // TODO: Check for opaqueness
                     // Check if the struct is an 'opaque' type (i.e. cannot be initialized by SMPL
                     // code)
-                    /*
                     if self.program.metadata().is_opaque(struct_type_id) {
                         return Err(TypeError::InitOpaqueType {
-                            struct_type: unimplemented!(),
+                            struct_type: struct_type_app,
                             span: tmp.span(),
                         }.into());
                     }
-                    */
-
-                    // TODO: Take into account type arguments
-                    let struct_type_app = TypeApp::Applied {
-                        type_cons: Box::new(struct_type_cons.clone()),
-                        args: None,
-                    };
 
                     init.set_struct_type(struct_type_app.clone());
                     if let Err(unknown_fields) = init.set_field_init(self.program.universe()) {
