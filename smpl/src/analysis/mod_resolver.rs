@@ -72,6 +72,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
             let type_id = reserved_type.0;
             let (struct_type, field_ordering) = generate_struct_type_cons(
                 program,
+                type_id,
                 raw_program.scopes.get(mod_id).unwrap(),
                 reserved_type.1.data(),
             )?;

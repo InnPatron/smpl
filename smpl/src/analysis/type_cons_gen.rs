@@ -42,6 +42,7 @@ fn type_param_map(universe: &Universe, type_params: Option<&TypeParams>, mut new
 // TODO: Store type constructors in Program
 pub fn generate_struct_type_cons(
     program: &mut Program,
+    type_id: TypeId,
     scope: &ScopedData,
     struct_def: &Struct,
 ) -> Result<(TypeCons, Vec<FieldId>), AnalysisError> {
@@ -95,7 +96,7 @@ pub fn generate_struct_type_cons(
     };
 
     let type_cons = TypeCons::Record {
-        name: struct_def.name.data().clone(),
+        type_id: type_id,
         fields: fields,
         field_map: field_map,
         type_params: type_params,
