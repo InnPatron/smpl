@@ -11,7 +11,6 @@ use super::metadata::FnLayout;
 
 use super::error::*;
 use super::type_cons_gen::generate_anonymous_fn_type;
-use super::smpl_type::*;
 use super::type_cons::*;
 use super::linear_cfg_traversal::*;
 use super::control_flow::CFG;

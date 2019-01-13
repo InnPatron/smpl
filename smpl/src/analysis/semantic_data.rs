@@ -13,7 +13,6 @@ use crate::feature::PresentFeatures;
 use super::type_cons::*;
 use super::error::AnalysisError;
 use super::metadata::Metadata;
-use super::smpl_type::*;
 use super::control_flow::CFG;
 
 pub const UNIT_TYPE: &'static str = "Unit";

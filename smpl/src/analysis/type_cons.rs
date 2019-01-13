@@ -3,7 +3,6 @@ use std::collections::{HashMap, HashSet};
 use crate::ast::{Struct, Ident, ModulePath, TypeAnnotation, TypeAnnotationRef, TypeParams};
 
 use super::semantic_data::{FieldId, TypeId, TypeParamId, Program, ScopedData, Universe, FnId};
-use super::smpl_type::*;
 use super::error::{AnalysisError, TypeError, ApplicationError};
 
 #[derive(Debug, Clone, PartialEq)]
