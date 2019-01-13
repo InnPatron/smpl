@@ -137,6 +137,17 @@ pub enum TypeApp {
 
 impl TypeApp {
 
+    pub fn type_cons(&self) -> Option<&TypeCons> {
+        match *self {
+            TypeApp::Applied {
+                type_cons: ref tc,
+                ..
+            } => Some(&*tc),
+
+            TypeApp::Param(_) => None,
+        }
+    }
+
     pub fn apply(&self) -> Result<TypeApp, TypeError> {
         let mut param_map = HashMap::new();
 
