@@ -587,7 +587,7 @@ impl<'a> FnAnalyzer<'a> {
                         _ => {
                             return Err(TypeError::NotAStruct {
                                 type_name: type_name.clone(),
-                                found: unimplemented!(),
+                                found: struct_type_app,
                                 span: tmp.span(),
                             }.into());
                         }
@@ -614,7 +614,7 @@ impl<'a> FnAnalyzer<'a> {
                         // No field initializations but the struct type has fields
                         return Err(TypeError::StructNotFullyInitialized {
                             type_name: type_name.clone(),
-                            struct_type: unimplemented!(),
+                            struct_type: struct_type_app,
                             missing_fields: unknown_fields,
                             span: tmp.span(),
                         }.into());
@@ -626,7 +626,7 @@ impl<'a> FnAnalyzer<'a> {
                                 // Missing fields -> struct is not fully initialized
                                 return Err(TypeError::StructNotFullyInitialized {
                                     type_name: type_name.clone(),
-                                    struct_type: unimplemented!(),
+                                    struct_type: struct_type_app,
                                     missing_fields: {
                                         let inits = init_list
                                             .iter()
