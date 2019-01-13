@@ -20,7 +20,7 @@ pub enum TypeCons {
     },
 
     Record {
-        name: Ident,
+        type_id: TypeId,
         type_params: Option<Vec<TypeParamId>>,
         fields: HashMap<FieldId, TypeApp>,
         field_map: HashMap<Ident, FieldId>,
@@ -90,17 +90,17 @@ impl TypeCons {
             },
 
             (Record {
-                name: ref lhs_name,
+                type_id: lhs_type_id,
                 type_params: _,
                 fields: ref lhs_fields,
                 field_map: ref lhs_field_map,
             }, Record {
-                name: ref rhs_name,
+                type_id: rhs_type_id,
                 type_params: _,
                 fields: ref rhs_fields,
                 field_map: ref rhs_field_map,
             }) => {
-                if !(lhs_name == rhs_name) {
+                if lhs_type_id != rhs_type_id {
                     return Ok(false);
                 }
 
@@ -241,13 +241,13 @@ impl TypeApp {
                     },
 
                     TypeCons::Record {
-                        name: ref name,
+                        type_id: type_id,
                         type_params: ref type_params,
                         fields: ref fields,
                         field_map: ref field_map,
                     } => {
                         let type_cons = TypeCons::Record {
-                            name: name.clone(),
+                            type_id: type_id,
                             type_params: type_params.clone(),
                             fields: fields
                                 .iter()
