@@ -60,7 +60,7 @@ where
     }
 
     pub fn get_type(&self) -> Option<TypeApp> {
-        self.data_type.borrow().map(|type_app| type_app.clone())
+        self.data_type.borrow().clone()
     }
 }
 
@@ -165,7 +165,7 @@ impl LocalVarDecl {
     }
 
     pub fn var_type(&self) -> Option<TypeApp> {
-        self.var_type.borrow().map(|app| app.clone())
+        self.var_type.borrow().clone()
     }
 
     pub fn var_id(&self) -> VarId {
@@ -403,10 +403,10 @@ impl StructInit {
 
         let field_map = match *struct_type {
             TypeApp::Applied {
-                type_cons: type_cons,
+                type_cons: ref type_cons,
                 args: _,
             } => {
-                match *type_cons {
+                match **type_cons {
                     TypeCons::Record { 
                             field_map: ref field_map,
                             .. 
@@ -449,7 +449,7 @@ impl StructInit {
 
     pub fn struct_type(&self) -> Option<TypeApp> {
         let borrow = self.struct_type.borrow();
-        borrow.map(|app| app.clone())
+        borrow.clone()
     }
 }
 
@@ -490,7 +490,7 @@ impl FieldAccess {
     }
 
     pub fn field_type(&self) -> Option<TypeApp> {
-        self.field_type.borrow().map(|app| app.clone())
+        self.field_type.borrow().clone()
     }
 }
 
