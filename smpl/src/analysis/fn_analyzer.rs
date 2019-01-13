@@ -603,7 +603,8 @@ impl<'a> FnAnalyzer<'a> {
                         type_cons: Box::new(struct_type_cons.clone()),
                         args: None,
                     };
-                    init.set_struct_type(struct_type_app);
+
+                    init.set_struct_type(struct_type_app.clone());
                     if let Err(unknown_fields) = init.set_field_init(self.program.universe()) {
                         // TODO: Allow for multiple errors
                         /*let ident = struct_type.get_ident(id);
@@ -682,8 +683,7 @@ impl<'a> FnAnalyzer<'a> {
                         }
                     }
 
-                    // tmp_type = struct_type_cons;
-                    tmp_type = unimplemented!();
+                    tmp_type = struct_type_app;
                 }
 
                 Value::Binding(ref var) => match self.current_scope.binding_info(var.ident())? {
