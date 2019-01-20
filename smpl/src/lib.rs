@@ -17,7 +17,6 @@ mod parser;
 mod ast;
 #[macro_use]
 mod analysis;
-mod code_gen;
 mod span;
 mod module;
 
@@ -29,4 +28,3 @@ pub use self::parser::parse_module;
 pub use crate::analysis::Program;
 pub use crate::analysis::check_program;
 
-pub use self::code_gen::interpreter;
