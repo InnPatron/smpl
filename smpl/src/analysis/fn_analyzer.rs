@@ -833,74 +833,75 @@ impl<'a> FnAnalyzer<'a> {
                     };
 
                     // Check args and parameters align
-                    if let TypeCons::Function {
-                        parameters: ref params,
-                        return_type: ref return_type,
-                        ..
-                    } = fn_type_app.type_cons().unwrap() {
-                        tmp_type = return_type.clone();
+                    match fn_type_app.type_cons().unwrap() {
+                        TypeCons::Function {
+                            parameters: ref params,
+                            return_type: ref return_type,
+                            ..
+                        } => {
+                            tmp_type = return_type.clone();
 
-                        let arg_type_ids = fn_call.args().map(|ref vec| {
-                            vec.iter()
-                                .map(|ref tmp_id| {
-                                    let tmp = expr.get_tmp(*tmp_id.data());
-                                    let tmp_value = tmp.value();
-                                    let tmp_value_type = tmp_value.get_type().unwrap();
-                                    tmp_id.set_type(tmp_value_type.clone());
-                                    tmp_value_type
-                                })
-                                .collect::<Vec<_>>()
-                        });
+                            let arg_type_ids = fn_call.args().map(|ref vec| {
+                                vec.iter()
+                                    .map(|ref tmp_id| {
+                                        let tmp = expr.get_tmp(*tmp_id.data());
+                                        let tmp_value = tmp.value();
+                                        let tmp_value_type = tmp_value.get_type().unwrap();
+                                        tmp_id.set_type(tmp_value_type.clone());
+                                        tmp_value_type
+                                    })
+                                    .collect::<Vec<_>>()
+                            });
 
-                        // TODO: Unchecked/checked gate
+                            // TODO: Unchecked/checked gate
 
-                        match arg_type_ids {
-                            Some(arg_type_ids) => {
-                                if params.len() != arg_type_ids.len() {
-                                    return Err(TypeError::Arity {
-                                        fn_type: fn_type_app.clone(),
-                                        found_args: arg_type_ids.len(),
-                                        expected_param: params.len(),
-                                        span: tmp.span(),
-                                    }.into());
+                            match arg_type_ids {
+                                Some(arg_type_ids) => {
+                                    if params.len() != arg_type_ids.len() {
+                                        return Err(TypeError::Arity {
+                                            fn_type: fn_type_app.clone(),
+                                            found_args: arg_type_ids.len(),
+                                            expected_param: params.len(),
+                                            span: tmp.span(),
+                                        }.into());
+                                    }
+
+                                    let fn_param_type_ids = params.iter();
+
+                                    for (index, (arg_type, param_type)) in
+                                        arg_type_ids.iter().zip(fn_param_type_ids).enumerate()
+                                    {
+                                        if arg_type != param_type {
+                                            return Err(
+                                                TypeError::ArgMismatch {
+                                                    fn_type: fn_type_app.clone(),
+                                                    index: index,
+                                                    arg: arg_type.clone(),
+                                                    param: param_type.clone(),
+                                                    span: tmp.span(),
+                                                }.into(),
+                                            );
+                                        }
+                                    }
                                 }
 
-                                let fn_param_type_ids = params.iter();
-
-                                for (index, (arg_type, param_type)) in
-                                    arg_type_ids.iter().zip(fn_param_type_ids).enumerate()
-                                {
-                                    if arg_type != param_type {
-                                        return Err(
-                                            TypeError::ArgMismatch {
-                                                fn_type: fn_type_app.clone(),
-                                                index: index,
-                                                arg: arg_type.clone(),
-                                                param: param_type.clone(),
-                                                span: tmp.span(),
-                                            }.into(),
-                                        );
+                                None => {
+                                    if params.len() != 0 {
+                                        return Err(TypeError::Arity {
+                                            fn_type: fn_type_app.clone(),
+                                            found_args: 0,
+                                            expected_param: params.len(),
+                                            span: tmp.span(),
+                                        }.into());
                                     }
                                 }
                             }
+                        },
 
-                            None => {
-                                if params.len() != 0 {
-                                    return Err(TypeError::Arity {
-                                        fn_type: fn_type_app.clone(),
-                                        found_args: 0,
-                                        expected_param: params.len(),
-                                        span: tmp.span(),
-                                    }.into());
-                                }
-                            }
-                        }
+                        TypeCons::UncheckedFunction { .. } => unimplemented!(),
 
-                    } else {
-                        panic!(
-                            "Called function mapped to non-function type: {:?}", fn_type_app
-                        );
-                    }
+                        _ => panic!("Function call on a non-function type: {:?}", fn_type_app),
+                    };
                 }
 
                 Value::ArrayInit(ref init) => {
