@@ -8,6 +8,11 @@ use super::error::{AnalysisError, TypeError, ApplicationError};
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeCons {
 
+    UncheckedFunction {
+        type_params: Option<Vec<TypeParamId>>,
+        return_type: TypeApp,
+    },
+
     Function { 
         type_params: Option<Vec<TypeParamId>>,
         parameters: Vec<TypeApp>,
@@ -34,6 +39,15 @@ pub enum TypeCons {
 }
 
 impl TypeCons {
+
+    pub fn is_unchecked_fn(&self) -> bool {
+        if let TypeCons::UncheckedFunction { .. } = *self {
+            true
+        } else {
+            false
+        }
+    }
+
     fn type_params(&self) -> Option<&[TypeParamId]> {
         match *self {
 
@@ -43,6 +57,11 @@ impl TypeCons {
             } => type_params.as_ref().map(|v| v.as_slice()),
 
             TypeCons::Record {
+                type_params: ref type_params,
+                ..
+            } => type_params.as_ref().map(|v| v.as_slice()),
+
+            TypeCons::UncheckedFunction {
                 type_params: ref type_params,
                 ..
             } => type_params.as_ref().map(|v| v.as_slice()),
@@ -73,6 +92,20 @@ impl TypeCons {
                     if !TypeApp::instantiated_equality(lhs, rhs)? {
                         return Ok(false);
                     }
+                }
+
+                Ok(true)
+            },
+
+            (UncheckedFunction { 
+                type_params: _,
+                return_type: ref lhs_return,
+            }, UncheckedFunction { 
+                type_params: _,
+                return_type: ref rhs_return,
+            }) => {
+                if !TypeApp::instantiated_equality(lhs_return, rhs_return)? {
+                    return Ok(false);
                 }
 
                 Ok(true)
@@ -216,6 +249,23 @@ impl TypeApp {
                         let type_cons = TypeCons::Function {
                             type_params: type_params.clone(),
                             parameters: parameters,
+                            return_type: return_type,
+                        };
+                        Ok(TypeApp::Applied {
+                            type_cons: Box::new(type_cons),
+                            args: None,
+                        })
+                    },
+
+                    TypeCons::UncheckedFunction { 
+                        type_params: ref type_params,
+                        return_type: ref return_type,
+                    } => {
+
+                        let return_type = return_type.apply_internal(param_map)?;
+
+                        let type_cons = TypeCons::UncheckedFunction {
+                            type_params: type_params.clone(),
                             return_type: return_type,
                         };
                         Ok(TypeApp::Applied {
