@@ -853,8 +853,6 @@ impl<'a> FnAnalyzer<'a> {
                                     .collect::<Vec<_>>()
                             });
 
-                            // TODO: Unchecked/checked gate
-
                             match arg_type_ids {
                                 Some(arg_type_ids) => {
                                     if params.len() != arg_type_ids.len() {
@@ -898,7 +896,12 @@ impl<'a> FnAnalyzer<'a> {
                             }
                         },
 
-                        TypeCons::UncheckedFunction { .. } => unimplemented!(),
+                        TypeCons::UncheckedFunction { 
+                            return_type: ref return_type,
+                            ..
+                        } => {
+                            tmp_type = return_type.clone();
+                        },
 
                         _ => panic!("Function call on a non-function type: {:?}", fn_type_app),
                     };
