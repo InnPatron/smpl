@@ -258,7 +258,23 @@ pub fn generate_builtin_fn_type(
             metadata.insert_unchecked_builtin_params(fn_id);
             features.add_feature(UNCHECKED_BUILTIN_FN_PARAMS);
 
-            Vec::with_capacity(0)
+            let type_params = type_parameter_map
+            .values()
+            .map(|id| id.clone())
+            .collect::<Vec<_>>();
+
+            let type_params = if type_params.len() > 0 {
+                Some(type_params)
+            } else {
+                None
+            };
+
+            let type_cons = TypeCons::UncheckedFunction {
+                type_params: type_params,
+                return_type: ret_type,
+            };
+
+            return Ok(type_cons);
         }
     };
 
