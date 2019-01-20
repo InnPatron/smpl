@@ -827,13 +827,17 @@ impl<'a> FnAnalyzer<'a> {
                     };
 
                     // TODO: take into accout type arguments
+                    let fn_type_app = TypeApp::Applied {
+                        type_cons: Box::new(fn_type_cons),
+                        args: None,
+                    };
 
                     // Check args and parameters align
                     if let TypeCons::Function {
                         parameters: ref params,
                         return_type: ref return_type,
                         ..
-                    } = fn_type_cons {
+                    } = fn_type_app.type_cons().unwrap() {
                         tmp_type = return_type.clone();
 
                         let arg_type_ids = fn_call.args().map(|ref vec| {
@@ -854,7 +858,7 @@ impl<'a> FnAnalyzer<'a> {
                             Some(arg_type_ids) => {
                                 if params.len() != arg_type_ids.len() {
                                     return Err(TypeError::Arity {
-                                        fn_type: unimplemented!(),
+                                        fn_type: fn_type_app.clone(),
                                         found_args: arg_type_ids.len(),
                                         expected_param: params.len(),
                                         span: tmp.span(),
@@ -869,7 +873,7 @@ impl<'a> FnAnalyzer<'a> {
                                     if arg_type != param_type {
                                         return Err(
                                             TypeError::ArgMismatch {
-                                                fn_type: unimplemented!(),
+                                                fn_type: fn_type_app.clone(),
                                                 index: index,
                                                 arg: arg_type.clone(),
                                                 param: param_type.clone(),
@@ -883,7 +887,7 @@ impl<'a> FnAnalyzer<'a> {
                             None => {
                                 if params.len() != 0 {
                                     return Err(TypeError::Arity {
-                                        fn_type: unimplemented!(),
+                                        fn_type: fn_type_app.clone(),
                                         found_args: 0,
                                         expected_param: params.len(),
                                         span: tmp.span(),
@@ -894,7 +898,7 @@ impl<'a> FnAnalyzer<'a> {
 
                     } else {
                         panic!(
-                            "Called function mapped to non-function type: {:?}", fn_type_cons
+                            "Called function mapped to non-function type: {:?}", fn_type_app
                         );
                     }
                 }
