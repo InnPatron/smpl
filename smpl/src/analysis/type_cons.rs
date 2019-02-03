@@ -478,7 +478,7 @@ fn type_app_eq_rec(universe: &Universe, lhs: &TypeApp, rhs: &TypeApp) -> bool {
                         return false;
                     }
 
-                    if type_app_eq_rec(universe, lhs_ret, rhs_ret) {
+                    if type_app_eq_rec(universe, lhs_ret, rhs_ret) == false {
                         return false;
                     }
 
