@@ -5,7 +5,7 @@ use crate::ast::{Struct, Ident, ModulePath, TypeAnnotation, TypeAnnotationRef, T
 use super::semantic_data::{FieldId, TypeId, TypeParamId, Program, ScopedData, Universe, FnId};
 use super::error::{AnalysisError, TypeError, ApplicationError};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum TypeCons {
 
     UncheckedFunction {
@@ -71,7 +71,7 @@ impl TypeCons {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum TypeApp {
     Applied {
         type_cons: TypeId,

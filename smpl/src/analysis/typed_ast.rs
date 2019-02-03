@@ -64,15 +64,6 @@ where
     }
 }
 
-impl<T> PartialEq<Typed<T>> for Typed<T>
-where
-    T: PartialEq + Clone + ::std::fmt::Debug,
-{
-    fn eq(&self, other: &Typed<T>) -> bool {
-        self.data == other.data && self.data_type == other.data_type
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Assignment {
     field_access: FieldAccess,
@@ -119,14 +110,6 @@ pub struct LocalVarDecl {
     var_type: RefCell<Option<TypeApp>>,
     var_id: VarId,
     span: Span,
-}
-
-impl PartialEq for LocalVarDecl {
-    fn eq(&self, other: &LocalVarDecl) -> bool {
-        self.var_type == other.var_type && self.var_name == other.var_name
-            && self.var_init == other.var_init && self.var_type == other.var_type
-            && self.var_id == other.var_id
-    }
 }
 
 impl LocalVarDecl {
@@ -182,12 +165,6 @@ pub struct Expr {
     map: HashMap<TmpId, Tmp>,
     execution_order: Vec<TmpId>,
     span: Option<Span>,
-}
-
-impl PartialEq for Expr {
-    fn eq(&self, other: &Expr) -> bool {
-        self.map == other.map && self.execution_order == other.execution_order
-    }
 }
 
 impl Expr {
@@ -267,12 +244,6 @@ pub struct Tmp {
     span: Span,
 }
 
-impl PartialEq for Tmp {
-    fn eq(&self, other: &Tmp) -> bool {
-        self.id == other.id
-    }
-}
-
 impl Tmp {
     pub fn id(&self) -> TmpId {
         self.id
@@ -306,7 +277,7 @@ pub enum Value {
     AnonymousFn(self::AnonymousFn),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct ModAccess {
     path: ast::ModulePath,
     id: Cell<Option<FnId>>,
