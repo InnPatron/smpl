@@ -388,22 +388,19 @@ impl CFG {
             return_type: ref return_type,
             ..
         } = fn_type {
-            if let TypeApp::Applied { type_cons: ref return_type_cons, .. } = return_type {
 
-                let return_type_cons = universe.get_type_cons(*return_type_cons).unwrap();
-                let unit = TypeApp::Applied { type_cons: universe.unit(), args: None };
-                if type_app_eq(universe, return_type, &unit)? {
-                    // TODO: Figure out how to get last line of function
-                    append_node!(
-                        cfg,
-                        head,
-                        previous,
-                        Node::Return(ReturnData {
-                            expr: None,
-                            span: Span::dummy(),
-                        })
-                    );
-                }
+            let unit = TypeApp::Applied { type_cons: universe.unit(), args: None };
+            if type_app_eq(universe, return_type, &unit)? {
+                // TODO: Figure out how to get last line of function
+                append_node!(
+                    cfg,
+                    head,
+                    previous,
+                    Node::Return(ReturnData {
+                        expr: None,
+                        span: Span::dummy(),
+                    })
+                );
             }
         }
 
