@@ -6,7 +6,7 @@ use crate::ast;
 
 use crate::span::Span;
 
-use super::error::ControlFlowError;
+use super::error::{ControlFlowError, AnalysisError};
 use super::type_cons::*;
 use super::expr_flow;
 use super::typed_ast;
@@ -352,7 +352,7 @@ impl CFG {
         universe: &Universe,
         body: ast::AstNode<ast::Block>,
         fn_type: &TypeCons,
-    ) -> Result<Self, ControlFlowError> {
+    ) -> Result<Self, AnalysisError> {
         let mut cfg = {
             let mut graph = graph::Graph::new();
             let start = graph.add_node(Node::Start);
@@ -383,27 +383,29 @@ impl CFG {
         }
 
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
-            
-            if let TypeCons::Function {
-                return_type: ref return_type,
-                ..
-            } = fn_type {
-                if let TypeApp::Applied { type_cons: ref return_type_cons, .. } = return_type {
-                    let return_type_cons = universe.get_type_cons(*return_type_cons).unwrap();
-                    if *return_type_cons == TypeCons::Unit {
-                        // TODO: Figure out how to get last line of function
-                        append_node!(
-                            cfg,
-                            head,
-                            previous,
-                            Node::Return(ReturnData {
-                                expr: None,
-                                span: Span::dummy(),
-                            })
-                        );
-                    }
+
+        if let TypeCons::Function {
+            return_type: ref return_type,
+            ..
+        } = fn_type {
+            if let TypeApp::Applied { type_cons: ref return_type_cons, .. } = return_type {
+
+                let return_type_cons = universe.get_type_cons(*return_type_cons).unwrap();
+                let unit = TypeApp::Applied { type_cons: universe.unit(), args: None };
+                if type_app_eq(universe, return_type, &unit)? {
+                    // TODO: Figure out how to get last line of function
+                    append_node!(
+                        cfg,
+                        head,
+                        previous,
+                        Node::Return(ReturnData {
+                            expr: None,
+                            span: Span::dummy(),
+                        })
+                    );
                 }
             }
+        }
 
 
         append_node!(cfg, head, previous, Node::ExitScope);

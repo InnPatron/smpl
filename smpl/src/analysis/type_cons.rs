@@ -94,13 +94,13 @@ impl TypeApp {
         }
     }
 
-    fn apply(&self, universe: &mut Universe) -> Result<TypeApp, TypeError> {
+    fn apply(&self, universe: &Universe) -> Result<TypeApp, TypeError> {
         let mut param_map = HashMap::new();
 
         self.apply_internal(universe, &param_map)
     }
 
-    fn apply_internal(&self, universe: &mut Universe, param_map: &HashMap<TypeParamId, TypeApp>) -> Result<TypeApp, TypeError> {
+    fn apply_internal(&self, universe: &Universe, param_map: &HashMap<TypeParamId, TypeApp>) -> Result<TypeApp, TypeError> {
         match *self {
             TypeApp::Applied {
                 type_cons: ref type_cons,
@@ -168,7 +168,7 @@ impl TypeApp {
                         };
 
                         let type_id = universe.new_type_id();
-                        universe.insert_type_cons(type_id, type_cons);
+                        universe.insert_generated_type_cons(type_id, type_cons);
                         Ok(TypeApp::Applied {
                             type_cons: type_id,
                             args: None,
@@ -188,7 +188,7 @@ impl TypeApp {
                         };
 
                         let type_id = universe.new_type_id();
-                        universe.insert_type_cons(type_id, type_cons);
+                        universe.insert_generated_type_cons(type_id, type_cons);
                         Ok(TypeApp::Applied {
                             type_cons: type_id,
                             args: None,
@@ -206,7 +206,7 @@ impl TypeApp {
                         };
 
                         let type_id = universe.new_type_id();
-                        universe.insert_type_cons(type_id, type_cons);
+                        universe.insert_generated_type_cons(type_id, type_cons);
                         Ok(TypeApp::Applied {
                             type_cons: type_id,
                             args: None
@@ -236,7 +236,7 @@ impl TypeApp {
                         };
 
                         let type_id = universe.new_type_id();
-                        universe.insert_type_cons(type_id, type_cons);
+                        universe.insert_generated_type_cons(type_id, type_cons);
                         Ok(TypeApp::Applied {
                             type_cons: type_id,
                             args: None,
@@ -346,7 +346,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             };
 
             let type_id = universe.new_type_id();
-            universe.insert_type_cons(type_id, cons);
+            universe.insert_generated_type_cons(type_id, cons);
             
             Ok(TypeApp::Applied {
                 type_cons: type_id,
@@ -417,7 +417,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             };
 
             let type_id = universe.new_type_id();
-            universe.insert_type_cons(type_id, cons);
+            universe.insert_generated_type_cons(type_id, cons);
 
             Ok(TypeApp::Applied {
                 type_cons: type_id,
@@ -427,14 +427,14 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
     }
 }
 
-pub fn type_app_eq(universe: &mut Universe, lhs: &TypeApp, rhs: &TypeApp) -> Result<bool, TypeError> {
+pub fn type_app_eq(universe: &Universe, lhs: &TypeApp, rhs: &TypeApp) -> Result<bool, TypeError> {
     let lhs = lhs.apply(universe)?;
     let rhs = rhs.apply(universe)?;
 
     Ok(type_app_eq_rec(universe, &lhs, &rhs))
 }
 
-fn type_app_eq_rec(universe: &mut Universe, lhs: &TypeApp, rhs: &TypeApp) -> bool {
+fn type_app_eq_rec(universe: &Universe, lhs: &TypeApp, rhs: &TypeApp) -> bool {
     // Assume types have been applied
     match (lhs, rhs) {
         (&TypeApp::Applied {

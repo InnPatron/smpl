@@ -104,7 +104,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
                 fn_id,
                 reserved_fn.1.data(),
             )?;
-            let cfg = CFG::generate(program.universe(), fn_decl.body.clone(), &fn_type)?;
+            let cfg = CFG::generate(program.universe_mut(), fn_decl.body.clone(), &fn_type)?;
 
             program
                 .universe_mut()

@@ -241,7 +241,7 @@ fn resolve_bin_op(
         },
 
         Eq | InEq => {
-            if lhs == rhs {
+            if type_app_eq(universe, lhs, rhs)? {
                 universe.boolean()
             } else {
                 return Err(TypeError::LhsRhsInEq(lhs.clone(), rhs.clone(), span).into());
@@ -436,7 +436,7 @@ impl<'a> FnAnalyzer<'a> {
                                 struct_type: current_type.clone(),
                                 span: span,
                             })?;
-                            next_type = fields.get(field_id).unwrap();
+                            next_type = fields.get(field_id).unwrap().clone();
 
                             field.set_field_id(field_id.clone());
                             field.set_field_type(current_type.clone());
@@ -503,10 +503,10 @@ impl<'a> FnAnalyzer<'a> {
 
                             match field_type_cons {
                                 TypeCons::Array{
-                                    element_type: ref element_type,
+                                    element_type: element_type,
                                     size: _,
                                 } => {
-                                    next_type = element_type;
+                                    next_type = element_type.clone();
                                 }
 
                                 _ => {
@@ -603,7 +603,7 @@ impl<'a> FnAnalyzer<'a> {
 
                     // Check if the struct is an 'opaque' type (i.e. cannot be initialized by SMPL
                     // code)
-                    if self.program.metadata().is_opaque(*struct_type_id) {
+                    if self.program.metadata().is_opaque(struct_type_id) {
                         return Err(TypeError::InitOpaqueType {
                             struct_type: struct_type_app,
                             span: tmp.span(),
@@ -661,7 +661,9 @@ impl<'a> FnAnalyzer<'a> {
                                 typed_tmp_id.set_type(tmp_type.clone());
 
                                 // Expression type the same as the field type?
-                                if tmp_type != *field_type {
+                                if type_app_eq(self.program.universe(), 
+                                               &tmp_type, 
+                                               field_type)? {
                                     return Err(TypeError::UnexpectedType {
                                         found: tmp_type,
                                         expected: field_type.clone(),
@@ -808,7 +810,7 @@ impl<'a> FnAnalyzer<'a> {
 
                                     // TODO: Take into account type args
                                     match type_cons {
-                                        Some(tc) => match *tc {
+                                        Some(tc) => match tc {
                                             TypeCons::Function {..} => Some(type_cons_id),
 
                                             _ => unimplemented!(),
@@ -888,7 +890,8 @@ impl<'a> FnAnalyzer<'a> {
                                     for (index, (arg_type, param_type)) in
                                         arg_type_ids.iter().zip(fn_param_type_ids).enumerate()
                                     {
-                                        if arg_type != param_type {
+                                        if type_app_eq(self.program.universe(), 
+                                                       arg_type, param_type)? {
                                             return Err(
                                                 TypeError::ArgMismatch {
                                                     fn_type: fn_type_app.clone(),
@@ -951,7 +954,9 @@ impl<'a> FnAnalyzer<'a> {
                                 let expected_element_type = expected_element_type
                                     .as_ref()
                                     .unwrap();
-                                if *expected_element_type != current_element_type {
+                                if type_app_eq(self.program.universe(), 
+                                               expected_element_type, 
+                                               &current_element_type)? {
                                     return Err(TypeError::HeterogenousArray {
                                         expected: expected_element_type.clone(),
                                         found: current_element_type,
@@ -1036,7 +1041,7 @@ impl<'a> FnAnalyzer<'a> {
                                     .universe()
                                     .get_type_cons(*type_cons)
                                     .unwrap();
-                                match *type_cons {
+                                match type_cons {
                                     TypeCons::Array {
                                         element_type: ref element_type,
                                         ..
@@ -1078,7 +1083,7 @@ impl<'a> FnAnalyzer<'a> {
                                     .universe()
                                     .get_type_cons(*type_cons)
                                     .unwrap();
-                                match *type_cons {
+                                match type_cons {
                                     TypeCons::Int => (),
 
                                     _ => {
@@ -1123,7 +1128,7 @@ impl<'a> FnAnalyzer<'a> {
                     let (func_scope, fn_type) =
                         generate_anonymous_fn_type(self.program, &self.current_scope, fn_id, func)?;
 
-                    let cfg = CFG::generate(self.program.universe(), func.body.clone(), &fn_type)?;
+                    let cfg = CFG::generate(self.program.universe_mut(), func.body.clone(), &fn_type)?;
 
                     a_fn.set_fn_id(fn_id);
 
@@ -1228,7 +1233,8 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         
         var_decl.set_type(var_type.clone());
 
-        if var_type == expr_type {
+        if type_app_eq(self.program.universe(), 
+                       &var_type, &expr_type)? {
             self.current_scope.insert_var(name, 
                                           var_id, 
                                           var_type.clone());
@@ -1257,7 +1263,9 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
 
         let assignment_span = Span::combine(assignment.access_span(), assignment.value().span());
 
-        if assignee_type != expr_type {
+        if type_app_eq(self.program.universe(), 
+                       &assignee_type,
+                       &expr_type)? {
             return Err(TypeError::LhsRhsInEq(assignee_type, expr_type, assignment_span).into());
         }
 
@@ -1282,7 +1290,9 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
             }
         };
 
-        if expr_type != self.fn_return_type {
+        if type_app_eq(self.program.universe(), 
+                       &expr_type, 
+                       &self.fn_return_type)? {
             return Err(TypeError::InEqFnReturn {
                 expr: expr_type,
                 fn_return: self.fn_return_type.clone(),
@@ -1302,7 +1312,9 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
             args: None,
         };
 
-        if expr_type != expected {
+        if type_app_eq(self.program.universe(), 
+                       &expr_type,
+                       &expected)? {
             return Err(TypeError::UnexpectedType {
                 found: expr_type,
                 expected: expected,
@@ -1332,7 +1344,9 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
             args: None,
         };
 
-        if expr_type != expected {
+        if type_app_eq(self.program.universe(), 
+                       &expr_type, 
+                       &expected)? {
             return Err(TypeError::UnexpectedType {
                 found: expr_type,
                 expected: expected,
