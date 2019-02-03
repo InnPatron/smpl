@@ -93,6 +93,171 @@ impl TypeApp {
             TypeApp::Param(_) => None,
         }
     }
+
+    fn apply(&self, universe: &mut Universe) -> Result<TypeApp, TypeError> {
+        let mut param_map = HashMap::new();
+
+        self.apply_internal(universe, &param_map)
+    }
+
+    fn apply_internal(&self, universe: &mut Universe, param_map: &HashMap<TypeParamId, TypeApp>) -> Result<TypeApp, TypeError> {
+        match *self {
+            TypeApp::Applied {
+                type_cons: ref type_cons,
+                args: ref type_args,
+            } => {
+                let type_cons = universe.get_type_cons(*type_cons).unwrap();
+                let new_param_map = match (type_cons.type_params(), type_args) {
+
+                    (Some(ref type_params), Some(ref type_args)) => {
+                        if type_params.len() != type_args.len() {
+                            return Err(ApplicationError::Arity { 
+                                expected: type_params.len(), 
+                                found: type_args.len(),
+                            }.into());
+                        }
+
+                        let mut param_map = param_map.clone();
+                        
+                        for (param_id, type_arg) in type_params.iter().zip(type_args.iter()) {
+                            param_map.insert(param_id.clone(), type_arg.clone());
+                        }
+
+                        Some(param_map)
+                    },
+
+                    (Some(ref type_params), None) => {
+                        return Err(ApplicationError::Arity { 
+                            expected: type_params.len(), 
+                            found: 0,
+                        }.into());
+                    },
+
+                    (None, Some(ref type_args)) => {
+                        return Err(ApplicationError::Arity { 
+                            expected: 0, 
+                            found: type_args.len(),
+                        }.into());
+                    },
+
+                    (None, None) => None,
+
+                };
+
+                let param_map = new_param_map
+                    .as_ref()
+                    .unwrap_or(param_map);
+
+                match type_cons {
+                    TypeCons::Function { 
+                        type_params: ref type_params,
+                        parameters: ref parameters,
+                        return_type: ref return_type,
+                    } => {
+                        let parameters = parameters
+                            .iter()
+                            .map(|app| app.apply_internal(universe, param_map))
+                            .collect::<Result<Vec<_>, _>>()?;
+
+                        let return_type = return_type.apply_internal(universe, param_map)?;
+
+                        let type_cons = TypeCons::Function {
+                            type_params: type_params.clone(),
+                            parameters: parameters,
+                            return_type: return_type,
+                        };
+
+                        let type_id = universe.new_type_id();
+                        universe.insert_type_cons(type_id, type_cons);
+                        Ok(TypeApp::Applied {
+                            type_cons: type_id,
+                            args: None,
+                        })
+                    },
+
+                    TypeCons::UncheckedFunction { 
+                        type_params: ref type_params,
+                        return_type: ref return_type,
+                    } => {
+
+                        let return_type = return_type.apply_internal(universe, param_map)?;
+
+                        let type_cons = TypeCons::UncheckedFunction {
+                            type_params: type_params.clone(),
+                            return_type: return_type,
+                        };
+
+                        let type_id = universe.new_type_id();
+                        universe.insert_type_cons(type_id, type_cons);
+                        Ok(TypeApp::Applied {
+                            type_cons: type_id,
+                            args: None,
+                        })
+                    },
+
+                    TypeCons::Array { 
+                        element_type: ref element_type,
+                        size: size,
+                    } => {
+
+                        let type_cons = TypeCons::Array {
+                            element_type: element_type.apply_internal(universe, param_map)?,
+                            size: *size
+                        };
+
+                        let type_id = universe.new_type_id();
+                        universe.insert_type_cons(type_id, type_cons);
+                        Ok(TypeApp::Applied {
+                            type_cons: type_id,
+                            args: None
+                        })
+                    },
+
+                    TypeCons::Record {
+                        type_id: type_id,
+                        type_params: ref type_params,
+                        fields: ref fields,
+                        field_map: ref field_map,
+                    } => {
+                        let type_cons = TypeCons::Record {
+                            type_id: type_id.clone(),
+                            type_params: type_params.clone(),
+                            fields: fields
+                                .iter()
+                                .map(|(k, v)| {
+                                    match v.apply_internal(universe, param_map) {
+                                        Ok(v) => Ok((k.clone(), v)),
+                                        Err(e) => Err(e),
+                                    }
+                                 })
+                                .collect::<Result<HashMap<_,_>, _>>()?,
+
+                            field_map: field_map.clone(),
+                        };
+
+                        let type_id = universe.new_type_id();
+                        universe.insert_type_cons(type_id, type_cons);
+                        Ok(TypeApp::Applied {
+                            type_cons: type_id,
+                            args: None,
+                        })
+                    },
+
+                    _ => Ok(self.clone()),
+                }
+            }
+
+            TypeApp::Param(ref param_id) => {
+                if let Some(type_app) = param_map.get(param_id) {
+                    // Equivalence relation between type parameters
+                    type_app.apply_internal(universe, param_map)
+                } else {
+                    // Final equivalence to another type parameter
+                    Ok(TypeApp::Param(param_id.clone()))
+                }
+            }
+        }
+    }
 }
 
 pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
