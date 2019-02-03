@@ -691,7 +691,7 @@ mod tests {
     use petgraph::dot::{Config, Dot};
     use petgraph::Direction;
 
-    use super::super::semantic_data::Universe;
+    use super::super::semantic_data::{TypeId, Universe};
 
     macro_rules! edges {
         ($CFG: expr, $node: expr) => {
@@ -705,9 +705,9 @@ mod tests {
         }
     }
 
-    fn expected_app(tc: TypeCons) -> TypeApp {
+    fn expected_app(tc: TypeId) -> TypeApp {
         TypeApp::Applied {
-            type_cons: Box::new(tc),
+            type_cons: tc,
             args: None
         }
     }
@@ -730,7 +730,7 @@ let b: int = 3;
 }";
         let mut input = buffer_input(input);
         let universe = Universe::std();
-        let fn_type = fn_type_cons(vec![expected_app(TypeCons::Int)], expected_app(TypeCons::Unit));
+        let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
 
@@ -799,7 +799,7 @@ if (test) {
         let mut input = buffer_input(input);
 
         let universe = Universe::std();
-        let fn_type = fn_type_cons(vec![expected_app(TypeCons::Int)], expected_app(TypeCons::Unit));
+        let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
 
@@ -946,7 +946,7 @@ if (test) {
 }";
         let mut input = buffer_input(input);
         let universe = Universe::std();
-        let fn_type = fn_type_cons(vec![expected_app(TypeCons::Int)], expected_app(TypeCons::Unit));
+        let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         
         let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
@@ -1106,7 +1106,7 @@ if (test) {
 }";
         let mut input = buffer_input(input);
         let universe = Universe::std();
-        let fn_type = fn_type_cons(vec![expected_app(TypeCons::Int)], expected_app(TypeCons::Unit));
+        let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         
         let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
