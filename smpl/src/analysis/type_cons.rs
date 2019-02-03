@@ -445,7 +445,7 @@ fn type_app_eq_rec(universe: &Universe, lhs: &TypeApp, rhs: &TypeApp) -> bool {
             args: ref rhs_args,
         }) => {
             let lhs = universe.get_type_cons(*lhs_type_cons).unwrap();
-            let rhs = universe.get_type_cons(*lhs_type_cons).unwrap();
+            let rhs = universe.get_type_cons(*rhs_type_cons).unwrap();
 
             match (lhs, rhs) {
                 (TypeCons::Int, TypeCons::Int) => true,
