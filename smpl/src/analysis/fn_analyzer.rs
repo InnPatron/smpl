@@ -661,7 +661,7 @@ impl<'a> FnAnalyzer<'a> {
                                 typed_tmp_id.set_type(tmp_type.clone());
 
                                 // Expression type the same as the field type?
-                                if type_app_eq(self.program.universe(), 
+                                if !type_app_eq(self.program.universe(), 
                                                &tmp_type, 
                                                field_type)? {
                                     return Err(TypeError::UnexpectedType {
@@ -890,7 +890,7 @@ impl<'a> FnAnalyzer<'a> {
                                     for (index, (arg_type, param_type)) in
                                         arg_type_ids.iter().zip(fn_param_type_ids).enumerate()
                                     {
-                                        if type_app_eq(self.program.universe(), 
+                                        if !type_app_eq(self.program.universe(), 
                                                        arg_type, param_type)? {
                                             return Err(
                                                 TypeError::ArgMismatch {
@@ -954,7 +954,7 @@ impl<'a> FnAnalyzer<'a> {
                                 let expected_element_type = expected_element_type
                                     .as_ref()
                                     .unwrap();
-                                if type_app_eq(self.program.universe(), 
+                                if !type_app_eq(self.program.universe(), 
                                                expected_element_type, 
                                                &current_element_type)? {
                                     return Err(TypeError::HeterogenousArray {
@@ -1263,7 +1263,7 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
 
         let assignment_span = Span::combine(assignment.access_span(), assignment.value().span());
 
-        if type_app_eq(self.program.universe(), 
+        if !type_app_eq(self.program.universe(), 
                        &assignee_type,
                        &expr_type)? {
             return Err(TypeError::LhsRhsInEq(assignee_type, expr_type, assignment_span).into());
@@ -1290,7 +1290,7 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
             }
         };
 
-        if type_app_eq(self.program.universe(), 
+        if !type_app_eq(self.program.universe(), 
                        &expr_type, 
                        &self.fn_return_type)? {
             return Err(TypeError::InEqFnReturn {
@@ -1312,7 +1312,7 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
             args: None,
         };
 
-        if type_app_eq(self.program.universe(), 
+        if !type_app_eq(self.program.universe(), 
                        &expr_type,
                        &expected)? {
             return Err(TypeError::UnexpectedType {
@@ -1344,7 +1344,7 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
             args: None,
         };
 
-        if type_app_eq(self.program.universe(), 
+        if !type_app_eq(self.program.universe(), 
                        &expr_type, 
                        &expected)? {
             return Err(TypeError::UnexpectedType {
