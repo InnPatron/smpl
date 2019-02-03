@@ -389,7 +389,8 @@ impl CFG {
                 ..
             } = fn_type {
                 if let TypeApp::Applied { type_cons: ref return_type_cons, .. } = return_type {
-                    if **return_type_cons == TypeCons::Unit {
+                    let return_type_cons = universe.get_type_cons(*return_type_cons).unwrap();
+                    if *return_type_cons == TypeCons::Unit {
                         // TODO: Figure out how to get last line of function
                         append_node!(
                             cfg,

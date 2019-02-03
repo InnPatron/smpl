@@ -131,7 +131,7 @@ pub fn generate_fn_type(
         }
         None => {
             TypeApp::Applied {
-                type_cons: Box::new(TypeCons::Unit),
+                type_cons: universe.unit(),
                 args: None
             }
         }
@@ -214,7 +214,7 @@ pub fn generate_builtin_fn_type(
         }
         None => {
             TypeApp::Applied {
-                type_cons: Box::new(TypeCons::Unit),
+                type_cons: universe.unit(),
                 args: None
             }
         }
@@ -321,7 +321,7 @@ pub fn generate_anonymous_fn_type(
         }
         None => {
             TypeApp::Applied {
-                type_cons: Box::new(TypeCons::Unit),
+                type_cons: universe.unit(),
                 args: None
             }
         }

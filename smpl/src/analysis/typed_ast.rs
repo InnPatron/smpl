@@ -406,7 +406,8 @@ impl StructInit {
                 type_cons: ref type_cons,
                 args: _,
             } => {
-                match **type_cons {
+                let type_cons = universe.get_type_cons(*type_cons).unwrap();
+                match *type_cons {
                     TypeCons::Record { 
                             field_map: ref field_map,
                             .. 

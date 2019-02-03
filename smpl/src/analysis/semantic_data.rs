@@ -189,10 +189,12 @@ impl Universe {
         self.fn_map.remove(&fn_id);
     }
 
-    pub fn insert_fn(&mut self, fn_id: FnId, fn_type: TypeCons, cfg: CFG) {
+    pub fn insert_fn(&mut self, fn_id: FnId, fn_type: TypeCons, cfg: CFG) -> TypeId {
+        let type_id = self.new_type_id();
+        self.insert_type_cons(type_id, fn_type);
 
         let function = Function {
-            fn_type: fn_type,
+            fn_type: type_id,
             cfg: Rc::new(cfg),
         };
 
@@ -202,11 +204,15 @@ impl Universe {
                 fn_id.0
             );
         }
+
+        type_id
     }
 
-    pub fn insert_builtin_fn(&mut self, fn_id: FnId, fn_type: TypeCons) {
+    pub fn insert_builtin_fn(&mut self, fn_id: FnId, fn_type: TypeCons) -> TypeId {
+        let type_id = self.new_type_id();
+        self.insert_type_cons(type_id, fn_type);
 
-        let builtin = BuiltinFunction { fn_type: fn_type };
+        let builtin = BuiltinFunction { fn_type: type_id };
 
         if self.builtin_fn_map.insert(fn_id, builtin).is_some() {
             panic!(
@@ -214,6 +220,8 @@ impl Universe {
                 fn_id.0
             );
         }
+
+        type_id
     }
 
     pub fn insert_type_cons(&mut self, id: TypeId, cons: TypeCons) {
@@ -356,10 +364,10 @@ impl ScopedData {
         &'a self,
         universe: &'b Universe,
         path: &'c ModulePath,
-    ) -> Option<TypeCons> {
+    ) -> Option<TypeId> {
         self.type_cons_map
             .get(path)
-            .map(|id| universe.get_type_cons(id.clone()).unwrap().clone())
+            .map(|id| id.clone())
     }
 
     pub fn insert_type_cons(&mut self, path: ModulePath, id: TypeId) -> Option<TypeId> {
@@ -431,24 +439,24 @@ pub enum BindingInfo {
 
 #[derive(Clone, Debug)]
 pub struct BuiltinFunction {
-    fn_type: TypeCons,
+    fn_type: TypeId,
 }
 
 impl BuiltinFunction {
-    pub fn fn_type(&self) -> &TypeCons {
-        &self.fn_type
+    pub fn fn_type(&self) -> TypeId {
+        self.fn_type
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct Function {
-    fn_type: TypeCons,
+    fn_type: TypeId,
     cfg: Rc<CFG>,
 }
 
 impl Function {
-    pub fn fn_type(&self) -> &TypeCons {
-        &self.fn_type
+    pub fn fn_type(&self) -> TypeId {
+        self.fn_type
     }
 
     pub fn cfg(&self) -> Rc<CFG> {
