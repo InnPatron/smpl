@@ -5,6 +5,46 @@ use crate::ast::{Struct, Ident, ModulePath, TypeAnnotation, TypeAnnotationRef, T
 use super::semantic_data::{FieldId, TypeId, TypeParamId, Program, ScopedData, Universe, FnId};
 use super::error::{AnalysisError, TypeError, ApplicationError};
 
+macro_rules! nill_check {
+    ($type_args: expr) => {{
+        if $type_args.is_some() {
+            // TODO: error on type args to type cons int, bool, etc
+            unimplemented!()
+        }
+    }}
+}
+
+#[derive(PartialEq, Clone)]
+pub enum Type {
+    UncheckedFunction {
+        return_type: Box<Type>,
+    },
+
+    Function { 
+        parameters: Vec<Type>,
+        return_type: Box<Type>,
+    },
+
+    Array { 
+        element_type: Box<Type>,
+        size: u64 
+    },
+
+    Record {
+        type_id: TypeId,
+        fields: HashMap<FieldId, Type>,
+        field_map: HashMap<Ident, FieldId>,
+    },
+
+    Param(TypeParamId),
+
+    Int,
+    Float,
+    String,
+    Bool,
+    Unit,
+}
+
 #[derive(Debug, Clone)]
 pub enum TypeCons {
 
@@ -94,13 +134,13 @@ impl TypeApp {
         }
     }
 
-    fn apply(&self, universe: &Universe) -> Result<TypeApp, TypeError> {
+    fn apply(&self, universe: &Universe) -> Result<Type, TypeError> {
         let mut param_map = HashMap::new();
 
         self.apply_internal(universe, &param_map)
     }
 
-    fn apply_internal(&self, universe: &Universe, param_map: &HashMap<TypeParamId, TypeApp>) -> Result<TypeApp, TypeError> {
+    fn apply_internal(&self, universe: &Universe, param_map: &HashMap<TypeParamId, TypeApp>) -> Result<Type, TypeError> {
         match *self {
             TypeApp::Applied {
                 type_cons: ref type_cons,
@@ -161,17 +201,9 @@ impl TypeApp {
 
                         let return_type = return_type.apply_internal(universe, param_map)?;
 
-                        let type_cons = TypeCons::Function {
-                            type_params: type_params.clone(),
+                        Ok(Type::Function {
                             parameters: parameters,
-                            return_type: return_type,
-                        };
-
-                        let type_id = universe.new_type_id();
-                        universe.insert_generated_type_cons(type_id, type_cons);
-                        Ok(TypeApp::Applied {
-                            type_cons: type_id,
-                            args: None,
+                            return_type: Box::new(return_type),
                         })
                     },
 
@@ -182,16 +214,8 @@ impl TypeApp {
 
                         let return_type = return_type.apply_internal(universe, param_map)?;
 
-                        let type_cons = TypeCons::UncheckedFunction {
-                            type_params: type_params.clone(),
-                            return_type: return_type,
-                        };
-
-                        let type_id = universe.new_type_id();
-                        universe.insert_generated_type_cons(type_id, type_cons);
-                        Ok(TypeApp::Applied {
-                            type_cons: type_id,
-                            args: None,
+                        Ok(Type::UncheckedFunction {
+                            return_type: Box::new(return_type),
                         })
                     },
 
@@ -200,16 +224,10 @@ impl TypeApp {
                         size: size,
                     } => {
 
-                        let type_cons = TypeCons::Array {
-                            element_type: element_type.apply_internal(universe, param_map)?,
+                        let element_type = element_type.apply_internal(universe, param_map)?;
+                        Ok(Type::Array {
+                            element_type: Box::new(element_type),
                             size: size
-                        };
-
-                        let type_id = universe.new_type_id();
-                        universe.insert_generated_type_cons(type_id, type_cons);
-                        Ok(TypeApp::Applied {
-                            type_cons: type_id,
-                            args: None
                         })
                     },
 
@@ -219,9 +237,8 @@ impl TypeApp {
                         fields: ref fields,
                         field_map: ref field_map,
                     } => {
-                        let type_cons = TypeCons::Record {
+                        Ok(Type::Record {
                             type_id: type_id.clone(),
-                            type_params: type_params.clone(),
                             fields: fields
                                 .iter()
                                 .map(|(k, v)| {
@@ -233,24 +250,33 @@ impl TypeApp {
                                 .collect::<Result<HashMap<_,_>, _>>()?,
 
                             field_map: field_map.clone(),
-                        };
-
-                        let type_id = universe.new_type_id();
-                        universe.insert_generated_type_cons(type_id, type_cons);
-                        Ok(TypeApp::Applied {
-                            type_cons: type_id,
-                            args: None,
                         })
                     },
 
-                    _ => {
-                        if type_args.is_some() {
-                            // TODO: error on type args to type cons int, bool, etc
-                            unimplemented!()
-                        }
-
-                        Ok(self.clone())  
+                    TypeCons::Int => {
+                        nill_check!(type_args);
+                        Ok(Type::Int)
                     },
+
+                    TypeCons::Float => {
+                        nill_check!(type_args);
+                        Ok(Type::Float)
+                    },
+
+                    TypeCons::Bool => {
+                        nill_check!(type_args);
+                        Ok(Type::Bool)
+                    },
+
+                    TypeCons::String => {
+                        nill_check!(type_args);
+                        Ok(Type::String)
+                    },
+
+                    TypeCons::Unit => {
+                        nill_check!(type_args);
+                        Ok(Type::Unit)
+                    }
                 }
             }
 
@@ -260,7 +286,7 @@ impl TypeApp {
                     type_app.apply_internal(universe, param_map)
                 } else {
                     // Final equivalence to another type parameter
-                    Ok(TypeApp::Param(param_id.clone()))
+                    Ok(Type::Param(param_id.clone()))
                 }
             }
         }
@@ -431,7 +457,7 @@ pub fn type_app_eq(universe: &Universe, lhs: &TypeApp, rhs: &TypeApp) -> Result<
     let lhs = lhs.apply(universe)?;
     let rhs = rhs.apply(universe)?;
 
-    Ok(type_app_eq_rec(universe, &lhs, &rhs))
+    Ok(lhs == rhs)
 }
 
 fn type_app_eq_rec(universe: &Universe, lhs: &TypeApp, rhs: &TypeApp) -> bool {
