@@ -554,12 +554,17 @@ impl<'a> FnAnalyzer<'a> {
                     BindingInfo::Fn(fn_id) => {
                         self.program.features_mut().add_feature(FUNCTION_VALUE);
 
+                        // Bindings to unchecked functions are OK because:
+                        // 1) Attempting to use the binding will trigger type checking
+                        // 2) Cannot write out unchecked function types currently
+                        /*
                         if self.program
                             .metadata_mut()
                             .is_builtin_params_unchecked(fn_id)
                         {
                             return Err(AnalysisError::UncheckedFunctionBinding(var.ident().clone()));
                         }
+                        */
 
                         let fn_type_id = if self.program.metadata().is_builtin(fn_id) {
                             let f = self.program.universe().get_builtin_fn(fn_id);

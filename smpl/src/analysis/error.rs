@@ -15,7 +15,6 @@ pub enum AnalysisError {
     UnresolvedUses(Vec<AstNode<UseDecl>>),
     UnresolvedStructs(Vec<AstNode<Struct>>),
     UnresolvedFns(Vec<AstNode<Function>>),
-    UncheckedFunctionBinding(Ident),
     MissingModName,
 }
 
