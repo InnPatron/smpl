@@ -630,87 +630,21 @@ impl<'a> FnAnalyzer<'a> {
 
                 Value::FnCall(ref fn_call) => {
                     // Search for the function
-                    let fn_type_cons = if fn_call.path().0.len() == 1 {
-                        let binding = self.current_scope
-                            .binding_info(fn_call.path().0.get(0).unwrap().data());
-                        if binding.is_ok() {
-                            match binding.unwrap() {
-                                BindingInfo::Fn(fn_id) => {
-                                    fn_call.set_id(fn_id);
-                                    if self.program.metadata_mut().is_builtin(fn_id) {
-                                        let func = self.program.universe().get_builtin_fn(fn_id);
-                                        Some(func.fn_type().clone())
-                                    } else {
-                                        let func = self.program.universe().get_fn(fn_id);
-                                        Some(func.fn_type().clone())
-                                    }
-                                }
-                                BindingInfo::Var(v_id, v_type_app) => {
-                                    // Function call on a local variable / parameter
-                                    // Should be a functino type
-                                    fn_call.set_id(v_id);
 
-                                    self.program.features_mut().add_feature(FUNCTION_VALUE);
-
-                                    let type_cons_id = v_type_app.type_cons().unwrap();
-                                    let type_cons = self
-                                        .program
-                                        .universe()
-                                        .get_type_cons(type_cons_id);
-
-                                    // TODO: Take into account type args
-                                    match type_cons {
-                                        Some(tc) => match tc {
-                                            TypeCons::Function {..} => Some(type_cons_id),
-
-                                            _ => unimplemented!(),
-                                        },
-
-                                        None => unimplemented!(),
-                                    }
-                                }
-                            }
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    };
-
-                    let fn_type_cons = match fn_type_cons {
-                        Some(tc) => tc,
-                        None => {
-                            let fn_id = self.current_scope.get_fn(fn_call.path())?;
-                            fn_call.set_id(fn_id);
-                            if self.program.metadata_mut().is_builtin(fn_id) {
-                                let func = self.program.universe().get_builtin_fn(fn_id);
-                                func.fn_type().clone()
-                            } else {
-                                let func = self.program.universe().get_fn(fn_id);
-                                func.fn_type().clone()
-                            }
-                        }
-                    };
-
-                    // TODO: take into accout type arguments
-                    let fn_type_app = TypeApp::Applied {
-                        type_cons: fn_type_cons,
-                        args: None,
-                    };
-
-                    // Check args and parameters align
-                    let fn_type_cons = self
-                        .program
-                        .universe()
-                        .get_type_cons(fn_type_app.type_cons().unwrap())
+                    let fn_value_tmp_type = expr
+                        .get_tmp(fn_call.fn_value())
+                        .value()
+                        .get_type()
                         .unwrap();
-                    match fn_type_cons {
-                        TypeCons::Function {
+                    
+                    // Check args and parameters align
+                    match fn_value_tmp_type {
+                        Type::Function {
                             parameters: ref params,
                             return_type: ref return_type,
                             ..
                         } => {
-                            tmp_type = return_type.clone();
+                            tmp_type = *(return_type.clone());
 
                             let arg_type_ids = fn_call.args().map(|ref vec| {
                                 vec.iter()
@@ -728,7 +662,7 @@ impl<'a> FnAnalyzer<'a> {
                                 Some(arg_type_ids) => {
                                     if params.len() != arg_type_ids.len() {
                                         return Err(TypeError::Arity {
-                                            fn_type: fn_type_app.clone(),
+                                            fn_type: fn_value_tmp_type.clone(),
                                             found_args: arg_type_ids.len(),
                                             expected_param: params.len(),
                                             span: tmp.span(),
@@ -740,11 +674,10 @@ impl<'a> FnAnalyzer<'a> {
                                     for (index, (arg_type, param_type)) in
                                         arg_type_ids.iter().zip(fn_param_type_ids).enumerate()
                                     {
-                                        if !type_app_eq(self.program.universe(), 
-                                                       arg_type, param_type)? {
+                                        if arg_type != param_type {
                                             return Err(
                                                 TypeError::ArgMismatch {
-                                                    fn_type: fn_type_app.clone(),
+                                                    fn_type: fn_value_tmp_type.clone(),
                                                     index: index,
                                                     arg: arg_type.clone(),
                                                     param: param_type.clone(),
@@ -758,7 +691,7 @@ impl<'a> FnAnalyzer<'a> {
                                 None => {
                                     if params.len() != 0 {
                                         return Err(TypeError::Arity {
-                                            fn_type: fn_type_app.clone(),
+                                            fn_type: fn_value_tmp_type.clone(),
                                             found_args: 0,
                                             expected_param: params.len(),
                                             span: tmp.span(),
@@ -768,14 +701,14 @@ impl<'a> FnAnalyzer<'a> {
                             }
                         },
 
-                        TypeCons::UncheckedFunction { 
-                            return_type: ref return_type,
+                        Type::UncheckedFunction { 
+                            return_type: return_type,
                             ..
                         } => {
-                            tmp_type = return_type.clone();
+                            tmp_type = *return_type;
                         },
 
-                        _ => panic!("Function call on a non-function type: {:?}", fn_type_app),
+                        t @ _ => panic!("Function call on a non-function type: {:?}", t),
                     };
                 }
 

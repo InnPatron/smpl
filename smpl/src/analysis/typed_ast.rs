@@ -551,6 +551,10 @@ impl FnCall {
         }
     }
 
+    pub fn fn_value(&self) -> TmpId {
+        self.fn_value
+    }
+
     pub fn args(&self) -> Option<&Vec<Typed<TmpId>>> {
         self.args.as_ref()
     }
