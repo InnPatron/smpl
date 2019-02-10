@@ -146,7 +146,7 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
         AstExpr::Path(path) => {
             let (path, span) = path.to_data();
             let tmp = match path {
-                TypedPath::NillArity(path) => {
+                TypedPath::NillArity(mut path) => {
                     // TODO: is this necessary? Figure out if path length always greater than 1
                     if path.0.len() == 1 {
                         Value::Binding(Binding::new(path.0.pop().unwrap()))

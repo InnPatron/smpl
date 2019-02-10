@@ -167,9 +167,9 @@ fn resolve_bin_op(
     let expected_bool = Type::Bool;
 
     let resolve_type = match *op {
-        Add | Sub | Mul | Div | Mod => match (lhs, rhs) {
-            (Type::Int, Type::Int) => Type::Int,
-            (Type::Float, Type::Float) => Type::Float,
+        Add | Sub | Mul | Div | Mod => match (&lhs, &rhs) {
+            (&Type::Int, &Type::Int) => Type::Int,
+            (&Type::Float, &Type::Float) => Type::Float,
 
             _ => return Err(TypeError::BinOp {
                 op: op.clone(),
@@ -180,8 +180,8 @@ fn resolve_bin_op(
             }.into()),
         },
 
-        LogicalAnd | LogicalOr => match (lhs, rhs) {
-            (Type::Bool, Type::Bool) => Type::Bool,
+        LogicalAnd | LogicalOr => match (&lhs, &rhs) {
+            (&Type::Bool, &Type::Bool) => Type::Bool,
             _ => return Err(TypeError::BinOp {
                 op: op.clone(),
                 expected: vec![expected_bool],
@@ -191,9 +191,9 @@ fn resolve_bin_op(
             }.into()),
         },
 
-        GreaterEq | LesserEq | Greater | Lesser => match (lhs, rhs) {
-            (Type::Int, Type::Int) => Type::Bool,
-            (Type::Float, Type::Float) => Type::Bool,
+        GreaterEq | LesserEq | Greater | Lesser => match (&lhs, &rhs) {
+            (&Type::Int, &Type::Int) => Type::Bool,
+            (&Type::Float, &Type::Float) => Type::Bool,
 
             _ => return Err(TypeError::BinOp {
                 op: op.clone(),
@@ -364,10 +364,10 @@ impl<'a> FnAnalyzer<'a> {
 
                             match *field_type {
                                 Type::Array{
-                                    element_type: element_type,
+                                    element_type: ref element_type,
                                     size: _,
                                 } => {
-                                    next_type = *element_type;
+                                    next_type = *(element_type.clone());
                                 }
 
                                 _ => {
@@ -487,7 +487,7 @@ impl<'a> FnAnalyzer<'a> {
                                 // Missing fields -> struct is not fully initialized
                                 return Err(TypeError::StructNotFullyInitialized {
                                     type_name: type_name.clone(),
-                                    struct_type: struct_type,
+                                    struct_type: struct_type.clone(),
                                     missing_fields: {
                                         let inits = init_list
                                             .iter()
