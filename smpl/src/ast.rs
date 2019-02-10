@@ -221,9 +221,9 @@ pub enum Expr {
     StructInit(AstNode<StructInit>),
     ArrayInit(AstNode<ArrayInit>),
     Indexing(AstNode<Indexing>),
-    ModAccess(AstNode<ModulePath>),
     AnonymousFn(AstNode<AnonymousFn>),
     FnCallChain(AstNode<FnCallChain>),
+    Path(AstNode<TypedPath>),
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -703,8 +703,9 @@ pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: 
         let span = LocationSpan::new(base_span.start(), end.end());
         let span = span;
 
-        let mod_access = AstNode::new(ModulePath(path), span);
-        Ok(AstNode::new(Expr::ModAccess(mod_access), span))
+        let mod_access = ModulePath(path);
+        let path = AstNode::new(TypedPath::NillArity(mod_access), span);
+        Ok(AstNode::new(Expr::Path(path), span))
     }
 }
 
