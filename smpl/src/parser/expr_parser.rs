@@ -398,27 +398,48 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
                 None
             };
 
-            let args = production!(
-                fn_args_post_lparen(tokens, lspan),
-                parser_state!("fn-call", "fn-args")
-            );
+            // Check if fn call with type args or just a type instantiation on a function
+            if type_args.is_none() || peek_token!(tokens, |tok| {
+                match tok {
+                    Token::LParen => true,
+                    _ => false,
+                }
+            }, parser_state!("potential-fn-call", "arg-lparen")) {
+                let args = if type_args.is_none() {
+                    production!(
+                        fn_args_post_lparen(tokens, lspan),
+                        parser_state!("fn-call", "fn-args")
+                    )
+                } else {
+                    production!(
+                        fn_args(tokens),
+                        parser_state!("fn-call", "fn-args")
+                    )
+                };
 
-            let (args, arg_span) = args.to_data();
-            let args = args.map(|v| v.into_iter().map(|a| a.to_data().0).collect());
+                let (args, arg_span) = args.to_data();
+                let args = args.map(|v| v.into_iter().map(|a| a.to_data().0).collect());
 
-            let fn_path = ModulePath(vec![AstNode::new(base_ident, base_span.clone())]);
-            let fn_path = match type_args {
-                Some(args) => TypedPath::Parameterized(fn_path, args),
-                None => TypedPath::NillArity(fn_path),
-            };
+                let fn_path = ModulePath(vec![AstNode::new(base_ident, base_span.clone())]);
+                let fn_path = match type_args {
+                    Some(args) => TypedPath::Parameterized(fn_path, args),
+                    None => TypedPath::NillArity(fn_path),
+                };
 
-            let fn_call = FnCall {
-                path: AstNode::new(fn_path, base_span),
-                args: args,
-            };
+                let fn_call = FnCall {
+                    path: AstNode::new(fn_path, base_span),
+                    args: args,
+                };
 
-            let span = Span::combine(base_span, arg_span);
-            Ok(AstNode::new(Expr::FnCall(AstNode::new(fn_call, span)), span))
+                let span = Span::combine(base_span, arg_span);
+                Ok(AstNode::new(Expr::FnCall(AstNode::new(fn_call, span)), span))
+            } else {
+                // Definitely a type instantiation
+                let path = ModulePath(vec![AstNode::new(base_ident, base_span.clone())]);
+                let path = TypedPath::Parameterized(path, type_args.unwrap());
+
+                Ok(AstNode::new(Expr::Path(AstNode::new(path, base_span)), base_span))
+            }
         }
 
         IdentLeafDec::Indexing => {
