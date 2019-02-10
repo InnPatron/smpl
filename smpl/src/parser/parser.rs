@@ -1022,14 +1022,14 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             
             let args = args.map(|v| v.into_iter().map(|a| a.to_data().0).collect());
 
-            let fn_path = ModulePath(vec![AstNode::new(base_ident, base_span)]);
+            let fn_path = ModulePath(vec![AstNode::new(base_ident, base_span.clone())]);
             let fn_path = match type_args {
                 Some(args) => TypedPath::Parameterized(fn_path, args),
                 None => TypedPath::NillArity(fn_path),
             };
 
             let fn_call = FnCall {
-                path: fn_path,
+                path: AstNode::new(fn_path, base_span),
                 args: args,
             };
 

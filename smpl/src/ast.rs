@@ -253,7 +253,7 @@ pub struct FnCallChain {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
-    pub path: TypedPath,
+    pub path: AstNode<TypedPath>,
     pub args: Option<Vec<Expr>>,
 }
 

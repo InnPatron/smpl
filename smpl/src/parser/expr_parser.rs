@@ -406,14 +406,14 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             let (args, arg_span) = args.to_data();
             let args = args.map(|v| v.into_iter().map(|a| a.to_data().0).collect());
 
-            let fn_path = ModulePath(vec![AstNode::new(base_ident, base_span)]);
+            let fn_path = ModulePath(vec![AstNode::new(base_ident, base_span.clone())]);
             let fn_path = match type_args {
                 Some(args) => TypedPath::Parameterized(fn_path, args),
                 None => TypedPath::NillArity(fn_path),
             };
 
             let fn_call = FnCall {
-                path: fn_path,
+                path: AstNode::new(fn_path, base_span),
                 args: args,
             };
 
@@ -691,7 +691,7 @@ pub fn expr_module_path(tokens: &mut BufferedTokenizer, base: Ident, base_span: 
         let span = Span::combine(start, args_span);
 
         let fn_call = FnCall {
-            path: path, 
+            path: AstNode::new(path, Span::combine(start, end)),
             args: args.map(|v| v.into_iter().map(|e| e.to_data().0).collect::<Vec<_>>()),
         };
 
