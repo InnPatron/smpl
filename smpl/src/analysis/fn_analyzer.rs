@@ -1151,7 +1151,29 @@ impl<'a> FnAnalyzer<'a> {
                     };
 
                     self.program.features_mut().add_feature(ANONYMOUS_FN);
-                }
+                },
+
+                Value::TypeInst(ref type_inst) => {
+                    let fn_id = self.current_scope
+                        .get_fn(type_inst.path())?;
+
+                    let func = self.program.universe().get_fn(fn_id);
+                    let func_type_id = func.fn_type();
+
+                    let type_args = type_inst.args()
+                        .iter()
+                        .map(|ann| {
+                            type_app_from_annotation(self.program.universe_mut(),
+                                &self.current_scope,
+                                ann)
+                        })
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                    tmp_type = TypeApp::Applied {
+                        type_cons: func_type_id,
+                        args: Some(type_args),
+                    };
+                },
             }
 
             tmp.value().set_type(tmp_type.clone());
