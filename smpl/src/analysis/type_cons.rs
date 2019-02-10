@@ -14,7 +14,8 @@ macro_rules! nill_check {
     }}
 }
 
-#[derive(PartialEq, Clone)]
+/// Use during analysis
+#[derive(PartialEq, Clone, Debug)]
 pub enum Type {
     UncheckedFunction {
         return_type: Box<Type>,
@@ -45,6 +46,7 @@ pub enum Type {
     Unit,
 }
 
+/// Use TypeCons and TypeApp for type constructor mapping and graphing
 #[derive(Debug, Clone)]
 pub enum TypeCons {
 
@@ -134,7 +136,7 @@ impl TypeApp {
         }
     }
 
-    fn apply(&self, universe: &Universe) -> Result<Type, TypeError> {
+    pub fn apply(&self, universe: &Universe) -> Result<Type, TypeError> {
         let mut param_map = HashMap::new();
 
         self.apply_internal(universe, &param_map)

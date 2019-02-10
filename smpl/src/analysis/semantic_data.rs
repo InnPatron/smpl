@@ -361,7 +361,7 @@ impl Module {
 pub struct ScopedData {
     type_cons_map: HashMap<ModulePath, TypeId>,
     var_map: HashMap<Ident, VarId>,
-    var_type_map: HashMap<VarId, TypeApp>,
+    var_type_map: HashMap<VarId, Type>,
     fn_map: HashMap<ModulePath, FnId>,
     type_param_map: HashMap<Ident, TypeParamId>,
 }
@@ -406,7 +406,7 @@ impl ScopedData {
         }
     }
 
-    pub fn var_info(&self, name: &Ident) -> Result<(VarId, TypeApp), AnalysisError> {
+    pub fn var_info(&self, name: &Ident) -> Result<(VarId, Type), AnalysisError> {
         let var_id = self.var_map
             .get(name)
             .ok_or(AnalysisError::UnknownBinding(name.clone()))?
@@ -416,7 +416,7 @@ impl ScopedData {
         Ok((var_id, type_id))
     }
 
-    pub fn insert_var(&mut self, name: Ident, id: VarId, var_type: TypeApp) {
+    pub fn insert_var(&mut self, name: Ident, id: VarId, var_type: Type) {
         self.var_map.insert(name, id);
 
         if self.var_type_map.insert(id, var_type).is_some() {
@@ -449,7 +449,7 @@ impl ScopedData {
 }
 
 pub enum BindingInfo {
-    Var(VarId, TypeApp),
+    Var(VarId, Type),
     Fn(FnId),
 }
 

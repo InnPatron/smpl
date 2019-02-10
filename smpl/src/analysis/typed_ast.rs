@@ -20,7 +20,7 @@ where
     T: ::std::fmt::Debug + Clone,
 {
     data: T,
-    data_type: RefCell<Option<TypeApp>>,
+    data_type: RefCell<Option<Type>>,
 }
 
 impl<T> Typed<T>
@@ -42,14 +42,14 @@ where
         }
     }
 
-    pub fn typed(data: T, t: TypeApp) -> Typed<T> {
+    pub fn typed(data: T, t: Type) -> Typed<T> {
         Typed {
             data: data,
             data_type: RefCell::new(Some(t)),
         }
     }
 
-    pub fn set_type(&self, t: TypeApp) {
+    pub fn set_type(&self, t: Type) {
         // TODO: Handle type override
         let mut borrow = self.data_type.borrow_mut();
         if borrow.is_some() {
@@ -59,7 +59,7 @@ where
         }
     }
 
-    pub fn get_type(&self) -> Option<TypeApp> {
+    pub fn get_type(&self) -> Option<Type> {
         self.data_type.borrow().clone()
     }
 }
@@ -107,7 +107,7 @@ pub struct LocalVarDecl {
     type_ann: Option<ast::AstNode<ast::TypeAnnotation>>,
     var_name: ast::AstNode<ast::Ident>,
     var_init: self::Expr,
-    var_type: RefCell<Option<TypeApp>>,
+    var_type: RefCell<Option<Type>>,
     var_id: VarId,
     span: Span,
 }
@@ -136,7 +136,7 @@ impl LocalVarDecl {
         self.var_name.data()
     }
 
-    pub fn set_type(&self, app: TypeApp) {
+    pub fn set_type(&self, app: Type) {
         let mut borrow = self.var_type.borrow_mut();
         if borrow.is_some() {
             panic!(
@@ -147,7 +147,7 @@ impl LocalVarDecl {
         }
     }
 
-    pub fn var_type(&self) -> Option<TypeApp> {
+    pub fn var_type(&self) -> Option<Type> {
         self.var_type.borrow().clone()
     }
 
@@ -366,7 +366,7 @@ pub enum ArrayInit {
 pub struct StructInit {
     struct_type_name: ast::TypedPath,
     field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>,
-    struct_type: RefCell<Option<TypeApp>>,
+    struct_type: RefCell<Option<Type>>,
     mapped_field_init: RefCell<Option<Vec<(FieldId, Typed<TmpId>)>>>,
 }
 
@@ -387,7 +387,7 @@ impl StructInit {
         self.struct_type_name.module_path()
     }
 
-    pub fn set_struct_type(&self, app: TypeApp) {
+    pub fn set_struct_type(&self, app: Type) {
         let mut borrow = self.struct_type.borrow_mut();
         if borrow.is_some() {
             panic!(
@@ -414,21 +414,11 @@ impl StructInit {
         let struct_type = self.struct_type.borrow();
         let struct_type = struct_type.as_ref().unwrap();
 
-        let field_map = match *struct_type {
-            TypeApp::Applied {
-                type_cons: ref type_cons,
-                args: _,
-            } => {
-                let type_cons = universe.get_type_cons(*type_cons).unwrap();
-                match type_cons {
-                    TypeCons::Record { 
-                            field_map: field_map,
-                            .. 
-                    } => field_map,
-
-                    _ => unimplemented!(),
-                }
-            },
+        let field_map = match struct_type {
+            Type::Record { 
+                    field_map: field_map,
+                    ..
+            } => field_map,
 
             _ => unimplemented!(),
         };
@@ -461,7 +451,7 @@ impl StructInit {
         }
     }
 
-    pub fn struct_type(&self) -> Option<TypeApp> {
+    pub fn struct_type(&self) -> Option<Type> {
         let borrow = self.struct_type.borrow();
         borrow.clone()
     }
@@ -471,7 +461,7 @@ impl StructInit {
 pub struct FieldAccess {
     raw_path: ast::Path,
     path: self::Path,
-    field_type: RefCell<Option<TypeApp>>,
+    field_type: RefCell<Option<Type>>,
 }
 
 impl FieldAccess {
@@ -491,7 +481,7 @@ impl FieldAccess {
         &self.path
     }
 
-    pub fn set_field_type(&self, app: TypeApp) {
+    pub fn set_field_type(&self, app: Type) {
         let mut borrow = self.field_type.borrow_mut();
 
         if borrow.is_some() {
@@ -503,7 +493,7 @@ impl FieldAccess {
         }
     }
 
-    pub fn field_type(&self) -> Option<TypeApp> {
+    pub fn field_type(&self) -> Option<Type> {
         self.field_type.borrow().clone()
     }
 }
@@ -622,7 +612,7 @@ impl self::Path {
         }
     }
 
-    pub fn root_var_type(&self) -> TypeApp {
+    pub fn root_var_type(&self) -> Type {
         let r = self.root_var.borrow();
 
         match *r {
@@ -641,11 +631,11 @@ impl self::Path {
         *r = Some(Typed::untyped(id));
     }
 
-    pub fn set_root_var_type(&self, app: TypeApp) {
+    pub fn set_root_var_type(&self, ty: Type) {
         let r = self.root_var.borrow_mut();
 
         match *r {
-            Some(ref t) => t.set_type(app),
+            Some(ref t) => t.set_type(ty),
             None => panic!("No root var"),
         }
     }
@@ -688,7 +678,7 @@ impl Field {
         }
     }
 
-    pub fn field_type(&self) -> TypeApp {
+    pub fn field_type(&self) -> Type {
         let f = self.field_id.borrow();
 
         match *f {
@@ -707,7 +697,7 @@ impl Field {
         *f = Some(Typed::untyped(id));
     }
 
-    pub fn set_field_type(&self, app: TypeApp) {
+    pub fn set_field_type(&self, app: Type) {
         let f = self.field_id.borrow_mut();
 
         match *f {

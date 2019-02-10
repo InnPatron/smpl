@@ -20,14 +20,14 @@ use super::semantic_data::{BindingInfo, FnId, ModuleId, Program, ScopedData, Typ
 
 struct FnAnalyzer<'a> {
     program: &'a mut Program,
-    fn_return_type: TypeApp,
+    fn_return_type: Type,
     current_scope: ScopedData,
     scope_stack: Vec<ScopedData>,
 
     module_id: ModuleId,
 
     // metadata
-    locals: Vec<(VarId, TypeApp)>,
+    locals: Vec<(VarId, Type)>,
 }
 
 pub fn analyze_fn(
@@ -39,13 +39,18 @@ pub fn analyze_fn(
 
     let func = program.universe().get_fn(fn_id);
     let fn_type_id = func.fn_type();
-    let fn_type = program.universe().get_type_cons(fn_type_id).unwrap().clone();
+
+    let fn_type = TypeApp::Applied {
+        type_cons: fn_type_id,
+        args: None,
+    };
+
+    let fn_type = fn_type.apply(program.universe())?;
 
     let (return_type, fn_params) = match fn_type {
-        TypeCons::Function {
+        Type::Function {
             return_type: ref return_type,
             parameters: ref params,
-            ..
         } => (return_type.clone(), params),
 
         ref t @ _ => panic!("{} not mapped to a function but a {:?}", fn_id, t),
@@ -53,7 +58,7 @@ pub fn analyze_fn(
 
     let mut analyzer = FnAnalyzer {
         program: program,
-        fn_return_type: return_type,
+        fn_return_type: *return_type,
         current_scope: global_scope.clone(),
         scope_stack: Vec::new(),
         locals: Vec::new(),
@@ -147,65 +152,24 @@ fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, A
 fn resolve_bin_op(
     universe: &Universe,
     op: &ast::BinOp,
-    lhs: &TypeApp,
-    rhs: &TypeApp,
+    lhs: Type,
+    rhs: Type,
     span: Span,
-) -> Result<TypeApp, AnalysisError> {
+) -> Result<Type, AnalysisError> {
     use crate::ast::BinOp::*;
 
-    let lh_type = match lhs {
-        TypeApp::Applied {
-            type_cons: ref type_cons,
-            args: ref args
-        } => {
-            if args.is_some() {
-                unimplemented!()
-            } else {
-                universe.get_type_cons(*type_cons).unwrap()
-            }
-        },
+    let expected_int = Type::Int;
 
-        TypeApp::Param(app) => unimplemented!(),
-    };
-    let rh_type = match rhs {
-        TypeApp::Applied {
-            type_cons: ref type_cons,
-            args: ref args
-        } => {
-            if args.is_some() {
-                unimplemented!()
-            } else {
-                universe.get_type_cons(*type_cons).unwrap()
-            }
-        },
+    let expected_float = Type::Float;
 
-        TypeApp::Param(app) => unimplemented!(),
-    };
+    let expected_string = Type::String;
 
-    let expected_int = TypeApp::Applied {
-        type_cons: universe.int(),
-        args: None,
-    };
+    let expected_bool = Type::Bool;
 
-    let expected_float = TypeApp::Applied {
-        type_cons: universe.float(),
-        args: None,
-    };
-
-    let expected_string = TypeApp::Applied {
-        type_cons: universe.string(),
-        args: None,
-    };
-
-    let expected_bool = TypeApp::Applied {
-        type_cons: universe.boolean(),
-        args: None,
-    };
-
-    let type_cons = match *op {
-        Add | Sub | Mul | Div | Mod => match (lh_type, rh_type) {
-            (TypeCons::Int, TypeCons::Int) => universe.int(),
-            (TypeCons::Float, TypeCons::Float) => universe.float(),
+    let resolve_type = match *op {
+        Add | Sub | Mul | Div | Mod => match (lhs, rhs) {
+            (Type::Int, Type::Int) => Type::Int,
+            (Type::Float, Type::Float) => Type::Float,
 
             _ => return Err(TypeError::BinOp {
                 op: op.clone(),
@@ -216,8 +180,8 @@ fn resolve_bin_op(
             }.into()),
         },
 
-        LogicalAnd | LogicalOr => match (lh_type, rh_type) {
-            (TypeCons::Bool, TypeCons::Bool) => universe.boolean(),
+        LogicalAnd | LogicalOr => match (lhs, rhs) {
+            (Type::Bool, Type::Bool) => Type::Bool,
             _ => return Err(TypeError::BinOp {
                 op: op.clone(),
                 expected: vec![expected_bool],
@@ -227,9 +191,9 @@ fn resolve_bin_op(
             }.into()),
         },
 
-        GreaterEq | LesserEq | Greater | Lesser => match (lh_type, rh_type) {
-            (TypeCons::Int, TypeCons::Int) => universe.boolean(),
-            (TypeCons::Float, TypeCons::Float) => universe.boolean(),
+        GreaterEq | LesserEq | Greater | Lesser => match (lhs, rhs) {
+            (Type::Int, Type::Int) => Type::Bool,
+            (Type::Float, Type::Float) => Type::Bool,
 
             _ => return Err(TypeError::BinOp {
                 op: op.clone(),
@@ -241,61 +205,34 @@ fn resolve_bin_op(
         },
 
         Eq | InEq => {
-            if type_app_eq(universe, lhs, rhs)? {
-                universe.boolean()
+            if lhs == rhs {
+                Type::Bool 
             } else {
                 return Err(TypeError::LhsRhsInEq(lhs.clone(), rhs.clone(), span).into());
             }
         }
     };
 
-    Ok(TypeApp::Applied {
-        type_cons: type_cons,
-        args: None,
-    })
+    Ok(resolve_type)
 }
 
 fn resolve_uni_op(
     universe: &Universe,
     op: &ast::UniOp,
-    tmp_type: &TypeApp,
+    tmp_type: Type,
     span: Span,
-) -> Result<TypeApp, AnalysisError> {
+) -> Result<Type, AnalysisError> {
     use crate::ast::UniOp::*;
 
-    let tmp_type_cons = match *tmp_type {
-        TypeApp::Applied {
-            type_cons: ref type_cons,
-            args: ref args,
-        } => {
-            if args.is_some() {
-                unimplemented!()
-            } else {
-                universe.get_type_cons(*type_cons).unwrap()
-            }
-        },
+    let expected_int = Type::Int;
 
-        TypeApp::Param(_) => unimplemented!(),
-    };
+    let expected_float = Type::Float;
 
-    let expected_int = TypeApp::Applied {
-        type_cons: universe.int(),
-        args: None,
-    };
-
-    let expected_float = TypeApp::Applied {
-        type_cons: universe.float(),
-        args: None,
-    };
-
-    let expected_bool = TypeApp::Applied {
-        type_cons: universe.boolean(),
-        args: None,
-    };
+    let expected_bool = Type::Bool;
 
     match *op {
-        Negate => match tmp_type_cons {
-            TypeCons::Int | TypeCons::Float => Ok(tmp_type.clone()),
+        Negate => match tmp_type {
+            Type::Int | Type::Float => Ok(tmp_type.clone()),
             _ => Err(TypeError::UniOp {
                 op: op.clone(),
                 expected: vec![expected_int, expected_float],
@@ -304,8 +241,8 @@ fn resolve_uni_op(
             }.into()),
         },
 
-        LogicalInvert => match tmp_type_cons {
-            TypeCons::Bool => Ok(tmp_type.clone()),
+        LogicalInvert => match tmp_type {
+            Type::Bool => Ok(tmp_type.clone()),
             _ => Err(TypeError::UniOp {
                 op: op.clone(),
                 expected: vec![expected_bool],
@@ -324,7 +261,7 @@ impl<'a> FnAnalyzer<'a> {
         expr: &Expr,
         field_access: &FieldAccess,
         span: Span,
-    ) -> Result<TypeApp, AnalysisError> {
+    ) -> Result<Type, AnalysisError> {
 
         let path = field_access.path();
         let path_iter = path.path().iter();
@@ -348,24 +285,8 @@ impl<'a> FnAnalyzer<'a> {
                 .get_type()
                 .unwrap();
 
-            let indexing_type_cons = match &indexing_type {
-                TypeApp::Applied {
-                    type_cons: ref type_cons,
-                    args: ref args,
-                } => {
-                    if args.is_some() {
-                        unimplemented!()
-                    } else {
-                        self.program.universe().get_type_cons(*type_cons).unwrap()
-                    }
-
-                },
-
-                TypeApp::Param(_) => unimplemented!(),
-            };
-
-            match indexing_type_cons {
-                TypeCons::Int => (),
+            match indexing_type {
+                Type::Int => (),
                 _ => {
                     return Err(TypeError::InvalidIndex {
                         found: indexing_type.clone(),
@@ -374,27 +295,12 @@ impl<'a> FnAnalyzer<'a> {
                 }
             }
 
-            let var_type_cons = match &var_type {
-                TypeApp::Applied {
-                    type_cons: ref type_cons,
-                    args: ref args,
-                } => {
-                    if args.is_some() {
-                        unimplemented!()
-                    } else {
-                        self.program.universe().get_type_cons(*type_cons).unwrap()
-                    }
-                }
-
-                TypeApp::Param(_) => unimplemented!(),
-            };
-
-            match var_type_cons {
-                TypeCons::Array { 
-                    element_type: ref element_type,
+            match var_type {
+                Type::Array { 
+                    element_type: element_type,
                     ..
                 } => {
-                    current_type = element_type.clone();
+                    current_type = *element_type;
                 }
                 _ => {
                     return Err(TypeError::NotAnArray {
@@ -406,24 +312,9 @@ impl<'a> FnAnalyzer<'a> {
         }
 
         for (index, field) in path_iter.enumerate() {
-            let current_type_cons = match &current_type {
-                TypeApp::Applied {
-                    type_cons: ref type_cons,
-                    args: ref args,
-                } => {
-                    if args.is_some() {
-                        unimplemented!()
-                    } else {
-                        self.program.universe().get_type_cons(*type_cons).unwrap()
-                    }
-                }
-
-                TypeApp::Param(_) => unimplemented!(),
-            };
-
             let next_type;
-            match current_type_cons {
-                TypeCons::Record {
+            match current_type {
+                Type::Record {
                     fields: ref fields,
                     field_map: ref field_map,
                     ..
@@ -460,23 +351,8 @@ impl<'a> FnAnalyzer<'a> {
                                 .get_type()
                                 .unwrap();
 
-                            let type_cons = match indexing_type {
-                                TypeApp::Applied {
-                                    type_cons: ref type_cons,
-                                    args: ref args
-                                } => {
-                                    if args.is_some() {
-                                        unimplemented!()
-                                    } else {
-                                        self.program.universe().get_type_cons(*type_cons).unwrap()
-                                    }
-                                },
-
-                                TypeApp::Param(_) => unimplemented!(),
-                            };
-
-                            match type_cons {
-                                TypeCons::Int => (),
+                            match indexing_type {
+                                Type::Int => (),
 
                                 _ => {
                                     return Err(TypeError::InvalidIndex {
@@ -484,29 +360,14 @@ impl<'a> FnAnalyzer<'a> {
                                         span: expr.get_tmp(*indexing).span(),
                                     }.into());
                                 }
-                            }
-
-                            let field_type_cons = match *field_type {
-                                TypeApp::Applied {
-                                    type_cons: ref type_cons,
-                                    args: ref args,
-                                } => {
-                                    if args.is_some() {
-                                        unimplemented!()
-                                    } else {
-                                        self.program.universe().get_type_cons(*type_cons).unwrap()
-                                    }
-                                },
-
-                                TypeApp::Param(_) => unimplemented!(),
                             };
 
-                            match field_type_cons {
-                                TypeCons::Array{
+                            match *field_type {
+                                Type::Array{
                                     element_type: element_type,
                                     size: _,
                                 } => {
-                                    next_type = element_type.clone();
+                                    next_type = *element_type;
                                 }
 
                                 _ => {
@@ -540,7 +401,7 @@ impl<'a> FnAnalyzer<'a> {
         Ok(accessed_field_type)
     }
 
-    fn resolve_expr(&mut self, expr: &Expr) -> Result<TypeApp, AnalysisError> {
+    fn resolve_expr(&mut self, expr: &Expr) -> Result<Type, AnalysisError> {
         let mut expr_type = None;
 
         for tmp_id in expr.execution_order() {
@@ -551,17 +412,14 @@ impl<'a> FnAnalyzer<'a> {
                     use crate::ast::Literal;
 
                     let universe = self.program.universe();
-                    let type_cons = match *literal {
-                        Literal::Int(_) => universe.int(),
-                        Literal::Float(_) => universe.float(),
-                        Literal::String(_) => universe.string(),
-                        Literal::Bool(_) => universe.boolean(),
+                    let lit_type = match *literal {
+                        Literal::Int(_) => Type::Int,
+                        Literal::Float(_) => Type::Float,
+                        Literal::String(_) => Type::String,
+                        Literal::Bool(_) => Type::Bool,
                     };
 
-                    tmp_type = TypeApp::Applied { 
-                        type_cons: type_cons,
-                        args: None,
-                    };
+                    tmp_type = lit_type;
                 }
 
                 Value::StructInit(ref init) => {
@@ -573,19 +431,14 @@ impl<'a> FnAnalyzer<'a> {
                         .ok_or(AnalysisError::UnknownType(type_name.clone()))?;
 
                     // TODO: Take into account type arguments
-                    let struct_type_app = TypeApp::Applied {
+                    let struct_type = TypeApp::Applied {
                         type_cons: struct_type_id,
                         args: None,
-                    };
-
-                    let struct_type_cons = self.program
-                        .universe()
-                        .get_type_cons(struct_type_id)
-                        .unwrap();
+                    }.apply(self.program.universe())?;
 
                     // Check if type is a struct.
-                    let (struct_type_id, fields, field_map) = match struct_type_cons {
-                        TypeCons::Record {
+                    let (struct_type_id, fields, field_map) = match struct_type {
+                        Type::Record {
                             type_id: struct_type_id,
                             fields: ref fields,
                             field_map: ref field_map,
@@ -595,7 +448,7 @@ impl<'a> FnAnalyzer<'a> {
                         _ => {
                             return Err(TypeError::NotAStruct {
                                 type_name: type_name.clone(),
-                                found: struct_type_app,
+                                found: struct_type,
                                 span: tmp.span(),
                             }.into());
                         }
@@ -605,12 +458,12 @@ impl<'a> FnAnalyzer<'a> {
                     // code)
                     if self.program.metadata().is_opaque(struct_type_id) {
                         return Err(TypeError::InitOpaqueType {
-                            struct_type: struct_type_app,
+                            struct_type: struct_type,
                             span: tmp.span(),
                         }.into());
                     }
 
-                    init.set_struct_type(struct_type_app.clone());
+                    init.set_struct_type(struct_type.clone());
                     if let Err(unknown_fields) = init.set_field_init(self.program.universe()) {
                         // TODO: Allow for multiple errors
                         /*let ident = struct_type.get_ident(id);
@@ -622,7 +475,7 @@ impl<'a> FnAnalyzer<'a> {
                         // No field initializations but the struct type has fields
                         return Err(TypeError::StructNotFullyInitialized {
                             type_name: type_name.clone(),
-                            struct_type: struct_type_app,
+                            struct_type: struct_type,
                             missing_fields: unknown_fields,
                             span: tmp.span(),
                         }.into());
@@ -634,7 +487,7 @@ impl<'a> FnAnalyzer<'a> {
                                 // Missing fields -> struct is not fully initialized
                                 return Err(TypeError::StructNotFullyInitialized {
                                     type_name: type_name.clone(),
-                                    struct_type: struct_type_app,
+                                    struct_type: struct_type,
                                     missing_fields: {
                                         let inits = init_list
                                             .iter()
@@ -661,9 +514,7 @@ impl<'a> FnAnalyzer<'a> {
                                 typed_tmp_id.set_type(tmp_type.clone());
 
                                 // Expression type the same as the field type?
-                                if !type_app_eq(self.program.universe(), 
-                                               &tmp_type, 
-                                               field_type)? {
+                                if tmp_type != *field_type {
                                     return Err(TypeError::UnexpectedType {
                                         found: tmp_type,
                                         expected: field_type.clone(),
@@ -691,7 +542,7 @@ impl<'a> FnAnalyzer<'a> {
                         }
                     }
 
-                    tmp_type = struct_type_app;
+                    tmp_type = struct_type;
                 }
 
                 Value::Binding(ref var) => match self.current_scope.binding_info(var.ident())? {
@@ -718,14 +569,13 @@ impl<'a> FnAnalyzer<'a> {
                             f.fn_type().clone()
                         };
 
-                        // TODO: Take into account type args
-                        let fn_type_app = TypeApp::Applied {
+                        let fn_type = TypeApp::Applied {
                             type_cons: fn_type_id,
                             args: None,
-                        };
+                        }.apply(self.program.universe())?;
 
                         var.set_id(fn_id);
-                        tmp_type = fn_type_app;
+                        tmp_type = fn_type;
                     }
                 },
 
@@ -756,8 +606,8 @@ impl<'a> FnAnalyzer<'a> {
                     tmp_type = resolve_bin_op(
                         self.program.universe(),
                         op,
-                        &lhs_type,
-                        &rhs_type,
+                        lhs_type,
+                        rhs_type,
                         tmp.span(),
                     )?;
                 }
@@ -774,7 +624,7 @@ impl<'a> FnAnalyzer<'a> {
                     tmp_type =
                         resolve_uni_op(self.program.universe(), 
                                        op, 
-                                       &uni_tmp_type, 
+                                       uni_tmp_type, 
                                        tmp.span())?;
                 }
 
@@ -954,9 +804,8 @@ impl<'a> FnAnalyzer<'a> {
                                 let expected_element_type = expected_element_type
                                     .as_ref()
                                     .unwrap();
-                                if !type_app_eq(self.program.universe(), 
-                                               expected_element_type, 
-                                               &current_element_type)? {
+
+                                if current_element_type != *expected_element_type {
                                     return Err(TypeError::HeterogenousArray {
                                         expected: expected_element_type.clone(),
                                         found: current_element_type,
@@ -966,22 +815,9 @@ impl<'a> FnAnalyzer<'a> {
                                 }
                             }
 
-                            // TODO: Create array type
-
-                            let type_cons = TypeCons::Array {
-                                element_type: expected_element_type.unwrap(),
+                            let array_type = Type::Array {
+                                element_type: Box::new(expected_element_type.unwrap()),
                                 size: size,
-                            };
-
-                            let type_id = self.program.universe().new_type_id();
-
-                            self.program
-                                .universe_mut()
-                                .insert_type_cons(type_id, type_cons);
-
-                            let array_type = TypeApp::Applied {
-                                type_cons: type_id,
-                                args: None,
                             };
 
                             tmp_type = array_type;
@@ -996,15 +832,10 @@ impl<'a> FnAnalyzer<'a> {
 
                             let element_type = array_tmp_type;
 
-                            let array_type = TypeCons::Array {
-                                element_type: element_type,
+                            let array_type = Type::Array {
+                                element_type: Box::new(element_type),
                                 size: size,
                             };
-
-                            let type_id = self.program.universe().new_type_id();
-                            self.program
-                                .universe_mut()
-                                .insert_type_cons(type_id, array_type);
 
                             // TODO: Insert array type into metadata?
                             /*
@@ -1012,10 +843,7 @@ impl<'a> FnAnalyzer<'a> {
                                 .metadata_mut()
                                 .insert_array_type(self.module_id, array_type);
                             */
-                            tmp_type = TypeApp::Applied {
-                                type_cons: type_id,
-                                args: None,
-                            };
+                            tmp_type = array_type;
                         }
                     }
                 }
@@ -1032,33 +860,14 @@ impl<'a> FnAnalyzer<'a> {
                         indexing.array.set_type(tmp_type.clone());
 
                         match &tmp_type {
-                            TypeApp::Applied {
-                                type_cons: ref type_cons,
-                                args: _,
-                            } => {
-                                let type_cons = self
-                                    .program
-                                    .universe()
-                                    .get_type_cons(*type_cons)
-                                    .unwrap();
-                                match type_cons {
-                                    TypeCons::Array {
-                                        element_type: ref element_type,
-                                        ..
-                                    } => element_type.clone(),
-
-                                    _ => {
-                                        return Err(TypeError::NotAnArray {
-                                            found: tmp_type.clone(),
-                                            span: tmp.span(),
-                                        }.into());
-                                    }
-                                }
-                            }
+                            Type::Array {
+                                element_type: ref element_type,
+                                ..
+                            } => element_type.clone(),
 
                             _ => {
                                 return Err(TypeError::NotAnArray {
-                                    found: tmp_type,
+                                    found: tmp_type.clone(),
                                     span: tmp.span(),
                                 }.into());
                             }
@@ -1074,37 +883,18 @@ impl<'a> FnAnalyzer<'a> {
                         indexing.indexer.set_type(tmp_type.clone());
 
                         match &tmp_type {
-                            TypeApp::Applied {
-                                type_cons: ref type_cons,
-                                args: _,
-                            } => {
-                                let type_cons = self
-                                    .program
-                                    .universe()
-                                    .get_type_cons(*type_cons)
-                                    .unwrap();
-                                match type_cons {
-                                    TypeCons::Int => (),
-
-                                    _ => {
-                                        return Err(TypeError::InvalidIndex {
-                                            found: tmp_type.clone(),
-                                            span: tmp.span(),
-                                        }.into());
-                                    }
-                                }
-                            },
+                            Type::Int => (),
 
                             _ => {
                                 return Err(TypeError::InvalidIndex {
-                                    found: tmp_type,
+                                    found: tmp_type.clone(),
                                     span: tmp.span(),
                                 }.into());
                             }
                         }
                     }
 
-                    tmp_type = expected_element_type;
+                    tmp_type = *expected_element_type;
                 }
 
                 Value::ModAccess(ref access) => {
@@ -1116,7 +906,7 @@ impl<'a> FnAnalyzer<'a> {
                     tmp_type = TypeApp::Applied {
                         type_cons: fn_type.clone(),
                         args: None,
-                    };
+                    }.apply(self.program.universe())?;
 
                     self.program.features_mut().add_feature(MOD_ACCESS);
                 }
@@ -1145,10 +935,11 @@ impl<'a> FnAnalyzer<'a> {
                         self.module_id,
                     )?;
 
+                    // TODO: Construct type directly
                     tmp_type = TypeApp::Applied {
                         type_cons: type_id,
                         args: None
-                    };
+                    }.apply(self.program.universe())?;
 
                     self.program.features_mut().add_feature(ANONYMOUS_FN);
                 },
@@ -1172,7 +963,7 @@ impl<'a> FnAnalyzer<'a> {
                     tmp_type = TypeApp::Applied {
                         type_cons: func_type_id,
                         args: Some(type_args),
-                    };
+                    }.apply(self.program.universe())?;
                 },
             }
 
@@ -1247,7 +1038,10 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
             });
 
         let var_type = match var_type {
-            Some(app_gen_result) => app_gen_result?,
+            Some(app_gen_result) => {
+                app_gen_result?
+                    .apply(self.program.universe())?
+            },
     
 
             None => expr_type.clone(),
@@ -1255,8 +1049,7 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         
         var_decl.set_type(var_type.clone());
 
-        if type_app_eq(self.program.universe(), 
-                       &var_type, &expr_type)? {
+        if var_type == expr_type {
             self.current_scope.insert_var(name, 
                                           var_id, 
                                           var_type.clone());
@@ -1285,9 +1078,7 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
 
         let assignment_span = Span::combine(assignment.access_span(), assignment.value().span());
 
-        if !type_app_eq(self.program.universe(), 
-                       &assignee_type,
-                       &expr_type)? {
+        if expr_type != assignee_type {
             return Err(TypeError::LhsRhsInEq(assignee_type, expr_type, assignment_span).into());
         }
 
@@ -1304,17 +1095,10 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         let expr_type = match expr {
             Some(ref expr) => self.resolve_expr(expr)?,
 
-            None => {
-                TypeApp::Applied {
-                    type_cons: self.program.universe().unit(),
-                    args: None,
-                }
-            }
+            None => Type::Unit
         };
 
-        if !type_app_eq(self.program.universe(), 
-                       &expr_type, 
-                       &self.fn_return_type)? {
+        if expr_type != self.fn_return_type {
             return Err(TypeError::InEqFnReturn {
                 expr: expr_type,
                 fn_return: self.fn_return_type.clone(),
@@ -1329,14 +1113,9 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         let condition = &condition.expr;
         let expr_type = self.resolve_expr(condition)?;
 
-        let expected = TypeApp::Applied {
-            type_cons: self.program.universe().boolean(),
-            args: None,
-        };
+        let expected = Type::Bool;
 
-        if !type_app_eq(self.program.universe(), 
-                       &expr_type,
-                       &expected)? {
+        if expr_type != expected {
             return Err(TypeError::UnexpectedType {
                 found: expr_type,
                 expected: expected,
@@ -1361,14 +1140,9 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         let condition = &condition.expr;
         let expr_type = self.resolve_expr(condition)?;
         
-        let expected = TypeApp::Applied {
-            type_cons: self.program.universe().boolean(),
-            args: None,
-        };
+        let expected = Type::Bool;
 
-        if !type_app_eq(self.program.universe(), 
-                       &expr_type, 
-                       &expected)? {
+        if expr_type != expected {
             return Err(TypeError::UnexpectedType {
                 found: expr_type,
                 expected: expected,
