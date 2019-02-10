@@ -533,4 +533,24 @@ fn foo() { }";
 
         let _input = parse_module(wrap_input!(input)).unwrap();
     }
+
+    #[test]
+    fn parse_fn_generic() {
+        let input =
+"fn foo(type T)(bar: fn(type T)(T) -> T) {
+    bar();
+}";
+
+        let _input = parse_module(wrap_input!(input)).unwrap();
+    }
+
+    #[test]
+    fn parse_type_inst() {
+        let input =
+"fn foo() {
+    let a = bar(type int);
+}";
+
+        let _input = parse_module(wrap_input!(input)).unwrap();
+    }
 }
