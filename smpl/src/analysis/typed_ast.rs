@@ -549,22 +549,16 @@ impl Binding {
 
 #[derive(Debug, Clone)]
 pub struct FnCall {
-    path: ast::TypedPath,
+    fn_value: TmpId,
     args: Option<Vec<Typed<TmpId>>>,
-    fn_nomer: Cell<Option<BindingId>>,
 }
 
 impl FnCall {
-    pub fn new(path: ast::TypedPath, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
+    pub fn new(fn_value: TmpId, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
         FnCall {
-            path: path,
+            fn_value: fn_value,
             args: args,
-            fn_nomer: Cell::new(None),
         }
-    }
-
-    pub fn path(&self) -> &ast::ModulePath {
-        &self.path.module_path()
     }
 
     pub fn args(&self) -> Option<&Vec<Typed<TmpId>>> {
@@ -573,25 +567,6 @@ impl FnCall {
 
     pub fn args_mut(&mut self) -> &mut Option<Vec<Typed<TmpId>>> {
         &mut self.args
-    }
-
-    pub fn set_id<T>(&self, id: T)
-    where
-        T: ::std::fmt::Debug + Into<BindingId>,
-    {
-        if self.fn_nomer.get().is_some() {
-            panic!(
-                "Attempting to overwrite {:#?} of the FnCall {:?}",
-                self.fn_nomer.get().unwrap(),
-                self.path
-            );
-        } else {
-            self.fn_nomer.set(Some(id.into()));
-        }
-    }
-
-    pub fn get_id(&self) -> Option<BindingId> {
-        self.fn_nomer.get()
     }
 }
 
