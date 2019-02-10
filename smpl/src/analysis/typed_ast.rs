@@ -275,6 +275,48 @@ pub enum Value {
     Indexing(Indexing),
     ModAccess(self::ModAccess),
     AnonymousFn(self::AnonymousFn),
+    TypeInst(self::TypeInst),
+}
+
+// Can currently only type instantiate on static functions
+#[derive(Debug, Clone)]
+pub struct TypeInst {
+    path: ast::ModulePath,
+    args: Vec<ast::TypeAnnotation>,
+    fn_id: Cell<Option<FnId>>,
+}
+
+impl TypeInst {
+    pub fn new(path: ast::ModulePath, args: Vec<ast::TypeAnnotation>) -> TypeInst {
+        TypeInst {
+            path: path,
+            args: args,
+            fn_id: Cell::new(None),
+        }
+    }
+
+    pub fn path(&self) -> &ast::ModulePath {
+        &self.path
+    }
+
+    pub fn args(&self) -> &[ast::TypeAnnotation] {
+        &self.args
+    }
+
+    pub fn set_id(&self, id: FnId) {
+        if self.fn_id.get().is_some() {
+            panic!(
+                "Attempting to overwrite fn-id of the type-inst {:?}",
+                self.path
+            );
+        } else {
+            self.fn_id.set(Some(id));
+        }
+    }
+
+    pub fn get_id(&self) -> Option<FnId> {
+        self.fn_id.get()
+    } 
 }
 
 #[derive(Debug, Clone)]

@@ -4,7 +4,7 @@ use super::typed_ast::Binding as TypedBinding;
 
 use crate::span::Span;
 
-use crate::ast::{ArrayInit as AstArrayInit, Expr as AstExpr, AstNode};
+use crate::ast::{ArrayInit as AstArrayInit, Expr as AstExpr, AstNode, TypedPath};
 
 pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
@@ -142,11 +142,18 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
             )
         }
 
-        AstExpr::ModAccess(path) => {
+        AstExpr::Path(path) => {
             let (path, span) = path.to_data();
+            let tmp = match path {
+                TypedPath::NillArity(path) => 
+                    Value::ModAccess(ModAccess::new(path)),
+                TypedPath::Parameterized(path, args) => 
+                    Value::TypeInst(TypeInst::new(path, args)),
+            };
+
             (
-                scope.map_tmp(universe, Value::ModAccess(ModAccess::new(path)), span),
-                span,
+                scope.map_tmp(universe, tmp, span),
+                span
             )
         }
 
