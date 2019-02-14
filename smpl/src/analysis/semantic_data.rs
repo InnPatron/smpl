@@ -191,10 +191,11 @@ impl Universe {
         self.fn_map.remove(&fn_id);
     }
 
-    pub fn insert_fn(&mut self, fn_id: FnId, type_id: TypeId, cfg: CFG) {
+    pub fn insert_fn(&mut self, fn_id: FnId, type_id: TypeId, fn_scope: ScopedData, cfg: CFG) {
         let function = Function {
             fn_type: type_id,
             cfg: Rc::new(cfg),
+            fn_scope: fn_scope,
         };
 
         if self.fn_map.insert(fn_id, Rc::new(function)).is_some() {
@@ -467,6 +468,7 @@ impl BuiltinFunction {
 pub struct Function {
     fn_type: TypeId,
     cfg: Rc<CFG>,
+    fn_scope: ScopedData
 }
 
 impl Function {
@@ -476,6 +478,10 @@ impl Function {
 
     pub fn cfg(&self) -> Rc<CFG> {
         self.cfg.clone()
+    }
+
+    pub fn fn_scope(&self) -> &ScopedData {
+        &self.fn_scope
     }
 }
 

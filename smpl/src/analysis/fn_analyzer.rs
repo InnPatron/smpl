@@ -871,7 +871,7 @@ impl<'a> FnAnalyzer<'a> {
 
                     self.program
                         .universe_mut()
-                        .insert_fn(fn_id, fn_type_id, cfg);
+                        .insert_fn(fn_id, fn_type_id, func_scope, cfg);
 
                     // Since anonymous functions are ALWAYS inside another function
                     // Assume the global scope is at the bottom of the scope stack

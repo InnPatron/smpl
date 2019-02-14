@@ -99,7 +99,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
             let fn_id = reserved_fn.0;
             let fn_decl = reserved_fn.1.data();
             // TODO: Store new function scope storing the type parameters
-            let (scope, fn_type) = generate_fn_type(
+            let (fn_scope, fn_type) = generate_fn_type(
                 program,
                 raw_program.scopes.get(mod_id).unwrap(),
                 fn_id,
@@ -116,7 +116,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
 
             program
                 .universe_mut()
-                .insert_fn(fn_id, fn_type_id, cfg);
+                .insert_fn(fn_id, fn_type_id, fn_scope, cfg);
             program.metadata_mut().insert_module_fn(
                 mod_id.clone(),
                 fn_decl.name.data().clone(),
