@@ -191,10 +191,7 @@ impl Universe {
         self.fn_map.remove(&fn_id);
     }
 
-    pub fn insert_fn(&mut self, fn_id: FnId, fn_type: TypeCons, cfg: CFG) -> TypeId {
-        let type_id = self.new_type_id();
-        self.insert_type_cons(type_id, fn_type);
-
+    pub fn insert_fn(&mut self, fn_id: FnId, type_id: TypeId, cfg: CFG) {
         let function = Function {
             fn_type: type_id,
             cfg: Rc::new(cfg),
@@ -206,15 +203,10 @@ impl Universe {
                 fn_id.0
             );
         }
-
-        type_id
     }
 
-    pub fn insert_builtin_fn(&mut self, fn_id: FnId, fn_type: TypeCons) -> TypeId {
-        let type_id = self.new_type_id();
-        self.insert_type_cons(type_id, fn_type);
-
-        let builtin = BuiltinFunction { fn_type: type_id };
+    pub fn insert_builtin_fn(&mut self, fn_id: FnId, fn_type: TypeId) {
+        let builtin = BuiltinFunction { fn_type: fn_type };
 
         if self.builtin_fn_map.insert(fn_id, builtin).is_some() {
             panic!(
@@ -222,22 +214,29 @@ impl Universe {
                 fn_id.0
             );
         }
+    }
 
+    pub fn manual_insert_type_cons(&mut self, type_id: TypeId, cons: TypeCons) {
+        if self.type_cons_map.insert(type_id, cons).is_some() {
+            panic!("Duplicate type constructor for type id");
+        }
+    }
+
+    pub fn insert_type_cons(&mut self, cons: TypeCons) -> TypeId {
+        let type_id = self.new_type_id();
+        self.manual_insert_type_cons(type_id, cons);
         type_id
     }
 
-    pub fn insert_type_cons(&mut self, id: TypeId, cons: TypeCons) {
-        if self.type_cons_map.insert(id, cons).is_some() {
-            panic!("Duplicate type constructor for type id");
-        }
-    }
-
-    pub fn insert_generated_type_cons(&self, id: TypeId, cons: TypeCons) {
+    pub fn insert_generated_type_cons(&self, cons: TypeCons) -> TypeId {
+        let type_id = self.new_type_id();
         let mut borrow = self.generated_type_cons_map.borrow_mut();
 
-        if borrow.insert(id, cons).is_some() {
+        if borrow.insert(type_id, cons).is_some() {
             panic!("Duplicate type constructor for type id");
         }
+
+        type_id
     }
 
     pub fn get_type_cons(&self, id: TypeId) -> Option<TypeCons> {

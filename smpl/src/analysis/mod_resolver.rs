@@ -79,7 +79,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
 
             program
                 .universe_mut()
-                .insert_type_cons(type_id, struct_type);
+                .manual_insert_type_cons(type_id, struct_type);
 
             type_roots.push(type_id);
 
@@ -104,11 +104,14 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
                 fn_id,
                 reserved_fn.1.data(),
             )?;
+            let fn_type_id = program
+                .universe_mut()
+                .insert_type_cons(fn_type);
             let cfg = CFG::generate(program.universe_mut(), fn_decl.body.clone(), &fn_type)?;
 
             program
                 .universe_mut()
-                .insert_fn(fn_id, fn_type, cfg);
+                .insert_fn(fn_id, fn_type_id, cfg);
             program.metadata_mut().insert_module_fn(
                 mod_id.clone(),
                 fn_decl.name.data().clone(),
@@ -129,11 +132,15 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
                 reserved_builtin.1.data(),
             )?;
 
+            let fn_type_id = program
+                .universe_mut()
+                .insert_type_cons(fn_type);
+
             program.features_mut().add_feature(BUILTIN_FN);
 
             program
                 .universe_mut()
-                .insert_builtin_fn(fn_id, fn_type);
+                .insert_builtin_fn(fn_id, fn_type_id);
 
             program.metadata_mut().insert_builtin(fn_id);
             program.metadata_mut().insert_module_fn(

@@ -856,13 +856,17 @@ impl<'a> FnAnalyzer<'a> {
                     let (func_scope, fn_type) =
                         generate_anonymous_fn_type(self.program, &self.current_scope, fn_id, func)?;
 
+                    let fn_type_id = self.program
+                        .universe_mut()
+                        .insert_type_cons(fn_type);
+
                     let cfg = CFG::generate(self.program.universe_mut(), func.body.clone(), &fn_type)?;
 
                     a_fn.set_fn_id(fn_id);
 
-                    let type_id = self.program
+                    self.program
                         .universe_mut()
-                        .insert_fn(fn_id, fn_type.clone(), cfg);
+                        .insert_fn(fn_id, fn_type_id, cfg);
 
                     // Since anonymous functions are ALWAYS inside another function
                     // Assume the global scope is at the bottom of the scope stack
@@ -875,7 +879,7 @@ impl<'a> FnAnalyzer<'a> {
 
                     // TODO: Construct type directly
                     tmp_type = TypeApp::Applied {
-                        type_cons: type_id,
+                        type_cons: fn_type_id,
                         args: None
                     }.apply(self.program.universe())?;
 

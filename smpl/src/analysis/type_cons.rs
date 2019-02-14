@@ -373,8 +373,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                 size: *size,
             };
 
-            let type_id = universe.new_type_id();
-            universe.insert_generated_type_cons(type_id, cons);
+            let type_id = universe.insert_generated_type_cons(cons);
             
             Ok(TypeApp::Applied {
                 type_cons: type_id,
@@ -444,8 +443,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                 }),
             };
 
-            let type_id = universe.new_type_id();
-            universe.insert_generated_type_cons(type_id, cons);
+            let type_id = universe.insert_generated_type_cons(cons);
 
             Ok(TypeApp::Applied {
                 type_cons: type_id,
