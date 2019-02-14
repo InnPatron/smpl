@@ -430,10 +430,26 @@ impl<'a> FnAnalyzer<'a> {
                         .type_cons(self.program.universe(), &tmp_type_name)
                         .ok_or(AnalysisError::UnknownType(type_name.clone()))?;
 
+                    let type_args = match init.type_args() {
+                        Some(vec) =>  {
+                            let args = vec.iter()
+                                .map(|ann| {
+                                    type_app_from_annotation(self.program.universe_mut(),
+                                        &self.current_scope,
+                                        ann)
+                                })
+                            .collect::<Result<Vec<_>, _>>()?;
+
+                            Some(args)
+                        },
+
+                        None => None
+                    };
+
                     // TODO: Take into account type arguments
                     let struct_type = TypeApp::Applied {
                         type_cons: struct_type_id,
-                        args: None,
+                        args: type_args,
                     }.apply(self.program.universe(), &self.current_scope)?;
 
                     // Check if type is a struct.

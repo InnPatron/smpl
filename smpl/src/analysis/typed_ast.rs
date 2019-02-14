@@ -387,6 +387,10 @@ impl StructInit {
         self.struct_type_name.module_path()
     }
 
+    pub fn type_args(&self) -> Option<&[ast::TypeAnnotation]> {
+        self.struct_type_name.annotations()
+    }
+
     pub fn set_struct_type(&self, app: Type) {
         let mut borrow = self.struct_type.borrow_mut();
         if borrow.is_some() {
