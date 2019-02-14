@@ -860,6 +860,11 @@ impl<'a> FnAnalyzer<'a> {
                         .universe_mut()
                         .insert_type_cons(fn_type);
 
+                    let fn_type = TypeApp::Applied {
+                        type_cons: fn_type_id,
+                        args: None,
+                    }.apply(self.program.universe())?;
+
                     let cfg = CFG::generate(self.program.universe_mut(), func.body.clone(), &fn_type)?;
 
                     a_fn.set_fn_id(fn_id);

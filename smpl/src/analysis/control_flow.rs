@@ -351,7 +351,7 @@ impl CFG {
     pub fn generate(
         universe: &Universe,
         body: ast::AstNode<ast::Block>,
-        fn_type: &TypeCons,
+        fn_type: &Type,
     ) -> Result<Self, AnalysisError> {
         let mut cfg = {
             let mut graph = graph::Graph::new();
@@ -384,13 +384,12 @@ impl CFG {
 
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
 
-        if let TypeCons::Function {
+        if let Type::Function {
             return_type: ref return_type,
             ..
         } = fn_type {
 
-            let unit = TypeApp::Applied { type_cons: universe.unit(), args: None };
-            if type_app_eq(universe, return_type, &unit)? {
+            if **return_type == Type::Unit {
                 // TODO: Figure out how to get last line of function
                 append_node!(
                     cfg,
