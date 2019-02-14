@@ -597,11 +597,11 @@ pub fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeA
                     _ => false,
                 }
             }, parser_state!("type-annotation", "type-arguments")) {
-                let _type = consume_token!(tokens, 
-                                           Token::Type,
-                                           parser_state!("type-annotation", "type"));
+                let type_arg_list = production!(
+                    type_arg_list(tokens),
+                    parser_state!("type-annotation", "type-app"));
 
-                unimplemented!()
+                TypedPath::Parameterized(bind, type_arg_list)
             } else {
                 TypedPath::NillArity(bind)
             };
