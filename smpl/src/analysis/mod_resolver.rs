@@ -181,7 +181,6 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
             let fn_id = reserved_fn.0;
             analyze_fn(
                 program,
-                raw_program.scopes.get(mod_id).unwrap(),
                 fn_id,
                 mod_id.clone(),
             )?;

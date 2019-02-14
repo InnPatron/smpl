@@ -32,7 +32,6 @@ struct FnAnalyzer<'a> {
 
 pub fn analyze_fn(
     program: &mut Program,
-    global_scope: &ScopedData,
     fn_id: FnId,
     module_id: ModuleId,
 ) -> Result<(), AnalysisError> {
@@ -45,7 +44,7 @@ pub fn analyze_fn(
         args: None,
     };
 
-    let current_scope = global_scope.clone();
+    let current_scope = func.fn_scope().clone();
     let fn_type = fn_type.apply(program.universe(), &current_scope)?;
 
     let (return_type, fn_params) = match fn_type {
@@ -878,7 +877,6 @@ impl<'a> FnAnalyzer<'a> {
                     // Assume the global scope is at the bottom of the scope stack
                     analyze_fn(
                         self.program,
-                        self.scope_stack.get(0).unwrap(),
                         fn_id,
                         self.module_id,
                     )?;
