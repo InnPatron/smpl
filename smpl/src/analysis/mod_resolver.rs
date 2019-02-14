@@ -111,7 +111,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
             let fn_type = TypeApp::Applied {
                 type_cons: fn_type_id,
                 args: None,
-            }.apply(program.universe())?;
+            }.apply(program.universe(), &fn_scope)?;
             let cfg = CFG::generate(program.universe_mut(), fn_decl.body.clone(), &fn_type)?;
 
             program

@@ -439,6 +439,10 @@ impl ScopedData {
         self.type_param_map.get(ident).map(|id| id.clone())
     }
 
+    pub fn type_params<'a>(&'a self) -> impl Iterator<Item=TypeParamId> + 'a {
+        self.type_param_map.values().map(|id| id.clone())
+    }
+
     pub fn all_types(&self) -> Vec<(&ModulePath, &TypeId)> {
         self.type_cons_map.iter().collect()
     }

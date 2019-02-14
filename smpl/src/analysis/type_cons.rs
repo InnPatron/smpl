@@ -136,8 +136,10 @@ impl TypeApp {
         }
     }
 
-    pub fn apply(&self, universe: &Universe) -> Result<Type, TypeError> {
-        let mut param_map = HashMap::new();
+    pub fn apply(&self, universe: &Universe, scope: &ScopedData) -> Result<Type, TypeError> {
+        let param_map = scope.type_params()
+            .map(|id| (id, TypeApp::Param(id)))
+            .collect::<HashMap<_,_>>();
 
         self.apply_internal(universe, &param_map)
     }

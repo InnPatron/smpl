@@ -45,7 +45,8 @@ pub fn analyze_fn(
         args: None,
     };
 
-    let fn_type = fn_type.apply(program.universe())?;
+    let current_scope = global_scope.clone();
+    let fn_type = fn_type.apply(program.universe(), &current_scope)?;
 
     let (return_type, fn_params) = match fn_type {
         Type::Function {
@@ -59,7 +60,7 @@ pub fn analyze_fn(
     let mut analyzer = FnAnalyzer {
         program: program,
         fn_return_type: *return_type,
-        current_scope: global_scope.clone(),
+        current_scope: current_scope,
         scope_stack: Vec::new(),
         locals: Vec::new(),
         module_id: module_id,
@@ -434,7 +435,7 @@ impl<'a> FnAnalyzer<'a> {
                     let struct_type = TypeApp::Applied {
                         type_cons: struct_type_id,
                         args: None,
-                    }.apply(self.program.universe())?;
+                    }.apply(self.program.universe(), &self.current_scope)?;
 
                     // Check if type is a struct.
                     let (struct_type_id, fields, field_map) = match struct_type {
@@ -577,7 +578,7 @@ impl<'a> FnAnalyzer<'a> {
                         let fn_type = TypeApp::Applied {
                             type_cons: fn_type_id,
                             args: None,
-                        }.apply(self.program.universe())?;
+                        }.apply(self.program.universe(), &self.current_scope)?;
 
                         var.set_id(fn_id);
                         tmp_type = fn_type;
@@ -844,7 +845,7 @@ impl<'a> FnAnalyzer<'a> {
                     tmp_type = TypeApp::Applied {
                         type_cons: fn_type.clone(),
                         args: None,
-                    }.apply(self.program.universe())?;
+                    }.apply(self.program.universe(), &self.current_scope)?;
 
                     self.program.features_mut().add_feature(MOD_ACCESS);
                 }
@@ -863,7 +864,7 @@ impl<'a> FnAnalyzer<'a> {
                     let fn_type = TypeApp::Applied {
                         type_cons: fn_type_id,
                         args: None,
-                    }.apply(self.program.universe())?;
+                    }.apply(self.program.universe(), &self.current_scope)?;
 
                     let cfg = CFG::generate(self.program.universe_mut(), func.body.clone(), &fn_type)?;
 
@@ -886,7 +887,7 @@ impl<'a> FnAnalyzer<'a> {
                     tmp_type = TypeApp::Applied {
                         type_cons: fn_type_id,
                         args: None
-                    }.apply(self.program.universe())?;
+                    }.apply(self.program.universe(), &self.current_scope)?;
 
                     self.program.features_mut().add_feature(ANONYMOUS_FN);
                 },
@@ -910,7 +911,7 @@ impl<'a> FnAnalyzer<'a> {
                     tmp_type = TypeApp::Applied {
                         type_cons: func_type_id,
                         args: Some(type_args),
-                    }.apply(self.program.universe())?;
+                    }.apply(self.program.universe(), &self.current_scope)?;
                 },
             }
 
@@ -987,7 +988,7 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         let var_type = match var_type {
             Some(app_gen_result) => {
                 app_gen_result?
-                    .apply(self.program.universe())?
+                    .apply(self.program.universe(), &self.current_scope)?
             },
     
 
