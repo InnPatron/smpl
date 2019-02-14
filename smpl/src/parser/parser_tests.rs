@@ -553,4 +553,24 @@ fn foo() { }";
 
         let _input = parse_module(wrap_input!(input)).unwrap();
     }
+
+    #[test]
+    fn parse_generic_struct_init() {
+        let mod1 =
+"mod mod1;
+
+struct Foo(type T) {
+    f: T,
+}
+
+fn foo(type T)(v: T) -> Foo(type T) {
+    let f = init Foo(type T) {
+        f: v,
+    };
+
+    return f;
+}";
+
+        let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
+    }
 }
