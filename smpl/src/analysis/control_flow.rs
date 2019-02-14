@@ -714,7 +714,6 @@ mod tests {
             return_type: return_type,
             type_params: None,
         };
-
         tc
     }
 
@@ -725,8 +724,12 @@ let a: int = 2;
 let b: int = 3;
 }";
         let mut input = buffer_input(input);
-        let universe = Universe::std();
-        let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
+        let mut universe = Universe::std();
+        let fn_type = fn_type_cons( vec![expected_app(universe.int())], expected_app(universe.unit()));
+        let fn_type = TypeApp::Applied {
+            type_cons: universe.insert_type_cons(fn_type),
+            args: None,
+        }.apply(&universe, &universe.std_scope()).unwrap();
         let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
 
@@ -794,8 +797,12 @@ if (test) {
 }";
         let mut input = buffer_input(input);
 
-        let universe = Universe::std();
-        let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
+        let mut universe = Universe::std();
+        let fn_type = fn_type_cons( vec![expected_app(universe.int())], expected_app(universe.unit()));
+        let fn_type = TypeApp::Applied {
+            type_cons: universe.insert_type_cons(fn_type),
+            args: None,
+        }.apply(&universe, &universe.std_scope()).unwrap();
         let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
 
@@ -941,8 +948,12 @@ if (test) {
     }
 }";
         let mut input = buffer_input(input);
-        let universe = Universe::std();
-        let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
+        let mut universe = Universe::std();
+        let fn_type = fn_type_cons( vec![expected_app(universe.int())], expected_app(universe.unit()));
+        let fn_type = TypeApp::Applied {
+            type_cons: universe.insert_type_cons(fn_type),
+            args: None,
+        }.apply(&universe, &universe.std_scope()).unwrap();
         
         let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
@@ -1101,8 +1112,12 @@ if (test) {
     }
 }";
         let mut input = buffer_input(input);
-        let universe = Universe::std();
-        let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
+        let mut universe = Universe::std();
+        let fn_type = fn_type_cons( vec![expected_app(universe.int())], expected_app(universe.unit()));
+        let fn_type = TypeApp::Applied {
+            type_cons: universe.insert_type_cons(fn_type),
+            args: None,
+        }.apply(&universe, &universe.std_scope()).unwrap();
         
         let fn_def = testfn_decl(&mut input).unwrap();
         let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
