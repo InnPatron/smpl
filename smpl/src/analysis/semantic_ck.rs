@@ -1025,4 +1025,25 @@ fn foo(type T)(t: T) -> T {
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _err = check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn generic_struct_init_type_arg_error() {
+        let mod1 =
+"mod mod1;
+
+struct Foo(type T) {
+    f: T,
+}
+
+fn foo(type T)(v: T) -> Foo(type T) {
+    let f = init Foo {
+        f: v,
+    };
+
+    return f;
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err());
+    }
 }
