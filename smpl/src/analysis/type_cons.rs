@@ -171,10 +171,14 @@ impl TypeApp {
                     },
 
                     (Some(ref type_params), None) => {
-                        return Err(ApplicationError::Arity { 
-                            expected: type_params.len(), 
-                            found: 0,
-                        }.into());
+                        // Allow unapplied types
+                        let mut param_map = param_map.clone();
+                        
+                        for param_id in type_params.iter() {
+                            param_map.insert(param_id.clone(), TypeApp::Param(param_id.clone()));
+                        }
+
+                        Some(param_map)
                     },
 
                     (None, Some(ref type_args)) => {
@@ -285,12 +289,10 @@ impl TypeApp {
             }
 
             TypeApp::Param(ref param_id) => {
-                if let Some(type_app) = param_map.get(param_id) {
-                    // Equivalence relation between type parameters
-                    type_app.apply_internal(universe, param_map)
-                } else {
-                    // Final equivalence to another type parameter
-                    Ok(Type::Param(param_id.clone()))
+                let type_app = param_map.get(param_id).unwrap();
+                match type_app {
+                    TypeApp::Param(ref param_id) => Ok(Type::Param(param_id.clone())),
+                    app @ _ => type_app.apply_internal(universe, param_map),
                 }
             }
         }
