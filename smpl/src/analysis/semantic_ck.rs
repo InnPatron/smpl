@@ -976,4 +976,53 @@ fn bar() -> int {
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _err = check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn generic_struct_decl() {
+        let mod1 =
+"mod mod1;
+
+struct Foo(type T) {
+    f: T,
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn generic_struct_init() {
+        let mod1 =
+"mod mod1;
+
+struct Foo(type T) {
+    f: T,
+}
+
+fn foo(type T)(v: T) -> Foo(type T) {
+    let f = init Foo(type T) {
+        f: v,
+    };
+
+    return f;
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn generic_function() {
+        let mod1 = 
+"mod mod1;
+
+fn foo(type T)(t: T) -> T {
+    let v: T = t;
+
+    return v;
+}
+";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
 }
