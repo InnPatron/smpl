@@ -10,8 +10,6 @@ SMPL was built to replace [Popstcl](https://gitlab.com/Random_Civvy/popstcl) as 
 
 Popstcl has dynamic types and dynamic scoping, all of which I found painful to use.
 
-**SMPL has an embeddable interpreter and a Rust code-generator. Use the interpreter for access to all language features.**
-
 ## The Good
 
 * Rust-like syntax.
@@ -21,6 +19,7 @@ Popstcl has dynamic types and dynamic scoping, all of which I found painful to u
 * Embeddable (**asynchronous!**) interpreter
 * SMPL code is sandboxed (?)
 * Function piping
+* Basic generics
 
 ## The Bad
 * ~~Types and functions are brought into scope top-to-bottom.~~ Declarations can be in any order
@@ -78,13 +77,7 @@ fn main() {
 
 ## Running SMPL code.
 
-Currently, SMPL only compiles into Rust. The easiest way to run SMPL code is to compile it and put it into a Cargo project (see smpl-tests/bin_test.sh). Please note that the Rust backend does NOT support all language features.
-
-```
-smplc -i INPUT_FILE -o OUTPUT_DIR -b 0
-```
-
-The `-b` flag stands for backend. The Rust backend is '0'.
+The Rust backend is temporarily unsupported.
 
 **SMPL is meant to be embedded in other Rust programs. The interpreter is the only method of SMPL code execution guaranteed to support ALL language features.**
 
