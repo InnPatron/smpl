@@ -917,8 +917,13 @@ impl<'a> FnAnalyzer<'a> {
                     let fn_id = self.current_scope
                         .get_fn(type_inst.path())?;
 
-                    let func = self.program.universe().get_fn(fn_id);
-                    let func_type_id = func.fn_type();
+                    let fn_type_id = if self.program.metadata().is_builtin(fn_id) {
+                        let f = self.program.universe().get_builtin_fn(fn_id);
+                        f.fn_type().clone()
+                    } else {
+                        let f = self.program.universe().get_fn(fn_id);
+                        f.fn_type().clone()
+                    };
 
                     let type_args = type_inst.args()
                         .iter()
@@ -930,7 +935,7 @@ impl<'a> FnAnalyzer<'a> {
                     .collect::<Result<Vec<_>, _>>()?;
 
                     tmp_type = TypeApp::Applied {
-                        type_cons: func_type_id,
+                        type_cons: fn_type_id,
                         args: Some(type_args),
                     }.apply(self.program.universe(), &self.current_scope)?;
                 },
