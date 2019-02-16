@@ -171,14 +171,10 @@ impl TypeApp {
                     },
 
                     (Some(ref type_params), None) => {
-                        // Allow unapplied types
-                        let mut param_map = param_map.clone();
-                        
-                        for param_id in type_params.iter() {
-                            param_map.insert(param_id.clone(), TypeApp::Param(param_id.clone()));
-                        }
-
-                        Some(param_map)
+                        return Err(ApplicationError::Arity { 
+                            expected: type_params.len(), 
+                            found: 0,
+                        }.into());
                     },
 
                     (None, Some(ref type_args)) => {
