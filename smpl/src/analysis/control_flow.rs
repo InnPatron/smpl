@@ -730,7 +730,8 @@ let b: int = 3;
         let universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
+        let scope = universe.std_scope();
+        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -799,7 +800,8 @@ if (test) {
         let universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
+        let scope = universe.std_scope();
+        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -947,7 +949,8 @@ if (test) {
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         
         let fn_def = testfn_decl(&mut input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
+        let scope = universe.std_scope();
+        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -1107,7 +1110,8 @@ if (test) {
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         
         let fn_def = testfn_decl(&mut input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
+        let scope = universe.std_scope();
+        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
