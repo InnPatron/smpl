@@ -1,12 +1,12 @@
-use crate::code_gen::interpreter::VmModule;
 use crate::code_gen::interpreter::builtins;
+use crate::code_gen::interpreter::VmModule;
 
 macro_rules! include {
     ($v: expr, $self: expr, $field: ident, $builtin: expr) => {
         if $self.$field {
             $v.push($builtin)
         }
-    }
+    };
 }
 
 #[derive(Builder, Clone)]
@@ -30,7 +30,7 @@ impl Std {
             err: true,
             log: true,
             math: true,
-            str: true
+            str: true,
         }
     }
 
@@ -40,7 +40,7 @@ impl Std {
             err: false,
             log: false,
             math: false,
-            str: false
+            str: false,
         }
     }
 

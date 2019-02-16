@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::ast::{Struct, Ident, ModulePath, TypeAnnotation, TypeAnnotationRef, TypeParams};
+use crate::ast::{Ident, ModulePath, Struct, TypeAnnotation, TypeAnnotationRef, TypeParams};
 
-use super::semantic_data::{FieldId, TypeId, TypeParamId, Program, ScopedData, Universe, FnId};
-use super::error::{AnalysisError, TypeError, ApplicationError};
+use super::error::{AnalysisError, ApplicationError, TypeError};
+use super::semantic_data::{FieldId, FnId, Program, ScopedData, TypeId, TypeParamId, Universe};
 
 macro_rules! nill_check {
     ($type_args: expr) => {{
@@ -11,7 +11,7 @@ macro_rules! nill_check {
             // TODO: error on type args to type cons int, bool, etc
             unimplemented!()
         }
-    }}
+    }};
 }
 
 /// Use during analysis
@@ -21,14 +21,14 @@ pub enum Type {
         return_type: Box<Type>,
     },
 
-    Function { 
+    Function {
         parameters: Vec<Type>,
         return_type: Box<Type>,
     },
 
-    Array { 
+    Array {
         element_type: Box<Type>,
-        size: u64 
+        size: u64,
     },
 
     Record {
@@ -49,21 +49,20 @@ pub enum Type {
 /// Use TypeCons and TypeApp for type constructor mapping and graphing
 #[derive(Debug, Clone)]
 pub enum TypeCons {
-
     UncheckedFunction {
         type_params: Option<Vec<TypeParamId>>,
         return_type: TypeApp,
     },
 
-    Function { 
+    Function {
         type_params: Option<Vec<TypeParamId>>,
         parameters: Vec<TypeApp>,
         return_type: TypeApp,
     },
 
-    Array { 
+    Array {
         element_type: TypeApp,
-        size: u64 
+        size: u64,
     },
 
     Record {
@@ -81,7 +80,6 @@ pub enum TypeCons {
 }
 
 impl TypeCons {
-
     pub fn is_unchecked_fn(&self) -> bool {
         if let TypeCons::UncheckedFunction { .. } = *self {
             true
@@ -92,7 +90,6 @@ impl TypeCons {
 
     fn type_params(&self) -> Option<&[TypeParamId]> {
         match *self {
-
             TypeCons::Function {
                 type_params: ref type_params,
                 ..
@@ -124,12 +121,10 @@ pub enum TypeApp {
 }
 
 impl TypeApp {
-
     pub fn type_cons(&self) -> Option<TypeId> {
         match *self {
             TypeApp::Applied {
-                type_cons: ref tc,
-                ..
+                type_cons: ref tc, ..
             } => Some(tc.clone()),
 
             TypeApp::Param(_) => None,
@@ -137,14 +132,19 @@ impl TypeApp {
     }
 
     pub fn apply(&self, universe: &Universe, scope: &ScopedData) -> Result<Type, TypeError> {
-        let param_map = scope.type_params()
+        let param_map = scope
+            .type_params()
             .map(|id| (id, TypeApp::Param(id)))
-            .collect::<HashMap<_,_>>();
+            .collect::<HashMap<_, _>>();
 
         self.apply_internal(universe, &param_map)
     }
 
-    fn apply_internal(&self, universe: &Universe, param_map: &HashMap<TypeParamId, TypeApp>) -> Result<Type, TypeError> {
+    fn apply_internal(
+        &self,
+        universe: &Universe,
+        param_map: &HashMap<TypeParamId, TypeApp>,
+    ) -> Result<Type, TypeError> {
         match *self {
             TypeApp::Applied {
                 type_cons: ref type_cons,
@@ -152,48 +152,47 @@ impl TypeApp {
             } => {
                 let type_cons = universe.get_type_cons(*type_cons).unwrap();
                 let new_param_map = match (type_cons.type_params(), type_args) {
-
                     (Some(ref type_params), Some(ref type_args)) => {
                         if type_params.len() != type_args.len() {
-                            return Err(ApplicationError::Arity { 
-                                expected: type_params.len(), 
+                            return Err(ApplicationError::Arity {
+                                expected: type_params.len(),
                                 found: type_args.len(),
-                            }.into());
+                            }
+                            .into());
                         }
 
                         let mut param_map = param_map.clone();
-                        
+
                         for (param_id, type_arg) in type_params.iter().zip(type_args.iter()) {
                             param_map.insert(param_id.clone(), type_arg.clone());
                         }
 
                         Some(param_map)
-                    },
+                    }
 
                     (Some(ref type_params), None) => {
-                        return Err(ApplicationError::Arity { 
-                            expected: type_params.len(), 
+                        return Err(ApplicationError::Arity {
+                            expected: type_params.len(),
                             found: 0,
-                        }.into());
-                    },
+                        }
+                        .into());
+                    }
 
                     (None, Some(ref type_args)) => {
-                        return Err(ApplicationError::Arity { 
-                            expected: 0, 
+                        return Err(ApplicationError::Arity {
+                            expected: 0,
                             found: type_args.len(),
-                        }.into());
-                    },
+                        }
+                        .into());
+                    }
 
                     (None, None) => None,
-
                 };
 
-                let param_map = new_param_map
-                    .as_ref()
-                    .unwrap_or(param_map);
+                let param_map = new_param_map.as_ref().unwrap_or(param_map);
 
                 match type_cons {
-                    TypeCons::Function { 
+                    TypeCons::Function {
                         type_params: ref type_params,
                         parameters: ref parameters,
                         return_type: ref return_type,
@@ -209,73 +208,67 @@ impl TypeApp {
                             parameters: parameters,
                             return_type: Box::new(return_type),
                         })
-                    },
+                    }
 
-                    TypeCons::UncheckedFunction { 
+                    TypeCons::UncheckedFunction {
                         type_params: ref type_params,
                         return_type: ref return_type,
                     } => {
-
                         let return_type = return_type.apply_internal(universe, param_map)?;
 
                         Ok(Type::UncheckedFunction {
                             return_type: Box::new(return_type),
                         })
-                    },
+                    }
 
-                    TypeCons::Array { 
+                    TypeCons::Array {
                         element_type: ref element_type,
                         size: size,
                     } => {
-
                         let element_type = element_type.apply_internal(universe, param_map)?;
                         Ok(Type::Array {
                             element_type: Box::new(element_type),
-                            size: size
+                            size: size,
                         })
-                    },
+                    }
 
                     TypeCons::Record {
                         type_id: type_id,
                         type_params: ref type_params,
                         fields: ref fields,
                         field_map: ref field_map,
-                    } => {
-                        Ok(Type::Record {
-                            type_id: type_id.clone(),
-                            fields: fields
-                                .iter()
-                                .map(|(k, v)| {
-                                    match v.apply_internal(universe, param_map) {
-                                        Ok(v) => Ok((k.clone(), v)),
-                                        Err(e) => Err(e),
-                                    }
-                                 })
-                                .collect::<Result<HashMap<_,_>, _>>()?,
+                    } => Ok(Type::Record {
+                        type_id: type_id.clone(),
+                        fields: fields
+                            .iter()
+                            .map(|(k, v)| match v.apply_internal(universe, param_map) {
+                                Ok(v) => Ok((k.clone(), v)),
+                                Err(e) => Err(e),
+                            })
+                            .collect::<Result<HashMap<_, _>, _>>()?,
 
-                            field_map: field_map.clone(),
-                        })
-                    },
+                        field_map: field_map.clone(),
+                    }),
 
                     TypeCons::Int => {
                         nill_check!(type_args);
                         Ok(Type::Int)
-                    },
+                    }
 
                     TypeCons::Float => {
                         nill_check!(type_args);
                         Ok(Type::Float)
-                    },
+                    }
 
                     TypeCons::Bool => {
                         nill_check!(type_args);
                         Ok(Type::Bool)
-                    },
+                    }
 
                     TypeCons::String => {
                         nill_check!(type_args);
                         Ok(Type::String)
-                    },
+                    }
 
                     TypeCons::Unit => {
                         nill_check!(type_args);
@@ -299,33 +292,24 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
     universe: &'a mut Universe,
     scope: &'b ScopedData,
     anno: T,
-    ) -> Result<TypeApp, AnalysisError> {
-
+) -> Result<TypeApp, AnalysisError> {
     match anno.into() {
         TypeAnnotationRef::Path(typed_path) => {
             // Check if path refers to type parameter
             // Assume naming conflicts detected at type parameter declaration
             if typed_path.module_path().0.len() == 1 {
-
                 let ident = typed_path.module_path().0.get(0).unwrap().data();
                 let type_param = scope.type_param(ident);
-                
+
                 // Found a type parameter
                 if let Some(tp_id) = type_param {
-
                     // Do not allow type arguments on a type parameter
                     if typed_path.annotations().is_some() {
                         return Err(TypeError::ParameterizedParameter {
-                            ident: typed_path
-                                .module_path()
-                                .0
-                                .get(0)
-                                .unwrap()
-                                .data()
-                                .clone()
-                        }.into());
+                            ident: typed_path.module_path().0.get(0).unwrap().data().clone(),
+                        }
+                        .into());
                     }
-
 
                     return Ok(TypeApp::Param(tp_id));
                 }
@@ -334,22 +318,21 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             // Not a type parameter
             let type_cons_path = super::semantic_data::ModulePath::new(
                 typed_path
-                .module_path()
-                .0
-                .clone()
-                .into_iter()
-                .map(|node| node.data().clone())
-                .collect()
+                    .module_path()
+                    .0
+                    .clone()
+                    .into_iter()
+                    .map(|node| node.data().clone())
+                    .collect(),
             );
             let type_cons = scope
                 .type_cons(universe, &type_cons_path)
                 .ok_or(AnalysisError::UnknownType(typed_path.module_path().clone()))?;
 
             let type_args = typed_path.annotations().map(|ref vec| {
-                vec
-                    .iter()
+                vec.iter()
                     .map(|anno| type_app_from_annotation(universe, scope, anno))
-                    .collect::<Result<Vec<_>,_>>()
+                    .collect::<Result<Vec<_>, _>>()
             });
 
             let type_args = match type_args {
@@ -360,29 +343,26 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
             Ok(TypeApp::Applied {
                 type_cons: type_cons,
-                args: type_args
+                args: type_args,
             })
-        },
+        }
 
         TypeAnnotationRef::Array(element_type, size) => {
-            let element_type_app = type_app_from_annotation(universe,
-                                                              scope,
-                                                              element_type.data())?;
+            let element_type_app = type_app_from_annotation(universe, scope, element_type.data())?;
             let cons = TypeCons::Array {
                 element_type: element_type_app,
                 size: *size,
             };
 
             let type_id = universe.insert_generated_type_cons(cons);
-            
+
             Ok(TypeApp::Applied {
                 type_cons: type_id,
                 args: None,
             })
-        },
+        }
 
         TypeAnnotationRef::FnType(tp, args, ret_type) => {
-
             let (local_type_params, new_scope) = match tp.map(|local_type_params| {
                 let mut new_scope = scope.clone();
                 let mut local_param_ids = Vec::new();
@@ -391,8 +371,8 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                 // Insert local type parameters into the current scope
                 for p in local_type_params.params.iter() {
                     if new_scope.insert_type_param(p.data().clone(), local_type_param_id) {
-                        return Err(TypeError::TypeParameterNamingConflict { 
-                            ident: p.data().clone()
+                        return Err(TypeError::TypeParameterNamingConflict {
+                            ident: p.data().clone(),
                         });
                     }
 
@@ -405,31 +385,26 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                     let data = data?;
 
                     (Some(data.0), Some(data.1))
-                },
+                }
 
                 None => (None, None),
             };
 
-            let scope = new_scope
-                .as_ref()
-                .unwrap_or(scope);
+            let scope = new_scope.as_ref().unwrap_or(scope);
 
-            let arg_type_cons = match args.map(|slice|{
-                slice.iter().map(|arg| type_app_from_annotation(universe,
-                                                                 scope,
-                                                                 arg.data())
-                                 )
+            let arg_type_cons = match args.map(|slice| {
+                slice
+                    .iter()
+                    .map(|arg| type_app_from_annotation(universe, scope, arg.data()))
                     .collect::<Result<Vec<_>, _>>()
             }) {
                 Some(args) => Some(args?),
                 None => None,
             };
 
-            let return_type_cons = match ret_type.map(|ret_type| {
-                type_app_from_annotation(universe,
-                                          scope,
-                                          ret_type.data())
-            }) {
+            let return_type_cons = match ret_type
+                .map(|ret_type| type_app_from_annotation(universe, scope, ret_type.data()))
+            {
                 Some(ret) => Some(ret?),
                 None => None,
             };
@@ -449,6 +424,6 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                 type_cons: type_id,
                 args: None,
             })
-        },
+        }
     }
 }

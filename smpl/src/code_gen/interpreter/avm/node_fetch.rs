@@ -5,8 +5,8 @@ use failure::Error;
 
 use crate::analysis::*;
 
-use crate::code_gen::interpreter::value::Value;
 use super::vm::FnContext;
+use crate::code_gen::interpreter::value::Value;
 
 type ExprStage = usize;
 
@@ -16,7 +16,11 @@ pub enum FetchResult {
     Return(Value),
 }
 
-pub fn node_fetch(context: &mut FnContext, program: &Program, current: NodeIndex) -> Result<FetchResult, Error> {
+pub fn node_fetch(
+    context: &mut FnContext,
+    program: &Program,
+    current: NodeIndex,
+) -> Result<FetchResult, Error> {
     let func = context.get_fn(program);
     match *func.cfg().node_weight(current) {
         Node::End => {
@@ -130,8 +134,6 @@ pub fn node_fetch(context: &mut FnContext, program: &Program, current: NodeIndex
             }
         }
 
-        Node::Condition(_) => {
-            Ok(FetchResult::Expr(0))
-        }
+        Node::Condition(_) => Ok(FetchResult::Expr(0)),
     }
 }

@@ -1,9 +1,9 @@
 use failure::Error;
 
-use crate::{no_args, exact_args};
+use crate::{exact_args, no_args};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::cell::RefCell;
 
 use crate::module::*;
 use crate::parser::parse_module;
@@ -28,7 +28,6 @@ pub fn vm_module() -> VmModule {
     let input = UnparsedModule::anonymous(VEC_DECLARATION);
     let parsed = parse_module(input).unwrap();
 
-
     let mut module = VmModule::new(parsed)
         .add_builtin(VEC_NEW, new)
         .add_builtin(VEC_LEN, len)
@@ -44,7 +43,7 @@ pub fn vm_module() -> VmModule {
 #[derive(Fail, Debug)]
 pub enum VecError {
     #[fail(display = "Index '{}' out of range ('{}')", _0, _1)]
-    IndexOutOfRange(i64, usize)
+    IndexOutOfRange(i64, usize),
 }
 
 fn new(args: Option<Vec<Value>>) -> Result<Value, Error> {

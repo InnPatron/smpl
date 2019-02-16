@@ -1,7 +1,7 @@
 use petgraph::graph::NodeIndex;
 
-use super::control_flow::*;
 use super::control_data::*;
+use super::control_flow::*;
 
 pub trait Passenger<E> {
     fn start(&mut self, id: NodeIndex) -> Result<(), E>;

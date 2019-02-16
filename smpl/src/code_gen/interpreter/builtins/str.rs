@@ -1,8 +1,8 @@
 use failure::Error;
 
-use crate::{exact_args, min_args};
 use crate::module::*;
 use crate::parser::parse_module;
+use crate::{exact_args, min_args};
 
 use crate::code_gen::interpreter::*;
 
@@ -74,7 +74,6 @@ fn to_lower(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::String(string.to_lowercase()))
 }
 
-
 fn to_upper(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
@@ -86,95 +85,117 @@ fn to_upper(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
 #[cfg(test)]
 mod tests {
-use crate::module::*;
-use super::*;
+    use super::*;
+    use crate::module::*;
 
-macro_rules! wrap_input {
-    ($input: expr) => {{ 
-        UnparsedModule::anonymous($input)
-    }}
-}
+    macro_rules! wrap_input {
+        ($input: expr) => {{
+            UnparsedModule::anonymous($input)
+        }};
+    }
 
-#[test]
-fn interpreter_str_len() {
-    let mut vm = AVM::new(Std::std(), Vec::new()).unwrap();
+    #[test]
+    fn interpreter_str_len() {
+        let mut vm = AVM::new(Std::std(), Vec::new()).unwrap();
 
-    let fn_handle = vm.query_module(MOD_STRING, STRING_LEN).unwrap().unwrap();
+        let fn_handle = vm.query_module(MOD_STRING, STRING_LEN).unwrap().unwrap();
 
-    let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("".to_string())])).unwrap();
-    assert_eq!(Value::Int(0), result);
+        let result = vm
+            .eval_fn_args_sync(fn_handle, Some(vec![Value::String("".to_string())]))
+            .unwrap();
+        assert_eq!(Value::Int(0), result);
 
-    let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("1".to_string())])).unwrap();
-    assert_eq!(Value::Int(1), result);
+        let result = vm
+            .eval_fn_args_sync(fn_handle, Some(vec![Value::String("1".to_string())]))
+            .unwrap();
+        assert_eq!(Value::Int(1), result);
 
-    let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("123456789".to_string())])).unwrap();
-    assert_eq!(Value::Int(9), result);
-}
+        let result = vm
+            .eval_fn_args_sync(
+                fn_handle,
+                Some(vec![Value::String("123456789".to_string())]),
+            )
+            .unwrap();
+        assert_eq!(Value::Int(9), result);
+    }
 
-#[test]
-fn interpreter_str_to_string() {
+    #[test]
+    fn interpreter_str_to_string() {
+        let mut vm = AVM::new(Std::std(), Vec::new()).unwrap();
 
-    let mut vm = AVM::new(Std::std(), Vec::new()).unwrap();
+        let fn_handle = vm
+            .query_module(MOD_STRING, STRING_TO_STRING)
+            .unwrap()
+            .unwrap();
 
-    let fn_handle = vm.query_module(MOD_STRING, STRING_TO_STRING)
-        .unwrap()
-        .unwrap();
+        let result = vm
+            .eval_fn_args_sync(
+                fn_handle,
+                Some(vec![
+                    Value::String("I am ".to_string()),
+                    Value::Int(1337),
+                    Value::String("!".to_string()),
+                ]),
+            )
+            .unwrap();
+        assert_eq!(Value::String("I am 1337!".to_string()), result);
+    }
 
-    let result = vm.eval_fn_args_sync(
-        fn_handle,
-        Some(vec![
-            Value::String("I am ".to_string()),
-            Value::Int(1337),
-            Value::String("!".to_string()),
-        ]),
-    ).unwrap();
-    assert_eq!(Value::String("I am 1337!".to_string()), result);
-}
+    #[test]
+    fn interpreter_str_append() {
+        let mut vm = AVM::new(Std::std(), Vec::new()).unwrap();
 
-#[test]
-fn interpreter_str_append() {
+        let fn_handle = vm.query_module(MOD_STRING, STRING_APPEND).unwrap().unwrap();
 
-    let mut vm = AVM::new(Std::std(), Vec::new()).unwrap();
+        let result = vm
+            .eval_fn_args_sync(
+                fn_handle,
+                Some(vec![
+                    Value::String("I'll ".to_string()),
+                    Value::String("be back.".to_string()),
+                ]),
+            )
+            .unwrap();
+        assert_eq!(Value::String("I'll be back.".to_string()), result);
+    }
 
-    let fn_handle = vm.query_module(MOD_STRING, STRING_APPEND).unwrap().unwrap();
+    #[test]
+    fn interpreter_str_to_lower() {
+        let mut vm = AVM::new(Std::std(), Vec::new()).unwrap();
 
-    let result = vm.eval_fn_args_sync(
-        fn_handle,
-        Some(vec![
-            Value::String("I'll ".to_string()),
-            Value::String("be back.".to_string()),
-        ]),
-    ).unwrap();
-    assert_eq!(Value::String("I'll be back.".to_string()), result);
-}
+        let fn_handle = vm
+            .query_module(MOD_STRING, STRING_TO_LOWER)
+            .unwrap()
+            .unwrap();
 
-#[test]
-fn interpreter_str_to_lower() {
+        let result = vm
+            .eval_fn_args_sync(
+                fn_handle,
+                Some(vec![Value::String("LOUD NOISES".to_string())]),
+            )
+            .unwrap();
+        assert_eq!(Value::String("loud noises".to_string()), result);
+    }
 
-    let mut vm = AVM::new(Std::std(), Vec::new()).unwrap();
+    #[test]
+    fn interpreter_str_to_upper() {
+        let mut vm = AVM::new(Std::std(), Vec::new()).unwrap();
 
-    let fn_handle = vm.query_module(MOD_STRING, STRING_TO_LOWER)
-        .unwrap()
-        .unwrap();
+        let fn_handle = vm
+            .query_module(MOD_STRING, STRING_TO_UPPER)
+            .unwrap()
+            .unwrap();
 
-    let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("LOUD NOISES".to_string())])).unwrap();
-    assert_eq!(Value::String("loud noises".to_string()), result);
-}
+        let result = vm
+            .eval_fn_args_sync(
+                fn_handle,
+                Some(vec![Value::String("loud noises".to_string())]),
+            )
+            .unwrap();
+        assert_eq!(Value::String("LOUD NOISES".to_string()), result);
+    }
 
-#[test]
-fn interpreter_str_to_upper() {
-
-    let mut vm = AVM::new(Std::std(), Vec::new()).unwrap();
-
-    let fn_handle = vm.query_module(MOD_STRING, STRING_TO_UPPER)
-        .unwrap()
-        .unwrap();
-
-    let result = vm.eval_fn_args_sync(fn_handle, Some(vec![Value::String("loud noises".to_string())])).unwrap();
-    assert_eq!(Value::String("LOUD NOISES".to_string()), result);
-}
-
-#[test]
+    #[test]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 fn interpreter_str_intermodule_to_string() {
     let mod1 =

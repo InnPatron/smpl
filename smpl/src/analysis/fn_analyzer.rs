@@ -1,22 +1,24 @@
-use std::rc::Rc;
-use std::collections::HashSet;
 use petgraph::graph::NodeIndex;
+use std::collections::HashSet;
+use std::rc::Rc;
 
-use crate::feature::*;
 use crate::ast;
+use crate::feature::*;
 
 use crate::span::Span;
 
 use super::metadata::FnLayout;
 
-use super::error::*;
-use super::type_cons_gen::generate_anonymous_fn_type;
-use super::type_cons::*;
-use super::linear_cfg_traversal::*;
-use super::control_flow::CFG;
 use super::control_data::*;
+use super::control_flow::CFG;
+use super::error::*;
+use super::linear_cfg_traversal::*;
+use super::semantic_data::{
+    BindingInfo, FnId, ModuleId, Program, ScopedData, TypeId, Universe, VarId,
+};
+use super::type_cons::*;
+use super::type_cons_gen::generate_anonymous_fn_type;
 use super::typed_ast::*;
-use super::semantic_data::{BindingInfo, FnId, ModuleId, Program, ScopedData, TypeId, Universe, VarId};
 
 struct FnAnalyzer<'a> {
     program: &'a mut Program,
@@ -35,7 +37,6 @@ pub fn analyze_fn(
     fn_id: FnId,
     module_id: ModuleId,
 ) -> Result<(), AnalysisError> {
-
     let func = program.universe().get_fn(fn_id);
     let fn_type_id = func.fn_type();
 
@@ -60,7 +61,7 @@ pub fn analyze_fn(
                 .collect::<Result<Vec<_>, _>>()?;
 
             (return_type, params)
-        },
+        }
 
         ref t @ _ => panic!("{} not mapped to a function but a {:?}", fn_id, t),
     };
@@ -78,8 +79,8 @@ pub fn analyze_fn(
 
     // Add parameters to the current scope.
     for (param_type, meta) in fn_params
-            .iter()
-            .zip(analyzer.program.metadata().function_param_ids(fn_id).iter())
+        .iter()
+        .zip(analyzer.program.metadata().function_param_ids(fn_id).iter())
     {
         let v_id = meta.var_id();
         let p_name = meta.name();
@@ -89,7 +90,6 @@ pub fn analyze_fn(
 
         param_types.push((v_id, param_type.clone()));
     }
-
 
     let func = analyzer.program.universe().get_fn(fn_id);
     let cfg = func.cfg();
@@ -180,42 +180,51 @@ fn resolve_bin_op(
             (&Type::Int, &Type::Int) => Type::Int,
             (&Type::Float, &Type::Float) => Type::Float,
 
-            _ => return Err(TypeError::BinOp {
-                op: op.clone(),
-                expected: vec![expected_int, expected_float],
-                lhs: lhs.clone(),
-                rhs: rhs.clone(),
-                span: span,
-            }.into()),
+            _ => {
+                return Err(TypeError::BinOp {
+                    op: op.clone(),
+                    expected: vec![expected_int, expected_float],
+                    lhs: lhs.clone(),
+                    rhs: rhs.clone(),
+                    span: span,
+                }
+                .into());
+            }
         },
 
         LogicalAnd | LogicalOr => match (&lhs, &rhs) {
             (&Type::Bool, &Type::Bool) => Type::Bool,
-            _ => return Err(TypeError::BinOp {
-                op: op.clone(),
-                expected: vec![expected_bool],
-                lhs: lhs.clone(),
-                rhs: rhs.clone(),
-                span: span,
-            }.into()),
+            _ => {
+                return Err(TypeError::BinOp {
+                    op: op.clone(),
+                    expected: vec![expected_bool],
+                    lhs: lhs.clone(),
+                    rhs: rhs.clone(),
+                    span: span,
+                }
+                .into());
+            }
         },
 
         GreaterEq | LesserEq | Greater | Lesser => match (&lhs, &rhs) {
             (&Type::Int, &Type::Int) => Type::Bool,
             (&Type::Float, &Type::Float) => Type::Bool,
 
-            _ => return Err(TypeError::BinOp {
-                op: op.clone(),
-                expected: vec![expected_int, expected_float],
-                lhs: lhs.clone(),
-                rhs: rhs.clone(),
-                span: span,
-            }.into()),
+            _ => {
+                return Err(TypeError::BinOp {
+                    op: op.clone(),
+                    expected: vec![expected_int, expected_float],
+                    lhs: lhs.clone(),
+                    rhs: rhs.clone(),
+                    span: span,
+                }
+                .into());
+            }
         },
 
         Eq | InEq => {
             if lhs == rhs {
-                Type::Bool 
+                Type::Bool
             } else {
                 return Err(TypeError::LhsRhsInEq(lhs.clone(), rhs.clone(), span).into());
             }
@@ -247,7 +256,8 @@ fn resolve_uni_op(
                 expected: vec![expected_int, expected_float],
                 expr: tmp_type.clone(),
                 span: span,
-            }.into()),
+            }
+            .into()),
         },
 
         LogicalInvert => match tmp_type {
@@ -257,7 +267,8 @@ fn resolve_uni_op(
                 expected: vec![expected_bool],
                 expr: tmp_type.clone(),
                 span: span,
-            }.into()),
+            }
+            .into()),
         },
 
         _ => unimplemented!(),
@@ -271,7 +282,6 @@ impl<'a> FnAnalyzer<'a> {
         field_access: &FieldAccess,
         span: Span,
     ) -> Result<Type, AnalysisError> {
-
         let path = field_access.path();
         let path_iter = path.path().iter();
 
@@ -284,15 +294,10 @@ impl<'a> FnAnalyzer<'a> {
         path.set_root_var(root_var_id);
         path.set_root_var_type(root_var_type.clone());
 
-
         current_type = root_var_type.clone();
 
         if let Some(e) = path.root_indexing_expr() {
-            let indexing_type = expr
-                .get_tmp(e)
-                .value()
-                .get_type()
-                .unwrap();
+            let indexing_type = expr.get_tmp(e).value().get_type().unwrap();
 
             match indexing_type {
                 Type::Int => (),
@@ -300,12 +305,13 @@ impl<'a> FnAnalyzer<'a> {
                     return Err(TypeError::InvalidIndex {
                         found: indexing_type.clone(),
                         span: expr.get_tmp(e).span(),
-                    }.into());
+                    }
+                    .into());
                 }
             }
 
             match var_type {
-                Type::Array { 
+                Type::Array {
                     element_type: element_type,
                     ..
                 } => {
@@ -315,7 +321,8 @@ impl<'a> FnAnalyzer<'a> {
                     return Err(TypeError::NotAnArray {
                         found: var_type.clone(),
                         span: expr.get_tmp(e).span(),
-                    }.into());
+                    }
+                    .into());
                 }
             }
         }
@@ -327,64 +334,61 @@ impl<'a> FnAnalyzer<'a> {
                     fields: ref fields,
                     field_map: ref field_map,
                     ..
-                } => {
-                    match *field {
-                        PathSegment::Ident(ref field) => {
-                            let name = field.name();
-                            let field_id = field_map.get(name).ok_or(TypeError::UnknownField {
-                                name: name.clone(),
-                                struct_type: current_type.clone(),
-                                span: span,
-                            })?;
-                            next_type = fields.get(field_id).unwrap().clone();
+                } => match *field {
+                    PathSegment::Ident(ref field) => {
+                        let name = field.name();
+                        let field_id = field_map.get(name).ok_or(TypeError::UnknownField {
+                            name: name.clone(),
+                            struct_type: current_type.clone(),
+                            span: span,
+                        })?;
+                        next_type = fields.get(field_id).unwrap().clone();
 
-                            field.set_field_id(field_id.clone());
-                            field.set_field_type(current_type.clone());
-                        }
+                        field.set_field_id(field_id.clone());
+                        field.set_field_type(current_type.clone());
+                    }
 
-                        PathSegment::Indexing(ref field, ref indexing) => {
-                            let name = field.name();
-                            let field_id = field_map.get(name).ok_or(TypeError::UnknownField {
-                                name: name.clone(),
-                                struct_type: current_type.clone(),
-                                span: span,
-                            })?;
+                    PathSegment::Indexing(ref field, ref indexing) => {
+                        let name = field.name();
+                        let field_id = field_map.get(name).ok_or(TypeError::UnknownField {
+                            name: name.clone(),
+                            struct_type: current_type.clone(),
+                            span: span,
+                        })?;
 
-                            let field_type = fields.get(field_id).unwrap();
+                        let field_type = fields.get(field_id).unwrap();
 
-                            field.set_field_id(field_id.clone());
-                            field.set_field_type(field_type.clone());
+                        field.set_field_id(field_id.clone());
+                        field.set_field_type(field_type.clone());
 
-                            let indexing_type = expr.get_tmp(*indexing)
-                                .value()
-                                .get_type()
-                                .unwrap();
+                        let indexing_type = expr.get_tmp(*indexing).value().get_type().unwrap();
 
-                            match indexing_type {
-                                Type::Int => (),
+                        match indexing_type {
+                            Type::Int => (),
 
-                                _ => {
-                                    return Err(TypeError::InvalidIndex {
-                                        found: indexing_type.clone(),
-                                        span: expr.get_tmp(*indexing).span(),
-                                    }.into());
+                            _ => {
+                                return Err(TypeError::InvalidIndex {
+                                    found: indexing_type.clone(),
+                                    span: expr.get_tmp(*indexing).span(),
                                 }
-                            };
+                                .into());
+                            }
+                        };
 
-                            match *field_type {
-                                Type::Array{
-                                    element_type: ref element_type,
-                                    size: _,
-                                } => {
-                                    next_type = *(element_type.clone());
-                                }
+                        match *field_type {
+                            Type::Array {
+                                element_type: ref element_type,
+                                size: _,
+                            } => {
+                                next_type = *(element_type.clone());
+                            }
 
-                                _ => {
-                                    return Err(TypeError::NotAnArray {
-                                        found: field_type.clone(),
-                                        span: span,
-                                    }.into());
+                            _ => {
+                                return Err(TypeError::NotAnArray {
+                                    found: field_type.clone(),
+                                    span: span,
                                 }
+                                .into());
                             }
                         }
                     }
@@ -397,7 +401,8 @@ impl<'a> FnAnalyzer<'a> {
                         invalid_type: current_type,
                         root_type: root_var_type,
                         span: span,
-                    }.into());
+                    }
+                    .into());
                 }
             }
 
@@ -435,31 +440,36 @@ impl<'a> FnAnalyzer<'a> {
                     // Get type info
                     let type_name = init.type_name();
                     let tmp_type_name = type_name.clone().into();
-                    let struct_type_id = self.current_scope
+                    let struct_type_id = self
+                        .current_scope
                         .type_cons(self.program.universe(), &tmp_type_name)
                         .ok_or(AnalysisError::UnknownType(type_name.clone()))?;
 
                     let type_args = match init.type_args() {
-                        Some(vec) =>  {
-                            let args = vec.iter()
+                        Some(vec) => {
+                            let args = vec
+                                .iter()
                                 .map(|ann| {
-                                    type_app_from_annotation(self.program.universe_mut(),
+                                    type_app_from_annotation(
+                                        self.program.universe_mut(),
                                         &self.current_scope,
-                                        ann)
+                                        ann,
+                                    )
                                 })
-                            .collect::<Result<Vec<_>, _>>()?;
+                                .collect::<Result<Vec<_>, _>>()?;
 
                             Some(args)
-                        },
+                        }
 
-                        None => None
+                        None => None,
                     };
 
                     // TODO: Take into account type arguments
                     let struct_type = TypeApp::Applied {
                         type_cons: struct_type_id,
                         args: type_args,
-                    }.apply(self.program.universe(), &self.current_scope)?;
+                    }
+                    .apply(self.program.universe(), &self.current_scope)?;
 
                     // Check if type is a struct.
                     let (struct_type_id, fields, field_map) = match struct_type {
@@ -475,7 +485,8 @@ impl<'a> FnAnalyzer<'a> {
                                 type_name: type_name.clone(),
                                 found: struct_type,
                                 span: tmp.span(),
-                            }.into());
+                            }
+                            .into());
                         }
                     };
 
@@ -485,25 +496,27 @@ impl<'a> FnAnalyzer<'a> {
                         return Err(TypeError::InitOpaqueType {
                             struct_type: struct_type,
                             span: tmp.span(),
-                        }.into());
+                        }
+                        .into());
                     }
 
                     init.set_struct_type(struct_type.clone());
                     if let Err(unknown_fields) = init.set_field_init(self.program.universe()) {
                         // TODO: Allow for multiple errors
                         /*let ident = struct_type.get_ident(id);
-                                return Err(TypeError::UnknownField {
-                                    name: ident.clone(),
-                                    struct_type: struct_type_id,
-                                }.into());
-                                */
+                        return Err(TypeError::UnknownField {
+                            name: ident.clone(),
+                            struct_type: struct_type_id,
+                        }.into());
+                        */
                         // No field initializations but the struct type has fields
                         return Err(TypeError::StructNotFullyInitialized {
                             type_name: type_name.clone(),
                             struct_type: struct_type,
                             missing_fields: unknown_fields,
                             span: tmp.span(),
-                        }.into());
+                        }
+                        .into());
                     }
 
                     match init.field_init() {
@@ -526,11 +539,11 @@ impl<'a> FnAnalyzer<'a> {
                                             .collect::<Vec<_>>()
                                     },
                                     span: tmp.span(),
-                                }.into());
+                                }
+                                .into());
                             }
                             // Go threw initialization list and check expressions
                             for (ref id, ref typed_tmp_id) in init_list {
-
                                 let field_type = fields.get(id).unwrap();
 
                                 let tmp = expr.get_tmp(*typed_tmp_id.data());
@@ -544,7 +557,8 @@ impl<'a> FnAnalyzer<'a> {
                                         found: tmp_type,
                                         expected: field_type.clone(),
                                         span: tmp.span(),
-                                    }.into());
+                                    }
+                                    .into());
                                 }
                             }
                         }
@@ -562,7 +576,8 @@ impl<'a> FnAnalyzer<'a> {
                                             .collect::<Vec<_>>()
                                     },
                                     span: tmp.span(),
-                                }.into());
+                                }
+                                .into());
                             }
                         }
                     }
@@ -602,7 +617,8 @@ impl<'a> FnAnalyzer<'a> {
                         let fn_type = TypeApp::Applied {
                             type_cons: fn_type_id,
                             args: None,
-                        }.apply(self.program.universe(), &self.current_scope)?;
+                        }
+                        .apply(self.program.universe(), &self.current_scope)?;
 
                         var.set_id(fn_id);
                         tmp_type = fn_type;
@@ -617,18 +633,9 @@ impl<'a> FnAnalyzer<'a> {
                 }
 
                 Value::BinExpr(ref op, ref lhs, ref rhs) => {
-                    let lhs_type = expr
-                        .get_tmp(*lhs.data())
-                        .value()
-                        .get_type()
-                        .unwrap();
+                    let lhs_type = expr.get_tmp(*lhs.data()).value().get_type().unwrap();
 
-                    let rhs_type = 
-                        expr
-                        .get_tmp(*rhs.data())
-                        .value()
-                        .get_type()
-                        .unwrap();
+                    let rhs_type = expr.get_tmp(*rhs.data()).value().get_type().unwrap();
 
                     lhs.set_type(lhs_type.clone());
                     rhs.set_type(rhs_type.clone());
@@ -643,30 +650,20 @@ impl<'a> FnAnalyzer<'a> {
                 }
 
                 Value::UniExpr(ref op, ref uni_e) => {
-                    let uni_tmp_type = expr
-                        .get_tmp(*uni_e.data())
-                        .value()
-                        .get_type()
-                        .unwrap();
+                    let uni_tmp_type = expr.get_tmp(*uni_e.data()).value().get_type().unwrap();
 
                     uni_e.set_type(uni_tmp_type.clone());
 
                     tmp_type =
-                        resolve_uni_op(self.program.universe(), 
-                                       op, 
-                                       uni_tmp_type, 
-                                       tmp.span())?;
+                        resolve_uni_op(self.program.universe(), op, uni_tmp_type, tmp.span())?;
                 }
 
                 Value::FnCall(ref fn_call) => {
                     // Search for the function
 
-                    let fn_value_tmp_type = expr
-                        .get_tmp(fn_call.fn_value())
-                        .value()
-                        .get_type()
-                        .unwrap();
-                    
+                    let fn_value_tmp_type =
+                        expr.get_tmp(fn_call.fn_value()).value().get_type().unwrap();
+
                     // Check args and parameters align
                     match fn_value_tmp_type {
                         Type::Function {
@@ -696,7 +693,8 @@ impl<'a> FnAnalyzer<'a> {
                                             found_args: arg_type_ids.len(),
                                             expected_param: params.len(),
                                             span: tmp.span(),
-                                        }.into());
+                                        }
+                                        .into());
                                     }
 
                                     let fn_param_type_ids = params.iter();
@@ -705,15 +703,14 @@ impl<'a> FnAnalyzer<'a> {
                                         arg_type_ids.iter().zip(fn_param_type_ids).enumerate()
                                     {
                                         if arg_type != param_type {
-                                            return Err(
-                                                TypeError::ArgMismatch {
-                                                    fn_type: fn_value_tmp_type.clone(),
-                                                    index: index,
-                                                    arg: arg_type.clone(),
-                                                    param: param_type.clone(),
-                                                    span: tmp.span(),
-                                                }.into(),
-                                            );
+                                            return Err(TypeError::ArgMismatch {
+                                                fn_type: fn_value_tmp_type.clone(),
+                                                index: index,
+                                                arg: arg_type.clone(),
+                                                param: param_type.clone(),
+                                                span: tmp.span(),
+                                            }
+                                            .into());
                                         }
                                     }
                                 }
@@ -725,18 +722,19 @@ impl<'a> FnAnalyzer<'a> {
                                             found_args: 0,
                                             expected_param: params.len(),
                                             span: tmp.span(),
-                                        }.into());
+                                        }
+                                        .into());
                                     }
                                 }
                             }
-                        },
+                        }
 
-                        Type::UncheckedFunction { 
+                        Type::UncheckedFunction {
                             return_type: return_type,
                             ..
                         } => {
                             tmp_type = *return_type;
-                        },
+                        }
 
                         t @ _ => panic!("Function call on a non-function type: {:?}", t),
                     };
@@ -758,15 +756,12 @@ impl<'a> FnAnalyzer<'a> {
                             let mut expected_element_type = None;
 
                             for (i, (current_element_type, span)) in element_types.enumerate() {
-                                
                                 if expected_element_type.is_none() {
                                     expected_element_type = Some(current_element_type);
                                     continue;
                                 }
 
-                                let expected_element_type = expected_element_type
-                                    .as_ref()
-                                    .unwrap();
+                                let expected_element_type = expected_element_type.as_ref().unwrap();
 
                                 if current_element_type != *expected_element_type {
                                     return Err(TypeError::HeterogenousArray {
@@ -774,7 +769,8 @@ impl<'a> FnAnalyzer<'a> {
                                         found: current_element_type,
                                         index: i,
                                         span: span,
-                                    }.into());
+                                    }
+                                    .into());
                                 }
                             }
 
@@ -812,9 +808,7 @@ impl<'a> FnAnalyzer<'a> {
                 }
 
                 Value::Indexing(ref indexing) => {
-
                     let expected_element_type = {
-
                         // Check type of array
                         let tmp = expr.get_tmp(*indexing.array.data());
                         let tmp_value = tmp.value();
@@ -832,7 +826,8 @@ impl<'a> FnAnalyzer<'a> {
                                 return Err(TypeError::NotAnArray {
                                     found: tmp_type.clone(),
                                     span: tmp.span(),
-                                }.into());
+                                }
+                                .into());
                             }
                         }
                     };
@@ -852,7 +847,8 @@ impl<'a> FnAnalyzer<'a> {
                                 return Err(TypeError::InvalidIndex {
                                     found: tmp_type.clone(),
                                     span: tmp.span(),
-                                }.into());
+                                }
+                                .into());
                             }
                         }
                     }
@@ -875,7 +871,8 @@ impl<'a> FnAnalyzer<'a> {
                     tmp_type = TypeApp::Applied {
                         type_cons: fn_type_id,
                         args: None,
-                    }.apply(self.program.universe(), &self.current_scope)?;
+                    }
+                    .apply(self.program.universe(), &self.current_scope)?;
 
                     self.program.features_mut().add_feature(MOD_ACCESS);
                 }
@@ -887,14 +884,14 @@ impl<'a> FnAnalyzer<'a> {
                     let (func_scope, fn_type) =
                         generate_anonymous_fn_type(self.program, &self.current_scope, fn_id, func)?;
 
-                    let cfg = CFG::generate(self.program.universe_mut(), 
-                                            func.body.clone(), 
-                                            &fn_type,
-                                            &func_scope)?;
+                    let cfg = CFG::generate(
+                        self.program.universe_mut(),
+                        func.body.clone(),
+                        &fn_type,
+                        &func_scope,
+                    )?;
 
-                    let fn_type_id = self.program
-                        .universe_mut()
-                        .insert_type_cons(fn_type);
+                    let fn_type_id = self.program.universe_mut().insert_type_cons(fn_type);
 
                     a_fn.set_fn_id(fn_id);
 
@@ -904,24 +901,20 @@ impl<'a> FnAnalyzer<'a> {
 
                     // Since anonymous functions are ALWAYS inside another function
                     // Assume the global scope is at the bottom of the scope stack
-                    analyze_fn(
-                        self.program,
-                        fn_id,
-                        self.module_id,
-                    )?;
+                    analyze_fn(self.program, fn_id, self.module_id)?;
 
                     // TODO: Construct type directly
                     tmp_type = TypeApp::Applied {
                         type_cons: fn_type_id,
-                        args: None
-                    }.apply(self.program.universe(), &self.current_scope)?;
+                        args: None,
+                    }
+                    .apply(self.program.universe(), &self.current_scope)?;
 
                     self.program.features_mut().add_feature(ANONYMOUS_FN);
-                },
+                }
 
                 Value::TypeInst(ref type_inst) => {
-                    let fn_id = self.current_scope
-                        .get_fn(type_inst.path())?;
+                    let fn_id = self.current_scope.get_fn(type_inst.path())?;
 
                     type_inst.set_id(fn_id);
 
@@ -933,20 +926,24 @@ impl<'a> FnAnalyzer<'a> {
                         f.fn_type().clone()
                     };
 
-                    let type_args = type_inst.args()
+                    let type_args = type_inst
+                        .args()
                         .iter()
                         .map(|ann| {
-                            type_app_from_annotation(self.program.universe_mut(),
+                            type_app_from_annotation(
+                                self.program.universe_mut(),
                                 &self.current_scope,
-                                ann)
+                                ann,
+                            )
                         })
-                    .collect::<Result<Vec<_>, _>>()?;
+                        .collect::<Result<Vec<_>, _>>()?;
 
                     tmp_type = TypeApp::Applied {
                         type_cons: fn_type_id,
                         args: Some(type_args),
-                    }.apply(self.program.universe(), &self.current_scope)?;
-                },
+                    }
+                    .apply(self.program.universe(), &self.current_scope)?;
+                }
             }
 
             tmp.value().set_type(tmp_type.clone());
@@ -1002,7 +999,11 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn local_var_decl(&mut self, _id: NodeIndex, var_decl: &LocalVarDeclData) -> Result<(), AnalysisError> {
+    fn local_var_decl(
+        &mut self,
+        _id: NodeIndex,
+        var_decl: &LocalVarDeclData,
+    ) -> Result<(), AnalysisError> {
         let var_decl = &var_decl.decl;
 
         let expr_type = self.resolve_expr(var_decl.init_expr())?;
@@ -1011,30 +1012,23 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         let var_id = var_decl.var_id();
         let var_type_annotation = var_decl.type_annotation();
 
-        let var_type = var_decl
-            .type_annotation()
-            .map(|ann| {
-                type_app_from_annotation(self.program.universe_mut(),
-                    &self.current_scope,
-                    ann)
-            });
+        let var_type = var_decl.type_annotation().map(|ann| {
+            type_app_from_annotation(self.program.universe_mut(), &self.current_scope, ann)
+        });
 
         let var_type = match var_type {
             Some(app_gen_result) => {
-                app_gen_result?
-                    .apply(self.program.universe(), &self.current_scope)?
-            },
-    
+                app_gen_result?.apply(self.program.universe(), &self.current_scope)?
+            }
 
             None => expr_type.clone(),
         };
-        
+
         var_decl.set_type(var_type.clone());
 
         if var_type == expr_type {
-            self.current_scope.insert_var(name, 
-                                          var_id, 
-                                          var_type.clone());
+            self.current_scope
+                .insert_var(name, var_id, var_type.clone());
         } else {
             return Err(TypeError::LhsRhsInEq(var_type, expr_type, var_decl.span()).into());
         }
@@ -1045,16 +1039,19 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn assignment(&mut self, _id: NodeIndex, assignment: &AssignmentData) -> Result<(), AnalysisError> {
+    fn assignment(
+        &mut self,
+        _id: NodeIndex,
+        assignment: &AssignmentData,
+    ) -> Result<(), AnalysisError> {
         let assignment = &assignment.assignment;
         let assignee = assignment.assignee();
 
         if assignment.access().order_length() > 0 {
             self.resolve_expr(assignment.access())?;
         }
-        let assignee_type = self.resolve_field_access(assignment.access(), 
-                                                      assignee, 
-                                                      assignment.access_span())?;
+        let assignee_type =
+            self.resolve_field_access(assignment.access(), assignee, assignment.access_span())?;
 
         let expr_type = self.resolve_expr(assignment.value())?;
 
@@ -1077,7 +1074,7 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         let expr_type = match expr {
             Some(ref expr) => self.resolve_expr(expr)?,
 
-            None => Type::Unit
+            None => Type::Unit,
         };
 
         if expr_type != self.fn_return_type {
@@ -1085,13 +1082,18 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
                 expr: expr_type,
                 fn_return: self.fn_return_type.clone(),
                 return_span: span,
-            }.into());
+            }
+            .into());
         }
 
         Ok(())
     }
 
-    fn loop_condition(&mut self, _id: NodeIndex, condition: &ExprData) -> Result<(), AnalysisError> {
+    fn loop_condition(
+        &mut self,
+        _id: NodeIndex,
+        condition: &ExprData,
+    ) -> Result<(), AnalysisError> {
         let condition = &condition.expr;
         let expr_type = self.resolve_expr(condition)?;
 
@@ -1102,7 +1104,8 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
                 found: expr_type,
                 expected: expected,
                 span: condition.span(),
-            }.into());
+            }
+            .into());
         }
 
         Ok(())
@@ -1118,10 +1121,14 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn branch_condition(&mut self, _id: NodeIndex, condition: &ExprData) -> Result<(), AnalysisError> {
+    fn branch_condition(
+        &mut self,
+        _id: NodeIndex,
+        condition: &ExprData,
+    ) -> Result<(), AnalysisError> {
         let condition = &condition.expr;
         let expr_type = self.resolve_expr(condition)?;
-        
+
         let expected = Type::Bool;
 
         if expr_type != expected {
@@ -1129,7 +1136,8 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
                 found: expr_type,
                 expected: expected,
                 span: condition.span(),
-            }.into());
+            }
+            .into());
         }
 
         Ok(())
@@ -1145,12 +1153,20 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn branch_end_true_path(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), AnalysisError> {
+    fn branch_end_true_path(
+        &mut self,
+        _id: NodeIndex,
+        _: &BranchingData,
+    ) -> Result<(), AnalysisError> {
         // Do nothing
         Ok(())
     }
 
-    fn branch_end_false_path(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), AnalysisError> {
+    fn branch_end_false_path(
+        &mut self,
+        _id: NodeIndex,
+        _: &BranchingData,
+    ) -> Result<(), AnalysisError> {
         // Do nothing
         Ok(())
     }

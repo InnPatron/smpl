@@ -1,33 +1,32 @@
 use petgraph::graph;
-use petgraph::Direction;
 use petgraph::visit::EdgeRef;
+use petgraph::Direction;
 
 use crate::ast;
 
 use crate::span::Span;
 
-use super::error::{ControlFlowError, AnalysisError};
-use super::type_cons::*;
+use super::error::{AnalysisError, ControlFlowError};
 use super::expr_flow;
+use super::semantic_data::{LoopId, ScopedData, Universe};
+use super::type_cons::*;
 use super::typed_ast;
-use super::semantic_data::{LoopId, Universe, ScopedData};
 
 use super::control_data::*;
 
 macro_rules! node_w {
     ($CFG: expr, $node: expr) => {
         $CFG.graph().node_weight($node).unwrap()
-    }
+    };
 }
 
 macro_rules! neighbors {
     ($CFG: expr, $node: expr) => {
         $CFG.graph().neighbors_directed($node, Direction::Outgoing)
-    }
+    };
 }
 
 macro_rules! append_node {
-
     ($CFG: expr, $head: expr, $previous: expr, $to_insert: expr) => {
         append_node!($CFG, $head, $previous, $to_insert, Edge::Normal)
     };
@@ -47,7 +46,6 @@ macro_rules! append_node {
 }
 
 macro_rules! append_node_index {
-
     ($CFG: expr, $head: expr, $previous: expr, $to_insert: expr) => {
         append_node_index!($CFG, $head, $previous, $to_insert, Edge::Normal)
     };
@@ -388,8 +386,8 @@ impl CFG {
         if let TypeCons::Function {
             return_type: ref return_type,
             ..
-        } = fn_type {
-
+        } = fn_type
+        {
             let return_type = return_type.apply(universe, fn_scope)?;
             if return_type == Type::Unit {
                 // TODO: Figure out how to get last line of function
@@ -404,7 +402,6 @@ impl CFG {
                 );
             }
         }
-
 
         append_node!(cfg, head, previous, Node::ExitScope);
         append_node_index!(cfg, head, previous, cfg.end);
@@ -444,7 +441,8 @@ impl CFG {
                         );
 
                         // All branches come back together at a Node::BranchMerge
-                        let merge_node = cfg.graph
+                        let merge_node = cfg
+                            .graph
                             .add_node(Node::BranchMerge(BranchingData { branch_id: id }));
 
                         let mut previous_condition = None;

@@ -1,7 +1,7 @@
-use crate::span::Span;
+use crate::analysis::type_cons::{Type, TypeApp};
 use crate::ast::*;
 use crate::err::Error;
-use crate::analysis::type_cons::{TypeApp, Type};
+use crate::span::Span;
 
 #[derive(Clone, Debug)]
 pub enum AnalysisError {
@@ -133,15 +133,15 @@ pub enum TypeError {
     },
 
     ParameterNamingConflict {
-        ident: Ident
+        ident: Ident,
     },
 
     FieldNamingConflict {
-        ident: Ident
+        ident: Ident,
     },
 
     TypeParameterNamingConflict {
-        ident: Ident
+        ident: Ident,
     },
 
     ParameterizedParameter {
@@ -164,7 +164,7 @@ pub enum ApplicationError {
     Arity { expected: usize, found: usize },
     ExpectedNumber { param_position: usize },
     ExpectedType { param_position: usize },
-    InvalidNumber { param_position: usize, found: i64 }
+    InvalidNumber { param_position: usize, found: i64 },
 }
 
 impl From<ApplicationError> for TypeError {

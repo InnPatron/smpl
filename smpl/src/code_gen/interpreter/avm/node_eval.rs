@@ -4,8 +4,8 @@ use failure::Error;
 
 use crate::analysis::*;
 
-use crate::code_gen::interpreter::value::Value;
 use super::vm::StackInfo;
+use crate::code_gen::interpreter::value::Value;
 
 pub enum NodeEval {
     Next(NodeIndex),
@@ -13,11 +13,14 @@ pub enum NodeEval {
 }
 
 /// Performs any Node post-processing
-pub fn eval_node(stack_info: &mut StackInfo, program: &Program, current: NodeIndex) -> Result<NodeEval, Error> {
+pub fn eval_node(
+    stack_info: &mut StackInfo,
+    program: &Program,
+    current: NodeIndex,
+) -> Result<NodeEval, Error> {
     let context = &mut stack_info.fn_context;
     let func = context.get_fn(program);
     match *func.cfg().node_weight(current) {
-        
         Node::LocalVarDecl(ref data) => {
             context.previous_is_loop_head = false;
             let value_tmp_id = data.decl.init_expr().last();
@@ -58,12 +61,10 @@ pub fn eval_node(stack_info: &mut StackInfo, program: &Program, current: NodeInd
                         value = {
                             let value = value.borrow();
                             let struct_value = irmatch!(*value; Value::Struct(ref s) => s);
-                            let field_to_index =
-                                struct_value.ref_field(f.name().as_str()).unwrap();
+                            let field_to_index = struct_value.ref_field(f.name().as_str()).unwrap();
                             let field_to_index = field_to_index.borrow();
                             let field = irmatch!(*field_to_index; Value::Array(ref a) => a);
 
-                            
                             let indexer = stack_info.func_env.get_tmp(*indexer).unwrap();
                             let indexer = irmatch!(indexer; Value::Int(i) => i);
                             field.get(indexer as usize).unwrap().clone()
@@ -88,7 +89,7 @@ pub fn eval_node(stack_info: &mut StackInfo, program: &Program, current: NodeInd
                     let result_tmp_id = expr.last();
                     let result = stack_info.func_env.get_tmp(result_tmp_id);
                     result.unwrap()
-                },
+                }
 
                 None => Value::Unit,
             };
@@ -113,9 +114,7 @@ pub fn eval_node(stack_info: &mut StackInfo, program: &Program, current: NodeInd
             Ok(NodeEval::Next(next))
         }
 
-        Node::Expr(_) => {
-            Ok(NodeEval::Next(func.cfg().next(current)))
-        }
+        Node::Expr(_) => Ok(NodeEval::Next(func.cfg().next(current))),
 
         _ => unreachable!(),
     }

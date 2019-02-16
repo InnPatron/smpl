@@ -1,13 +1,12 @@
-
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod parser_tests {
-    use crate::parser::parser::*;
-    use crate::parser::expr_parser::*;
-    use crate::parser::*;
     use crate::ast::*;
-    use crate::span::Span;
     use crate::module::*;
+    use crate::parser::expr_parser::*;
+    use crate::parser::parser::*;
+    use crate::parser::*;
+    use crate::span::Span;
 
     fn parse_expr_quick(input: &str) -> Expr {
         let mut tokens = buffer_input(input);
@@ -24,16 +23,15 @@ mod parser_tests {
     }
 
     macro_rules! wrap_input {
-        ($input: expr) => {{ 
+        ($input: expr) => {{
             UnparsedModule::anonymous($input)
-        }}
+        }};
     }
 
     #[test]
     fn parse_programs() {
         {
-            let input =
-"fn test() -> bla {
+            let input = "fn test() -> bla {
     if test {
 
     }
@@ -42,8 +40,7 @@ mod parser_tests {
         }
 
         {
-            let input =
-"fn main() {
+            let input = "fn main() {
 	let hello: String = \"Hello!\";
 }
 
@@ -94,8 +91,7 @@ fn if_complex() -> i32 {
     #[test]
     fn test_parse_struct_init() {
         let init_1 = r##" init NAME { }"##;
-        let init_2 =
-r##"
+        let init_2 = r##"
 init NAME {
     field1: 1 + 2,
     field2: true
@@ -116,7 +112,7 @@ init NAME {
         }
 
         // Check init_2
-            {
+        {
             let field_init = bin_expr!((int!(1 => BoxExpr), 
                                         BinOp::Add, 
                                         int!(2 => BoxExpr)) => BoxExpr);
@@ -124,8 +120,10 @@ init NAME {
 
             let expected = Expr::StructInit(dummy_node!(StructInit {
                 struct_name: type_path!("NAME"),
-                field_init: Some(vec![(dummy_node!(ident!("field1")), field_init), 
-                                      (dummy_node!(ident!("field2")), field2_init)]),
+                field_init: Some(vec![
+                    (dummy_node!(ident!("field1")), field_init),
+                    (dummy_node!(ident!("field2")), field2_init)
+                ]),
             }));
 
             assert_eq!(init_2, expected);
@@ -190,8 +188,7 @@ init NAME {
                     Expr::Bin(bin_expr) => {
                         let (bin_expr, _) = bin_expr.to_data();
                         assert_eq!(bin_expr.op, BinOp::Eq);
-                        assert_eq!(*bin_expr.lhs,
-                                   string!("something" => Expr));
+                        assert_eq!(*bin_expr.lhs, string!("something" => Expr));
                         assert_eq!(*bin_expr.rhs, boolean!(false => Expr));
                     }
 
@@ -206,7 +203,7 @@ init NAME {
                 Expr::Literal(lit) => {
                     let (lit, _) = lit.to_data();
                     assert_eq!(lit, Literal::Bool(true));
-                },
+                }
 
                 e @ _ => panic!("Expected Bool. Found {:?}", e),
             }
@@ -219,7 +216,7 @@ init NAME {
 
         let stmt = parse_stmt_quick(input);
 
-        let expr_stmt = match stmt { 
+        let expr_stmt = match stmt {
             Stmt::ExprStmt(s) => s,
             _ => panic!(),
         };
@@ -241,12 +238,17 @@ init NAME {
         assert_eq!(func.name, dummy_node!(ident!("test_fn")));
         assert_eq!(func.body, dummy_node!(Block(Vec::new())));
 
-        let expected = vec![(dummy_node!(ident!("arg")), type_path!("i32")),
-                            (dummy_node!(ident!("test")), type_path!("float")),
-                            (dummy_node!(ident!("next")), type_path!("String"))];
+        let expected = vec![
+            (dummy_node!(ident!("arg")), type_path!("i32")),
+            (dummy_node!(ident!("test")), type_path!("float")),
+            (dummy_node!(ident!("next")), type_path!("String")),
+        ];
         for (param, expected) in func.params.unwrap().iter().zip(expected.iter()) {
             assert_eq!(param.data().name, expected.0);
-            assert_eq!(*param.data().param_type.data(), TypeAnnotation::Path(expected.1.clone()));
+            assert_eq!(
+                *param.data().param_type.data(),
+                TypeAnnotation::Path(expected.1.clone())
+            );
         }
     }
 
@@ -270,14 +272,30 @@ struct TestStruct {
         let _struct2 = teststruct_decl(&mut input2).unwrap();
 
         assert_eq!(_struct.name, dummy_node!(ident!("TestStruct")));
-        let struct_field_0 = _struct.clone().body.0.map(|v| v.get(0).unwrap().clone()).unwrap();
-        let struct_field_1 = _struct2.clone().body.0.map(|v| v.get(1).unwrap().clone()).unwrap();
+        let struct_field_0 = _struct
+            .clone()
+            .body
+            .0
+            .map(|v| v.get(0).unwrap().clone())
+            .unwrap();
+        let struct_field_1 = _struct2
+            .clone()
+            .body
+            .0
+            .map(|v| v.get(1).unwrap().clone())
+            .unwrap();
 
         assert_eq!(struct_field_0.name, dummy_node!(ident!("field1")));
         assert_eq!(struct_field_1.name, dummy_node!(ident!("field2")));
 
-        assert_eq!(*struct_field_0.field_type.data(), TypeAnnotation::Path(type_path!("Type1")));
-        assert_eq!(*struct_field_1.field_type.data(), TypeAnnotation::Path(type_path!("Type2")));
+        assert_eq!(
+            *struct_field_0.field_type.data(),
+            TypeAnnotation::Path(type_path!("Type1"))
+        );
+        assert_eq!(
+            *struct_field_1.field_type.data(),
+            TypeAnnotation::Path(type_path!("Type2"))
+        );
 
         assert_eq!(_struct.name, _struct2.name);
         assert_eq!(_struct.body, _struct2.body);
@@ -301,7 +319,10 @@ struct TestStruct {
             let input = "1.+2";
             let _e = parse_expr_quick(input);
             let _root = {
-                let _1 = Box::new(Expr::Literal(AstNode::new(Literal::Float(1.0), Span::dummy())));
+                let _1 = Box::new(Expr::Literal(AstNode::new(
+                    Literal::Float(1.0),
+                    Span::dummy(),
+                )));
                 let _2 = int!(2 => BoxExpr);
 
                 let parent = bin_expr!((_1, BinOp::Add, _2) => Expr);
@@ -340,7 +361,6 @@ struct TestStruct {
                 parent
             };
             assert_eq!(e, root);
-
         }
 
         {
@@ -355,7 +375,7 @@ struct TestStruct {
 
                 let lhs_child = bin_expr!((_5.clone(), BinOp::Mod, _5) => BoxExpr);
                 let lhs_child = bin_expr!((lhs_child, BinOp::Mul, _10) => BoxExpr);
-                
+
                 let rhs_child = bin_expr!((_321, BinOp::Div, _8) => BoxExpr);
 
                 let parent = bin_expr!((lhs_child, BinOp::Sub, rhs_child) => Expr);
@@ -370,7 +390,7 @@ struct TestStruct {
         {
             let input = "true && true || false";
             let e = parse_expr_quick(input);
-            
+
             let root = {
                 let _true = boolean!(true => BoxExpr);
                 let _false = boolean!(false => BoxExpr);
@@ -467,8 +487,7 @@ struct TestStruct {
 
     #[test]
     fn parse_annotate_struct() {
-        let input =
-"#[test, foo = \"bar\"]
+        let input = "#[test, foo = \"bar\"]
 struct Foo { }";
 
         let _input = parse_module(wrap_input!(input)).unwrap();
@@ -476,8 +495,7 @@ struct Foo { }";
 
     #[test]
     fn parse_annotate_fn() {
-        let input =
-"#[test, foo = \"bar\"]
+        let input = "#[test, foo = \"bar\"]
 
 fn foo() { }";
 
@@ -486,48 +504,43 @@ fn foo() { }";
 
     #[test]
     fn parse_struct_decl_type_param() {
-        let input =
-"struct Foo(type Bar, Baz) {
+        let input = "struct Foo(type Bar, Baz) {
     b: Bar,
 }";
-        
+
         let _input = parse_module(wrap_input!(input)).unwrap();
     }
 
     #[test]
     fn parse_fn_decl_type_param() {
-        let input =
-"fn foo(type Bar, Baz)(a: Bar, b: Baz) -> Baz {
+        let input = "fn foo(type Bar, Baz)(a: Bar, b: Baz) -> Baz {
     return a;
 }";
-        
+
         let _input = parse_module(wrap_input!(input)).unwrap();
     }
 
     #[test]
     fn parse_struct_init_type_arg() {
-        let input =
-"fn foo(a: Bar, b: Baz) {
+        let input = "fn foo(a: Bar, b: Baz) {
     init Bar(type Baq, Qux) { fi: fo };
 }";
-        
+
         let _input = parse_module(wrap_input!(input)).unwrap();
     }
 
     #[test]
     fn parse_fn_call_type_arg() {
-        let input =
-"fn foo(a: Bar, b: Baz) {
+        let input = "fn foo(a: Bar, b: Baz) {
     typed(type Bar)();
 }";
-        
+
         let _input = parse_module(wrap_input!(input)).unwrap();
     }
 
     #[test]
     fn parse_fn_generic_param() {
-        let input =
-"fn foo(bar: fn(type T)(T) -> T) {
+        let input = "fn foo(bar: fn(type T)(T) -> T) {
     bar();
 }";
 
@@ -536,8 +549,7 @@ fn foo() { }";
 
     #[test]
     fn parse_fn_generic() {
-        let input =
-"fn foo(type T)(bar: fn(type T)(T) -> T) {
+        let input = "fn foo(type T)(bar: fn(type T)(T) -> T) {
     bar();
 }";
 
@@ -546,8 +558,7 @@ fn foo() { }";
 
     #[test]
     fn parse_type_inst() {
-        let input =
-"fn foo() {
+        let input = "fn foo() {
     let a = bar(type int);
 }";
 
@@ -556,8 +567,7 @@ fn foo() { }";
 
     #[test]
     fn parse_generic_struct_init() {
-        let mod1 =
-"mod mod1;
+        let mod1 = "mod mod1;
 
 struct Foo(type T) {
     f: T,

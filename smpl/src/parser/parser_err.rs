@@ -2,30 +2,35 @@ use std::fmt;
 
 use failure::*;
 
+use super::tokens::{SpannedError, Token};
 use crate::ast::Expr;
 use crate::span::LocationSpan;
-use super::tokens::{Token, SpannedError};
 
 macro_rules! parser_error {
-    ($kind: expr, $state: expr) => {{ parser_error!($kind, $state, None) }};
+    ($kind: expr, $state: expr) => {{
+        parser_error!($kind, $state, None)
+    }};
 
     ($kind: expr, $state: expr, $location: expr) => {{
         use crate::parser::parser_err::*;
-        ParserError::new($kind, $location)
-            .push_state($state)
-    }}
+        ParserError::new($kind, $location).push_state($state)
+    }};
 }
 
 macro_rules! production {
-    ($production: expr, $state: expr) => {{ 
+    ($production: expr, $state: expr) => {{
         use crate::parser::parser_err::*;
         ($production).map_err(|e| e.push_state($state))?
-    }}
+    }};
 }
 
 macro_rules! parser_state {
-    ($state: expr) => {{ ParserState::new_state($state) }};
-    ($state: expr, $substate: expr) => { ParserState::new_state($state).substate($substate) };
+    ($state: expr) => {{
+        ParserState::new_state($state)
+    }};
+    ($state: expr, $substate: expr) => {
+        ParserState::new_state($state).substate($substate)
+    };
 }
 
 #[derive(Debug, Clone)]
@@ -59,7 +64,7 @@ impl ParserError {
         self
     }
 
-    pub fn state_trace<'a>(&'a self) -> impl Iterator<Item=&'a ParserState> {
+    pub fn state_trace<'a>(&'a self) -> impl Iterator<Item = &'a ParserState> {
         self.parser_states.iter()
     }
 
@@ -118,7 +123,7 @@ impl ParserState {
     pub fn substate(self, substate: &str) -> ParserState {
         ParserState {
             substate: Some(substate.to_string()),
-            .. self
+            ..self
         }
     }
 }

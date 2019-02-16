@@ -1,9 +1,8 @@
+use std::default::Default;
+use std::iter::{Enumerate, Iterator, Peekable};
 /// Inspired by Gluon, specifically gluon/parser/src/token.rs
 /// https://github.com/gluon-lang/gluon/blob/master/parser/src/token.rs
-
 use std::str::CharIndices;
-use std::iter::{Iterator, Peekable, Enumerate};
-use std::default::Default;
 
 use crate::span::*;
 
@@ -234,7 +233,10 @@ impl<'input> CharInput<'input> {
         };
         let mut chars = input.char_indices().enumerate().peekable();
         let lookahead = chars.peek().map(|(char_index, (byte_index, c))| {
-            (Location::new(byte_index.clone(), char_index.clone(), 1, 2), c.clone())
+            (
+                Location::new(byte_index.clone(), char_index.clone(), 1, 2),
+                c.clone(),
+            )
         });
         CharInput {
             chars: chars,
@@ -269,19 +271,24 @@ impl<'input> Iterator for CharInput<'input> {
                 self.column += 1;
                 self.end_of_input.column += 1;
             }
-            (Location::new(byte_index, char_index, self.line, self.column), c.clone())
+            (
+                Location::new(byte_index, char_index, self.line, self.column),
+                c.clone(),
+            )
         });
 
         let line = self.line;
-        let column = self.column; 
+        let column = self.column;
         self.lookahead = self.chars.peek().map(|(char_index, (byte_index, c))| {
-            (Location::new(byte_index.clone(), char_index.clone(), line, column), c.clone())
+            (
+                Location::new(byte_index.clone(), char_index.clone(), line, column),
+                c.clone(),
+            )
         });
 
         result
     }
 }
-
 
 #[derive(Debug)]
 pub struct Tokenizer<'input> {
@@ -298,7 +305,9 @@ impl<'input> Tokenizer<'input> {
     }
 
     fn test_lookahead<F>(&self, mut test: F) -> bool
-        where F: FnMut(char) -> bool {
+    where
+        F: FnMut(char) -> bool,
+    {
         self.chars.peek().map_or(false, |c| test(c.1))
     }
 
@@ -310,14 +319,16 @@ impl<'input> Tokenizer<'input> {
     }
 
     fn take_while<F>(&mut self, start: Location, mut acceptor: F) -> (Location, &'input str)
-        where F: FnMut(char) -> bool {
-    
+    where
+        F: FnMut(char) -> bool,
+    {
         self.take_until(start, |c| !acceptor(c))
     }
 
     fn take_until<F>(&mut self, start: Location, mut terminator: F) -> (Location, &'input str)
-        where F: FnMut(char) -> bool {
-
+    where
+        F: FnMut(char) -> bool,
+    {
         let mut current = None;
         while let Some((loc, c)) = self.chars.peek() {
             if terminator(c) {
@@ -343,8 +354,7 @@ impl<'input> Tokenizer<'input> {
                 // Loop body did not run
                 // Slice until the end of input
                 (start, self.slice(start, self.chars.end_of_input()))
-            },
-
+            }
         }
     }
 }
@@ -356,15 +366,30 @@ impl<'input> Tokenizer<'input> {
 
     fn op(&mut self, start: Location, c: char) -> Result<SpannedToken, SpannedError> {
         match c {
-            '+' => Ok(SpannedToken::new(Token::Plus, LocationSpan::span_1(start, 1))),
+            '+' => Ok(SpannedToken::new(
+                Token::Plus,
+                LocationSpan::span_1(start, 1),
+            )),
 
-            '-' => Ok(SpannedToken::new(Token::Minus, LocationSpan::span_1(start, 1))),
+            '-' => Ok(SpannedToken::new(
+                Token::Minus,
+                LocationSpan::span_1(start, 1),
+            )),
 
-            '*' => Ok(SpannedToken::new(Token::Star, LocationSpan::span_1(start, 1))),
+            '*' => Ok(SpannedToken::new(
+                Token::Star,
+                LocationSpan::span_1(start, 1),
+            )),
 
-            '/' => Ok(SpannedToken::new(Token::Slash, LocationSpan::span_1(start, 1))),
+            '/' => Ok(SpannedToken::new(
+                Token::Slash,
+                LocationSpan::span_1(start, 1),
+            )),
 
-            '%' => Ok(SpannedToken::new(Token::Percent, LocationSpan::span_1(start, 1))),
+            '%' => Ok(SpannedToken::new(
+                Token::Percent,
+                LocationSpan::span_1(start, 1),
+            )),
 
             '&' => {
                 if self.test_lookahead(|c| c == '&') {
@@ -372,9 +397,15 @@ impl<'input> Tokenizer<'input> {
                         error: TokenizerError::UnexpectedEndOfInput,
                         location: start,
                     })?;
-                    Ok(SpannedToken::new(Token::LAnd, LocationSpan::new(start, end)))
+                    Ok(SpannedToken::new(
+                        Token::LAnd,
+                        LocationSpan::new(start, end),
+                    ))
                 } else {
-                    Ok(SpannedToken::new(Token::Ref, LocationSpan::span_1(start, 1)))
+                    Ok(SpannedToken::new(
+                        Token::Ref,
+                        LocationSpan::span_1(start, 1),
+                    ))
                 }
             }
 
@@ -390,11 +421,14 @@ impl<'input> Tokenizer<'input> {
                         error: TokenizerError::UnexpectedEndOfInput,
                         location: start,
                     })?;
-                    Ok(SpannedToken::new(Token::Pipe, LocationSpan::new(start, end)))
+                    Ok(SpannedToken::new(
+                        Token::Pipe,
+                        LocationSpan::new(start, end),
+                    ))
                 } else {
                     Err(SpannedError {
                         error: TokenizerError::IncompleteToken(Token::LOr),
-                        location: start
+                        location: start,
                     })
                 }
             }
@@ -407,11 +441,14 @@ impl<'input> Tokenizer<'input> {
                     })?;
                     Ok(SpannedToken::new(Token::Eq, LocationSpan::new(start, end)))
                 } else {
-                    Ok(SpannedToken::new(Token::Assign, LocationSpan::span_1(start, 1)))
+                    Ok(SpannedToken::new(
+                        Token::Assign,
+                        LocationSpan::span_1(start, 1),
+                    ))
                 }
             }
 
-            '!' =>  {
+            '!' => {
                 if self.test_lookahead(|c| c == '=') {
                     let (end, _) = self.chars.next().ok_or(SpannedError {
                         error: TokenizerError::UnexpectedEndOfInput,
@@ -419,7 +456,10 @@ impl<'input> Tokenizer<'input> {
                     })?;
                     Ok(SpannedToken::new(Token::NEq, LocationSpan::new(start, end)))
                 } else {
-                    Ok(SpannedToken::new(Token::Invert, LocationSpan::span_1(start, 1)))
+                    Ok(SpannedToken::new(
+                        Token::Invert,
+                        LocationSpan::span_1(start, 1),
+                    ))
                 }
             }
 
@@ -448,7 +488,6 @@ impl<'input> Tokenizer<'input> {
             }
 
             ch => unreachable!("Missing handler for {}", ch),
-
         }
     }
 
@@ -486,7 +525,7 @@ impl<'input> Tokenizer<'input> {
 
         if let Some((_loc, ch)) = self.chars.peek() {
             if ch == '.' {
-                self.chars.next();      // Skip '.'
+                self.chars.next(); // Skip '.'
                 let (end, float) = self.take_while(start, is_digit);
 
                 if let Some((next, ch)) = self.chars.peek() {
@@ -494,26 +533,37 @@ impl<'input> Tokenizer<'input> {
                         return Err(SpannedError {
                             error: TokenizerError::UnexpectedChar(ch),
                             location: next,
-                        })
+                        });
                     }
                 }
 
                 let f = float.parse::<f64>().unwrap();
 
-                return Ok(SpannedToken::new(Token::FloatLiteral(f), LocationSpan::new(start, end)));
+                return Ok(SpannedToken::new(
+                    Token::FloatLiteral(f),
+                    LocationSpan::new(start, end),
+                ));
             }
         }
 
         let i = int.parse::<i64>().unwrap();
-        Ok(SpannedToken::new(Token::IntLiteral(i), LocationSpan::new(start, end)))
+        Ok(SpannedToken::new(
+            Token::IntLiteral(i),
+            LocationSpan::new(start, end),
+        ))
     }
 
     fn string_literal(&mut self, start: Location) -> Result<SpannedToken, SpannedError> {
         let mut literal = String::new();
         while let Some((e, ch)) = self.chars.next() {
             match ch {
-                '\"' => return Ok(SpannedToken::new(Token::StringLiteral(literal), LocationSpan::new(start, e))),
-                
+                '\"' => {
+                    return Ok(SpannedToken::new(
+                        Token::StringLiteral(literal),
+                        LocationSpan::new(start, e),
+                    ));
+                }
+
                 // TODO: Track escape characters
                 ch => literal.push(ch),
             }
@@ -521,7 +571,7 @@ impl<'input> Tokenizer<'input> {
 
         Err(SpannedError {
             error: TokenizerError::UnterminatedStringLiteral,
-            location: start
+            location: start,
         })
     }
 }
@@ -532,60 +582,92 @@ impl<'input> Iterator for Tokenizer<'input> {
     fn next(&mut self) -> Option<Self::Item> {
         while let Some((start, c)) = self.chars.next() {
             return match c {
-                '/' if self.test_lookahead(is_slash)
-                    => {
-                    
+                '/' if self.test_lookahead(is_slash) => {
                     self.line_comment(start);
                     continue;
-                },
+                }
 
-                '-' if self.test_lookahead(|c| c == '>')
-                    => {
-
+                '-' if self.test_lookahead(|c| c == '>') => {
                     let (end, _) = self.chars.next().unwrap();
-                    Some(Ok(SpannedToken::new(Token::Arrow, LocationSpan::new(start, end))))
-                },
+                    Some(Ok(SpannedToken::new(
+                        Token::Arrow,
+                        LocationSpan::new(start, end),
+                    )))
+                }
 
-                ',' => Some(Ok(SpannedToken::new(Token::Comma,  LocationSpan::span_1(start, 1)))),
-                '.' => Some(Ok(SpannedToken::new(Token::Dot,    LocationSpan::span_1(start, 1)))),
-                ';' => Some(Ok(SpannedToken::new(Token::Semi,   LocationSpan::span_1(start, 1)))),
+                ',' => Some(Ok(SpannedToken::new(
+                    Token::Comma,
+                    LocationSpan::span_1(start, 1),
+                ))),
+                '.' => Some(Ok(SpannedToken::new(
+                    Token::Dot,
+                    LocationSpan::span_1(start, 1),
+                ))),
+                ';' => Some(Ok(SpannedToken::new(
+                    Token::Semi,
+                    LocationSpan::span_1(start, 1),
+                ))),
 
-                ':' if self.test_lookahead(is_colon) 
-                    => {
-
+                ':' if self.test_lookahead(is_colon) => {
                     let (end, _) = self.chars.next().unwrap();
-                    Some(Ok(SpannedToken::new(Token::ColonColon,  LocationSpan::new(start, end))))
-                },
+                    Some(Ok(SpannedToken::new(
+                        Token::ColonColon,
+                        LocationSpan::new(start, end),
+                    )))
+                }
 
-                ':' if self.test_lookahead(is_colon) == false
-                    => Some(Ok(SpannedToken::new(Token::Colon,  LocationSpan::span_1(start, 1)))),
+                ':' if self.test_lookahead(is_colon) == false => Some(Ok(SpannedToken::new(
+                    Token::Colon,
+                    LocationSpan::span_1(start, 1),
+                ))),
 
-                '(' => Some(Ok(SpannedToken::new(Token::LParen,  LocationSpan::span_1(start, 1)))),
-                ')' => Some(Ok(SpannedToken::new(Token::RParen,  LocationSpan::span_1(start, 1)))),
+                '(' => Some(Ok(SpannedToken::new(
+                    Token::LParen,
+                    LocationSpan::span_1(start, 1),
+                ))),
+                ')' => Some(Ok(SpannedToken::new(
+                    Token::RParen,
+                    LocationSpan::span_1(start, 1),
+                ))),
 
-                '[' => Some(Ok(SpannedToken::new(Token::LBracket,  LocationSpan::span_1(start, 1)))),
-                ']' => Some(Ok(SpannedToken::new(Token::RBracket,  LocationSpan::span_1(start, 1)))),
+                '[' => Some(Ok(SpannedToken::new(
+                    Token::LBracket,
+                    LocationSpan::span_1(start, 1),
+                ))),
+                ']' => Some(Ok(SpannedToken::new(
+                    Token::RBracket,
+                    LocationSpan::span_1(start, 1),
+                ))),
 
-                '{' => Some(Ok(SpannedToken::new(Token::LBrace,  LocationSpan::span_1(start, 1)))),
-                '}' => Some(Ok(SpannedToken::new(Token::RBrace,  LocationSpan::span_1(start, 1)))),
+                '{' => Some(Ok(SpannedToken::new(
+                    Token::LBrace,
+                    LocationSpan::span_1(start, 1),
+                ))),
+                '}' => Some(Ok(SpannedToken::new(
+                    Token::RBrace,
+                    LocationSpan::span_1(start, 1),
+                ))),
 
-                '#' => Some(Ok(SpannedToken::new(Token:: Pound, LocationSpan::span_1(start, 1)))),
+                '#' => Some(Ok(SpannedToken::new(
+                    Token::Pound,
+                    LocationSpan::span_1(start, 1),
+                ))),
 
                 '\"' => Some(self.string_literal(start)),
 
-
                 ch if is_ident_start(ch) => Some(Ok(self.identifier(start))),
-                ch if is_digit(ch) || (ch == '-' && self.test_lookahead(is_digit))
-                    => Some(self.numeric_literal(start)),
+                ch if is_digit(ch) || (ch == '-' && self.test_lookahead(is_digit)) => {
+                    Some(self.numeric_literal(start))
+                }
 
                 ch if is_op(ch) => Some(self.op(start, ch)),
                 ch if ch.is_whitespace() => continue,
 
                 _ch => Some(Err(SpannedError {
-                        error: TokenizerError::UnexpectedChar(c),
-                        location: start,
+                    error: TokenizerError::UnexpectedChar(c),
+                    location: start,
                 })),
-            }
+            };
         }
 
         None
@@ -604,7 +686,7 @@ impl<'a> BufferedTokenizer<'a> {
 
         BufferedTokenizer {
             tokenizer: tokenizer,
-            next: next
+            next: next,
         }
     }
 
@@ -624,15 +706,13 @@ impl<'a> BufferedTokenizer<'a> {
         self.next.is_none()
     }
 
-    pub fn peek<F, R>(&self, 
-                   closure: F) -> Option<Result<R, SpannedError>>
-    where F: Fn(&Token) -> R {
-
-        self.next.as_ref().map(|ref r| {
-            match r {
-                Ok(ref t) => Ok(closure(t.token())),
-                Err(ref e) => Err((*e).clone()),
-            }
+    pub fn peek<F, R>(&self, closure: F) -> Option<Result<R, SpannedError>>
+    where
+        F: Fn(&Token) -> R,
+    {
+        self.next.as_ref().map(|ref r| match r {
+            Ok(ref t) => Ok(closure(t.token())),
+            Err(ref e) => Err((*e).clone()),
         })
     }
 }
@@ -646,19 +726,17 @@ fn is_slash(c: char) -> bool {
 }
 
 fn is_op(c: char) -> bool {
-    c == '+' ||
-    c == '-' ||
-    c == '*' ||
-    c == '/' ||
-    c == '%' ||
-
-    c == '&' ||
-    c == '|' ||
-
-    c == '!' ||
-    c == '=' ||
-    c == '>' ||
-    c == '<'
+    c == '+'
+        || c == '-'
+        || c == '*'
+        || c == '/'
+        || c == '%'
+        || c == '&'
+        || c == '|'
+        || c == '!'
+        || c == '='
+        || c == '>'
+        || c == '<'
 }
 
 fn is_ident_start(c: char) -> bool {
@@ -685,7 +763,7 @@ mod tests {
     fn tokenize_mod_decl() {
         let input = "mod test;";
         let mut tok = Tokenizer::new(input);
-        
+
         assert_eq!(Token::Mod, unwrap(tok.next()));
         assert_eq!(Token::Identifier("test".to_string()), unwrap(tok.next()));
         assert_eq!(Token::Semi, unwrap(tok.next()));
@@ -717,8 +795,7 @@ mod tests {
 
     #[test]
     fn tokenize_line_comment() {
-        let input = 
-"// Test Bla
+        let input = "// Test Bla
 mod hello;";
         let mut tok = Tokenizer::new(input);
 
@@ -730,8 +807,7 @@ mod hello;";
 
     #[test]
     fn tokenize_literals() {
-        let input = 
-"true 
+        let input = "true 
 false 
 1337 
 -1337 
@@ -762,22 +838,26 @@ false
 
     #[test]
     fn tokenize_string_literal() {
-        let input = 
-"\" this is lit \"
+        let input = "\" this is lit \"
 \" -erally\"
 ";
         let mut tok = Tokenizer::new(input);
 
-        assert_eq!(Token::StringLiteral(" this is lit ".to_string()), unwrap(tok.next()));
-        assert_eq!(Token::StringLiteral(" -erally".to_string()), unwrap(tok.next()));
+        assert_eq!(
+            Token::StringLiteral(" this is lit ".to_string()),
+            unwrap(tok.next())
+        );
+        assert_eq!(
+            Token::StringLiteral(" -erally".to_string()),
+            unwrap(tok.next())
+        );
 
         assert_eq!(None, tok.next());
     }
 
     #[test]
     fn tokenize_idents() {
-        let input =
-"
+        let input = "
 _ident
 _123
 abcd
@@ -796,7 +876,6 @@ A1b2
     fn tokenize_math_expr() {
         let input = "2.0 * foo - (bar/3)--100 % 1. + 3";
         let mut tok = Tokenizer::new(input);
-
 
         assert_eq!(Token::FloatLiteral(2.0), unwrap(tok.next()));
         assert_eq!(Token::Star, unwrap(tok.next()));
@@ -817,7 +896,6 @@ A1b2
         assert_eq!(Token::FloatLiteral(1.0), unwrap(tok.next()));
         assert_eq!(Token::Plus, unwrap(tok.next()));
         assert_eq!(Token::IntLiteral(3), unwrap(tok.next()));
-
     }
 
     #[test]

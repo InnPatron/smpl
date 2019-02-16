@@ -25,7 +25,7 @@ impl LocationSpan {
     }
 
     pub fn dummy() -> LocationSpan {
-        LocationSpan::new(Location::new(0,0,0,0), Location::new(0,0,0,0))
+        LocationSpan::new(Location::new(0, 0, 0, 0), Location::new(0, 0, 0, 0))
     }
 
     pub fn start(&self) -> Location {
@@ -52,7 +52,6 @@ impl LocationSpan {
         LocationSpan::new(start, end)
     }
 }
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Location {

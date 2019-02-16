@@ -68,7 +68,6 @@ fn float_to_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-
 fn is_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
@@ -94,10 +93,11 @@ fn string_to_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
     let a = args.remove(0);
     match a {
-        Value::String(s) => Ok(Value::Float(
-            s.parse::<f32>()
-                .map_err(|_| ConversionError(s, ConversionTarget::Float))?,
-        )),
+        Value::String(s) => {
+            Ok(Value::Float(s.parse::<f32>().map_err(|_| {
+                ConversionError(s, ConversionTarget::Float)
+            })?))
+        }
         _ => unreachable!(),
     }
 }

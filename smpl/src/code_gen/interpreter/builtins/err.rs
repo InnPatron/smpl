@@ -32,16 +32,14 @@ impl std::fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self.0 {
             Some(ref s) => write!(f, "A runtime error occured.\n{}", s),
-            None => write!(f, "A runtime error occured.")
+            None => write!(f, "A runtime error occured."),
         }
     }
 }
 
-
 fn panic(_args: Option<Vec<Value>>) -> Result<Value, Error> {
     Err(RuntimeError(None))?
 }
-
 
 fn panic_msg(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = args.unwrap();

@@ -1,19 +1,19 @@
-use std::collections::HashMap;
 use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
+use std::fmt;
 use std::rc::Rc;
 use std::slice::Iter;
-use std::fmt;
 
 use uuid::Uuid;
 
-use crate::ast::*;
 use crate::ast::ModulePath as AstModulePath;
+use crate::ast::*;
 use crate::feature::PresentFeatures;
 
-use super::type_cons::*;
+use super::control_flow::CFG;
 use super::error::AnalysisError;
 use super::metadata::Metadata;
-use super::control_flow::CFG;
+use super::type_cons::*;
 
 pub const UNIT_TYPE: &'static str = "Unit";
 pub const INT_TYPE: &'static str = "int";
@@ -86,12 +86,8 @@ pub struct Universe {
 
 impl Universe {
     pub fn std() -> Universe {
-        let unit = (TypeId(0), 
-                    internal_module_path!(UNIT_TYPE), 
-                    TypeCons::Unit);
-        let int = (TypeId(1), 
-                   internal_module_path!(INT_TYPE), 
-                   TypeCons::Int);
+        let unit = (TypeId(0), internal_module_path!(UNIT_TYPE), TypeCons::Unit);
+        let int = (TypeId(1), internal_module_path!(INT_TYPE), TypeCons::Int);
         let float = (
             TypeId(2),
             internal_module_path!(FLOAT_TYPE),
@@ -102,9 +98,7 @@ impl Universe {
             internal_module_path!(STRING_TYPE),
             TypeCons::String,
         );
-        let boolean = (TypeId(4), 
-                       internal_module_path!(BOOL_TYPE), 
-                       TypeCons::Bool);
+        let boolean = (TypeId(4), internal_module_path!(BOOL_TYPE), TypeCons::Bool);
 
         let type_map = vec![
             unit.clone(),
@@ -120,7 +114,7 @@ impl Universe {
                 .clone()
                 .into_iter()
                 .map(|(id, _, tc)| (id, tc))
-                .collect(), 
+                .collect(),
             fn_map: HashMap::new(),
             builtin_fn_map: HashMap::new(),
             module_map: HashMap::new(),
@@ -131,7 +125,7 @@ impl Universe {
                     .clone()
                     .into_iter()
                     .map(|(id, path, _)| (path, id))
-                    .collect(), 
+                    .collect(),
                 var_map: HashMap::new(),
                 var_type_map: HashMap::new(),
                 fn_map: HashMap::new(),
@@ -241,13 +235,10 @@ impl Universe {
     }
 
     pub fn get_type_cons(&self, id: TypeId) -> Option<TypeCons> {
-        self.type_cons_map
-            .get(&id)
-            .map(|cons| cons.clone())
-            .or( { 
-                let borrow = self.generated_type_cons_map.borrow();
-                borrow.get(&id).map(|cons| cons.clone())
-            })
+        self.type_cons_map.get(&id).map(|cons| cons.clone()).or({
+            let borrow = self.generated_type_cons_map.borrow();
+            borrow.get(&id).map(|cons| cons.clone())
+        })
     }
 
     pub fn get_fn(&self, id: FnId) -> Rc<Function> {
@@ -388,9 +379,7 @@ impl ScopedData {
         universe: &'b Universe,
         path: &'c ModulePath,
     ) -> Option<TypeId> {
-        self.type_cons_map
-            .get(path)
-            .map(|id| id.clone())
+        self.type_cons_map.get(path).map(|id| id.clone())
     }
 
     pub fn insert_type_cons(&mut self, path: ModulePath, id: TypeId) -> Option<TypeId> {
@@ -414,7 +403,8 @@ impl ScopedData {
     }
 
     pub fn var_info(&self, name: &Ident) -> Result<(VarId, Type), AnalysisError> {
-        let var_id = self.var_map
+        let var_id = self
+            .var_map
             .get(name)
             .ok_or(AnalysisError::UnknownBinding(name.clone()))?
             .clone();
@@ -446,7 +436,7 @@ impl ScopedData {
         self.type_param_map.get(ident).map(|id| id.clone())
     }
 
-    pub fn type_params<'a>(&'a self) -> impl Iterator<Item=TypeParamId> + 'a {
+    pub fn type_params<'a>(&'a self) -> impl Iterator<Item = TypeParamId> + 'a {
         self.type_param_map.values().map(|id| id.clone())
     }
 
@@ -479,7 +469,7 @@ impl BuiltinFunction {
 pub struct Function {
     fn_type: TypeId,
     cfg: Rc<CFG>,
-    fn_scope: ScopedData
+    fn_scope: ScopedData,
 }
 
 impl Function {

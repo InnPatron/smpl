@@ -3,8 +3,8 @@ use crate::module::ParsedModule;
 
 use super::error::AnalysisError;
 use super::metadata::*;
-use super::semantic_data::*;
 use super::mod_resolver;
+use super::semantic_data::*;
 
 pub fn check_program(modules: Vec<ParsedModule>) -> Result<Program, AnalysisError> {
     let metadata = Metadata::new();

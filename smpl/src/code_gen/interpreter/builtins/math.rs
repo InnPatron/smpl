@@ -38,19 +38,15 @@ pub fn vm_module() -> VmModule {
         .add_builtin(MATH_SIN, sin)
         .add_builtin(MATH_COS, cos)
         .add_builtin(MATH_TAN, tan)
-
         .add_builtin(MATH_ASIN, asin)
         .add_builtin(MATH_ACOS, acos)
         .add_builtin(MATH_ATAN, atan)
         .add_builtin(MATH_ATAN2, atan2)
-
         .add_builtin(MATH_TO_RADIANS, to_radians)
         .add_builtin(MATH_TO_DEGREES, to_degrees)
-
         .add_builtin(MATH_FPOWF, fpowf)
         .add_builtin(MATH_FPOWI, fpowi)
         .add_builtin(MATH_IPOW, ipow)
-
         .add_builtin(MATH_FLOOR, floor)
         .add_builtin(MATH_CEIL, ceil)
         .add_builtin(MATH_ROUND, round);

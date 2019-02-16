@@ -1,16 +1,16 @@
-mod layout;
-mod fn_data;
 mod attribute_keys;
+mod fn_data;
+mod layout;
 
-pub use self::layout::*;
 pub use self::fn_data::*;
+pub use self::layout::*;
 
 use std::collections::{HashMap, HashSet};
 
-use crate::module::ModuleSource;
-use crate::ast::{Annotation, Ident};
-use crate::analysis::semantic_data::{FnId, ModuleId, Program, TypeId};
 use super::error::AnalysisError;
+use crate::analysis::semantic_data::{FnId, ModuleId, Program, TypeId};
+use crate::ast::{Annotation, Ident};
+use crate::module::ModuleSource;
 
 #[derive(Clone, Debug)]
 pub struct Metadata {
@@ -125,9 +125,10 @@ impl Metadata {
 
         for (_, mod_id) in universe.all_modules().into_iter() {
             let module = universe.get_module(*mod_id);
-            if let Ok(id) = module.module_scope().get_fn(&ModulePath(vec![
-                AstNode::new(ident!["main"], Span::dummy()),
-            ])) {
+            if let Ok(id) = module.module_scope().get_fn(&ModulePath(vec![AstNode::new(
+                ident!["main"],
+                Span::dummy(),
+            )])) {
                 if m.main.is_none() {
                     m.main = Some((id, *mod_id))
                 } else {
@@ -144,31 +145,40 @@ impl Metadata {
     }
 
     pub fn set_struct_annotations(&mut self, type_id: TypeId, annotations: &[Annotation]) {
-        self.struct_annotations.insert(type_id, annotations
-                                       .into_iter()
-                                       .fold(HashMap::new(), |mut acc, anno| {
-                                           for &(ref k, ref v) in anno.keys.iter() {
-                                               acc.insert(k.to_string(), v.clone());
-                                           }
+        self.struct_annotations.insert(
+            type_id,
+            annotations
+                .into_iter()
+                .fold(HashMap::new(), |mut acc, anno| {
+                    for &(ref k, ref v) in anno.keys.iter() {
+                        acc.insert(k.to_string(), v.clone());
+                    }
 
-                                           acc
-                                       }));
+                    acc
+                }),
+        );
     }
 
-    pub fn get_struct_annotations(&self, type_id: TypeId) -> Option<&HashMap<String, Option<String>>> {
+    pub fn get_struct_annotations(
+        &self,
+        type_id: TypeId,
+    ) -> Option<&HashMap<String, Option<String>>> {
         self.struct_annotations.get(&type_id)
     }
 
     pub fn set_fn_annotations(&mut self, fn_id: FnId, annotations: &[Annotation]) {
-        self.fn_annotations.insert(fn_id, annotations
-                                       .into_iter()
-                                       .fold(HashMap::new(), |mut acc, anno| {
-                                           for &(ref k, ref v) in anno.keys.iter() {
-                                               acc.insert(k.to_string(), v.clone());
-                                           }
+        self.fn_annotations.insert(
+            fn_id,
+            annotations
+                .into_iter()
+                .fold(HashMap::new(), |mut acc, anno| {
+                    for &(ref k, ref v) in anno.keys.iter() {
+                        acc.insert(k.to_string(), v.clone());
+                    }
 
-                                           acc
-                                       }));
+                    acc
+                }),
+        );
     }
 
     pub fn get_fn_annotations(&self, fn_id: FnId) -> Option<&HashMap<String, Option<String>>> {
@@ -176,7 +186,8 @@ impl Metadata {
     }
 
     pub fn is_opaque(&self, type_id: TypeId) -> bool {
-        self.get_struct_annotations(type_id).map_or(false, |map| map.contains_key(attribute_keys::OPAQUE))
+        self.get_struct_annotations(type_id)
+            .map_or(false, |map| map.contains_key(attribute_keys::OPAQUE))
     }
 
     pub fn insert_mod_source(&mut self, id: ModuleId, source: ModuleSource) {
@@ -186,6 +197,8 @@ impl Metadata {
     }
 
     pub fn mod_source(&self, id: ModuleId) -> &ModuleSource {
-        self.module_sources.get(&id).expect("module should have a source")
+        self.module_sources
+            .get(&id)
+            .expect("module should have a source")
     }
 }

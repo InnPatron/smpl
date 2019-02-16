@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use std::cell::RefCell;
-use std::rc::Rc;
+use std::collections::HashMap;
 use std::fmt;
+use std::rc::Rc;
 
 use super::vm_i::FnHandle;
 
@@ -28,22 +28,20 @@ impl Clone for Value {
 
             Value::String(ref s) => Value::String(s.clone()),
 
-            Value::Array(ref a) => {
-                Value::Array(
-                    a
-                    .into_iter()
+            Value::Array(ref a) => Value::Array(
+                a.into_iter()
                     .map(|rc| {
                         let borrow = rc.borrow();
                         Rc::new(RefCell::new((*borrow).clone()))
                     })
-                    .collect())
-            }
+                    .collect(),
+            ),
 
             Value::Function(f) => Value::Function(f),
 
             Value::Struct(ref s) => Value::Struct(s.clone()),
 
-            Value::Unit => Value::Unit
+            Value::Unit => Value::Unit,
         }
     }
 }
@@ -109,12 +107,14 @@ impl Struct {
 
 impl Clone for Struct {
     fn clone(&self) -> Struct {
-        Struct(self.0
-               .iter()
-               .map(|(key, rc)| {
-                   let borrow = rc.borrow();
-                   (key.clone(), Rc::new(RefCell::new((*borrow).clone())))
-               })
-               .collect())
+        Struct(
+            self.0
+                .iter()
+                .map(|(key, rc)| {
+                    let borrow = rc.borrow();
+                    (key.clone(), Rc::new(RefCell::new((*borrow).clone())))
+                })
+                .collect(),
+        )
     }
 }

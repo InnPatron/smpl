@@ -1,18 +1,18 @@
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
-use std::slice::Iter;
 use std::iter::Iterator;
+use std::slice::Iter;
 
 use crate::span::Span;
 
-pub use crate::ast::BinOp;
-pub use crate::ast::UniOp;
-pub use crate::ast::Literal;
 use crate::ast;
+pub use crate::ast::BinOp;
+pub use crate::ast::Literal;
+pub use crate::ast::UniOp;
 
-use super::type_cons::*;
-use super::semantic_data::*;
 use super::expr_flow;
+use super::semantic_data::*;
+use super::type_cons::*;
 
 #[derive(Debug, Clone)]
 pub struct Typed<T>
@@ -139,9 +139,7 @@ impl LocalVarDecl {
     pub fn set_type(&self, app: Type) {
         let mut borrow = self.var_type.borrow_mut();
         if borrow.is_some() {
-            panic!(
-                "Attempting to override type for local variable declarration"
-            );
+            panic!("Attempting to override type for local variable declarration");
         } else {
             *borrow = Some(app);
         }
@@ -201,7 +199,10 @@ impl Expr {
     }
 
     pub fn tmp_by_index(&self, tmp_index: usize) -> TmpId {
-        self.execution_order.get(tmp_index).expect(&format!("Invalid temporary index {}", tmp_index)).clone()
+        self.execution_order
+            .get(tmp_index)
+            .expect(&format!("Invalid temporary index {}", tmp_index))
+            .clone()
     }
 
     pub fn set_span(&mut self, span: Span) {
@@ -316,7 +317,7 @@ impl TypeInst {
 
     pub fn get_id(&self) -> Option<FnId> {
         self.fn_id.get()
-    } 
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -394,9 +395,7 @@ impl StructInit {
     pub fn set_struct_type(&self, app: Type) {
         let mut borrow = self.struct_type.borrow_mut();
         if borrow.is_some() {
-            panic!(
-                "Attempting to overwrite struct type of struct init",
-            );
+            panic!("Attempting to overwrite struct type of struct init",);
         } else {
             *borrow = Some(app);
         }
@@ -419,9 +418,9 @@ impl StructInit {
         let struct_type = struct_type.as_ref().unwrap();
 
         let field_map = match struct_type {
-            Type::Record { 
-                    field_map: field_map,
-                    ..
+            Type::Record {
+                field_map: field_map,
+                ..
             } => field_map,
 
             _ => unimplemented!(),
@@ -435,7 +434,7 @@ impl StructInit {
                     match field_map.get(ident) {
                         Some(field_id) => {
                             result.push((field_id.clone(), tmp.clone()));
-                        },
+                        }
 
                         None => {
                             unknown_fields.push(ident.clone());
@@ -489,9 +488,7 @@ impl FieldAccess {
         let mut borrow = self.field_type.borrow_mut();
 
         if borrow.is_some() {
-            panic!(
-                "Attempting to override type of a field access",
-            );
+            panic!("Attempting to override type of a field access",);
         } else {
             *borrow = Some(app);
         }
@@ -583,15 +580,18 @@ impl self::Path {
 
         let (name, indexing) = match root {
             ast::PathSegment::Ident(i) => (i, None),
-            ast::PathSegment::Indexing(i, e) => (i, Some(expr_flow::flatten_expr(universe, expr, *e).0)),
+            ast::PathSegment::Indexing(i, e) => {
+                (i, Some(expr_flow::flatten_expr(universe, expr, *e).0))
+            }
         };
 
         let path = path_iter
             .map(|ps| match ps {
                 ast::PathSegment::Ident(i) => self::PathSegment::Ident(Field::new(i)),
-                ast::PathSegment::Indexing(i, e) => {
-                    self::PathSegment::Indexing(Field::new(i), expr_flow::flatten_expr(universe, expr, *e).0)
-                }
+                ast::PathSegment::Indexing(i, e) => self::PathSegment::Indexing(
+                    Field::new(i),
+                    expr_flow::flatten_expr(universe, expr, *e).0,
+                ),
             })
             .collect();
 

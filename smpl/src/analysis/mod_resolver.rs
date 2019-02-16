@@ -1,19 +1,19 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::ast::{DeclStmt, Function as AstFunction, Module as AstModule, Struct};
 use crate::ast::{AstNode, BuiltinFunction as AstBuiltinFunction, Ident, UseDecl};
-use crate::module::{ParsedModule, ModuleSource};
+use crate::ast::{DeclStmt, Function as AstFunction, Module as AstModule, Struct};
+use crate::module::{ModuleSource, ParsedModule};
 
+use super::control_flow::CFG;
+use super::cyclic_type_ck::cyclic_type_check;
 use super::error::{AnalysisError, TypeError};
 use super::feature_checkers::*;
-use super::metadata::*;
-use super::semantic_data::*;
-use super::semantic_data::Module;
-use super::control_flow::CFG;
 use super::fn_analyzer::analyze_fn;
-use super::type_cons_gen::*;
+use super::metadata::*;
+use super::semantic_data::Module;
+use super::semantic_data::*;
 use super::type_cons::TypeApp;
-use super::cyclic_type_ck::cyclic_type_check;
+use super::type_cons_gen::*;
 
 use crate::feature::*;
 
@@ -36,8 +36,10 @@ struct ReservedType(TypeId, AstNode<Struct>);
 struct ReservedFn(FnId, AstNode<AstFunction>);
 struct ReservedBuiltinFn(FnId, AstNode<AstBuiltinFunction>);
 
-pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Result<(), AnalysisError> {
-    
+pub fn check_modules(
+    program: &mut Program,
+    modules: Vec<ParsedModule>,
+) -> Result<(), AnalysisError> {
     let (mut raw_data, sources) = raw_mod_data(program, modules)?;
 
     let mut mapped_raw = HashMap::new();
@@ -45,12 +47,13 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
 
     // Map module IDs to sources
     for (mod_id, source) in sources.into_iter() {
-        program.metadata_mut().insert_mod_source(mod_id.clone(), source);
+        program
+            .metadata_mut()
+            .insert_mod_source(mod_id.clone(), source);
     }
 
     // Map reserved data
     for (mod_id, raw) in raw_data.iter() {
-
         // Map reserved data
         let mut scope = program.universe().std_scope();
         map_internal_data(&mut scope, raw);
@@ -106,15 +109,15 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
                 fn_id,
                 reserved_fn.1.data(),
             )?;
-            
-            let cfg = CFG::generate(program.universe_mut(), 
-                                    fn_decl.body.clone(), 
-                                    &fn_type,
-                                    &fn_scope)?;
 
-            let fn_type_id = program
-                .universe_mut()
-                .insert_type_cons(fn_type);
+            let cfg = CFG::generate(
+                program.universe_mut(),
+                fn_decl.body.clone(),
+                &fn_type,
+                &fn_scope,
+            )?;
+
+            let fn_type_id = program.universe_mut().insert_type_cons(fn_type);
 
             program
                 .universe_mut()
@@ -139,15 +142,11 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
                 reserved_builtin.1.data(),
             )?;
 
-            let fn_type_id = program
-                .universe_mut()
-                .insert_type_cons(fn_type);
+            let fn_type_id = program.universe_mut().insert_type_cons(fn_type);
 
             program.features_mut().add_feature(BUILTIN_FN);
 
-            program
-                .universe_mut()
-                .insert_builtin_fn(fn_id, fn_type_id);
+            program.universe_mut().insert_builtin_fn(fn_id, fn_type_id);
 
             program.metadata_mut().insert_builtin(fn_id);
             program.metadata_mut().insert_module_fn(
@@ -166,11 +165,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;
-            analyze_fn(
-                program,
-                fn_id,
-                mod_id.clone(),
-            )?;
+            analyze_fn(program, fn_id, mod_id.clone())?;
         }
     }
 
@@ -280,9 +275,10 @@ fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
     }
 }
 
-fn raw_mod_data(program: &mut Program, modules: Vec<ParsedModule>) 
-    -> Result<(HashMap<ModuleId, RawModData>, Vec<(ModuleId, ModuleSource)>), AnalysisError> {
-
+fn raw_mod_data(
+    program: &mut Program,
+    modules: Vec<ParsedModule>,
+) -> Result<(HashMap<ModuleId, RawModData>, Vec<(ModuleId, ModuleSource)>), AnalysisError> {
     let (universe, metadata, _) = program.analysis_context();
     let mut mod_map = HashMap::new();
     let mut source_map = Vec::new();

@@ -1,6 +1,6 @@
+use std::borrow::Borrow;
 use std::fmt;
 use std::slice::Iter;
-use std::borrow::Borrow;
 
 use crate::span::Span;
 
@@ -19,11 +19,7 @@ where
     }
 }
 
-impl<T> Eq for AstNode<T>
-where
-    T: ::std::fmt::Debug + Eq,
-{
-}
+impl<T> Eq for AstNode<T> where T: ::std::fmt::Debug + Eq {}
 
 impl<T> ::std::hash::Hash for AstNode<T>
 where
@@ -380,7 +376,7 @@ impl TypedPath {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypedPathRef<'a> {
     NillArity(&'a ModulePath),
-    Parameterized(&'a ModulePath, &'a[TypeAnnotation]),
+    Parameterized(&'a ModulePath, &'a [TypeAnnotation]),
 }
 
 impl<'a> TypedPathRef<'a> {
@@ -412,11 +408,9 @@ impl<'a> From<TypedPathRef<'a>> for TypedPath {
     fn from(f: TypedPathRef<'a>) -> TypedPath {
         match f {
             TypedPathRef::NillArity(mp) => TypedPath::NillArity(mp.clone()),
-            TypedPathRef::Parameterized(mp, anno) => TypedPath::Parameterized(mp.clone(), 
-                                                                              anno
-                                                                              .iter()
-                                                                              .map(|a| a.clone())
-                                                                              .collect()),
+            TypedPathRef::Parameterized(mp, anno) => {
+                TypedPath::Parameterized(mp.clone(), anno.iter().map(|a| a.clone()).collect())
+            }
         }
     }
 }

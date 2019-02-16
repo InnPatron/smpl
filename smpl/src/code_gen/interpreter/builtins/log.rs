@@ -1,5 +1,5 @@
-use std::io::Write;
 use failure::Error;
+use std::io::Write;
 
 use crate::min_args;
 use crate::module::*;
@@ -35,9 +35,7 @@ fn print(args: Option<Vec<Value>>) -> Result<Value, Error> {
         print!("{}", arg);
     }
 
-    ::std::io::stdout()
-        .flush()
-        .map_err(|e| LoggingError(e))?;
+    ::std::io::stdout().flush().map_err(|e| LoggingError(e))?;
 
     Ok(Value::Unit)
 }
@@ -51,9 +49,7 @@ fn println(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
     print!("\n");
 
-    ::std::io::stdout()
-        .flush()
-        .map_err(|e| LoggingError(e))?;
+    ::std::io::stdout().flush().map_err(|e| LoggingError(e))?;
 
     Ok(Value::Unit)
 }

@@ -1,6 +1,6 @@
 use crate::analysis::TypeId;
-use crate::span::Span;
 use crate::ast::*;
+use crate::span::Span;
 
 #[derive(Clone, Debug)]
 pub enum Error {

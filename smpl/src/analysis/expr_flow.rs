@@ -1,10 +1,10 @@
 use super::semantic_data::{TmpId, Universe};
-use super::typed_ast::*;
 use super::typed_ast::Binding as TypedBinding;
+use super::typed_ast::*;
 
 use crate::span::Span;
 
-use crate::ast::{ArrayInit as AstArrayInit, Expr as AstExpr, AstNode, TypedPath};
+use crate::ast::{ArrayInit as AstArrayInit, AstNode, Expr as AstExpr, TypedPath};
 
 pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
@@ -79,11 +79,7 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
             let (path, span) = path.to_data();
             let field_access = FieldAccess::new(universe, scope, path);
             (
-                scope.map_tmp(
-                    universe,
-                    Value::FieldAccess(field_access),
-                    span,
-                ),
+                scope.map_tmp(universe, Value::FieldAccess(field_access), span),
                 span,
             )
         }
@@ -107,7 +103,8 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
             let (init, span) = init.to_data();
             match init {
                 AstArrayInit::InitList(vec) => {
-                    let list = vec.into_iter()
+                    let list = vec
+                        .into_iter()
                         .map(|element| Typed::untyped(flatten_expr(universe, scope, element).0))
                         .collect();
 
@@ -153,16 +150,12 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
                     } else {
                         Value::ModAccess(ModAccess::new(path))
                     }
-                },
+                }
 
-                TypedPath::Parameterized(path, args) => 
-                    Value::TypeInst(TypeInst::new(path, args)),
+                TypedPath::Parameterized(path, args) => Value::TypeInst(TypeInst::new(path, args)),
             };
 
-            (
-                scope.map_tmp(universe, tmp, span),
-                span
-            )
+            (scope.map_tmp(universe, tmp, span), span)
         }
 
         AstExpr::AnonymousFn(a_fn) => {
@@ -218,10 +211,10 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::*;
-    use crate::parser::expr_parser::*;
     use super::super::semantic_data::*;
     use super::*;
+    use crate::parser::expr_parser::*;
+    use crate::parser::*;
 
     #[test]
     fn expr_exec_order_ck() {

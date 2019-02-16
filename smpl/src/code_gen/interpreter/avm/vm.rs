@@ -6,16 +6,16 @@ use std::rc::Rc;
 use petgraph::graph::NodeIndex;
 
 use crate::analysis::*;
-use crate::module::*;
 use crate::ast::{Ident, Module};
+use crate::module::*;
 
 use crate::err::Error as StaticError;
 
+use crate::code_gen::interpreter::env::Env;
+use crate::code_gen::interpreter::err::VmError;
 use crate::code_gen::interpreter::module::VmModule;
 use crate::code_gen::interpreter::std_options::Std;
 use crate::code_gen::interpreter::value::Value;
-use crate::code_gen::interpreter::env::Env;
-use crate::code_gen::interpreter::err::VmError;
 
 use crate::code_gen::interpreter::vm_i::*;
 
@@ -28,7 +28,6 @@ pub struct AVM {
 
 impl AVM {
     pub fn new(std: Std, mut modules: Vec<VmModule>) -> Result<AVM, VmError> {
-
         std.include(&mut modules);
 
         let mut builtins = Vec::new();
@@ -56,12 +55,16 @@ impl AVM {
         Ok(vm)
     }
 
-    fn map_builtin(&mut self, mod_id: ModuleId, fn_name: String, builtin: BuiltinFn) -> Result<(), VmError> {
-
-        let fn_id = self.program
+    fn map_builtin(
+        &mut self,
+        mod_id: ModuleId,
+        fn_name: String,
+        builtin: BuiltinFn,
+    ) -> Result<(), VmError> {
+        let fn_id = self
+            .program
             .metadata()
-            .module_fn(mod_id, 
-                       Ident(fn_name.clone()))
+            .module_fn(mod_id, Ident(fn_name.clone()))
             .ok_or(VmError::NotAFn(mod_id, fn_name.clone()))?;
 
         if self.program.metadata().is_builtin(fn_id) {
@@ -79,7 +82,11 @@ impl AVM {
         self.eval_fn_args_sync(handle, None)
     }
 
-    pub fn eval_fn_args_sync(&self, handle: FnHandle, args: Option<Vec<Value>>) -> Result<Value, Error> {
+    pub fn eval_fn_args_sync(
+        &self,
+        handle: FnHandle,
+        args: Option<Vec<Value>>,
+    ) -> Result<Value, Error> {
         let mut executor = self.eval_fn_args(handle, args)?;
 
         loop {
@@ -95,16 +102,26 @@ impl AVM {
         self.eval_fn_args(handle, None)
     }
 
-    pub fn eval_fn_args(&self, handle: FnHandle, args: Option<Vec<Value>>) -> Result<Executor, Error> {
+    pub fn eval_fn_args(
+        &self,
+        handle: FnHandle,
+        args: Option<Vec<Value>>,
+    ) -> Result<Executor, Error> {
         let id = handle.id();
         if self.program.metadata().is_builtin(id) {
-            Ok(Executor::builtin_stub(self.builtins
+            Ok(Executor::builtin_stub(self
+                .builtins
                 .get(&id)
-                .expect("Missing a built-in")(args)?
-                )
-            )
+                .expect("Missing a built-in")(
+                args
+            )?))
         } else {
-            Ok(Executor::new_fn_executor(&self.program, &self.builtins, handle, args))
+            Ok(Executor::new_fn_executor(
+                &self.program,
+                &self.builtins,
+                handle,
+                args,
+            ))
         }
     }
 
@@ -114,7 +131,8 @@ impl AVM {
         let mod_id = self.program.universe().module_id(&module);
 
         match mod_id {
-            Some(mod_id) => Ok(self.program
+            Some(mod_id) => Ok(self
+                .program
                 .metadata()
                 .module_fn(mod_id, name)
                 .map(|fn_id| fn_id.into())),
@@ -140,7 +158,6 @@ pub struct ExecutionContext {
 }
 
 impl ExecutionContext {
-
     pub fn stack(&self) -> &Vec<StackInfo> {
         &self.stack
     }
@@ -183,7 +200,6 @@ pub struct FnContext {
 
 impl FnContext {
     pub fn new(fn_id: FnId) -> FnContext {
-
         FnContext {
             fn_id: fn_id,
             loop_heads: HashMap::new(),
@@ -227,13 +243,13 @@ pub struct Executor<'a> {
 }
 
 impl<'a> Executor<'a> {
-    fn new_fn_executor(program: &'a Program,
-                        builtins: &'a HashMap<FnId, BuiltinFn>,
-                        fn_id: FnHandle, args: Option<Vec<Value>>) -> Executor<'a> {
-
-        let mut exec_context = ExecutionContext {
-            stack: Vec::new(),
-        };
+    fn new_fn_executor(
+        program: &'a Program,
+        builtins: &'a HashMap<FnId, BuiltinFn>,
+        fn_id: FnHandle,
+        args: Option<Vec<Value>>,
+    ) -> Executor<'a> {
+        let mut exec_context = ExecutionContext { stack: Vec::new() };
 
         // Set up the stack to execute the first node in the called function
         let fn_id = fn_id.id();
@@ -247,19 +263,23 @@ impl<'a> Executor<'a> {
 
         // Set up arguments
         if let Some(args) = args {
-            for (arg, param_info) in args.into_iter()
+            for (arg, param_info) in args
+                .into_iter()
                 .zip(program.metadata().function_param_ids(fn_id))
             {
-                exec_context.top_mut().func_env.map_var(param_info.var_id(), arg);
+                exec_context
+                    .top_mut()
+                    .func_env
+                    .map_var(param_info.var_id(), arg);
             }
         }
 
-        Executor { 
+        Executor {
             exec_type: ExecutorType::Executor(InternalExecutor {
                 program: program,
                 context: exec_context,
                 builtins: builtins,
-            })
+            }),
         }
     }
 

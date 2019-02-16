@@ -4,15 +4,15 @@ use failure::Error;
 
 use crate::analysis::*;
 
-use crate::code_gen::interpreter::value::Value;
 use crate::code_gen::interpreter::env::Env;
+use crate::code_gen::interpreter::value::Value;
 
 use crate::code_gen::interpreter::vm_i::*;
 
-use super::vm::*;
-use super::node_fetch::*;
 use super::expr_eval::*;
 use super::node_eval::*;
+use super::node_fetch::*;
+use super::vm::*;
 
 pub struct InternalExecutor<'a> {
     pub context: ExecutionContext,
@@ -24,22 +24,25 @@ impl<'a> InternalExecutor<'a> {
     pub fn step(&mut self) -> ExecResult<Value, Error> {
         match self.context.top().exec_state {
             ExecutorState::Fetch(node_index) => {
-                let node_fetch = match node_fetch(&mut self.context.top_mut().fn_context, 
-                                                  self.program, 
-                                                  node_index) {
+                let node_fetch = match node_fetch(
+                    &mut self.context.top_mut().fn_context,
+                    self.program,
+                    node_index,
+                ) {
                     Ok(d) => d,
                     Err(e) => return ExecResult::Err(e),
-
                 };
                 match node_fetch {
-                    FetchResult::Next(next) => self.context.top_mut().exec_state = ExecutorState::Fetch(next),
-                    FetchResult::Expr(expr_phase) => { 
+                    FetchResult::Next(next) => {
+                        self.context.top_mut().exec_state = ExecutorState::Fetch(next)
+                    }
+                    FetchResult::Expr(expr_phase) => {
                         self.context.top_mut().exec_state = ExecutorState::Expr {
                             node: node_index,
                             tmp_index: 0,
                             expr_phase: expr_phase,
                         };
-                    },
+                    }
                     FetchResult::Return(v) => {
                         let stack = self.context.stack_mut();
 
@@ -50,7 +53,7 @@ impl<'a> InternalExecutor<'a> {
 
                             None => return ExecResult::Ok(v),
                         }
-                    },
+                    }
                 }
             }
 
@@ -59,11 +62,7 @@ impl<'a> InternalExecutor<'a> {
                 tmp_index,
                 expr_phase,
             } => {
-                match eval_node_tmp(self.program, 
-                                    &mut self.context, 
-                                    node, 
-                                    tmp_index, 
-                                    expr_phase) {
+                match eval_node_tmp(self.program, &mut self.context, node, tmp_index, expr_phase) {
                     ExprEvalResult::Value(v, tmp_id) => {
                         self.context.top_mut().exec_state = ExecutorState::Expr {
                             node: node,
@@ -73,7 +72,7 @@ impl<'a> InternalExecutor<'a> {
 
                         // Map the tmp
                         self.context.top_mut().func_env.map_tmp(tmp_id, v);
-                    },
+                    }
 
                     ExprEvalResult::PhaseChange(v, tmp_id) => {
                         self.context.top_mut().exec_state = ExecutorState::Expr {
@@ -84,15 +83,13 @@ impl<'a> InternalExecutor<'a> {
 
                         // Map the tmp
                         self.context.top_mut().func_env.map_tmp(tmp_id, v);
-                    },
+                    }
 
                     ExprEvalResult::FnCall(fn_id, args) => {
                         // Check if builtin first
                         if self.program.metadata().is_builtin(fn_id) {
-                            let result = self.builtins
-                                                .get(&fn_id)
-                                                .expect("Missing a built-in")(args);
-                                                
+                            let result =
+                                self.builtins.get(&fn_id).expect("Missing a built-in")(args);
 
                             let v = match result {
                                 Ok(v) => v,
@@ -104,13 +101,11 @@ impl<'a> InternalExecutor<'a> {
                                 Some(ref mut top) => {
                                     top.fn_context.return_store = Some(v);
                                     return ExecResult::Pending;
-
                                 }
 
                                 None => unreachable!(),
                             }
                         }
-
 
                         let fn_context = FnContext::new(fn_id);
                         let start = fn_context.get_fn(self.program).cfg().start();
@@ -118,10 +113,11 @@ impl<'a> InternalExecutor<'a> {
                         // Set up arguments
                         let mut env = Env::new();
                         if let Some(args) = args {
-                            for (arg, param_info) in args.into_iter()
+                            for (arg, param_info) in args
+                                .into_iter()
                                 .zip(self.program.metadata().function_param_ids(fn_id))
                             {
-                               env.map_var(param_info.var_id(), arg);
+                                env.map_var(param_info.var_id(), arg);
                             }
                         }
 
@@ -133,7 +129,7 @@ impl<'a> InternalExecutor<'a> {
                             fn_context: fn_context,
                             exec_state: ExecutorState::Fetch(start),
                         });
-                    },
+                    }
 
                     ExprEvalResult::Finished(v, tmp_id) => {
                         // All expressions have been evaluated. Perform any node post-processing
@@ -142,7 +138,7 @@ impl<'a> InternalExecutor<'a> {
 
                         // Map the tmp
                         self.context.top_mut().func_env.map_tmp(tmp_id, v);
-                    },
+                    }
                 }
             }
 
@@ -157,7 +153,6 @@ impl<'a> InternalExecutor<'a> {
                 };
 
                 match result {
-
                     NodeEval::Next(next_node) => {
                         self.context.top_mut().exec_state = ExecutorState::Fetch(next_node);
                     }
@@ -172,7 +167,7 @@ impl<'a> InternalExecutor<'a> {
 
                             None => return ExecResult::Ok(value),
                         }
-                    },
+                    }
                 }
             }
         }

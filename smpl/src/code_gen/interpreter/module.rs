@@ -1,6 +1,6 @@
+use crate::analysis::ModuleId;
 use crate::code_gen::interpreter::BuiltinFn;
 use crate::module::ParsedModule;
-use crate::analysis::ModuleId;
 
 pub struct VmModule {
     pub parsed: ParsedModule,
