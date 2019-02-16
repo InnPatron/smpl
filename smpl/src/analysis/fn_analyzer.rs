@@ -862,12 +862,17 @@ impl<'a> FnAnalyzer<'a> {
 
                 Value::ModAccess(ref access) => {
                     let fn_id = self.current_scope.get_fn(&access.path())?;
-                    let func = self.program.universe().get_fn(fn_id);
 
-                    let fn_type = func.fn_type();
+                    let fn_type_id = if self.program.metadata().is_builtin(fn_id) {
+                        let f = self.program.universe().get_builtin_fn(fn_id);
+                        f.fn_type().clone()
+                    } else {
+                        let f = self.program.universe().get_fn(fn_id);
+                        f.fn_type().clone()
+                    };
 
                     tmp_type = TypeApp::Applied {
-                        type_cons: fn_type.clone(),
+                        type_cons: fn_type_id,
                         args: None,
                     }.apply(self.program.universe(), &self.current_scope)?;
 
