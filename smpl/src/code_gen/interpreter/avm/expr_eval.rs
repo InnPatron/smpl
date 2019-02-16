@@ -5,7 +5,7 @@ use petgraph::graph::NodeIndex;
 
 use crate::analysis::*;
 use crate::analysis::{Value as AbstractValue};
-use crate::analysis::smpl_type::*;
+use crate::analysis::type_cons::Type;
 
 use crate::code_gen::interpreter::value::{Struct, Value as Value};
 use crate::code_gen::interpreter::comp::*;
@@ -333,8 +333,8 @@ fn eval_tmp(program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> Tmp
             let lh_v = context.top().func_env.get_tmp(lh_id).unwrap();
             let rh_v = context.top().func_env.get_tmp(rh_id).unwrap();
 
-            match *program.universe().get_type(lhs.type_id().unwrap()) {
-                SmplType::Int => {
+            match lhs.get_type().unwrap() {
+                Type::Int => {
                     let lhs = irmatch!(lh_v; Value::Int(i) => i);
                     let rhs = irmatch!(rh_v; Value::Int(i) => i);
 
@@ -347,7 +347,7 @@ fn eval_tmp(program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> Tmp
                     }
                 }
 
-                SmplType::Float => {
+                Type::Float => {
                     let lhs = irmatch!(lh_v; Value::Float(f) => f);
                     let rhs = irmatch!(rh_v; Value::Float(f) => f);
 
@@ -360,7 +360,7 @@ fn eval_tmp(program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> Tmp
                     }
                 }
 
-                SmplType::Bool => {
+                Type::Bool => {
                     let lhs = irmatch!(lh_v; Value::Bool(b) => b);
                     let rhs = irmatch!(rh_v; Value::Bool(b) => b);
 
@@ -381,18 +381,18 @@ fn eval_tmp(program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> Tmp
             let t_id = t.data().clone();
             let t_v = context.top().func_env.get_tmp(t_id).unwrap();
 
-            irmatch!(*program.universe().get_type(t.type_id().unwrap());
-                     SmplType::Float => {
+            irmatch!(t.get_type().unwrap();
+                     Type::Float => {
                          let f = irmatch!(t_v; Value::Float(f) => f);
                          Value::Float(negate(f))
                      },
 
-                     SmplType::Int => {
+                     Type::Int => {
                          let i = irmatch!(t_v; Value::Int(i) => i);
                          Value::Int(negate(i))
                      },
 
-                     SmplType::Bool => {
+                     Type::Bool => {
                          let b = irmatch!(t_v; Value::Bool(b) => b);
                          Value::Bool(not(b))
                      }
