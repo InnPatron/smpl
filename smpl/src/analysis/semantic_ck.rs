@@ -1067,6 +1067,23 @@ fn foo(type A)(v: A) -> A {
     }
 
     #[test]
+    fn generic_builtin_fn_binding() {
+        let mod1 =
+"mod mod1;
+
+builtin fn bar(type T)(v: T) -> T;
+
+fn foo(type A)(v: A) -> A {
+    let b: fn(A) -> A = bar(type A);
+    let result: A = b(v);
+
+    return result;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
     fn instantiate_fn_binding() {
         let mod1 =
 "mod mod1;
@@ -1074,6 +1091,23 @@ fn foo(type A)(v: A) -> A {
 fn bar(type T)(v: T) -> T {
     return v;
 }
+
+fn foo(v: int) -> int {
+    let b: fn(int) -> int = bar(type int);
+    let result: int = b(v);
+
+    return result;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn instantiate_builtin_fn_binding() {
+        let mod1 =
+"mod mod1;
+
+builtin fn bar(type T)(v: T) -> T;
 
 fn foo(v: int) -> int {
     let b: fn(int) -> int = bar(type int);
