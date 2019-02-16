@@ -254,7 +254,25 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
                                         parser_state!("fn-decl", "name"));
     let _lparen = consume_token!(tokens, 
                                  Token::LParen,
-                                 parser_state!("fn-decl", "parameter lparen"));
+                                 parser_state!("fn-decl", "(type?) parameter lparen"));
+
+    let type_params = if peek_token!(tokens, |tok| {
+        match tok {
+            Token::Type => true,
+            _ => false,
+        }
+    }, parser_state!("fn-decl", "type parameters?")) {
+        let params = Some(type_param_list_post_lparen(tokens)?);
+
+        // Consume next lparen for actual parameters
+        let _lparen = consume_token!(tokens,
+                                     Token::LParen,
+                                     parser_state!("fn-decl", "parameter lparen"));
+
+        params
+    } else {
+        None
+    };
 
     let params = if peek_token!(tokens, |tok| {
         match tok {
@@ -325,6 +343,7 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
                     params: params,
                     return_type: return_type,
                     annotations: annotations,
+                    type_params: type_params,
                 },
                 span)
             )
@@ -353,6 +372,7 @@ fn fn_decl(tokens: &mut BufferedTokenizer, annotations: Vec<Annotation>, is_buil
                     return_type: return_type,
                     body: body,
                     annotations: annotations,
+                    type_params: type_params,
                 },
                 span)
             )
@@ -429,6 +449,20 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
     let (nameLoc, structName) = consume_token!(tokens, 
                                                Token::Identifier(i) => Ident(i),
                                                parser_state!("struct-decl", "name"));
+
+    let type_params = if peek_token!(tokens, |tok| {
+        match tok {
+            Token::LParen => true,
+
+            _ => false,
+        }
+    }, parser_state!("struct-decl", "type-parameters?")) {
+
+        Some(type_param_list(tokens)?)
+    } else {
+        None
+    };
+
     let _lbrace = consume_token!(tokens, 
                                  Token::LBrace,
                                  parser_state!("struct-decl", "fields lbrace"));
@@ -459,6 +493,7 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
             name: AstNode::new(structName, nameLoc),
             body: body,
             annotations: anns,
+            type_params: type_params,
         }, overallSpan)
     )
 }
@@ -556,6 +591,21 @@ pub fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeA
                 parser_state!("type-annotation", "module-binding")
             ).to_data();
 
+            let bind = if peek_token!(tokens, |tok| {
+                match tok {
+                    Token::LParen => true,
+                    _ => false,
+                }
+            }, parser_state!("type-annotation", "type-arguments")) {
+                let type_arg_list = production!(
+                    type_arg_list(tokens),
+                    parser_state!("type-annotation", "type-app"));
+
+                TypedPath::Parameterized(bind, type_arg_list)
+            } else {
+                TypedPath::NillArity(bind)
+            };
+
             Ok(AstNode::new(TypeAnnotation::Path(bind), span))
         },
 
@@ -638,8 +688,28 @@ fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> 
                                     parser_state!("fn-type", "fn"));
     let _lparen = consume_token!(tokens, 
                                  Token::LParen,
+                                 parser_state!("fn-type", "(type?)param lparen"));
+
+    let type_params = if peek_token!(tokens, |tok| {
+        match tok {
+            Token::Type => true,
+            _ => false,
+        }
+    }, parser_state!("fn-type", "type?")) {
+        let type_params = production!(
+                type_param_list_post_lparen(tokens),
+                parser_state!("fn-type", "type-params"));
+
+        // Consume parameter lparen
+        let _lparen = consume_token!(tokens, 
+                                 Token::LParen,
                                  parser_state!("fn-type", "param lparen"));
-        
+
+        Some(type_params)
+    } else {
+        None
+    };
+
     let mut params = None;
     if peek_token!(tokens, |tok| {
         match tok {
@@ -680,7 +750,7 @@ fn fn_type(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeAnnotation>> 
         fn_type_span = Span::combine(fn_type_span, return_span);
     }
 
-    Ok(AstNode::new(TypeAnnotation::FnType(params, return_type), fn_type_span))
+    Ok(AstNode::new(TypeAnnotation::FnType(type_params, params, return_type), fn_type_span))
 }
 
 fn fn_type_params(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<AstNode<TypeAnnotation>>> {
@@ -845,7 +915,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
     enum Dec {
         AccessPath,
         ModulePath,
-        FnCall,
+        FnCallOrTypeArgFnCall,
         Indexing,
         DefSingletonAssignment,
         DefSingletonExpr,
@@ -868,7 +938,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
         match tok {
             Token::Dot => Dec::AccessPath,
             Token::ColonColon => Dec::ModulePath,
-            Token::LParen => Dec::FnCall,
+            Token::LParen => Dec::FnCallOrTypeArgFnCall,
             Token::LBracket => Dec::Indexing,
             Token::Assign => Dec::DefSingletonAssignment,
             _ => Dec::DefSingletonExpr,
@@ -911,26 +981,59 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             return Ok(Stmt::Expr(expr));
         }
 
-        Dec::FnCall => {
+        Dec::FnCallOrTypeArgFnCall => {
             // Expecting: expr ';'
             // Function calls are not lvalues
 
-            let args = production!(
-                fn_args(tokens),
-                parser_state!("stmt-expr-fn-call", "fn-args")
-            );
-            let (args, arg_span) = args.to_data();
+            let (lspan, _lparen) = consume_token!(tokens,
+                                                  Token::LParen,
+                                                  parser_state!("stmt-expr-potential-fn-call", "lparen"));
+
+            let (type_args, args, args_span) = if peek_token!(tokens, |tok| {
+                match tok {
+                    Token::Type => true,
+                    _ => false
+                }
+            }, parser_state!("stmt-expr-potential-fn-call", "type-args?")) {
+                let type_args = production!(
+                    type_arg_list_post_lparen(tokens),
+                    parser_state!("stmt-expr-fn-call", "type-args")
+                );
+
+                // TODO: May be type-application on a binding, not a function call
+                // Also fix in the expression position too
+                // i.e. let function = foo(type int);
+                let (args, args_span) = production!(
+                    fn_args(tokens),
+                    parser_state!("expr-module-path", "fn-call")
+                ).to_data();
+
+                (Some(type_args), args, args_span)
+
+            } else {
+                let (args, args_span) = production!(
+                    fn_args_post_lparen(tokens, lspan),
+                    parser_state!("stmt-expr-fn-call", "fn-args")
+                ).to_data();
+
+                (None, args, args_span)
+            };
+
+            
             let args = args.map(|v| v.into_iter().map(|a| a.to_data().0).collect());
 
-            let called = ModulePath(vec![AstNode::new(base_ident, base_span)]);
+            let fn_path = ModulePath(vec![AstNode::new(base_ident, base_span.clone())]);
+            let fn_path = match type_args {
+                Some(args) => TypedPath::Parameterized(fn_path, args),
+                None => TypedPath::NillArity(fn_path),
+            };
 
             let fn_call = FnCall {
-                path: called,
+                path: AstNode::new(fn_path, base_span),
                 args: args,
             };
 
-
-            let span = Span::combine(base_span, arg_span);
+            let span = Span::combine(base_span, args_span);
             let expr_base = AstNode::new(fn_call, span);
             let expr_base = AstNode::new(Expr::FnCall(expr_base), span);
 
@@ -1329,4 +1432,115 @@ fn break_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
         ExprStmt::Break(span),
         span)
     )
+}
+
+fn type_param_list(tokens: &mut BufferedTokenizer) -> ParseErr<TypeParams> {
+    let _lparen = consume_token!(tokens,
+                                 Token::LParen,
+                                 parser_state!("type_param_list", "lparen"));
+
+    type_param_list_post_lparen(tokens)
+}
+
+fn type_param_list_post_lparen(tokens: &mut BufferedTokenizer) -> ParseErr<TypeParams> {
+    let _type = consume_token!(tokens,
+                                 Token::Type,
+                                 parser_state!("type-param-list", "type"));
+
+    let mut type_params = vec![consume_token!(tokens, 
+                                              Token::Identifier(ident) => Ident(ident),
+                                              parser_state!("type-param-list", "type-param"))];
+
+    loop {
+        if peek_token!(tokens, |tok| {
+            match tok {
+                Token::Comma => true,
+                _ => false
+            }
+        }, parser_state!("type-param-list", "comma-separator")) {
+            let _comma = consume_token!(tokens, 
+                                        Token::Comma,
+                                        parser_state!("type-param-list", "comma-separator"));
+            if peek_token!(tokens, |tok| {
+                match tok {
+                    Token::RParen => false,
+                    _ => true,
+                }
+            }, parser_state!("type-param-list", "rparen?")) {
+                type_params.push(
+                    consume_token!(tokens,
+                                   Token::Identifier(ident) => Ident(ident),
+                                   parser_state!("type-param-list", "type-param")));
+                continue;
+            }
+        }
+
+        break;
+    }
+
+    let _rparen = consume_token!(tokens,
+                                 Token::RParen,
+                                 parser_state!("type-param-list", "rparen"));
+
+    let type_params = type_params
+        .into_iter()
+        .map(|(span, ident)| AstNode::new(ident, span))
+        .collect::<Vec<_>>();
+
+    Ok(TypeParams { params: type_params })
+}
+
+pub fn type_arg_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<TypeAnnotation>> {
+    let _lparen = consume_token!(tokens,
+                                 Token::LParen,
+                                 parser_state!("type-arg-list", "lparen"));
+
+    type_arg_list_post_lparen(tokens)
+}
+
+pub fn type_arg_list_post_lparen(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<TypeAnnotation>> {
+    let _type = consume_token!(tokens,
+                                 Token::Type,
+                                 parser_state!("type-arg-list", "type"));
+
+    let mut type_args = vec![production!(type_annotation(tokens),
+                                           parser_state!("type-arg-list", "type-arg"))];
+
+    loop {
+        if peek_token!(tokens, |tok| {
+            match tok {
+                Token::Comma => true,
+                _ => false
+            }
+        }, parser_state!("type-arg-list", "comma-separator")) {
+            let _comma = consume_token!(tokens, 
+                                        Token::Comma,
+                                        parser_state!("type-arg-list", "comma-separator"));
+            if peek_token!(tokens, |tok| {
+                match tok {
+                    Token::RParen => false,
+                    _ => true,
+                }
+            }, parser_state!("type-arg-list", "rparen?")) {
+                type_args.push(
+                    production!(type_annotation(tokens),
+                                parser_state!("type-arg-list", "type-arg"))
+                    );
+                continue;
+            }
+        }
+
+        break;
+    }
+
+    let _rparen = consume_token!(tokens,
+                                 Token::RParen,
+                                 parser_state!("type-arg-list", "rparen"));
+
+    let type_args = type_args 
+        .into_iter()
+        .map(|node| node.to_data().0)
+        .collect::<Vec<_>>();
+
+    Ok(type_args)
 }

@@ -96,6 +96,7 @@ pub struct BuiltinFunction {
     pub params: BuiltinFnParams,
     pub return_type: Option<AstNode<TypeAnnotation>>,
     pub annotations: Vec<Annotation>,
+    pub type_params: Option<TypeParams>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -111,6 +112,7 @@ pub struct Function {
     pub return_type: Option<AstNode<TypeAnnotation>>,
     pub body: AstNode<Block>,
     pub annotations: Vec<Annotation>,
+    pub type_params: Option<TypeParams>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -124,6 +126,7 @@ pub struct Struct {
     pub name: AstNode<Ident>,
     pub body: StructBody,
     pub annotations: Vec<Annotation>,
+    pub type_params: Option<TypeParams>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -172,7 +175,7 @@ impl PartialEq for ExprStmt {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructInit {
-    pub struct_name: ModulePath,
+    pub struct_name: TypedPath,
     pub field_init: Option<Vec<(AstNode<Ident>, Box<Expr>)>>,
 }
 
@@ -218,9 +221,9 @@ pub enum Expr {
     StructInit(AstNode<StructInit>),
     ArrayInit(AstNode<ArrayInit>),
     Indexing(AstNode<Indexing>),
-    ModAccess(AstNode<ModulePath>),
     AnonymousFn(AstNode<AnonymousFn>),
     FnCallChain(AstNode<FnCallChain>),
+    Path(AstNode<TypedPath>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -250,17 +253,8 @@ pub struct FnCallChain {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
-    pub path: ModulePath,
+    pub path: AstNode<TypedPath>,
     pub args: Option<Vec<Expr>>,
-}
-
-impl FnCall {
-    pub fn new(path: ModulePath, args: Option<Vec<Expr>>) -> FnCall {
-        FnCall {
-            path: path,
-            args: args,
-        }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -362,10 +356,77 @@ impl fmt::Display for Ident {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum TypedPath {
+    NillArity(ModulePath),
+    Parameterized(ModulePath, Vec<TypeAnnotation>),
+}
+
+impl TypedPath {
+    pub fn module_path(&self) -> &ModulePath {
+        match *self {
+            TypedPath::NillArity(ref p) => p,
+            TypedPath::Parameterized(ref p, _) => p,
+        }
+    }
+
+    pub fn annotations(&self) -> Option<&[TypeAnnotation]> {
+        match *self {
+            TypedPath::NillArity(_) => None,
+            TypedPath::Parameterized(_, ref anno) => Some(anno),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum TypedPathRef<'a> {
+    NillArity(&'a ModulePath),
+    Parameterized(&'a ModulePath, &'a[TypeAnnotation]),
+}
+
+impl<'a> TypedPathRef<'a> {
+    pub fn module_path(&self) -> &ModulePath {
+        match *self {
+            TypedPathRef::NillArity(p) => p,
+            TypedPathRef::Parameterized(p, _) => p,
+        }
+    }
+
+    pub fn annotations(&self) -> Option<&[TypeAnnotation]> {
+        match *self {
+            TypedPathRef::NillArity(_) => None,
+            TypedPathRef::Parameterized(_, anno) => Some(anno),
+        }
+    }
+}
+
+impl<'a> From<&'a TypedPath> for TypedPathRef<'a> {
+    fn from(f: &'a TypedPath) -> TypedPathRef<'a> {
+        match *f {
+            TypedPath::NillArity(ref mp) => TypedPathRef::NillArity(mp),
+            TypedPath::Parameterized(ref mp, ref anno) => TypedPathRef::Parameterized(mp, anno),
+        }
+    }
+}
+
+impl<'a> From<TypedPathRef<'a>> for TypedPath {
+    fn from(f: TypedPathRef<'a>) -> TypedPath {
+        match f {
+            TypedPathRef::NillArity(mp) => TypedPath::NillArity(mp.clone()),
+            TypedPathRef::Parameterized(mp, anno) => TypedPath::Parameterized(mp.clone(), 
+                                                                              anno
+                                                                              .iter()
+                                                                              .map(|a| a.clone())
+                                                                              .collect()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum TypeAnnotation {
-    Path(ModulePath),
+    Path(TypedPath),
     Array(Box<AstNode<TypeAnnotation>>, u64),
     FnType(
+        Option<TypeParams>,
         Option<Vec<AstNode<TypeAnnotation>>>,
         Option<Box<AstNode<TypeAnnotation>>>,
     ),
@@ -374,9 +435,10 @@ pub enum TypeAnnotation {
 impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
     fn from(t: &TypeAnnotation) -> TypeAnnotationRef {
         match t {
-            &TypeAnnotation::Path(ref p) => TypeAnnotationRef::Path(p),
+            &TypeAnnotation::Path(ref p) => TypeAnnotationRef::Path(p.into()),
             &TypeAnnotation::Array(ref t, ref s) => TypeAnnotationRef::Array(t, s),
-            &TypeAnnotation::FnType(ref p, ref r) => TypeAnnotationRef::FnType(
+            &TypeAnnotation::FnType(ref tp, ref p, ref r) => TypeAnnotationRef::FnType(
+                tp.as_ref(),
                 p.as_ref().map(|v| v.as_slice()),
                 r.as_ref().map(|r| r.borrow()),
             ),
@@ -384,11 +446,30 @@ impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
     }
 }
 
+impl<'a> From<TypedPathRef<'a>> for TypeAnnotationRef<'a> {
+    fn from(p: TypedPathRef<'a>) -> TypeAnnotationRef {
+        TypeAnnotationRef::Path(p)
+    }
+}
+
+impl<'a> From<&'a ModulePath> for TypedPathRef<'a> {
+    fn from(mp: &'a ModulePath) -> TypedPathRef<'a> {
+        TypedPathRef::NillArity(mp)
+    }
+}
+
+impl<'a> From<&'a ModulePath> for TypeAnnotationRef<'a> {
+    fn from(mp: &'a ModulePath) -> TypeAnnotationRef<'a> {
+        TypeAnnotationRef::Path(mp.into())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeAnnotationRef<'a> {
-    Path(&'a ModulePath),
+    Path(TypedPathRef<'a>),
     Array(&'a AstNode<TypeAnnotation>, &'a u64),
     FnType(
+        Option<&'a TypeParams>,
         Option<&'a [AstNode<TypeAnnotation>]>,
         Option<&'a AstNode<TypeAnnotation>>,
     ),
@@ -397,9 +478,10 @@ pub enum TypeAnnotationRef<'a> {
 impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
     fn from(tr: TypeAnnotationRef) -> TypeAnnotation {
         match tr {
-            TypeAnnotationRef::Path(p) => TypeAnnotation::Path(p.clone()),
+            TypeAnnotationRef::Path(p) => TypeAnnotation::Path(p.into()),
             TypeAnnotationRef::Array(t, s) => TypeAnnotation::Array(Box::new(t.clone()), s.clone()),
-            TypeAnnotationRef::FnType(p, r) => TypeAnnotation::FnType(
+            TypeAnnotationRef::FnType(tp, p, r) => TypeAnnotation::FnType(
+                tp.map(|tp| tp.clone()),
                 p.map(|params| params.iter().map(|param| param.clone()).collect()),
                 r.map(|r| Box::new(r.clone())),
             ),
@@ -413,12 +495,6 @@ pub struct ModulePath(pub Vec<AstNode<Ident>>);
 impl ModulePath {
     pub fn iter<'a>(&'a self) -> Box<Iterator<Item = &Ident> + 'a> {
         Box::new(self.0.iter().map(|node| &node.data))
-    }
-}
-
-impl<'a> From<&'a ModulePath> for TypeAnnotationRef<'a> {
-    fn from(p: &ModulePath) -> TypeAnnotationRef {
-        TypeAnnotationRef::Path(p)
     }
 }
 
@@ -450,4 +526,11 @@ pub enum PathSegment {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Annotation {
     pub keys: Vec<(Ident, Option<String>)>,
+}
+
+// TODO: May need to manually implement PartialEq
+// Shouldn't matter b/c this is purely for syntactic comparison
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeParams {
+    pub params: Vec<AstNode<Ident>>,
 }

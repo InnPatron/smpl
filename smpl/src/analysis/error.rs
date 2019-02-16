@@ -1,7 +1,7 @@
-use crate::analysis::TypeId;
 use crate::span::Span;
 use crate::ast::*;
 use crate::err::Error;
+use crate::analysis::type_cons::{TypeApp, Type};
 
 #[derive(Clone, Debug)]
 pub enum AnalysisError {
@@ -9,13 +9,12 @@ pub enum AnalysisError {
     TypeError(TypeError),
     ParseError(String),
     MultipleMainFns,
-    UnknownType(TypeAnnotation),
+    UnknownType(ModulePath),
     UnknownBinding(Ident),
     UnknownFn(ModulePath),
     UnresolvedUses(Vec<AstNode<UseDecl>>),
     UnresolvedStructs(Vec<AstNode<Struct>>),
     UnresolvedFns(Vec<AstNode<Function>>),
-    UncheckedFunctionBinding(Ident),
     MissingModName,
 }
 
@@ -40,22 +39,22 @@ impl From<ControlFlowError> for AnalysisError {
 
 #[derive(Clone, Debug)]
 pub enum TypeError {
-    CyclicType(TypeId),
-    LhsRhsInEq(TypeId, TypeId, Span),
+    CyclicType(TypeApp),
+    LhsRhsInEq(Type, Type, Span),
     InEqFnReturn {
-        expr: TypeId,
-        fn_return: TypeId,
+        expr: Type,
+        fn_return: Type,
         return_span: Span,
     },
 
     UnexpectedType {
-        found: TypeId,
-        expected: TypeId,
+        found: Type,
+        expected: Type,
         span: Span,
     },
 
     Arity {
-        fn_type: TypeId,
+        fn_type: Type,
         found_args: usize,
         expected_param: usize,
         span: Span,
@@ -63,79 +62,113 @@ pub enum TypeError {
 
     BinOp {
         op: BinOp,
-        expected: Vec<TypeId>,
-        lhs: TypeId,
-        rhs: TypeId,
+        expected: Vec<Type>,
+        lhs: Type,
+        rhs: Type,
         span: Span,
     },
 
     UniOp {
         op: UniOp,
-        expected: Vec<TypeId>,
-        expr: TypeId,
+        expected: Vec<Type>,
+        expr: Type,
         span: Span,
     },
 
     ArgMismatch {
-        fn_type_id: TypeId,
+        fn_type: Type,
         index: usize,
-        arg: TypeId,
-        param: TypeId,
+        arg: Type,
+        param: Type,
         span: Span,
     },
 
     FieldAccessOnNonStruct {
         path: Path,
         index: usize,
-        invalid_type: TypeId,
-        root_type: TypeId,
+        invalid_type: Type,
+        root_type: Type,
         span: Span,
     },
 
     NotAStruct {
         type_name: ModulePath,
-        found: TypeId,
+        found: Type,
         span: Span,
     },
 
     StructNotFullyInitialized {
         type_name: ModulePath,
-        struct_type: TypeId,
+        struct_type: Type,
         missing_fields: Vec<Ident>,
         span: Span,
     },
 
     UnknownField {
         name: Ident,
-        struct_type: TypeId,
+        struct_type: Type,
         span: Span,
     },
 
     HeterogenousArray {
-        expected: TypeId,
-        found: TypeId,
+        expected: Type,
+        found: Type,
         index: usize,
         span: Span,
     },
 
     NotAnArray {
-        found: TypeId,
+        found: Type,
         span: Span,
     },
 
     InvalidIndex {
-        found: TypeId,
+        found: Type,
         span: Span,
     },
 
     InitOpaqueType {
-        struct_type: TypeId,
+        struct_type: Type,
         span: Span,
-    }
+    },
+
+    ParameterNamingConflict {
+        ident: Ident
+    },
+
+    FieldNamingConflict {
+        ident: Ident
+    },
+
+    TypeParameterNamingConflict {
+        ident: Ident
+    },
+
+    ParameterizedParameter {
+        ident: Ident,
+    },
+
+    ApplicationError(ApplicationError),
+
+    UninstantiatedType,
 }
 
 impl From<TypeError> for AnalysisError {
     fn from(err: TypeError) -> AnalysisError {
         AnalysisError::TypeError(err)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum ApplicationError {
+    Arity { expected: usize, found: usize },
+    ExpectedNumber { param_position: usize },
+    ExpectedType { param_position: usize },
+    InvalidNumber { param_position: usize, found: i64 }
+}
+
+impl From<ApplicationError> for TypeError {
+    fn from(err: ApplicationError) -> TypeError {
+        TypeError::ApplicationError(err)
     }
 }

@@ -4,7 +4,7 @@ use super::typed_ast::Binding as TypedBinding;
 
 use crate::span::Span;
 
-use crate::ast::{ArrayInit as AstArrayInit, Expr as AstExpr, AstNode};
+use crate::ast::{ArrayInit as AstArrayInit, Expr as AstExpr, AstNode, TypedPath};
 
 pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
@@ -91,13 +91,14 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
         AstExpr::FnCall(fn_call) => {
             let (fn_call, span) = fn_call.to_data();
             let path = fn_call.path;
+            let (fn_val, fn_val_span) = flatten_expr(universe, scope, AstExpr::Path(path));
             let args = fn_call.args.map(|vec| {
                 vec.into_iter()
                     .map(|e| Typed::untyped(flatten_expr(universe, scope, e).0))
                     .collect::<Vec<_>>()
             });
 
-            let fn_call = FnCall::new(path, args);
+            let fn_call = FnCall::new(fn_val, args);
 
             (scope.map_tmp(universe, Value::FnCall(fn_call), span), span)
         }
@@ -142,11 +143,25 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
             )
         }
 
-        AstExpr::ModAccess(path) => {
+        AstExpr::Path(path) => {
             let (path, span) = path.to_data();
+            let tmp = match path {
+                TypedPath::NillArity(mut path) => {
+                    // TODO: is this necessary? Figure out if path length always greater than 1
+                    if path.0.len() == 1 {
+                        Value::Binding(Binding::new(path.0.pop().unwrap()))
+                    } else {
+                        Value::ModAccess(ModAccess::new(path))
+                    }
+                },
+
+                TypedPath::Parameterized(path, args) => 
+                    Value::TypeInst(TypeInst::new(path, args)),
+            };
+
             (
-                scope.map_tmp(universe, Value::ModAccess(ModAccess::new(path)), span),
-                span,
+                scope.map_tmp(universe, tmp, span),
+                span
             )
         }
 

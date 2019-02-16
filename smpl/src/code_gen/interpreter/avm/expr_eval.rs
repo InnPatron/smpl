@@ -5,7 +5,7 @@ use petgraph::graph::NodeIndex;
 
 use crate::analysis::*;
 use crate::analysis::{Value as AbstractValue};
-use crate::analysis::smpl_type::*;
+use crate::analysis::type_cons::Type;
 
 use crate::code_gen::interpreter::value::{Struct, Value as Value};
 use crate::code_gen::interpreter::comp::*;
@@ -306,17 +306,15 @@ fn eval_tmp(program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> Tmp
                                         .unwrap());
             }
 
-            let fn_id = match call.get_id().unwrap() {
-                BindingId::Var(var) => {
-                    let var = context.top().func_env.get_var(var).unwrap();
-                    let function = irmatch!(var; Value::Function(fn_id) => fn_id);
-                    function.id()
-                }
+            let fn_value = call.fn_value();
 
-                BindingId::Fn(fn_id) => fn_id,
-            };
-
-            
+            let fn_id = irmatch!(context
+                .top()
+                .func_env
+                .get_tmp(fn_value)
+                .expect("Type checker should have caught fn call on non-fn binding"); 
+                Value::Function(fn_handle) => fn_handle.id());
+                        
             let args: Option<Vec<_>> = call.args().map(|v| {
                 v.iter()
                     .map(|tmp| context.top().func_env.get_tmp(tmp.data().clone()).unwrap().clone())
@@ -333,8 +331,8 @@ fn eval_tmp(program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> Tmp
             let lh_v = context.top().func_env.get_tmp(lh_id).unwrap();
             let rh_v = context.top().func_env.get_tmp(rh_id).unwrap();
 
-            match *program.universe().get_type(lhs.type_id().unwrap()) {
-                SmplType::Int => {
+            match lhs.get_type().unwrap() {
+                Type::Int => {
                     let lhs = irmatch!(lh_v; Value::Int(i) => i);
                     let rhs = irmatch!(rh_v; Value::Int(i) => i);
 
@@ -347,7 +345,7 @@ fn eval_tmp(program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> Tmp
                     }
                 }
 
-                SmplType::Float => {
+                Type::Float => {
                     let lhs = irmatch!(lh_v; Value::Float(f) => f);
                     let rhs = irmatch!(rh_v; Value::Float(f) => f);
 
@@ -360,7 +358,7 @@ fn eval_tmp(program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> Tmp
                     }
                 }
 
-                SmplType::Bool => {
+                Type::Bool => {
                     let lhs = irmatch!(lh_v; Value::Bool(b) => b);
                     let rhs = irmatch!(rh_v; Value::Bool(b) => b);
 
@@ -381,18 +379,18 @@ fn eval_tmp(program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> Tmp
             let t_id = t.data().clone();
             let t_v = context.top().func_env.get_tmp(t_id).unwrap();
 
-            irmatch!(*program.universe().get_type(t.type_id().unwrap());
-                     SmplType::Float => {
+            irmatch!(t.get_type().unwrap();
+                     Type::Float => {
                          let f = irmatch!(t_v; Value::Float(f) => f);
                          Value::Float(negate(f))
                      },
 
-                     SmplType::Int => {
+                     Type::Int => {
                          let i = irmatch!(t_v; Value::Int(i) => i);
                          Value::Int(negate(i))
                      },
 
-                     SmplType::Bool => {
+                     Type::Bool => {
                          let b = irmatch!(t_v; Value::Bool(b) => b);
                          Value::Bool(not(b))
                      }
@@ -458,6 +456,11 @@ fn eval_tmp(program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> Tmp
 
         AbstractValue::AnonymousFn(ref a_fn) => {
             let fn_id = a_fn.fn_id();
+            Value::Function(fn_id.into())
+        }
+
+        AbstractValue::TypeInst(ref type_inst) => {
+            let fn_id = type_inst.get_id().unwrap();
             Value::Function(fn_id.into())
         }
     };

@@ -6,11 +6,11 @@ use crate::ast;
 
 use crate::span::Span;
 
-use super::error::ControlFlowError;
-use super::smpl_type::{FunctionType, SmplType};
+use super::error::{ControlFlowError, AnalysisError};
+use super::type_cons::*;
 use super::expr_flow;
 use super::typed_ast;
-use super::semantic_data::{LoopId, Universe};
+use super::semantic_data::{LoopId, Universe, ScopedData};
 
 use super::control_data::*;
 
@@ -351,8 +351,9 @@ impl CFG {
     pub fn generate(
         universe: &Universe,
         body: ast::AstNode<ast::Block>,
-        fn_type: &FunctionType,
-    ) -> Result<Self, ControlFlowError> {
+        fn_type: &TypeCons,
+        fn_scope: &ScopedData,
+    ) -> Result<Self, AnalysisError> {
         let mut cfg = {
             let mut graph = graph::Graph::new();
             let start = graph.add_node(Node::Start);
@@ -383,18 +384,27 @@ impl CFG {
         }
 
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
-        if *universe.get_type(fn_type.return_type) == SmplType::Unit {
-            // TODO: Figure out how to get last line of function
-            append_node!(
-                cfg,
-                head,
-                previous,
-                Node::Return(ReturnData {
-                    expr: None,
-                    span: Span::dummy(),
-                })
-            );
+
+        if let TypeCons::Function {
+            return_type: ref return_type,
+            ..
+        } = fn_type {
+
+            let return_type = return_type.apply(universe, fn_scope)?;
+            if return_type == Type::Unit {
+                // TODO: Figure out how to get last line of function
+                append_node!(
+                    cfg,
+                    head,
+                    previous,
+                    Node::Return(ReturnData {
+                        expr: None,
+                        span: Span::dummy(),
+                    })
+                );
+            }
         }
+
 
         append_node!(cfg, head, previous, Node::ExitScope);
         append_node_index!(cfg, head, previous, cfg.end);
@@ -679,8 +689,7 @@ mod tests {
     use petgraph::dot::{Config, Dot};
     use petgraph::Direction;
 
-    use super::super::smpl_type::*;
-    use super::super::semantic_data::Universe;
+    use super::super::semantic_data::{TypeId, Universe};
 
     macro_rules! edges {
         ($CFG: expr, $node: expr) => {
@@ -694,6 +703,23 @@ mod tests {
         }
     }
 
+    fn expected_app(tc: TypeId) -> TypeApp {
+        TypeApp::Applied {
+            type_cons: tc,
+            args: None
+        }
+    }
+
+    fn fn_type_cons(params: Vec<TypeApp>, return_type: TypeApp) -> TypeCons {
+        let tc = TypeCons::Function {
+            parameters: params,
+            return_type: return_type,
+            type_params: None,
+        };
+
+        tc
+    }
+
     #[test]
     fn linear_cfg_generation() {
         let input = "fn test(arg: int) {
@@ -702,12 +728,10 @@ let b: int = 3;
 }";
         let mut input = buffer_input(input);
         let universe = Universe::std();
-        let fn_type = FunctionType {
-            params: ParamType::Checked(vec![universe.int()]),
-            return_type: universe.unit(),
-        };
+        let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
+        let scope = universe.std_scope();
+        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -774,12 +798,10 @@ if (test) {
         let mut input = buffer_input(input);
 
         let universe = Universe::std();
-        let fn_type = FunctionType {
-            params: ParamType::Checked(vec![universe.int()]),
-            return_type: universe.unit(),
-        };
+        let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
+        let scope = universe.std_scope();
+        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -924,13 +946,11 @@ if (test) {
 }";
         let mut input = buffer_input(input);
         let universe = Universe::std();
-        let fn_type = FunctionType {
-            params: ParamType::Checked(vec![universe.int()]),
-            return_type: universe.unit(),
-        };
+        let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         
         let fn_def = testfn_decl(&mut input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
+        let scope = universe.std_scope();
+        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -1087,13 +1107,11 @@ if (test) {
 }";
         let mut input = buffer_input(input);
         let universe = Universe::std();
-        let fn_type = FunctionType {
-            params: ParamType::Checked(vec![universe.int()]),
-            return_type: universe.unit(),
-        };
+        let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         
         let fn_def = testfn_decl(&mut input).unwrap();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type).unwrap();
+        let scope = universe.std_scope();
+        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 

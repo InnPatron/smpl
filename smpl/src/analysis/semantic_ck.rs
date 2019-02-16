@@ -26,7 +26,6 @@ mod tests {
     use super::super::error::*;
     use super::*;
     use crate::parser::*;
-    use crate::analysis::smpl_type::*;
     use crate::ast::Ident;
     use crate::module::UnparsedModule;
 
@@ -60,18 +59,6 @@ fn main() {
 
         let program = parse_module(wrap_input!(program)).unwrap();
         let program = check_program(vec![program]).unwrap();
-
-        let universe = program.universe();
-
-        let (main, _) = program.metadata().main().unwrap();
-        let main = universe.get_fn(main);
-        let main_type = universe.get_type(main.type_id());
-        if let SmplType::Function(ref fn_type) = *main_type {
-            assert_eq!(SmplType::Unit, *universe.get_type(fn_type.return_type));
-        } else {
-            panic!("main()'s TypeId was not mapped to a SmplType::Function");
-        }
-
     }
 
     #[test]
@@ -118,7 +105,13 @@ fn main() {
                 let tmp = e.get_tmp(*iter.last().unwrap());
                 match *tmp.value().data() {
                     Value::FnCall(ref call) => {
-                        assert_eq!(call.get_id().unwrap(), BindingId::Fn(called_fn));
+                        let fn_value = call.fn_value();
+                        let tmp = e.get_tmp(fn_value);
+                        if let Value::Binding(ref binding) = tmp.value().data() {
+                            ()
+                        } else {
+                            panic!("Function call not on binding");
+                        }
                     },
 
                     ref v => panic!("Expected Value::FnCall. Found {:?}", v),
@@ -654,6 +647,7 @@ fn main() {
         check_program(vec![mod1]).unwrap();
     }
 
+/*
     #[test]
     fn deny_unchecked_params_builtin_function_local() {
         let mod1 =
@@ -677,6 +671,7 @@ fn main() {
             }
         }
     }
+*/
 
     #[test]
     fn deny_unchecked_params_builtin_function_struct() {
@@ -699,8 +694,8 @@ fn main() {
             Ok(_) => panic!("Found Ok. Expected AnalysisError::UncheckedFunctionBinding"),
             Err(e) => {
                 match e {
-                    AnalysisError::UncheckedFunctionBinding(..) => (),
-                    _ => panic!("Expected AnalysisError::UncheckedFunctionBinding. Found {:?}", e),
+                    AnalysisError::TypeError(..) => (),
+                    _ => panic!("Expected AnalysisError::TypeError. Found {:?}", e),
                 }
             }
         }
@@ -787,6 +782,130 @@ struct TypeA {
 
 struct TypeB {
     f1: TypeA
+}
+";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!(),
+            Err(e) => match e {
+                AnalysisError::TypeError(e) => {
+                    match e {
+                        TypeError::CyclicType(_) => (),
+                        _ => panic!(),
+                    }
+                }
+
+                _ => panic!(),
+            }
+        }
+    }
+
+    #[test]
+    fn long_cyclic_type() {
+        let mod1 =
+"
+mod mod1;
+
+struct TypeA {
+    f1: TypeB
+}
+
+struct TypeB {
+    f1: TypeC
+}
+
+struct TypeC {
+    f1: TypeD
+}
+
+struct TypeD {
+    f1: TypeA
+}
+";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!(),
+            Err(e) => match e {
+                AnalysisError::TypeError(e) => {
+                    match e {
+                        TypeError::CyclicType(_) => (),
+                        _ => panic!(),
+                    }
+                }
+
+                _ => panic!(),
+            }
+        }
+    }
+
+    #[test]
+    fn generic_cyclic_type() {
+        let mod1 =
+"
+mod mod1;
+
+struct TypeA(type T) {
+    f1: TypeB(type T)
+}
+
+struct TypeB(type T) {
+    f1: TypeA(type T)
+}
+";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!(),
+            Err(e) => match e {
+                AnalysisError::TypeError(e) => {
+                    match e {
+                        TypeError::CyclicType(_) => (),
+                        _ => panic!(),
+                    }
+                }
+
+                _ => panic!(),
+            }
+        }
+    }
+
+    #[test]
+    fn self_cyclic_type() {
+        let mod1 =
+"
+mod mod1;
+
+struct TypeA {
+    f1: TypeA
+}
+";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!(),
+            Err(e) => match e {
+                AnalysisError::TypeError(e) => {
+                    match e {
+                        TypeError::CyclicType(_) => (),
+                        _ => panic!(),
+                    }
+                }
+
+                _ => panic!(),
+            }
+        }
+    }
+
+    #[test]
+    fn generic_self_cyclic_type() {
+        let mod1 =
+"
+mod mod1;
+
+struct TypeA(type A) {
+    f1: TypeA(type int)
 }
 ";
 
@@ -978,6 +1097,181 @@ fn bar() -> int {
     return f(3, 5);
 }";
 
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn generic_struct_decl() {
+        let mod1 =
+"mod mod1;
+
+struct Foo(type T) {
+    f: T,
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn generic_struct_init() {
+        let mod1 =
+"mod mod1;
+
+struct Foo(type T) {
+    f: T,
+}
+
+fn foo(type T)(v: T) -> Foo(type T) {
+    let f = init Foo(type T) {
+        f: v,
+    };
+
+    return f;
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn generic_function() {
+        let mod1 = 
+"mod mod1;
+
+fn foo(type T)(t: T) -> T {
+    let v: T = t;
+
+    return v;
+}
+";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn generic_struct_init_type_arg_error() {
+        let mod1 =
+"mod mod1;
+
+struct Foo(type T) {
+    f: T,
+}
+
+fn foo(type T)(v: T) -> Foo(type T) {
+    let f = init Foo {
+        f: v,
+    };
+
+    return f;
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err());
+    }
+
+    #[test]
+    fn generic_fn_binding() {
+        let mod1 =
+"mod mod1;
+
+fn bar(type T)(v: T) -> T {
+    return v;
+}
+
+fn foo(type A)(v: A) -> A {
+    let b: fn(A) -> A = bar(type A);
+    let result: A = b(v);
+
+    return result;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn generic_builtin_fn_binding() {
+        let mod1 =
+"mod mod1;
+
+builtin fn bar(type T)(v: T) -> T;
+
+fn foo(type A)(v: A) -> A {
+    let b: fn(A) -> A = bar(type A);
+    let result: A = b(v);
+
+    return result;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn instantiate_fn_binding() {
+        let mod1 =
+"mod mod1;
+
+fn bar(type T)(v: T) -> T {
+    return v;
+}
+
+fn foo(v: int) -> int {
+    let b: fn(int) -> int = bar(type int);
+    let result: int = b(v);
+
+    return result;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn instantiate_builtin_fn_binding() {
+        let mod1 =
+"mod mod1;
+
+builtin fn bar(type T)(v: T) -> T;
+
+fn foo(v: int) -> int {
+    let b: fn(int) -> int = bar(type int);
+    let result: int = b(v);
+
+    return result;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn generic_fn_binding_invalid_type() {
+        let mod1 =
+"mod mod1;
+
+fn bar(type T)(v: T) -> T {
+    return v;
+}
+
+fn foo(type A)(v: A) -> A {
+    let b: fn(int) -> A = bar(type A);
+    let result: A = b(v);
+
+    return result;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err());
+    }
+
+    #[test]
+    fn generic_fn_param() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type A)(a1: A, a2: A, a3: A, f: fn (A, A, A) -> A) -> A {
+    let result: A = f(a1, a2, a3);
+
+    return result;
+}";
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _err = check_program(vec![mod1]).unwrap();
     }

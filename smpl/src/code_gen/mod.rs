@@ -1,7 +1,4 @@
-mod rust_gen;
 pub mod interpreter;
-
-pub use self::rust_gen::RustBackend;
 
 struct StringEmitter {
     output: String,

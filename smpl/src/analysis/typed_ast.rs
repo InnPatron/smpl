@@ -10,7 +10,7 @@ pub use crate::ast::UniOp;
 pub use crate::ast::Literal;
 use crate::ast;
 
-use super::smpl_type::*;
+use super::type_cons::*;
 use super::semantic_data::*;
 use super::expr_flow;
 
@@ -20,7 +20,7 @@ where
     T: ::std::fmt::Debug + Clone,
 {
     data: T,
-    data_type: Cell<Option<TypeId>>,
+    data_type: RefCell<Option<Type>>,
 }
 
 impl<T> Typed<T>
@@ -38,37 +38,29 @@ where
     pub fn untyped(data: T) -> Typed<T> {
         Typed {
             data: data,
-            data_type: Cell::new(None),
+            data_type: RefCell::new(None),
         }
     }
 
-    pub fn typed(data: T, t: TypeId) -> Typed<T> {
+    pub fn typed(data: T, t: Type) -> Typed<T> {
         Typed {
             data: data,
-            data_type: Cell::new(Some(t)),
+            data_type: RefCell::new(Some(t)),
         }
     }
 
-    pub fn set_type_id(&self, t: TypeId) {
+    pub fn set_type(&self, t: Type) {
         // TODO: Handle type override
-        if self.data_type.get().is_some() {
+        let mut borrow = self.data_type.borrow_mut();
+        if borrow.is_some() {
             panic!("Attempting to overwrite the type of this node ({:?})", self);
         } else {
-            self.data_type.set(Some(t));
+            *borrow = Some(t);
         }
     }
 
-    pub fn type_id(&self) -> Option<TypeId> {
-        self.data_type.get()
-    }
-}
-
-impl<T> PartialEq<Typed<T>> for Typed<T>
-where
-    T: PartialEq + Clone + ::std::fmt::Debug,
-{
-    fn eq(&self, other: &Typed<T>) -> bool {
-        self.data == other.data && self.data_type == other.data_type
+    pub fn get_type(&self) -> Option<Type> {
+        self.data_type.borrow().clone()
     }
 }
 
@@ -112,29 +104,21 @@ impl Assignment {
 
 #[derive(Debug, Clone)]
 pub struct LocalVarDecl {
-    var_type: Option<ast::AstNode<ast::TypeAnnotation>>,
+    type_ann: Option<ast::AstNode<ast::TypeAnnotation>>,
     var_name: ast::AstNode<ast::Ident>,
     var_init: self::Expr,
-    type_id: Cell<Option<TypeId>>,
+    var_type: RefCell<Option<Type>>,
     var_id: VarId,
     span: Span,
-}
-
-impl PartialEq for LocalVarDecl {
-    fn eq(&self, other: &LocalVarDecl) -> bool {
-        self.var_type == other.var_type && self.var_name == other.var_name
-            && self.var_init == other.var_init && self.type_id == other.type_id
-            && self.var_id == other.var_id
-    }
 }
 
 impl LocalVarDecl {
     pub fn new(universe: &Universe, decl: ast::LocalVarDecl, stmt_span: Span) -> LocalVarDecl {
         LocalVarDecl {
-            var_type: decl.var_type,
+            type_ann: decl.var_type,
             var_name: decl.var_name,
             var_init: expr_flow::flatten(universe, decl.var_init),
-            type_id: Cell::new(None),
+            var_type: RefCell::new(None),
             var_id: universe.new_var_id(),
             span: stmt_span,
         }
@@ -145,26 +129,26 @@ impl LocalVarDecl {
     }
 
     pub fn type_annotation(&self) -> Option<&ast::TypeAnnotation> {
-        self.var_type.as_ref().map(|node| node.data())
+        self.type_ann.as_ref().map(|node| node.data())
     }
 
     pub fn var_name(&self) -> &ast::Ident {
         self.var_name.data()
     }
 
-    pub fn set_type_id(&self, id: TypeId) {
-        if self.type_id.get().is_some() {
+    pub fn set_type(&self, app: Type) {
+        let mut borrow = self.var_type.borrow_mut();
+        if borrow.is_some() {
             panic!(
-                "Attempting to override {} for local variable declarration {:?}",
-                id, self
+                "Attempting to override type for local variable declarration"
             );
         } else {
-            self.type_id.set(Some(id));
+            *borrow = Some(app);
         }
     }
 
-    pub fn type_id(&self) -> Option<TypeId> {
-        self.type_id.get()
+    pub fn var_type(&self) -> Option<Type> {
+        self.var_type.borrow().clone()
     }
 
     pub fn var_id(&self) -> VarId {
@@ -181,12 +165,6 @@ pub struct Expr {
     map: HashMap<TmpId, Tmp>,
     execution_order: Vec<TmpId>,
     span: Option<Span>,
-}
-
-impl PartialEq for Expr {
-    fn eq(&self, other: &Expr) -> bool {
-        self.map == other.map && self.execution_order == other.execution_order
-    }
 }
 
 impl Expr {
@@ -243,7 +221,7 @@ impl Expr {
             id: universe.new_tmp_id(),
             value: Typed {
                 data: val,
-                data_type: Cell::new(None),
+                data_type: RefCell::new(None),
             },
             span: span,
         };
@@ -264,12 +242,6 @@ pub struct Tmp {
     id: TmpId,
     value: Typed<Value>,
     span: Span,
-}
-
-impl PartialEq for Tmp {
-    fn eq(&self, other: &Tmp) -> bool {
-        self.id == other.id
-    }
 }
 
 impl Tmp {
@@ -303,9 +275,51 @@ pub enum Value {
     Indexing(Indexing),
     ModAccess(self::ModAccess),
     AnonymousFn(self::AnonymousFn),
+    TypeInst(self::TypeInst),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+// Can currently only type instantiate on static functions
+#[derive(Debug, Clone)]
+pub struct TypeInst {
+    path: ast::ModulePath,
+    args: Vec<ast::TypeAnnotation>,
+    fn_id: Cell<Option<FnId>>,
+}
+
+impl TypeInst {
+    pub fn new(path: ast::ModulePath, args: Vec<ast::TypeAnnotation>) -> TypeInst {
+        TypeInst {
+            path: path,
+            args: args,
+            fn_id: Cell::new(None),
+        }
+    }
+
+    pub fn path(&self) -> &ast::ModulePath {
+        &self.path
+    }
+
+    pub fn args(&self) -> &[ast::TypeAnnotation] {
+        &self.args
+    }
+
+    pub fn set_id(&self, id: FnId) {
+        if self.fn_id.get().is_some() {
+            panic!(
+                "Attempting to overwrite fn-id of the type-inst {:?}",
+                self.path
+            );
+        } else {
+            self.fn_id.set(Some(id));
+        }
+    }
+
+    pub fn get_id(&self) -> Option<FnId> {
+        self.fn_id.get()
+    } 
+}
+
+#[derive(Debug, Clone)]
 pub struct ModAccess {
     path: ast::ModulePath,
     id: Cell<Option<FnId>>,
@@ -350,38 +364,41 @@ pub enum ArrayInit {
 
 #[derive(Debug, Clone)]
 pub struct StructInit {
-    struct_type_name: ast::ModulePath,
+    struct_type_name: ast::TypedPath,
     field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>,
-    struct_type: Cell<Option<TypeId>>,
+    struct_type: RefCell<Option<Type>>,
     mapped_field_init: RefCell<Option<Vec<(FieldId, Typed<TmpId>)>>>,
 }
 
 impl StructInit {
     pub fn new(
-        struct_type_name: ast::ModulePath,
+        struct_type_name: ast::TypedPath,
         field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>,
     ) -> StructInit {
         StructInit {
             struct_type_name: struct_type_name,
-            struct_type: Cell::new(None),
+            struct_type: RefCell::new(None),
             field_init: field_init,
             mapped_field_init: RefCell::new(None),
         }
     }
 
     pub fn type_name(&self) -> &ast::ModulePath {
-        &self.struct_type_name
+        self.struct_type_name.module_path()
     }
 
-    pub fn set_struct_type(&self, id: TypeId) {
-        if self.struct_type.get().is_some() {
+    pub fn type_args(&self) -> Option<&[ast::TypeAnnotation]> {
+        self.struct_type_name.annotations()
+    }
+
+    pub fn set_struct_type(&self, app: Type) {
+        let mut borrow = self.struct_type.borrow_mut();
+        if borrow.is_some() {
             panic!(
-                "Attempting to overwrite {} of the struct init with {}",
-                self.struct_type.get().unwrap(),
-                id
+                "Attempting to overwrite struct type of struct init",
             );
         } else {
-            self.struct_type.set(Some(id));
+            *borrow = Some(app);
         }
     }
 
@@ -398,10 +415,16 @@ impl StructInit {
     }
 
     pub fn set_field_init(&self, universe: &Universe) -> Result<(), Vec<ast::Ident>> {
-        let t = universe.get_type(self.struct_type.get().unwrap());
-        let t = match *t {
-            SmplType::Struct(ref t) => t,
-            _ => unreachable!(),
+        let struct_type = self.struct_type.borrow();
+        let struct_type = struct_type.as_ref().unwrap();
+
+        let field_map = match struct_type {
+            Type::Record { 
+                    field_map: field_map,
+                    ..
+            } => field_map,
+
+            _ => unimplemented!(),
         };
 
         match self.field_init {
@@ -409,10 +432,10 @@ impl StructInit {
                 let mut result = Vec::new();
                 let mut unknown_fields = Vec::new();
                 for &(ref ident, ref tmp) in map.iter() {
-                    match t.field_id(ident) {
-                        Some(id) => {
-                            result.push((id, tmp.clone()));
-                        }
+                    match field_map.get(ident) {
+                        Some(field_id) => {
+                            result.push((field_id.clone(), tmp.clone()));
+                        },
 
                         None => {
                             unknown_fields.push(ident.clone());
@@ -432,8 +455,9 @@ impl StructInit {
         }
     }
 
-    pub fn struct_type(&self) -> Option<TypeId> {
-        self.struct_type.get()
+    pub fn struct_type(&self) -> Option<Type> {
+        let borrow = self.struct_type.borrow();
+        borrow.clone()
     }
 }
 
@@ -441,7 +465,7 @@ impl StructInit {
 pub struct FieldAccess {
     raw_path: ast::Path,
     path: self::Path,
-    field_type_id: Cell<Option<TypeId>>,
+    field_type: RefCell<Option<Type>>,
 }
 
 impl FieldAccess {
@@ -449,7 +473,7 @@ impl FieldAccess {
         FieldAccess {
             raw_path: path.clone(),
             path: self::Path::new(universe, expr, path),
-            field_type_id: Cell::new(None),
+            field_type: RefCell::new(None),
         }
     }
 
@@ -461,19 +485,20 @@ impl FieldAccess {
         &self.path
     }
 
-    pub fn set_field_type_id(&self, id: TypeId) {
-        if self.field_type_id.get().is_some() {
+    pub fn set_field_type(&self, app: Type) {
+        let mut borrow = self.field_type.borrow_mut();
+
+        if borrow.is_some() {
             panic!(
-                "Attempting to override {} for local variable declarration {:?}",
-                id, self
+                "Attempting to override type of a field access",
             );
         } else {
-            self.field_type_id.set(Some(id));
+            *borrow = Some(app);
         }
     }
 
-    pub fn field_type_id(&self) -> Option<TypeId> {
-        self.field_type_id.get()
+    pub fn field_type(&self) -> Option<Type> {
+        self.field_type.borrow().clone()
     }
 }
 
@@ -518,22 +543,20 @@ impl Binding {
 
 #[derive(Debug, Clone)]
 pub struct FnCall {
-    path: ast::ModulePath,
+    fn_value: TmpId,
     args: Option<Vec<Typed<TmpId>>>,
-    fn_nomer: Cell<Option<BindingId>>,
 }
 
 impl FnCall {
-    pub fn new(path: ast::ModulePath, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
+    pub fn new(fn_value: TmpId, args: Option<Vec<Typed<TmpId>>>) -> FnCall {
         FnCall {
-            path: path,
+            fn_value: fn_value,
             args: args,
-            fn_nomer: Cell::new(None),
         }
     }
 
-    pub fn path(&self) -> &ast::ModulePath {
-        &self.path
+    pub fn fn_value(&self) -> TmpId {
+        self.fn_value
     }
 
     pub fn args(&self) -> Option<&Vec<Typed<TmpId>>> {
@@ -542,25 +565,6 @@ impl FnCall {
 
     pub fn args_mut(&mut self) -> &mut Option<Vec<Typed<TmpId>>> {
         &mut self.args
-    }
-
-    pub fn set_id<T>(&self, id: T)
-    where
-        T: ::std::fmt::Debug + Into<BindingId>,
-    {
-        if self.fn_nomer.get().is_some() {
-            panic!(
-                "Attempting to overwrite {:#?} of the FnCall {:?}",
-                self.fn_nomer.get().unwrap(),
-                self.path
-            );
-        } else {
-            self.fn_nomer.set(Some(id.into()));
-        }
-    }
-
-    pub fn get_id(&self) -> Option<BindingId> {
-        self.fn_nomer.get()
     }
 }
 
@@ -616,11 +620,11 @@ impl self::Path {
         }
     }
 
-    pub fn root_var_type(&self) -> TypeId {
+    pub fn root_var_type(&self) -> Type {
         let r = self.root_var.borrow();
 
         match *r {
-            Some(ref typed_var_id) => typed_var_id.type_id().unwrap(),
+            Some(ref typed_var_id) => typed_var_id.get_type().unwrap().clone(),
             None => panic!("No root var"),
         }
     }
@@ -635,11 +639,11 @@ impl self::Path {
         *r = Some(Typed::untyped(id));
     }
 
-    pub fn set_root_var_type(&self, id: TypeId) {
+    pub fn set_root_var_type(&self, ty: Type) {
         let r = self.root_var.borrow_mut();
 
         match *r {
-            Some(ref t) => t.set_type_id(id),
+            Some(ref t) => t.set_type(ty),
             None => panic!("No root var"),
         }
     }
@@ -682,11 +686,11 @@ impl Field {
         }
     }
 
-    pub fn field_type(&self) -> TypeId {
+    pub fn field_type(&self) -> Type {
         let f = self.field_id.borrow();
 
         match *f {
-            Some(ref typed_field_id) => typed_field_id.type_id().unwrap(),
+            Some(ref typed_field_id) => typed_field_id.get_type().unwrap().clone(),
             None => panic!("No field"),
         }
     }
@@ -701,11 +705,11 @@ impl Field {
         *f = Some(Typed::untyped(id));
     }
 
-    pub fn set_field_type(&self, id: TypeId) {
+    pub fn set_field_type(&self, app: Type) {
         let f = self.field_id.borrow_mut();
 
         match *f {
-            Some(ref t) => t.set_type_id(id),
+            Some(ref t) => t.set_type(app),
             None => panic!("No field"),
         }
     }

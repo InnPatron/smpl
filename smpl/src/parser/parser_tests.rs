@@ -483,4 +483,94 @@ fn foo() { }";
 
         let _input = parse_module(wrap_input!(input)).unwrap();
     }
+
+    #[test]
+    fn parse_struct_decl_type_param() {
+        let input =
+"struct Foo(type Bar, Baz) {
+    b: Bar,
+}";
+        
+        let _input = parse_module(wrap_input!(input)).unwrap();
+    }
+
+    #[test]
+    fn parse_fn_decl_type_param() {
+        let input =
+"fn foo(type Bar, Baz)(a: Bar, b: Baz) -> Baz {
+    return a;
+}";
+        
+        let _input = parse_module(wrap_input!(input)).unwrap();
+    }
+
+    #[test]
+    fn parse_struct_init_type_arg() {
+        let input =
+"fn foo(a: Bar, b: Baz) {
+    init Bar(type Baq, Qux) { fi: fo };
+}";
+        
+        let _input = parse_module(wrap_input!(input)).unwrap();
+    }
+
+    #[test]
+    fn parse_fn_call_type_arg() {
+        let input =
+"fn foo(a: Bar, b: Baz) {
+    typed(type Bar)();
+}";
+        
+        let _input = parse_module(wrap_input!(input)).unwrap();
+    }
+
+    #[test]
+    fn parse_fn_generic_param() {
+        let input =
+"fn foo(bar: fn(type T)(T) -> T) {
+    bar();
+}";
+
+        let _input = parse_module(wrap_input!(input)).unwrap();
+    }
+
+    #[test]
+    fn parse_fn_generic() {
+        let input =
+"fn foo(type T)(bar: fn(type T)(T) -> T) {
+    bar();
+}";
+
+        let _input = parse_module(wrap_input!(input)).unwrap();
+    }
+
+    #[test]
+    fn parse_type_inst() {
+        let input =
+"fn foo() {
+    let a = bar(type int);
+}";
+
+        let _input = parse_module(wrap_input!(input)).unwrap();
+    }
+
+    #[test]
+    fn parse_generic_struct_init() {
+        let mod1 =
+"mod mod1;
+
+struct Foo(type T) {
+    f: T,
+}
+
+fn foo(type T)(v: T) -> Foo(type T) {
+    let f = init Foo(type T) {
+        f: v,
+    };
+
+    return f;
+}";
+
+        let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
+    }
 }
