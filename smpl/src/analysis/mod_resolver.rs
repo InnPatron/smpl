@@ -13,6 +13,7 @@ use super::control_flow::CFG;
 use super::fn_analyzer::analyze_fn;
 use super::type_cons_gen::*;
 use super::type_cons::TypeApp;
+use super::cyclic_type_ck::cyclic_type_check;
 
 use crate::feature::*;
 
@@ -160,22 +161,7 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
         }
     }
 
-    // TODO: Cyclic type check
-    /*
-    for root in type_roots.into_iter() {
-        cyclic_type_check(program, root)?;
-        let struct_type = program.universe().get_type_cons(root);
-        let struct_type = irmatch!(*struct_type; SmplType::Struct(ref s) => s);
-        for field_type in struct_type
-            .fields
-            .iter()
-            .map(|(_, type_id)| type_id.clone())
-        {
-            let (universe, _, features) = program.analysis_context();
-            field_type_scanner(universe, features, field_type);
-        }
-    }
-    */
+    cyclic_type_check(program, type_roots)?;
 
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
@@ -214,53 +200,6 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
 
     Ok(())
 }
-
-// TODO: Cyclic type check
-/*
-fn cyclic_type_check(program: &Program, root_id: TypeId) -> Result<(), AnalysisError> {
-    let mut visited_structs = HashSet::new();
-    let mut to_visit = Vec::new();
-
-    to_visit.push(root_id);
-
-    loop {
-        let depth = to_visit;
-        to_visit = Vec::new();
-        for type_id in depth.into_iter() {
-            if visited_structs.contains(&type_id) {
-                return Err(TypeError::CyclicType(root_id).into());
-            }
-
-            match *program.universe().get_type(type_id) {
-                SmplType::Struct(ref struct_type) => {
-                    // Remove fields with duplicate types
-                    let set: HashSet<_> = struct_type
-                        .fields
-                        .iter()
-                        .map(|(_, type_id)| type_id.clone())
-                        .collect();
-
-                    to_visit = set.into_iter().collect();
-
-                    visited_structs.insert(type_id);
-                }
-
-                SmplType::Array(ref array_type) => {
-                    to_visit.push(array_type.base_type);
-                }
-
-                _ => continue,
-            }
-        }
-
-        if to_visit.len() == 0 {
-            break;
-        }
-    }
-
-    Ok(())
-}
-*/
 
 fn map_usings(
     raw_modules: &HashMap<ModuleId, RawModData>,

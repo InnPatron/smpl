@@ -10,6 +10,7 @@ mod fn_analyzer;
 mod linear_cfg_traversal;
 mod mod_resolver;
 pub mod type_cons;
+mod cyclic_type_ck;
 mod type_cons_gen;
 pub mod error;
 pub mod metadata;
