@@ -1046,4 +1046,61 @@ fn foo(type T)(v: T) -> Foo(type T) {
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err());
     }
+
+    #[test]
+    fn generic_fn_binding() {
+        let mod1 =
+"mod mod1;
+
+fn bar(type T)(v: T) -> T {
+    return v;
+}
+
+fn foo(type A)(v: A) -> A {
+    let b: fn(A) -> A = bar(type A);
+    let result: A = b(v);
+
+    return result;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn instantiate_fn_binding() {
+        let mod1 =
+"mod mod1;
+
+fn bar(type T)(v: T) -> T {
+    return v;
+}
+
+fn foo(v: int) -> int {
+    let b: fn(int) -> int = bar(type int);
+    let result: int = b(v);
+
+    return result;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn generic_fn_binding_invalid_type() {
+        let mod1 =
+"mod mod1;
+
+fn bar(type T)(v: T) -> T {
+    return v;
+}
+
+fn foo(type A)(v: A) -> A {
+    let b: fn(int) -> A = bar(type A);
+    let result: A = b(v);
+
+    return result;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err());
+    }
 }
