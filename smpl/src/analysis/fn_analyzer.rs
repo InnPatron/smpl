@@ -45,20 +45,29 @@ pub fn analyze_fn(
     };
 
     let current_scope = func.fn_scope().clone();
-    let fn_type = fn_type.apply(program.universe(), &current_scope)?;
+    let fn_type_cons = program.universe().get_type_cons(fn_type_id).unwrap();
 
-    let (return_type, fn_params) = match fn_type {
-        Type::Function {
+    let (return_type, fn_params) = match fn_type_cons {
+        TypeCons::Function {
             return_type: ref return_type,
             parameters: ref params,
-        } => (return_type.clone(), params),
+            ..
+        } => {
+            let return_type = return_type.apply(program.universe(), &current_scope)?;
+            let params = params
+                .iter()
+                .map(|p| p.apply(program.universe(), &current_scope))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            (return_type, params)
+        },
 
         ref t @ _ => panic!("{} not mapped to a function but a {:?}", fn_id, t),
     };
 
     let mut analyzer = FnAnalyzer {
         program: program,
-        fn_return_type: *return_type,
+        fn_return_type: return_type,
         current_scope: current_scope,
         scope_stack: Vec::new(),
         locals: Vec::new(),
@@ -875,11 +884,6 @@ impl<'a> FnAnalyzer<'a> {
                     let fn_type_id = self.program
                         .universe_mut()
                         .insert_type_cons(fn_type);
-
-                    let fn_type = TypeApp::Applied {
-                        type_cons: fn_type_id,
-                        args: None,
-                    }.apply(self.program.universe(), &self.current_scope)?;
 
                     let cfg = CFG::generate(self.program.universe_mut(), func.body.clone(), &fn_type)?;
 
