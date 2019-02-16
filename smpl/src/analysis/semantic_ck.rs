@@ -1137,4 +1137,18 @@ fn foo(type A)(v: A) -> A {
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err());
     }
+
+    #[test]
+    fn generic_fn_param() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type A)(a1: A, a2: A, a3: A, f: fn (A, A, A) -> A) -> A {
+    let result: A = f(a1, a2, a3);
+
+    return result;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
 }
