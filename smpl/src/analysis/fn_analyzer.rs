@@ -862,6 +862,7 @@ impl<'a> FnAnalyzer<'a> {
 
                 Value::ModAccess(ref access) => {
                     let fn_id = self.current_scope.get_fn(&access.path())?;
+                    access.set_fn_id(fn_id);
 
                     let fn_type_id = if self.program.metadata().is_builtin(fn_id) {
                         let f = self.program.universe().get_builtin_fn(fn_id);
@@ -921,6 +922,8 @@ impl<'a> FnAnalyzer<'a> {
                 Value::TypeInst(ref type_inst) => {
                     let fn_id = self.current_scope
                         .get_fn(type_inst.path())?;
+
+                    type_inst.set_id(fn_id);
 
                     let fn_type_id = if self.program.metadata().is_builtin(fn_id) {
                         let f = self.program.universe().get_builtin_fn(fn_id);
