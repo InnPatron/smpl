@@ -298,6 +298,13 @@ impl Universe {
         BranchingId(self.inc_counter())
     }
 
+    pub fn static_types(&self) -> Vec<(TypeId, TypeCons)> {
+        self.type_cons_map
+            .iter()
+            .map(|(id, cons)| (id.clone(), cons.clone()))
+            .collect()
+    }
+
     pub fn all_fns(&self) -> Vec<(FnId, Rc<Function>)> {
         self.fn_map
             .iter()
