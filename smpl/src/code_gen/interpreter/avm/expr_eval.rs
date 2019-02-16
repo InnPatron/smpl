@@ -306,17 +306,15 @@ fn eval_tmp(program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> Tmp
                                         .unwrap());
             }
 
-            let fn_id = match call.get_id().unwrap() {
-                BindingId::Var(var) => {
-                    let var = context.top().func_env.get_var(var).unwrap();
-                    let function = irmatch!(var; Value::Function(fn_id) => fn_id);
-                    function.id()
-                }
+            let fn_value = call.fn_value();
 
-                BindingId::Fn(fn_id) => fn_id,
-            };
-
-            
+            let fn_id = irmatch!(context
+                .top()
+                .func_env
+                .get_tmp(fn_value)
+                .expect("Type checker should have caught fn call on non-fn binding"); 
+                Value::Function(fn_handle) => fn_handle.id());
+                        
             let args: Option<Vec<_>> = call.args().map(|v| {
                 v.iter()
                     .map(|tmp| context.top().func_env.get_tmp(tmp.data().clone()).unwrap().clone())
