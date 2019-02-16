@@ -458,6 +458,11 @@ fn eval_tmp(program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> Tmp
             let fn_id = a_fn.fn_id();
             Value::Function(fn_id.into())
         }
+
+        AbstractValue::TypeInst(ref type_inst) => {
+            let fn_id = type_inst.get_id().unwrap();
+            Value::Function(fn_id.into())
+        }
     };
 
     TmpResult::Value(tmp_value)
