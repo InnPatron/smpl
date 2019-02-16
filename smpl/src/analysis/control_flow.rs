@@ -10,7 +10,7 @@ use super::error::{ControlFlowError, AnalysisError};
 use super::type_cons::*;
 use super::expr_flow;
 use super::typed_ast;
-use super::semantic_data::{LoopId, Universe};
+use super::semantic_data::{LoopId, Universe, ScopedData};
 
 use super::control_data::*;
 
@@ -352,6 +352,7 @@ impl CFG {
         universe: &Universe,
         body: ast::AstNode<ast::Block>,
         fn_type: &TypeCons,
+        fn_scope: &ScopedData,
     ) -> Result<Self, AnalysisError> {
         let mut cfg = {
             let mut graph = graph::Graph::new();
@@ -389,8 +390,8 @@ impl CFG {
             ..
         } = fn_type {
 
-            let unit = TypeApp::Applied { type_cons: universe.unit(), args: None };
-            if type_app_eq(universe, return_type, &unit)? {
+            let return_type = return_type.apply(universe, fn_scope)?;
+            if return_type == Type::Unit {
                 // TODO: Figure out how to get last line of function
                 append_node!(
                     cfg,

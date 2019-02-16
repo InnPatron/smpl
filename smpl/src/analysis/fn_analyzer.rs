@@ -881,11 +881,14 @@ impl<'a> FnAnalyzer<'a> {
                     let (func_scope, fn_type) =
                         generate_anonymous_fn_type(self.program, &self.current_scope, fn_id, func)?;
 
+                    let cfg = CFG::generate(self.program.universe_mut(), 
+                                            func.body.clone(), 
+                                            &fn_type,
+                                            &func_scope)?;
+
                     let fn_type_id = self.program
                         .universe_mut()
                         .insert_type_cons(fn_type);
-
-                    let cfg = CFG::generate(self.program.universe_mut(), func.body.clone(), &fn_type)?;
 
                     a_fn.set_fn_id(fn_id);
 

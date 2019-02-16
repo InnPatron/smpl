@@ -12,6 +12,7 @@ use super::semantic_data::Module;
 use super::control_flow::CFG;
 use super::fn_analyzer::analyze_fn;
 use super::type_cons_gen::*;
+use super::type_cons::TypeApp;
 
 use crate::feature::*;
 
@@ -104,15 +105,15 @@ pub fn check_modules(program: &mut Program, modules: Vec<ParsedModule>) -> Resul
                 fn_id,
                 reserved_fn.1.data(),
             )?;
+            
+            let cfg = CFG::generate(program.universe_mut(), 
+                                    fn_decl.body.clone(), 
+                                    &fn_type,
+                                    &fn_scope)?;
+
             let fn_type_id = program
                 .universe_mut()
                 .insert_type_cons(fn_type);
-
-            let fn_type = TypeApp::Applied {
-                type_cons: fn_type_id,
-                args: None,
-            };
-            let cfg = CFG::generate(program.universe_mut(), fn_decl.body.clone(), &fn_type)?;
 
             program
                 .universe_mut()
