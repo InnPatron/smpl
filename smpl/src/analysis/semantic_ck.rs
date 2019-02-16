@@ -802,6 +802,130 @@ struct TypeB {
     }
 
     #[test]
+    fn long_cyclic_type() {
+        let mod1 =
+"
+mod mod1;
+
+struct TypeA {
+    f1: TypeB
+}
+
+struct TypeB {
+    f1: TypeC
+}
+
+struct TypeC {
+    f1: TypeD
+}
+
+struct TypeD {
+    f1: TypeA
+}
+";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!(),
+            Err(e) => match e {
+                AnalysisError::TypeError(e) => {
+                    match e {
+                        TypeError::CyclicType(_) => (),
+                        _ => panic!(),
+                    }
+                }
+
+                _ => panic!(),
+            }
+        }
+    }
+
+    #[test]
+    fn generic_cyclic_type() {
+        let mod1 =
+"
+mod mod1;
+
+struct TypeA(type T) {
+    f1: TypeB(type T)
+}
+
+struct TypeB(type T) {
+    f1: TypeA(type T)
+}
+";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!(),
+            Err(e) => match e {
+                AnalysisError::TypeError(e) => {
+                    match e {
+                        TypeError::CyclicType(_) => (),
+                        _ => panic!(),
+                    }
+                }
+
+                _ => panic!(),
+            }
+        }
+    }
+
+    #[test]
+    fn self_cyclic_type() {
+        let mod1 =
+"
+mod mod1;
+
+struct TypeA {
+    f1: TypeA
+}
+";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!(),
+            Err(e) => match e {
+                AnalysisError::TypeError(e) => {
+                    match e {
+                        TypeError::CyclicType(_) => (),
+                        _ => panic!(),
+                    }
+                }
+
+                _ => panic!(),
+            }
+        }
+    }
+
+    #[test]
+    fn generic_self_cyclic_type() {
+        let mod1 =
+"
+mod mod1;
+
+struct TypeA(type A) {
+    f1: TypeA(type int)
+}
+";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!(),
+            Err(e) => match e {
+                AnalysisError::TypeError(e) => {
+                    match e {
+                        TypeError::CyclicType(_) => (),
+                        _ => panic!(),
+                    }
+                }
+
+                _ => panic!(),
+            }
+        }
+    }
+
+    #[test]
     fn cyclic_type_ck_empty_types() {
         let mod1 =
 "
