@@ -5,8 +5,6 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
 
-use strfmt::strfmt;
-
 use crate::module::*;
 use crate::parser::parse_module;
 
