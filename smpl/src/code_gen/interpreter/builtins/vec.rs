@@ -12,7 +12,7 @@ use crate::parser::parse_module;
 
 use crate::code_gen::interpreter::*;
 
-pub const MOD_VEC: &'static str = "vec_{item_type}";
+pub const MOD_VEC: &'static str = "vec";
 pub const VEC_NEW: &'static str = "new";
 pub const VEC_LEN: &'static str = "len";
 pub const VEC_CONTAINS: &'static str = "contains";
@@ -24,30 +24,10 @@ pub const VEC_REMOVE: &'static str = "remove";
 pub const VEC_DATA_KEY: &'static str = "__DATA";
 pub const VEC_LEN_KEY: &'static str = "__LEN";
 
-const VEC_FMT_ITEM_TYPE: &'static str = "item_type";
-const VEC_FMT_ITEM_TYPE_MOD: &'static str = "item_type_mod";
-const VEC_FMT_ITEM_USE: &'static str = "item_mod_use";
-
 const VEC_DECLARATION: &'static str = include_str!("vec.smpl");
 
-pub fn vm_module(item_type_mod: Option<&str>, item_type: &str) -> VmModule {
-    let item_mod_use = match item_type_mod {
-        Some(str) => format!("use {};", str),
-        None => "".to_string(),
-    };
-
-    let item_type_mod = match item_type_mod {
-        Some(str) => format!("{}::", str),
-        None => "".to_string(),
-    };
-
-    let mut vars = HashMap::new();
-    vars.insert(VEC_FMT_ITEM_TYPE.to_string(), item_type);
-    vars.insert(VEC_FMT_ITEM_TYPE_MOD.to_string(), &item_type_mod);
-    vars.insert(VEC_FMT_ITEM_USE.to_string(), &item_mod_use);
-
-    let decl = strfmt(&VEC_DECLARATION, &vars).unwrap();
-    let input = UnparsedModule::anonymous(&decl);
+pub fn vm_module() -> VmModule {
+    let input = UnparsedModule::anonymous(VEC_DECLARATION);
     let parsed = parse_module(input).unwrap();
 
 
@@ -249,13 +229,13 @@ fn interpreter_vec_new() {
     let mod1 =
 "
 mod mod1;
-use vec_int;
+use vec;
 
 fn vec_new() {
-let v = vec_int::new();
+    let v: vec::Vec(type int)= vec::new(type int)();
 }
 ";
-    let mut modules = vec![vm_module(None, "int"), 
+    let mut modules = vec![vm_module(), 
         VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
     let mut vm = AVM::new(Std::no_std(), modules).unwrap();
@@ -272,17 +252,17 @@ fn interpreter_vec_push() {
     let mod1 =
 "
 mod mod1;
-use vec_int;
+use vec;
 
 fn test() -> int {
-let v = vec_int::new();
-v = vec_int::push(v, 123);
-v = vec_int::push(v, 456);
+let v = vec::new(type int)();
+v = vec::push(type int)(v, 123);
+v = vec::push(type int)(v, 456);
 
-return vec_int::len(v);
+return vec::len(type int)(v);
 }
 ";
-    let mut modules = vec![vm_module(None, "int"), 
+    let mut modules = vec![vm_module(), 
         VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
     let mut vm = AVM::new(Std::no_std(), modules).unwrap();
@@ -299,20 +279,20 @@ fn interpreter_vec_get() {
     let mod1 =
 "
 mod mod1;
-use vec_int;
+use vec;
 
 fn test() -> int {
-let v = vec_int::new();
-v = vec_int::push(v, 123);
-v = vec_int::push(v, 456);
+let v = vec::new(type int)();
+v = vec::push(type int)(v, 123);
+v = vec::push(type int)(v, 456);
 
-let a = vec_int::get(v, 0);
-let b = vec_int::get(v, 1);
+let a = vec::get(type int)(v, 0);
+let b = vec::get(type int)(v, 1);
 
 return a * b;
 }
 ";
-    let mut modules = vec![vm_module(None, "int"), 
+    let mut modules = vec![vm_module(), 
         VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
     let mut vm = AVM::new(Std::no_std(), modules).unwrap();
@@ -329,20 +309,20 @@ fn interpreter_vec_remove() {
     let mod1 =
 "
 mod mod1;
-use vec_int;
+use vec;
 
 fn test() -> int {
-let v = vec_int::new();
-v = vec_int::push(v, 123);
-v = vec_int::push(v, 456);
-v = vec_int::push(v, 789);
+let v = vec::new(type int)();
+v = vec::push(type int)(v, 123);
+v = vec::push(type int)(v, 456);
+v = vec::push(type int)(v, 789);
 
-v = vec_int::remove(v, 1);
+v = vec::remove(type int)(v, 1);
 
-return vec_int::get(v, 1);
+return vec::get(type int)(v, 1);
 }
 ";
-    let mut modules = vec![vm_module(None, "int"), 
+    let mut modules = vec![vm_module(), 
         VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
     let mut vm = AVM::new(Std::no_std(), modules).unwrap();
@@ -359,21 +339,21 @@ fn interpreter_vec_insert() {
     let mod1 =
 "
 mod mod1;
-use vec_int;
+use vec;
 
 fn test() -> int {
-let v = vec_int::new();
-v = vec_int::push(v, 123);
-v = vec_int::push(v, 456);
+let v = vec::new(type int)();
+v = vec::push(type int)(v, 123);
+v = vec::push(type int)(v, 456);
 
-v = vec_int::insert(v, 0, 1337);
+v = vec::insert(type int)(v, 0, 1337);
 
-let a = vec_int::get(v, 0);
+let a = vec::get(type int)(v, 0);
 
 return a;
 }
 ";
-    let mut modules = vec![vm_module(None, "int"), 
+    let mut modules = vec![vm_module(), 
         VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
     let mut vm = AVM::new(Std::no_std(), modules).unwrap();
@@ -390,39 +370,37 @@ fn interpreter_vec_contains() {
     let mod1 =
 "
 mod mod1;
-use vec_int;
+use vec;
 
 fn test() -> bool {
-let v = vec_int::new();
-v = vec_int::push(v, 1);
-v = vec_int::push(v, 2);
-v = vec_int::push(v, 3);
-v = vec_int::push(v, 4);
-v = vec_int::push(v, 5);
-v = vec_int::push(v, 6);
-v = vec_int::push(v, 7);
+let v = vec::new(type int)();
+v = vec::push(type int)(v, 1);
+v = vec::push(type int)(v, 2);
+v = vec::push(type int)(v, 3);
+v = vec::push(type int)(v, 4);
+v = vec::push(type int)(v, 5);
+v = vec::push(type int)(v, 6);
+v = vec::push(type int)(v, 7);
 
-return vec_int::contains(v, 5);
+return vec::contains(type int)(v, 5);
 }
 
 fn test2() -> bool {
-let v = vec_int::new();
-v = vec_int::push(v, 1);
-v = vec_int::push(v, 2);
-v = vec_int::push(v, 3);
-v = vec_int::push(v, 4);
-v = vec_int::push(v, 5);
-v = vec_int::push(v, 6);
-v = vec_int::push(v, 7);
+let v = vec::new(type int)();
+v = vec::push(type int)(v, 1);
+v = vec::push(type int)(v, 2);
+v = vec::push(type int)(v, 3);
+v = vec::push(type int)(v, 4);
+v = vec::push(type int)(v, 5);
+v = vec::push(type int)(v, 6);
+v = vec::push(type int)(v, 7);
 
-return vec_int::contains(v, 20);
+return vec::contains(type int)(v, 20);
 }
 ";
-    let mut modules = vec![vm_module(None, "int"), 
+    let mut modules = vec![vm_module(), 
         VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
-
-    let mut vm = AVM::new(Std::no_std(), modules).unwrap();
-
+    let mut vm = AVM::new(Std::no_std(), modules).unwrap(); 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
     let result = vm.eval_fn_sync(fn_handle).unwrap();
