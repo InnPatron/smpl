@@ -6,7 +6,7 @@ SMPL is a simple statically typed programming language meant for easy embedding 
 
 ## Motivation
 
-SMPL was built to replace [Popstcl](https://gitlab.com/Random_Civvy/popstcl) as the scripting language of my choose-your-own-adventure engine [CYOA](https://gitlab.com/Random_Civvy/cyoa).
+SMPL was built to replace [Popstcl](https://github.com/InnPatron/Popstcl) as the scripting language of my choose-your-own-adventure engine [CYOA](https://github.com/InnPatron/cyoa).
 
 Popstcl has dynamic types and dynamic scoping, all of which I found painful to use.
 
