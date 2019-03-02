@@ -42,7 +42,7 @@ pub fn analyze_fn(
 
     let (return_type, fn_params) = match fn_type_cons {
         TypeCons::Function {
-            return_type: ref return_type,
+            ref return_type,
             parameters: ref params,
             ..
         } => {
@@ -302,7 +302,7 @@ impl<'a> FnAnalyzer<'a> {
 
             match var_type {
                 Type::Array {
-                    element_type: element_type,
+                    element_type,
                     ..
                 } => {
                     current_type = *element_type;
@@ -321,8 +321,8 @@ impl<'a> FnAnalyzer<'a> {
             let next_type;
             match current_type {
                 Type::Record {
-                    fields: ref fields,
-                    field_map: ref field_map,
+                    ref fields,
+                    ref field_map,
                     ..
                 } => match *field {
                     PathSegment::Ident(ref field) => {
@@ -367,7 +367,7 @@ impl<'a> FnAnalyzer<'a> {
 
                         match *field_type {
                             Type::Array {
-                                element_type: ref element_type,
+                                ref element_type,
                                 size: _,
                             } => {
                                 next_type = *(element_type.clone());
@@ -464,8 +464,8 @@ impl<'a> FnAnalyzer<'a> {
                     let (struct_type_id, fields, field_map) = match struct_type {
                         Type::Record {
                             type_id: struct_type_id,
-                            fields: ref fields,
-                            field_map: ref field_map,
+                            ref fields,
+                            ref field_map,
                             ..
                         } => (struct_type_id, fields, field_map),
 
@@ -657,7 +657,7 @@ impl<'a> FnAnalyzer<'a> {
                     match fn_value_tmp_type {
                         Type::Function {
                             parameters: ref params,
-                            return_type: ref return_type,
+                            ref return_type,
                             ..
                         } => {
                             tmp_type = *(return_type.clone());
@@ -719,7 +719,7 @@ impl<'a> FnAnalyzer<'a> {
                         }
 
                         Type::UncheckedFunction {
-                            return_type: return_type,
+                            return_type,
                             ..
                         } => {
                             tmp_type = *return_type;
@@ -807,7 +807,7 @@ impl<'a> FnAnalyzer<'a> {
 
                         match &tmp_type {
                             Type::Array {
-                                element_type: ref element_type,
+                                ref element_type,
                                 ..
                             } => element_type.clone(),
 

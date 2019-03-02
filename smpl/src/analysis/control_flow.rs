@@ -384,7 +384,7 @@ impl CFG {
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
 
         if let TypeCons::Function {
-            return_type: ref return_type,
+            ref return_type,
             ..
         } = fn_type
         {

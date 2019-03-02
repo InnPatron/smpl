@@ -419,7 +419,7 @@ impl StructInit {
 
         let field_map = match struct_type {
             Type::Record {
-                field_map: field_map,
+                field_map,
                 ..
             } => field_map,
 

@@ -35,13 +35,13 @@ pub fn cyclic_type_check(program: &Program) -> Result<(), TypeError> {
         use super::type_cons::TypeCons::*;
         match type_cons {
             UncheckedFunction {
-                return_type: ref return_type,
+                ref return_type,
                 ..
             } => connect_app(&mut type_graph, &type_node_map, *current, return_type),
 
             Function {
                 parameters: ref params,
-                return_type: ref return_type,
+                ref return_type,
                 ..
             } => {
                 connect_app(&mut type_graph, &type_node_map, *current, return_type);
@@ -51,12 +51,13 @@ pub fn cyclic_type_check(program: &Program) -> Result<(), TypeError> {
             }
 
             Array {
-                element_type: ref element_type,
+                ref element_type,
                 ..
             } => connect_app(&mut type_graph, &type_node_map, *current, element_type),
 
             Record {
-                fields: ref fields, ..
+                ref fields, 
+                ..
             } => fields
                 .values()
                 .for_each(|f_app| connect_app(&mut type_graph, &type_node_map, *current, f_app)),
@@ -90,7 +91,7 @@ fn connect_app(
     match to {
         TypeApp::Applied {
             type_cons: ref type_cons_id,
-            args: ref args,
+            ref args,
         } => {
             args.as_ref()
                 .map(|args| args.iter().for_each(|to| connect_app(graph, map, from, to)));

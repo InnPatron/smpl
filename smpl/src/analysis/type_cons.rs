@@ -91,17 +91,17 @@ impl TypeCons {
     fn type_params(&self) -> Option<&[TypeParamId]> {
         match *self {
             TypeCons::Function {
-                type_params: ref type_params,
+                ref type_params,
                 ..
             } => type_params.as_ref().map(|v| v.as_slice()),
 
             TypeCons::Record {
-                type_params: ref type_params,
+                ref type_params,
                 ..
             } => type_params.as_ref().map(|v| v.as_slice()),
 
             TypeCons::UncheckedFunction {
-                type_params: ref type_params,
+                ref type_params,
                 ..
             } => type_params.as_ref().map(|v| v.as_slice()),
 
@@ -147,7 +147,7 @@ impl TypeApp {
     ) -> Result<Type, TypeError> {
         match *self {
             TypeApp::Applied {
-                type_cons: ref type_cons,
+                ref type_cons,
                 args: ref type_args,
             } => {
                 let type_cons = universe.get_type_cons(*type_cons).unwrap();
@@ -211,7 +211,7 @@ impl TypeApp {
                     }
 
                     TypeCons::UncheckedFunction {
-                        return_type: ref return_type,
+                        ref return_type,
                         ..
                     } => {
                         let return_type = return_type.apply_internal(universe, param_map)?;
@@ -222,8 +222,8 @@ impl TypeApp {
                     }
 
                     TypeCons::Array {
-                        element_type: ref element_type,
-                        size: size,
+                        ref element_type,
+                        size,
                     } => {
                         let element_type = element_type.apply_internal(universe, param_map)?;
                         Ok(Type::Array {
@@ -233,7 +233,7 @@ impl TypeApp {
                     }
 
                     TypeCons::Record {
-                        type_id: type_id,
+                        type_id,
                         ref fields,
                         ref field_map,
                         ..
