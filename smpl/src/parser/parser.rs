@@ -483,12 +483,12 @@ pub fn teststruct_decl(tokens: &mut BufferedTokenizer) -> ParseErr<Struct> {
 }
 
 fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseErr<AstNode<Struct>> {
-    let (structLoc, _) = consume_token!(
+    let (struct_loc, _) = consume_token!(
         tokens,
         Token::Struct,
         parser_state!("struct-decl", "struct")
     );
-    let (nameLoc, structName) = consume_token!(tokens, 
+    let (name_loc, struct_name) = consume_token!(tokens, 
                                                Token::Identifier(i) => Ident(i),
                                                parser_state!("struct-decl", "name"));
 
@@ -538,16 +538,16 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
         parser_state!("struct-decl", "fields rbrace")
     );
 
-    let overallSpan = LocationSpan::new(structLoc.start(), rloc.start());
+    let overall_span = LocationSpan::new(struct_loc.start(), rloc.start());
 
     Ok(AstNode::new(
         Struct {
-            name: AstNode::new(structName, nameLoc),
+            name: AstNode::new(struct_name, name_loc),
             body: body,
             annotations: anns,
             type_params: type_params,
         },
-        overallSpan,
+        overall_span,
     ))
 }
 
