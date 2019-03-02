@@ -424,6 +424,7 @@ pub enum TypeAnnotation {
         Option<Vec<AstNode<TypeAnnotation>>>,
         Option<Box<AstNode<TypeAnnotation>>>,
     ),
+    WidthConstraint(Vec<AstNode<WidthConstraint>>),
 }
 
 impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
@@ -436,6 +437,7 @@ impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
                 p.as_ref().map(|v| v.as_slice()),
                 r.as_ref().map(|r| r.borrow()),
             ),
+            &TypeAnnotation::WidthConstraint(ref w) => TypeAnnotationRef::WidthConstraint(w.as_slice()),
         }
     }
 }
@@ -467,6 +469,7 @@ pub enum TypeAnnotationRef<'a> {
         Option<&'a [AstNode<TypeAnnotation>]>,
         Option<&'a AstNode<TypeAnnotation>>,
     ),
+    WidthConstraint(&'a [AstNode<WidthConstraint>]),
 }
 
 impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
@@ -479,6 +482,7 @@ impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
                 p.map(|params| params.iter().map(|param| param.clone()).collect()),
                 r.map(|r| Box::new(r.clone())),
             ),
+            TypeAnnotationRef::WidthConstraint(w) => TypeAnnotation::WidthConstraint(w.to_vec()),
         }
     }
 }
@@ -527,4 +531,10 @@ pub struct Annotation {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeParams {
     pub params: Vec<AstNode<Ident>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum WidthConstraint {
+    BaseStruct(AstNode<Ident>),
+    Anonymous(Vec<(AstNode<Ident>, AstNode<TypeAnnotation>)>),
 }
