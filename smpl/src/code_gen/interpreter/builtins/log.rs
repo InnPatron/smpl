@@ -17,7 +17,7 @@ pub fn vm_module() -> VmModule {
     let input = UnparsedModule::anonymous(LOG_DECLARATION);
     let parsed = parse_module(input).unwrap();
 
-    let mut module = VmModule::new(parsed)
+    let module = VmModule::new(parsed)
         .add_builtin(LOG_PRINT, print)
         .add_builtin(LOG_PRINTLN, println);
 

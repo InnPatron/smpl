@@ -376,7 +376,7 @@ impl ScopedData {
 
     pub fn type_cons<'a, 'b, 'c>(
         &'a self,
-        universe: &'b Universe,
+        _universe: &'b Universe,
         path: &'c ModulePath,
     ) -> Option<TypeId> {
         self.type_cons_map.get(path).map(|id| id.clone())

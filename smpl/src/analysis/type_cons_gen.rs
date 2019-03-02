@@ -1,12 +1,11 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::ast::{
-    AnonymousFn, BuiltinFnParams, BuiltinFunction, Function, Ident, ModulePath, Struct,
-    TypeAnnotation, TypeAnnotationRef, TypeParams,
+    AnonymousFn, BuiltinFnParams, BuiltinFunction, Function, Ident, Struct, TypeParams,
 };
 use crate::feature::*;
 
-use super::error::{AnalysisError, ApplicationError, TypeError};
+use super::error::{AnalysisError, TypeError};
 use super::metadata::*;
 use super::semantic_data::{FieldId, FnId, Program, ScopedData, TypeId, TypeParamId, Universe};
 use super::type_cons::*;
@@ -113,9 +112,8 @@ pub fn generate_fn_type(
     fn_id: FnId,
     fn_def: &Function,
 ) -> Result<(ScopedData, TypeCons), AnalysisError> {
-    use super::feature_checkers::*;
 
-    let (universe, metadata, features) = program.analysis_context();
+    let (universe, metadata, _features) = program.analysis_context();
 
     // Check no parameter naming conflicts
     let (scope, type_parameter_map) =
@@ -290,7 +288,7 @@ pub fn generate_anonymous_fn_type(
     fn_id: FnId,
     fn_def: &AnonymousFn,
 ) -> Result<(ScopedData, TypeCons), AnalysisError> {
-    let (universe, metadata, features) = program.analysis_context();
+    let (universe, metadata, _features) = program.analysis_context();
 
     // Check no parameter naming conflicts
     // TODO: Allow type parameters on anonymous functions?

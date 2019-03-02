@@ -1,7 +1,7 @@
 use crate::analysis::*;
 use crate::feature::*;
 
-pub fn var_type_scanner(u: &Universe, f: &mut PresentFeatures, t: TypeId) {
+pub fn var_type_scanner(_u: &Universe, _f: &mut PresentFeatures, _t: TypeId) {
     // TODO: var type scanner
     unimplemented!();
     /*
@@ -19,7 +19,7 @@ pub fn var_type_scanner(u: &Universe, f: &mut PresentFeatures, t: TypeId) {
     */
 }
 
-pub fn fn_sig_type_scanner(u: &Universe, f: &mut PresentFeatures, t: TypeId) {
+pub fn fn_sig_type_scanner(_u: &Universe, _f: &mut PresentFeatures, _t: TypeId) {
     // TODO: fn_sig_type_scanner
     unimplemented!();
     /*
@@ -37,7 +37,7 @@ pub fn fn_sig_type_scanner(u: &Universe, f: &mut PresentFeatures, t: TypeId) {
     */
 }
 
-pub fn field_type_scanner(u: &Universe, f: &mut PresentFeatures, t: TypeId) {
+pub fn field_type_scanner(_u: &Universe, _f: &mut PresentFeatures, _t: TypeId) {
     // TODO: field type scanner
     unimplemented!();
     /*

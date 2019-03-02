@@ -20,7 +20,7 @@ pub fn vm_module() -> VmModule {
     let input = UnparsedModule::anonymous(STRING_DECLARATION);
     let parsed = parse_module(input).unwrap();
 
-    let mut module = VmModule::new(parsed)
+    let module = VmModule::new(parsed)
         .add_builtin(STRING_LEN, len)
         .add_builtin(STRING_TO_STRING, to_string)
         .add_builtin(STRING_APPEND, append)

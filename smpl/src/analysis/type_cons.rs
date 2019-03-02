@@ -1,9 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-use crate::ast::{Ident, ModulePath, Struct, TypeAnnotation, TypeAnnotationRef, TypeParams};
+use crate::ast::{Ident, TypeAnnotationRef};
 
 use super::error::{AnalysisError, ApplicationError, TypeError};
-use super::semantic_data::{FieldId, FnId, Program, ScopedData, TypeId, TypeParamId, Universe};
+use super::semantic_data::{FieldId, ScopedData, TypeId, TypeParamId, Universe};
 
 macro_rules! nill_check {
     ($type_args: expr) => {{
@@ -91,17 +91,17 @@ impl TypeCons {
     fn type_params(&self) -> Option<&[TypeParamId]> {
         match *self {
             TypeCons::Function {
-                type_params: ref type_params,
+                ref type_params,
                 ..
             } => type_params.as_ref().map(|v| v.as_slice()),
 
             TypeCons::Record {
-                type_params: ref type_params,
+                ref type_params,
                 ..
             } => type_params.as_ref().map(|v| v.as_slice()),
 
             TypeCons::UncheckedFunction {
-                type_params: ref type_params,
+                ref type_params,
                 ..
             } => type_params.as_ref().map(|v| v.as_slice()),
 
@@ -147,7 +147,7 @@ impl TypeApp {
     ) -> Result<Type, TypeError> {
         match *self {
             TypeApp::Applied {
-                type_cons: ref type_cons,
+                ref type_cons,
                 args: ref type_args,
             } => {
                 let type_cons = universe.get_type_cons(*type_cons).unwrap();
@@ -193,9 +193,9 @@ impl TypeApp {
 
                 match type_cons {
                     TypeCons::Function {
-                        type_params: ref type_params,
-                        parameters: ref parameters,
-                        return_type: ref return_type,
+                        ref parameters,
+                        ref return_type,
+                        ..
                     } => {
                         let parameters = parameters
                             .iter()
@@ -211,8 +211,8 @@ impl TypeApp {
                     }
 
                     TypeCons::UncheckedFunction {
-                        type_params: ref type_params,
-                        return_type: ref return_type,
+                        ref return_type,
+                        ..
                     } => {
                         let return_type = return_type.apply_internal(universe, param_map)?;
 
@@ -222,8 +222,8 @@ impl TypeApp {
                     }
 
                     TypeCons::Array {
-                        element_type: ref element_type,
-                        size: size,
+                        ref element_type,
+                        size,
                     } => {
                         let element_type = element_type.apply_internal(universe, param_map)?;
                         Ok(Type::Array {
@@ -233,10 +233,10 @@ impl TypeApp {
                     }
 
                     TypeCons::Record {
-                        type_id: type_id,
-                        type_params: ref type_params,
-                        fields: ref fields,
-                        field_map: ref field_map,
+                        type_id,
+                        ref fields,
+                        ref field_map,
+                        ..
                     } => Ok(Type::Record {
                         type_id: type_id.clone(),
                         fields: fields
@@ -281,7 +281,7 @@ impl TypeApp {
                 let type_app = param_map.get(param_id).unwrap();
                 match type_app {
                     TypeApp::Param(ref param_id) => Ok(Type::Param(param_id.clone())),
-                    app @ _ => type_app.apply_internal(universe, param_map),
+                    _ => type_app.apply_internal(universe, param_map),
                 }
             }
         }

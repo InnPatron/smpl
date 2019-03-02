@@ -1,4 +1,3 @@
-use std::default::Default;
 use std::iter::{Enumerate, Iterator, Peekable};
 /// Inspired by Gluon, specifically gluon/parser/src/token.rs
 /// https://github.com/gluon-lang/gluon/blob/master/parser/src/token.rs

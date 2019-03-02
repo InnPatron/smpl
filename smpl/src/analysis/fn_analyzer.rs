@@ -1,20 +1,17 @@
 use petgraph::graph::NodeIndex;
 use std::collections::HashSet;
-use std::rc::Rc;
 
 use crate::ast;
 use crate::feature::*;
 
 use crate::span::Span;
 
-use super::metadata::FnLayout;
-
 use super::control_data::*;
 use super::control_flow::CFG;
 use super::error::*;
 use super::linear_cfg_traversal::*;
 use super::semantic_data::{
-    BindingInfo, FnId, ModuleId, Program, ScopedData, TypeId, Universe, VarId,
+    BindingInfo, FnId, ModuleId, Program, ScopedData, Universe, VarId,
 };
 use super::type_cons::*;
 use super::type_cons_gen::generate_anonymous_fn_type;
@@ -39,18 +36,13 @@ pub fn analyze_fn(
 ) -> Result<(), AnalysisError> {
     let func = program.universe().get_fn(fn_id);
     let fn_type_id = func.fn_type();
-
-    let fn_type = TypeApp::Applied {
-        type_cons: fn_type_id,
-        args: None,
-    };
-
+    
     let current_scope = func.fn_scope().clone();
     let fn_type_cons = program.universe().get_type_cons(fn_type_id).unwrap();
 
     let (return_type, fn_params) = match fn_type_cons {
         TypeCons::Function {
-            return_type: ref return_type,
+            ref return_type,
             parameters: ref params,
             ..
         } => {
@@ -159,7 +151,7 @@ fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, A
 }
 
 fn resolve_bin_op(
-    universe: &Universe,
+    _universe: &Universe,
     op: &ast::BinOp,
     lhs: Type,
     rhs: Type,
@@ -170,8 +162,6 @@ fn resolve_bin_op(
     let expected_int = Type::Int;
 
     let expected_float = Type::Float;
-
-    let expected_string = Type::String;
 
     let expected_bool = Type::Bool;
 
@@ -235,7 +225,7 @@ fn resolve_bin_op(
 }
 
 fn resolve_uni_op(
-    universe: &Universe,
+    _universe: &Universe,
     op: &ast::UniOp,
     tmp_type: Type,
     span: Span,
@@ -312,7 +302,7 @@ impl<'a> FnAnalyzer<'a> {
 
             match var_type {
                 Type::Array {
-                    element_type: element_type,
+                    element_type,
                     ..
                 } => {
                     current_type = *element_type;
@@ -331,8 +321,8 @@ impl<'a> FnAnalyzer<'a> {
             let next_type;
             match current_type {
                 Type::Record {
-                    fields: ref fields,
-                    field_map: ref field_map,
+                    ref fields,
+                    ref field_map,
                     ..
                 } => match *field {
                     PathSegment::Ident(ref field) => {
@@ -377,7 +367,7 @@ impl<'a> FnAnalyzer<'a> {
 
                         match *field_type {
                             Type::Array {
-                                element_type: ref element_type,
+                                ref element_type,
                                 size: _,
                             } => {
                                 next_type = *(element_type.clone());
@@ -425,7 +415,6 @@ impl<'a> FnAnalyzer<'a> {
                 Value::Literal(ref literal) => {
                     use crate::ast::Literal;
 
-                    let universe = self.program.universe();
                     let lit_type = match *literal {
                         Literal::Int(_) => Type::Int,
                         Literal::Float(_) => Type::Float,
@@ -475,8 +464,8 @@ impl<'a> FnAnalyzer<'a> {
                     let (struct_type_id, fields, field_map) = match struct_type {
                         Type::Record {
                             type_id: struct_type_id,
-                            fields: ref fields,
-                            field_map: ref field_map,
+                            ref fields,
+                            ref field_map,
                             ..
                         } => (struct_type_id, fields, field_map),
 
@@ -668,7 +657,7 @@ impl<'a> FnAnalyzer<'a> {
                     match fn_value_tmp_type {
                         Type::Function {
                             parameters: ref params,
-                            return_type: ref return_type,
+                            ref return_type,
                             ..
                         } => {
                             tmp_type = *(return_type.clone());
@@ -730,7 +719,7 @@ impl<'a> FnAnalyzer<'a> {
                         }
 
                         Type::UncheckedFunction {
-                            return_type: return_type,
+                            return_type,
                             ..
                         } => {
                             tmp_type = *return_type;
@@ -818,7 +807,7 @@ impl<'a> FnAnalyzer<'a> {
 
                         match &tmp_type {
                             Type::Array {
-                                element_type: ref element_type,
+                                ref element_type,
                                 ..
                             } => element_type.clone(),
 
@@ -1010,7 +999,6 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
 
         let name = var_decl.var_name().clone();
         let var_id = var_decl.var_id();
-        let var_type_annotation = var_decl.type_annotation();
 
         let var_type = var_decl.type_annotation().map(|ann| {
             type_app_from_annotation(self.program.universe_mut(), &self.current_scope, ann)
