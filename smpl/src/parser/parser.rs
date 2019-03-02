@@ -630,6 +630,7 @@ pub fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeA
         Module,
         FnType,
         ArrayType,
+        WidthConstraint,
         Err,
     }
 
@@ -639,6 +640,8 @@ pub fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeA
             Token::Fn => TypeAnnDec::FnType,
             Token::Identifier(_) => TypeAnnDec::Module,
             Token::LBracket => TypeAnnDec::ArrayType,
+            Token::Base => TypeAnnDec::WidthConstraint,
+            Token::LBrace => TypeAnnDec::WidthConstraint,
 
             _ => TypeAnnDec::Err,
         },
@@ -682,7 +685,114 @@ pub fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeA
             parser_state!("type-annotation", "array-type")
         )),
 
+        TypeAnnDec::WidthConstraint => {
+            let constraints = production!(
+                width_constraint_list(tokens),
+                parser_state!("type-annotation", "width-constraint-list")
+            );
+
+            let (constraints, constraints_span) = constraints.to_data();
+
+            Ok(AstNode::new(TypeAnnotation::WidthConstraint(constraints), constraints_span))
+        }
+
         TypeAnnDec::Err => unimplemented!(),
+    }
+}
+
+fn width_constraint_list(tokens: &mut BufferedTokenizer) 
+    -> ParseErr<AstNode<Vec<AstNode<WidthConstraint>>>> {
+
+    let first = production!(
+        width_constraint(tokens),
+        parser_state!("width-constraint-list", "constraint[0]")
+    );
+
+    let mut span = first.span();
+    let mut constraints = vec![first];
+    let mut counter = 1;
+    while peek_token!(
+        tokens,
+        |tok| match tok {
+            Token::Plus => true,
+            _ => false,
+        },
+        parser_state!("width-constraint-list", &format!("peek-constraint[{}]", counter))
+    ) {
+        let _plus = consume_token!(tokens,
+                                   Token::Plus,
+                                   parser_state!("width-constraint-list", "constraint-concat"));
+        let next_constraint = production!(
+            width_constraint(tokens),
+            parser_state!("width-constraint-list", &format!("constraint[{}]", counter))
+        );
+
+        span = LocationSpan::new(span.start(), next_constraint.span().end());
+        constraints.push(next_constraint);
+
+        counter += 1;
+    }
+
+    let constraints = AstNode::new(constraints, span);
+    Ok(constraints)
+}
+
+fn width_constraint(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<WidthConstraint>> {
+
+    enum WCDec {
+        Base,
+        Anon,
+        Error(Token),
+    }
+
+    match peek_token!(
+        tokens,
+        |tok| match tok {
+            Token::LBrace => WCDec::Anon,
+            Token::Base => WCDec::Base,
+            _ => WCDec::Error(tok.clone()),
+        },
+        parser_state!("width-constraint", "constraint-peek")) {
+
+        WCDec::Base => {
+            let (base_loc, _) = consume_token!(tokens, 
+                                               Token::Base,
+                                               parser_state!("width-constraint", "base"));
+            let (name_loc, name) = consume_token!(tokens, 
+                                      Token::Identifier(i) => Ident(i),
+                                      parser_state!("width-constraint", "base-struct"));
+
+            let span = LocationSpan::new(base_loc.start(), name_loc.end());
+
+            let constraint = 
+                AstNode::new(WidthConstraint::BaseStruct(AstNode::new(name, name_loc)), span);
+
+            Ok(constraint)
+
+        },
+
+        WCDec::Anon => {
+            let (l_loc, _) = consume_token!(tokens, 
+                                            Token::LBrace,
+                                            parser_state!("width-constraint", "anonymous-open"));
+            let fields = production!(
+                struct_field_list(tokens),
+                parser_state!("width-constraint", "anonymous-struct")
+            )
+                .into_iter()
+                .map(|struct_field| (struct_field.name, struct_field.field_type))
+                .collect();
+
+            let (r_loc, _) = consume_token!(tokens, 
+                                            Token::RBrace,
+                                            parser_state!("width-constraint", "anonymous-close"));
+            let span = LocationSpan::new(l_loc.start(), r_loc.end());
+            let constraint = AstNode::new(WidthConstraint::Anonymous(fields), span);
+
+            Ok(constraint)
+        },
+
+        WCDec::Error(tok) => panic!("{}", tok),
     }
 }
 
