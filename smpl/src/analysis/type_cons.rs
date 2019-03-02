@@ -15,7 +15,7 @@ macro_rules! nill_check {
 }
 
 /// Use during analysis
-#[derive(PartialEq, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub enum Type {
     UncheckedFunction {
         return_type: Box<Type>,

@@ -10,6 +10,7 @@ use super::error::{AnalysisError, ControlFlowError};
 use super::expr_flow;
 use super::semantic_data::{LoopId, ScopedData, Universe};
 use super::type_cons::*;
+use super::type_resolver::resolve_types;
 use super::typed_ast;
 
 use super::control_data::*;
@@ -389,7 +390,7 @@ impl CFG {
         } = fn_type
         {
             let return_type = return_type.apply(universe, fn_scope)?;
-            if return_type == Type::Unit {
+            if resolve_types(&return_type, &Type::Unit) {
                 // TODO: Figure out how to get last line of function
                 append_node!(
                     cfg,
