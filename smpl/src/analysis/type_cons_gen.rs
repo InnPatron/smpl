@@ -126,7 +126,7 @@ pub fn generate_fn_type(
             // TODO: Function signature scanner?
             type_app
         }
-        None => TypeApp::Applied {
+        None => AbstractType::App {
             type_cons: universe.unit(),
             args: None,
         },
@@ -201,7 +201,7 @@ pub fn generate_builtin_fn_type(
             // TODO: Function signature scanner?
             type_app
         }
-        None => TypeApp::Applied {
+        None => AbstractType::App {
             type_cons: universe.unit(),
             args: None,
         },
@@ -301,7 +301,7 @@ pub fn generate_anonymous_fn_type(
             // TODO: Function signature scanner?
             type_app
         }
-        None => TypeApp::Applied {
+        None => AbstractType::App {
             type_cons: universe.unit(),
             args: None,
         },

@@ -701,14 +701,14 @@ mod tests {
         }
     }
 
-    fn expected_app(tc: TypeId) -> TypeApp {
-        TypeApp::Applied {
+    fn expected_app(tc: TypeId) -> AbstractType {
+        AbstractType::App {
             type_cons: tc,
             args: None
         }
     }
 
-    fn fn_type_cons(params: Vec<TypeApp>, return_type: TypeApp) -> TypeCons {
+    fn fn_type_cons(params: Vec<AbstractType>, return_type: AbstractType) -> TypeCons {
         let tc = TypeCons::Function {
             parameters: params,
             return_type: return_type,

@@ -454,7 +454,7 @@ impl<'a> FnAnalyzer<'a> {
                     };
 
                     // TODO: Take into account type arguments
-                    let struct_type = TypeApp::Applied {
+                    let struct_type = AbstractType::App {
                         type_cons: struct_type_id,
                         args: type_args,
                     }
@@ -603,7 +603,7 @@ impl<'a> FnAnalyzer<'a> {
                             f.fn_type().clone()
                         };
 
-                        let fn_type = TypeApp::Applied {
+                        let fn_type = AbstractType::App {
                             type_cons: fn_type_id,
                             args: None,
                         }
@@ -857,7 +857,7 @@ impl<'a> FnAnalyzer<'a> {
                         f.fn_type().clone()
                     };
 
-                    tmp_type = TypeApp::Applied {
+                    tmp_type = AbstractType::App {
                         type_cons: fn_type_id,
                         args: None,
                     }
@@ -893,7 +893,7 @@ impl<'a> FnAnalyzer<'a> {
                     analyze_fn(self.program, fn_id, self.module_id)?;
 
                     // TODO: Construct type directly
-                    tmp_type = TypeApp::Applied {
+                    tmp_type = AbstractType::App {
                         type_cons: fn_type_id,
                         args: None,
                     }
@@ -927,7 +927,7 @@ impl<'a> FnAnalyzer<'a> {
                         })
                         .collect::<Result<Vec<_>, _>>()?;
 
-                    tmp_type = TypeApp::Applied {
+                    tmp_type = AbstractType::App {
                         type_cons: fn_type_id,
                         args: Some(type_args),
                     }

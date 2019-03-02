@@ -46,29 +46,29 @@ pub enum Type {
     Unit,
 }
 
-/// Use TypeCons and TypeApp for type constructor mapping and graphing
+/// Use TypeCons and AbstractType for type constructor mapping and graphing
 #[derive(Debug, Clone)]
 pub enum TypeCons {
     UncheckedFunction {
         type_params: Option<Vec<TypeParamId>>,
-        return_type: TypeApp,
+        return_type: AbstractType,
     },
 
     Function {
         type_params: Option<Vec<TypeParamId>>,
-        parameters: Vec<TypeApp>,
-        return_type: TypeApp,
+        parameters: Vec<AbstractType>,
+        return_type: AbstractType,
     },
 
     Array {
-        element_type: TypeApp,
+        element_type: AbstractType,
         size: u64,
     },
 
     Record {
         type_id: TypeId,
         type_params: Option<Vec<TypeParamId>>,
-        fields: HashMap<FieldId, TypeApp>,
+        fields: HashMap<FieldId, AbstractType>,
         field_map: HashMap<Ident, FieldId>,
     },
 
@@ -111,30 +111,30 @@ impl TypeCons {
 }
 
 #[derive(Debug, Clone)]
-pub enum TypeApp {
-    Applied {
+pub enum AbstractType {
+    App {
         type_cons: TypeId,
-        args: Option<Vec<TypeApp>>,
+        args: Option<Vec<AbstractType>>,
     },
 
     Param(TypeParamId),
 }
 
-impl TypeApp {
+impl AbstractType {
     pub fn type_cons(&self) -> Option<TypeId> {
         match *self {
-            TypeApp::Applied {
+            AbstractType::App {
                 type_cons: ref tc, ..
             } => Some(tc.clone()),
 
-            TypeApp::Param(_) => None,
+            AbstractType::Param(_) => None,
         }
     }
 
     pub fn apply(&self, universe: &Universe, scope: &ScopedData) -> Result<Type, TypeError> {
         let param_map = scope
             .type_params()
-            .map(|id| (id, TypeApp::Param(id)))
+            .map(|id| (id, AbstractType::Param(id)))
             .collect::<HashMap<_, _>>();
 
         self.apply_internal(universe, &param_map)
@@ -143,10 +143,10 @@ impl TypeApp {
     fn apply_internal(
         &self,
         universe: &Universe,
-        param_map: &HashMap<TypeParamId, TypeApp>,
+        param_map: &HashMap<TypeParamId, AbstractType>,
     ) -> Result<Type, TypeError> {
         match *self {
-            TypeApp::Applied {
+            AbstractType::App {
                 ref type_cons,
                 args: ref type_args,
             } => {
@@ -277,10 +277,10 @@ impl TypeApp {
                 }
             }
 
-            TypeApp::Param(ref param_id) => {
+            AbstractType::Param(ref param_id) => {
                 let type_app = param_map.get(param_id).unwrap();
                 match type_app {
-                    TypeApp::Param(ref param_id) => Ok(Type::Param(param_id.clone())),
+                    AbstractType::Param(ref param_id) => Ok(Type::Param(param_id.clone())),
                     _ => type_app.apply_internal(universe, param_map),
                 }
             }
@@ -292,7 +292,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
     universe: &'a mut Universe,
     scope: &'b ScopedData,
     anno: T,
-) -> Result<TypeApp, AnalysisError> {
+) -> Result<AbstractType, AnalysisError> {
     match anno.into() {
         TypeAnnotationRef::Path(typed_path) => {
             // Check if path refers to type parameter
@@ -311,7 +311,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                         .into());
                     }
 
-                    return Ok(TypeApp::Param(tp_id));
+                    return Ok(AbstractType::Param(tp_id));
                 }
             }
 
@@ -341,7 +341,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                 None => None,
             };
 
-            Ok(TypeApp::Applied {
+            Ok(AbstractType::App {
                 type_cons: type_cons,
                 args: type_args,
             })
@@ -356,7 +356,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
             let type_id = universe.insert_generated_type_cons(cons);
 
-            Ok(TypeApp::Applied {
+            Ok(AbstractType::App {
                 type_cons: type_id,
                 args: None,
             })
@@ -412,7 +412,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             let cons = TypeCons::Function {
                 type_params: local_type_params,
                 parameters: arg_type_cons.unwrap_or(Vec::new()),
-                return_type: return_type_cons.unwrap_or(TypeApp::Applied {
+                return_type: return_type_cons.unwrap_or(AbstractType::App {
                     type_cons: universe.unit(),
                     args: None,
                 }),
@@ -420,7 +420,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
             let type_id = universe.insert_generated_type_cons(cons);
 
-            Ok(TypeApp::Applied {
+            Ok(AbstractType::App {
                 type_cons: type_id,
                 args: None,
             })
