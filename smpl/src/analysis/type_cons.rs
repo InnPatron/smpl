@@ -37,6 +37,10 @@ pub enum Type {
         field_map: HashMap<Ident, FieldId>,
     },
 
+    WidthConstraint {
+        fields: HashMap<Ident, Type>,
+    },
+
     Param(TypeParamId),
 
     Int,
@@ -117,6 +121,10 @@ pub enum AbstractType {
         args: Option<Vec<AbstractType>>,
     },
 
+    WidthConstraint {
+        fields: HashMap<Ident, AbstractType>,
+    },
+
     Param(TypeParamId),
 }
 
@@ -127,7 +135,7 @@ impl AbstractType {
                 type_cons: ref tc, ..
             } => Some(tc.clone()),
 
-            AbstractType::Param(_) => None,
+            _ => None,
         }
     }
 
@@ -275,6 +283,21 @@ impl AbstractType {
                         Ok(Type::Unit)
                     }
                 }
+            },
+
+            AbstractType::WidthConstraint { 
+                ref fields
+            } => {
+                let fields = fields
+                    .iter()
+                    .map(|(k, v)| {
+                            v.apply_internal(universe, param_map)
+                                .map(|t| (k.clone(), t))
+                }).collect::<Result<HashMap<_, _>, _>>()?;
+
+                Ok(Type::WidthConstraint {
+                    fields
+                })
             }
 
             AbstractType::Param(ref param_id) => {
