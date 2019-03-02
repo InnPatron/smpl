@@ -23,7 +23,7 @@ pub fn vm_module() -> VmModule {
     let input = UnparsedModule::anonymous(CONVERT_DECLARATION);
     let parsed = parse_module(input).unwrap();
 
-    let mut module = VmModule::new(parsed)
+    let module = VmModule::new(parsed)
         .add_builtin(CONVERT_INT_TO_FLOAT, int_to_float)
         .add_builtin(CONVERT_FLOAT_TO_INT, float_to_int)
         .add_builtin(CONVERT_IS_FLOAT, is_float)

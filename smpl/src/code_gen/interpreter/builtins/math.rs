@@ -34,7 +34,7 @@ pub fn vm_module() -> VmModule {
     let input = UnparsedModule::anonymous(MATH_DECLARATION);
     let parsed = parse_module(input).unwrap();
 
-    let mut module = VmModule::new(parsed)
+    let module = VmModule::new(parsed)
         .add_builtin(MATH_SIN, sin)
         .add_builtin(MATH_COS, cos)
         .add_builtin(MATH_TAN, tan)

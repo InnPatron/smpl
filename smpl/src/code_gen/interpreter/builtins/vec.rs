@@ -27,7 +27,7 @@ pub fn vm_module() -> VmModule {
     let input = UnparsedModule::anonymous(VEC_DECLARATION);
     let parsed = parse_module(input).unwrap();
 
-    let mut module = VmModule::new(parsed)
+    let module = VmModule::new(parsed)
         .add_builtin(VEC_NEW, new)
         .add_builtin(VEC_LEN, len)
         .add_builtin(VEC_CONTAINS, contains)

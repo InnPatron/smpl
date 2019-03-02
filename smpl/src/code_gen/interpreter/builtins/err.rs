@@ -17,7 +17,7 @@ pub fn vm_module() -> VmModule {
     let input = UnparsedModule::anonymous(ERR_DECLARATION);
     let parsed = parse_module(input).unwrap();
 
-    let mut module = VmModule::new(parsed)
+    let module = VmModule::new(parsed)
         .add_builtin(ERR_PANIC, panic)
         .add_builtin(ERR_PANIC_MSG, panic_msg)
         .add_builtin(ERR_ASSERT, assert);
