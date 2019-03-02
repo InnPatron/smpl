@@ -193,9 +193,9 @@ impl TypeApp {
 
                 match type_cons {
                     TypeCons::Function {
-                        type_params: ref type_params,
-                        parameters: ref parameters,
-                        return_type: ref return_type,
+                        ref parameters,
+                        ref return_type,
+                        ..
                     } => {
                         let parameters = parameters
                             .iter()
@@ -211,8 +211,8 @@ impl TypeApp {
                     }
 
                     TypeCons::UncheckedFunction {
-                        type_params: ref type_params,
                         return_type: ref return_type,
+                        ..
                     } => {
                         let return_type = return_type.apply_internal(universe, param_map)?;
 
@@ -234,9 +234,9 @@ impl TypeApp {
 
                     TypeCons::Record {
                         type_id: type_id,
-                        type_params: ref type_params,
-                        fields: ref fields,
-                        field_map: ref field_map,
+                        ref fields,
+                        ref field_map,
+                        ..
                     } => Ok(Type::Record {
                         type_id: type_id.clone(),
                         fields: fields
@@ -281,7 +281,7 @@ impl TypeApp {
                 let type_app = param_map.get(param_id).unwrap();
                 match type_app {
                     TypeApp::Param(ref param_id) => Ok(Type::Param(param_id.clone())),
-                    app @ _ => type_app.apply_internal(universe, param_map),
+                    _ => type_app.apply_internal(universe, param_map),
                 }
             }
         }

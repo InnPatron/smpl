@@ -68,7 +68,6 @@ pub fn check_modules(
 
     map_usings(&raw_data, &mut raw_program)?;
 
-    let mut type_roots = Vec::new();
     // Map ALL structs into the universe before generating functions
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_type) in raw_mod.reserved_structs.iter() {
@@ -83,8 +82,6 @@ pub fn check_modules(
             program
                 .universe_mut()
                 .manual_insert_type_cons(type_id, struct_type);
-
-            type_roots.push(type_id);
 
             let field_ordering = FieldOrdering::new(type_id, field_ordering);
             program
@@ -158,7 +155,7 @@ pub fn check_modules(
         }
     }
 
-    cyclic_type_check(program, type_roots)?;
+    cyclic_type_check(program)?;
 
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
@@ -277,7 +274,7 @@ fn raw_mod_data(
     program: &mut Program,
     modules: Vec<ParsedModule>,
 ) -> Result<(HashMap<ModuleId, RawModData>, Vec<(ModuleId, ModuleSource)>), AnalysisError> {
-    let (universe, metadata, _) = program.analysis_context();
+    let (universe, _metadata, _) = program.analysis_context();
     let mut mod_map = HashMap::new();
     let mut source_map = Vec::new();
 

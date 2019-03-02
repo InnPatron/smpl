@@ -87,7 +87,7 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
         AstExpr::FnCall(fn_call) => {
             let (fn_call, span) = fn_call.to_data();
             let path = fn_call.path;
-            let (fn_val, fn_val_span) = flatten_expr(universe, scope, AstExpr::Path(path));
+            let (fn_val, _fn_val_span) = flatten_expr(universe, scope, AstExpr::Path(path));
             let args = fn_call.args.map(|vec| {
                 vec.into_iter()
                     .map(|e| Typed::untyped(flatten_expr(universe, scope, e).0))

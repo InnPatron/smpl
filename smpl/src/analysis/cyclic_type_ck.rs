@@ -13,7 +13,7 @@ enum Node {
 
 type TypeGraph = Graph<Node, ()>;
 
-pub fn cyclic_type_check(program: &Program, type_roots: Vec<TypeId>) -> Result<(), TypeError> {
+pub fn cyclic_type_check(program: &Program) -> Result<(), TypeError> {
     let mut type_node_map = HashMap::new();
     let mut type_graph = TypeGraph::new();
 

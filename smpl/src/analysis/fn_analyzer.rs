@@ -36,12 +36,7 @@ pub fn analyze_fn(
 ) -> Result<(), AnalysisError> {
     let func = program.universe().get_fn(fn_id);
     let fn_type_id = func.fn_type();
-
-    let fn_type = TypeApp::Applied {
-        type_cons: fn_type_id,
-        args: None,
-    };
-
+    
     let current_scope = func.fn_scope().clone();
     let fn_type_cons = program.universe().get_type_cons(fn_type_id).unwrap();
 
@@ -156,7 +151,7 @@ fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, A
 }
 
 fn resolve_bin_op(
-    universe: &Universe,
+    _universe: &Universe,
     op: &ast::BinOp,
     lhs: Type,
     rhs: Type,
@@ -167,8 +162,6 @@ fn resolve_bin_op(
     let expected_int = Type::Int;
 
     let expected_float = Type::Float;
-
-    let expected_string = Type::String;
 
     let expected_bool = Type::Bool;
 
@@ -232,7 +225,7 @@ fn resolve_bin_op(
 }
 
 fn resolve_uni_op(
-    universe: &Universe,
+    _universe: &Universe,
     op: &ast::UniOp,
     tmp_type: Type,
     span: Span,
@@ -422,7 +415,6 @@ impl<'a> FnAnalyzer<'a> {
                 Value::Literal(ref literal) => {
                     use crate::ast::Literal;
 
-                    let universe = self.program.universe();
                     let lit_type = match *literal {
                         Literal::Int(_) => Type::Int,
                         Literal::Float(_) => Type::Float,
@@ -1007,7 +999,6 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
 
         let name = var_decl.var_name().clone();
         let var_id = var_decl.var_id();
-        let var_type_annotation = var_decl.type_annotation();
 
         let var_type = var_decl.type_annotation().map(|ann| {
             type_app_from_annotation(self.program.universe_mut(), &self.current_scope, ann)

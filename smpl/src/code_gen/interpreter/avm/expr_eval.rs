@@ -278,7 +278,7 @@ enum TmpResult {
     FnCall(FnId, Option<Vec<Value>>),
 }
 
-fn eval_tmp(program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> TmpResult {
+fn eval_tmp(_program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> TmpResult {
     let tmp_value = match *tmp.value().data() {
         AbstractValue::Literal(ref literal) => match *literal {
             Literal::Bool(b) => Value::Bool(b),

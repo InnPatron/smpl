@@ -113,7 +113,7 @@ pub fn generate_fn_type(
     fn_def: &Function,
 ) -> Result<(ScopedData, TypeCons), AnalysisError> {
 
-    let (universe, metadata, features) = program.analysis_context();
+    let (universe, metadata, _features) = program.analysis_context();
 
     // Check no parameter naming conflicts
     let (scope, type_parameter_map) =
@@ -288,7 +288,7 @@ pub fn generate_anonymous_fn_type(
     fn_id: FnId,
     fn_def: &AnonymousFn,
 ) -> Result<(ScopedData, TypeCons), AnalysisError> {
-    let (universe, metadata, features) = program.analysis_context();
+    let (universe, metadata, _features) = program.analysis_context();
 
     // Check no parameter naming conflicts
     // TODO: Allow type parameters on anonymous functions?

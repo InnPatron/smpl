@@ -413,7 +413,7 @@ impl StructInit {
         }
     }
 
-    pub fn set_field_init(&self, universe: &Universe) -> Result<(), Vec<ast::Ident>> {
+    pub fn set_field_init(&self, _universe: &Universe) -> Result<(), Vec<ast::Ident>> {
         let struct_type = self.struct_type.borrow();
         let struct_type = struct_type.as_ref().unwrap();
 
