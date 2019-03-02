@@ -2,7 +2,6 @@ use failure::Error;
 
 use crate::{exact_args, no_args};
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::module::*;

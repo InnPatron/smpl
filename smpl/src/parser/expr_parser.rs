@@ -1,4 +1,4 @@
-use std::iter::{Iterator, Peekable};
+use std::iter::Iterator;
 
 use super::parser::{
     block, fn_param_list, module_binding as full_module_binding, type_annotation, type_arg_list,

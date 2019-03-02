@@ -1,20 +1,17 @@
 use petgraph::graph::NodeIndex;
 use std::collections::HashSet;
-use std::rc::Rc;
 
 use crate::ast;
 use crate::feature::*;
 
 use crate::span::Span;
 
-use super::metadata::FnLayout;
-
 use super::control_data::*;
 use super::control_flow::CFG;
 use super::error::*;
 use super::linear_cfg_traversal::*;
 use super::semantic_data::{
-    BindingInfo, FnId, ModuleId, Program, ScopedData, TypeId, Universe, VarId,
+    BindingInfo, FnId, ModuleId, Program, ScopedData, Universe, VarId,
 };
 use super::type_cons::*;
 use super::type_cons_gen::generate_anonymous_fn_type;

@@ -1,4 +1,3 @@
-use super::ast::Module;
 use crate::err::Error;
 use crate::module::*;
 

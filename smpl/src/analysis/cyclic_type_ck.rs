@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use petgraph::graph::{Graph, NodeIndex};
-use petgraph::Direction;
 
 use super::error::TypeError;
 use super::semantic_data::*;
@@ -33,7 +32,6 @@ pub fn cyclic_type_check(program: &Program, type_roots: Vec<TypeId>) -> Result<(
 
     // Connect TypeIds by inspecting their type constructors
     for (ref current, ref type_cons) in all_types.iter() {
-        use super::type_cons::TypeCons;
         use super::type_cons::TypeCons::*;
         match type_cons {
             UncheckedFunction {

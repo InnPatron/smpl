@@ -6,10 +6,7 @@ use std::rc::Rc;
 use petgraph::graph::NodeIndex;
 
 use crate::analysis::*;
-use crate::ast::{Ident, Module};
-use crate::module::*;
-
-use crate::err::Error as StaticError;
+use crate::ast::Ident;
 
 use crate::code_gen::interpreter::env::Env;
 use crate::code_gen::interpreter::err::VmError;

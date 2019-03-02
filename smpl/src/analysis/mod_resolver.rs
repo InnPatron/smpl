@@ -1,18 +1,16 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::ast::{AstNode, BuiltinFunction as AstBuiltinFunction, Ident, UseDecl};
-use crate::ast::{DeclStmt, Function as AstFunction, Module as AstModule, Struct};
+use crate::ast::{DeclStmt, Function as AstFunction, Struct};
 use crate::module::{ModuleSource, ParsedModule};
 
 use super::control_flow::CFG;
 use super::cyclic_type_ck::cyclic_type_check;
-use super::error::{AnalysisError, TypeError};
-use super::feature_checkers::*;
+use super::error::AnalysisError;
 use super::fn_analyzer::analyze_fn;
 use super::metadata::*;
 use super::semantic_data::Module;
 use super::semantic_data::*;
-use super::type_cons::TypeApp;
 use super::type_cons_gen::*;
 
 use crate::feature::*;

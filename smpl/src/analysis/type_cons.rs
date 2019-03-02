@@ -1,9 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-use crate::ast::{Ident, ModulePath, Struct, TypeAnnotation, TypeAnnotationRef, TypeParams};
+use crate::ast::{Ident, TypeAnnotationRef};
 
 use super::error::{AnalysisError, ApplicationError, TypeError};
-use super::semantic_data::{FieldId, FnId, Program, ScopedData, TypeId, TypeParamId, Universe};
+use super::semantic_data::{FieldId, ScopedData, TypeId, TypeParamId, Universe};
 
 macro_rules! nill_check {
     ($type_args: expr) => {{
