@@ -758,9 +758,10 @@ fn width_constraint(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<WidthCon
             let (base_loc, _) = consume_token!(tokens, 
                                                Token::Base,
                                                parser_state!("width-constraint", "base"));
-            let (name_loc, name) = consume_token!(tokens, 
-                                      Token::Identifier(i) => Ident(i),
-                                      parser_state!("width-constraint", "base-struct"));
+            let (name, name_loc) = production!( 
+                                        module_binding(tokens),
+                                        parser_state!("width-constraint", "base-struct"))
+                .to_data();
 
             let span = LocationSpan::new(base_loc.start(), name_loc.end());
 
