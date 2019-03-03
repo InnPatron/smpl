@@ -583,4 +583,40 @@ fn foo(type T)(v: T) -> Foo(type T) {
 
         let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
     }
+
+    #[test]
+    fn parse_named_width_constraint() {
+        let mod1 =
+"mod mod1;
+
+fn foo(v: base BAR) {
+
+}";
+
+        let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
+    }
+
+    #[test]
+    fn parse_anonymous_width_constraint() {
+        let mod1 =
+"mod mod1;
+
+fn foo(v: { FOO: BAR}) {
+
+}";
+
+        let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
+    }
+
+    #[test]
+    fn parse_width_constraint_list() {
+        let mod1 =
+"mod mod1;
+
+fn foo(v: { FOO: BAR} + base BAR, f: base BAR + {FOO: BAR, BING: BANG}) {
+
+}";
+
+        let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
+    }
 }
