@@ -12,9 +12,9 @@ builtin fn atan2(r: float, other: float) -> float;
 builtin fn to_radians(degrees: float) -> float;
 builtin fn to_degrees(radians: float) -> float;
 
-builtin fn fpowf(base: float, power: float) -> float;
-builtin fn fpowi(base: float, power: int) -> float;
-builtin fn ipow(base: int, power: int) -> int;
+builtin fn fpowf(b: float, power: float) -> float;
+builtin fn fpowi(b: float, power: int) -> float;
+builtin fn ipow(b: int, power: int) -> int;
 
 builtin fn floor(f: float) -> float;
 builtin fn ceil(f: float) -> float;
