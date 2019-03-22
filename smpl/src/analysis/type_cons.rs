@@ -123,7 +123,7 @@ pub enum AbstractType {
 
     WidthConstraint {
         base_types: Vec<AbstractType>,
-        fields: HashMap<Ident, AbstractType>,
+        fields: HashMap<Ident, Vec<AbstractType>>,
     },
 
     Param(TypeParamId),
@@ -290,19 +290,13 @@ impl AbstractType {
                 ref base_types,
                 ref fields,
             } => {
-                let fields = fields
-                    .iter()
-                    .map(|(k, v)| {
-                            v.apply_internal(universe, param_map)
-                                .map(|t| (k.clone(), t))
-                }).collect::<Result<HashMap<_, _>, _>>()?;
 
+
+                // TODO: Apply fields
                 // TODO: Apply base types
                 // TODO: Perform width-constraint validation
 
-                Ok(Type::WidthConstraint {
-                    fields
-                })
+                unimplemented!()
             }
 
             AbstractType::Param(ref param_id) => {
@@ -454,56 +448,54 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             })
         }
 
-        TypeAnnotationRef::WidthConstraint(constraints) => fuse_width_constraints(universe,
-                                                                                  scope,
-                                                                                  constraints),
+        TypeAnnotationRef::WidthConstraint(constraints) => {
+            abstract_fuse_width_constraints(universe, scope, constraints)
+        }
     }
 }
 
-fn abs_type_from_constraint(universe: &mut Universe, scope: &ScopedData, constraint: &WidthConstraint)
-    -> Result<AbstractType, AnalysisError> {
-
-    match constraint {
-        WidthConstraint::BaseStruct(ref base_constraint) => {
-            let abs = type_app_from_annotation(universe, scope, base_constraint.data())?;
-
-            match abs {
-                AbstractType::App { 
-                    ..
-                }=> {
-                    let concrete = abs.apply(universe, scope)?;
-                    unimplemented!()
-                }
-
-                AbstractType::WidthConstraint { .. }=> {
-                    unimplemented!()
-                }
-
-                AbstractType::Param(..) => {
-                    unimplemented!()
-                }
-
-            }
-
-            unimplemented!();
-        },
-
-        WidthConstraint::Anonymous(ref fields) => {
-            for (name, ann) in fields.iter() {
-                let app = type_app_from_annotation(universe,
-                                                   scope,
-                                                   ann.data())?;
-            }
-
-            unimplemented!();
-        },
-    }
-}
-
-fn fuse_width_constraints(universe: &mut Universe, 
+fn abstract_fuse_width_constraints(universe: &mut Universe, 
                           scope: &ScopedData, 
                           constraints: &[AstNode<WidthConstraint>]) 
     -> Result<AbstractType, AnalysisError> {
-    unimplemented!()
+    
+    // Does NOT perform any validation
+    // Validation is performed on type application
+
+    let mut bases = Vec::new();
+    let mut constrained_fields: HashMap<Ident, Vec<AbstractType>> = HashMap::new();
+    for constraint in constraints {
+
+        match constraint.data() {
+            WidthConstraint::BaseStruct(ref base_constraint) => {
+                let app = type_app_from_annotation(universe,
+                                                   scope,
+                                                   base_constraint.data())?;
+
+                bases.push(app);
+            }
+
+            WidthConstraint::Anonymous(ref fields) => {
+                for (name, ann) in fields.iter() {
+                    let app = type_app_from_annotation(universe,
+                                                       scope,
+                                                       ann.data())?;
+
+                    constrained_fields.entry(name.data().clone())
+                        .or_insert(Vec::new())
+                        .push(app);
+                }
+
+
+            },
+        }
+    }
+
+    let width_constraint = AbstractType::WidthConstraint {
+        base_types: bases,
+        fields: constrained_fields,
+    };
+
+    Ok(width_constraint)
 }
 
