@@ -291,9 +291,42 @@ impl AbstractType {
                 ref fields,
             } => {
 
+                let mut concrete_constraints: HashMap<Ident, Vec<Type>> = HashMap::new();
 
-                // TODO: Apply fields
-                // TODO: Apply base types
+                for base in base_types {
+                    let concrete_base = base.apply_internal(universe, param_map)?;
+
+                    match concrete_base {
+                        Type::Record {
+                            ref fields,
+                            ref field_map,
+                            ..
+                        } => {
+                            for (field, field_id) in field_map.iter() {
+                                let field_type = fields.get(field_id).unwrap();
+                                concrete_constraints.entry(field.clone())
+                                    .and_modify(|vec| vec.push(field_type.clone()))
+                                    .or_insert(vec![field_type.clone()]);
+                            }
+                        },
+
+                        _ => {
+                            // TODO: Error trying to use non-record type as width constraint
+                        },
+                    }
+                }
+
+                for (field, constraints) in fields.iter() {
+                    for constraint in constraints {
+                        let concrete = constraint.apply_internal(universe, param_map)?;
+
+                        concrete_constraints.entry(field.clone())
+                            .or_insert(Vec::new())
+                            .push(concrete);
+                    }
+                    
+                }
+
                 // TODO: Perform width-constraint validation
 
                 unimplemented!()
