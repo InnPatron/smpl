@@ -122,6 +122,7 @@ pub enum AbstractType {
     },
 
     WidthConstraint {
+        base_types: Vec<AbstractType>,
         fields: HashMap<Ident, AbstractType>,
     },
 
@@ -286,7 +287,8 @@ impl AbstractType {
             },
 
             AbstractType::WidthConstraint { 
-                ref fields
+                ref base_types,
+                ref fields,
             } => {
                 let fields = fields
                     .iter()
@@ -294,6 +296,9 @@ impl AbstractType {
                             v.apply_internal(universe, param_map)
                                 .map(|t| (k.clone(), t))
                 }).collect::<Result<HashMap<_, _>, _>>()?;
+
+                // TODO: Apply base types
+                // TODO: Perform width-constraint validation
 
                 Ok(Type::WidthConstraint {
                     fields
