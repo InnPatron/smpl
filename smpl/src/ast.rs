@@ -535,6 +535,6 @@ pub struct TypeParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum WidthConstraint {
-    BaseStruct(AstNode<ModulePath>),
+    BaseStruct(AstNode<TypeAnnotation>),
     Anonymous(Vec<(AstNode<Ident>, AstNode<TypeAnnotation>)>),
 }
