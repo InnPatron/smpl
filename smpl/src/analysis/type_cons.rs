@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::{Ident, TypeAnnotationRef};
+use crate::ast::{Ident, TypeAnnotationRef, WidthConstraint, AstNode};
 
 use super::error::{AnalysisError, ApplicationError, TypeError};
 use super::semantic_data::{FieldId, ScopedData, TypeId, TypeParamId, Universe};
@@ -448,5 +448,57 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                 args: None,
             })
         }
+
+        TypeAnnotationRef::WidthConstraint(constraints) => fuse_width_constraints(universe,
+                                                                                  scope,
+                                                                                  constraints),
     }
 }
+
+fn abs_type_from_constraint(universe: &mut Universe, scope: &ScopedData, constraint: &WidthConstraint)
+    -> Result<AbstractType, AnalysisError> {
+
+    match constraint {
+        WidthConstraint::BaseStruct(ref base_constraint) => {
+            let abs = type_app_from_annotation(universe, scope, base_constraint.data())?;
+
+            match abs {
+                AbstractType::App { 
+                    ..
+                }=> {
+                    let concrete = abs.apply(universe, scope)?;
+                    unimplemented!()
+                }
+
+                AbstractType::WidthConstraint { .. }=> {
+                    unimplemented!()
+                }
+
+                AbstractType::Param(..) => {
+                    unimplemented!()
+                }
+
+            }
+
+            unimplemented!();
+        },
+
+        WidthConstraint::Anonymous(ref fields) => {
+            for (name, ann) in fields.iter() {
+                let app = type_app_from_annotation(universe,
+                                                   scope,
+                                                   ann.data())?;
+            }
+
+            unimplemented!();
+        },
+    }
+}
+
+fn fuse_width_constraints(universe: &mut Universe, 
+                          scope: &ScopedData, 
+                          constraints: &[AstNode<WidthConstraint>]) 
+    -> Result<AbstractType, AnalysisError> {
+    unimplemented!()
+}
+
