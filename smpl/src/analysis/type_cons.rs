@@ -533,7 +533,10 @@ fn abstract_fuse_width_constraints(universe: &mut Universe,
     Ok(width_constraint)
 }
 
-fn validate_concrete_field_constraints(constraints: &[Type]) -> Result<(), AnalysisError> {
+/// Validates type constraints
+/// If all type constraints pass validation, then all type constraints can be fused into one
+/// constraint
+fn fuse_validate_concrete_field_constraints(constraints: &[Type]) -> Result<Type, AnalysisError> {
 
     let mut constraint_iter = constraints.into_iter();
 
@@ -587,10 +590,18 @@ fn validate_concrete_field_constraints(constraints: &[Type]) -> Result<(), Analy
         }
     }
 
-    // Validate internal field constraints
-    for (_, constraints) in internal_field_constraints {
-        validate_concrete_field_constraints(&constraints)?;
-    }
+    if is_first_concrete_constraint {
+        Ok(first_constraint.clone())
+    } else {
+        // Validate internal field constraints and fuse
+        let mut final_internal_constraints = HashMap::new();
+        for (field, constraints) in internal_field_constraints {
+            let field_constraint = fuse_validate_concrete_field_constraints(&constraints)?;
+            if final_internal_constraints.insert(field, field_constraint).is_some() {
+                panic!("FUSE ERROR");
+            }
+        }
 
-    Ok(())
+        Ok(Type::WidthConstraint { fields: final_internal_constraints })
+    }
 }
