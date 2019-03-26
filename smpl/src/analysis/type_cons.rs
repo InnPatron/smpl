@@ -294,6 +294,7 @@ impl AbstractType {
 
                 let mut concrete_constraints: HashMap<Ident, Vec<Type>> = HashMap::new();
 
+                // Gather base constraints
                 for base in base_types {
                     let concrete_base = base.apply_internal(universe, param_map)?;
 
@@ -312,11 +313,12 @@ impl AbstractType {
                         },
 
                         _ => {
-                            // TODO: Error trying to use non-record type as width constraint
+                            unimplemented!()
                         },
                     }
                 }
 
+                // Gather constraints
                 for (field, constraints) in fields.iter() {
                     for constraint in constraints {
                         let concrete = constraint.apply_internal(universe, param_map)?;
@@ -328,9 +330,16 @@ impl AbstractType {
                     
                 }
 
-                // TODO: Perform width-constraint validation
+                // Perform width-constraint validation and fuse
+                let mut final_constraints = HashMap::new();
+                for (field, constraints) in concrete_constraints {
+                    let final_constraint = fuse_validate_concrete_field_constraints(&constraints)?;
+                    if final_constraints.insert(field, final_constraint).is_some() {
+                        panic!("FUSE ERROR")
+                    }
+                }
 
-                unimplemented!()
+                Ok(Type::WidthConstraint { fields: final_constraints })
             }
 
             AbstractType::Param(ref param_id) => {
@@ -536,7 +545,7 @@ fn abstract_fuse_width_constraints(universe: &mut Universe,
 /// Validates type constraints
 /// If all type constraints pass validation, then all type constraints can be fused into one
 /// constraint
-fn fuse_validate_concrete_field_constraints(constraints: &[Type]) -> Result<Type, AnalysisError> {
+fn fuse_validate_concrete_field_constraints(constraints: &[Type]) -> Result<Type, TypeError> {
 
     let mut constraint_iter = constraints.into_iter();
 
