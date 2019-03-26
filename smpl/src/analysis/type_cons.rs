@@ -4,6 +4,7 @@ use crate::ast::{Ident, TypeAnnotationRef, WidthConstraint, AstNode};
 
 use super::error::{AnalysisError, ApplicationError, TypeError};
 use super::semantic_data::{FieldId, ScopedData, TypeId, TypeParamId, Universe};
+use super::type_resolver::resolve_types;
 
 macro_rules! nill_check {
     ($type_args: expr) => {{
@@ -532,3 +533,64 @@ fn abstract_fuse_width_constraints(universe: &mut Universe,
     Ok(width_constraint)
 }
 
+fn validate_concrete_field_constraints(constraints: &[Type]) -> Result<(), AnalysisError> {
+
+    let mut constraint_iter = constraints.into_iter();
+
+    let mut first_constraint = constraint_iter.next().unwrap();
+    // Flag to see if first constraint is a concrete type (i.e. int or a width constraint)
+    let is_first_concrete_constraint = match first_constraint {
+        Type::WidthConstraint { .. } => false,
+        _ => true,
+    };
+
+    // Flag to see if constraint is a concrete type (i.e. int or a width constraint)
+    let found_base_type_constraint = is_first_concrete_constraint;
+
+    let mut internal_field_constraints: HashMap<Ident, Vec<Type>> = HashMap::new();
+
+    // Check for invalid constraints like:
+    //      { foo: int } + { foo: String }
+    //      { foo: int, foo: String }
+    //      { foo: int } + { foo: { ... } }
+    //      { foo: { bar: int } } + { foo: { bar: String } }
+    for constraint in constraint_iter {
+        match constraint {
+            Type::WidthConstraint {
+                ref fields
+            } => {
+                if found_base_type_constraint {
+                    // Error: found { foo: int } + { foo: { ... } }
+                    unimplemented!()
+                }
+
+                // Gather internal field constraints to recurse later on
+                for (field, concrete_constraint) in fields {
+                    internal_field_constraints.entry(field.clone())
+                            .or_insert(Vec::new())
+                            .push(concrete_constraint.clone());
+                }
+
+            }
+
+            _ => {
+                if !found_base_type_constraint {
+                    // Error: found { foo: { ... } } + { foo: int }
+                    unimplemented!()
+                }
+
+                if !resolve_types(constraint, first_constraint) {
+                    // Error: found { foo: int } + { foo: String }
+                    unimplemented!();
+                }
+            }
+        }
+    }
+
+    // Validate internal field constraints
+    for (_, constraints) in internal_field_constraints {
+        validate_concrete_field_constraints(&constraints)?;
+    }
+
+    Ok(())
+}
