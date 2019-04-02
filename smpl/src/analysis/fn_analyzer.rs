@@ -321,7 +321,10 @@ impl<'a> FnAnalyzer<'a> {
         for (index, field) in path_iter.enumerate() {
             let next_type;
             match current_type {
-                Type::Record {
+                Type::WidthConstraint {
+                    ref fields,
+                    ref field_map,
+                } | Type::Record {
                     ref fields,
                     ref field_map,
                     ..
