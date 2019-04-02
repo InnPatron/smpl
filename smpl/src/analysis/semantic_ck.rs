@@ -1275,4 +1275,31 @@ fn foo(type A)(a1: A, a2: A, a3: A, f: fn (A, A, A) -> A) -> A {
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _err = check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn width_constraint_call() {
+        let mod1 =
+"mod mod1;
+
+struct Baz {
+    f: float,
+    i: int,
+}
+
+fn foo(a: {i: int, f: float}) -> int {
+    let b: {i: int} = a;
+    return b.i;
+}
+
+fn bar() {
+    let baz = init Baz {
+        f: 1.0,
+        i: 5
+    };
+
+    let result = foo(baz);
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
 }
