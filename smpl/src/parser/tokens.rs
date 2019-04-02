@@ -55,6 +55,7 @@ pub enum Token {
     Builtin,
     Unchecked,
     Type,
+    Where,
 
     Init,
 
@@ -133,6 +134,7 @@ impl std::fmt::Display for Token {
             Unchecked => write!(f, "UNCHECKED"),
 
             Type => write!(f, "type"),
+            Where => write!(f, "where"),
 
             Init => write!(f, "init"),
 
@@ -509,6 +511,7 @@ impl<'input> Tokenizer<'input> {
             "builtin" => Token::Builtin,
             "UNCHECKED" => Token::Unchecked,
             "type" => Token::Type,
+            "where" => Token::Where,
             "continue" => Token::Continue,
             "break" => Token::Break,
             "return" => Token::Return,
