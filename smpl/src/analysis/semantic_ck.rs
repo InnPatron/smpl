@@ -1302,4 +1302,46 @@ fn bar() {
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _err = check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn width_constraint_nested() {
+        let mod1 =
+"mod mod1;
+
+struct Baz {
+    f: float,
+    i: int,
+    n: Baq,
+}
+
+struct Baq {
+    s: String
+}
+
+fn foo(a: {i: int, f: float, n: base Baq }) -> String {
+    let n: {s: String} = a.n;
+    return n.s;
+}
+
+fn qux(a: {i: int, f: float, n: {s: String} }) -> String {
+    let n: {s: String} = a.n;
+    return n.s;
+}
+
+fn bar() {
+    let baq = init Baq {
+        s: \"FOO\",
+    };
+    let baz = init Baz {
+        f: 1.0,
+        i: 5,
+        n: baq,
+    };
+
+    let result = foo(baz);
+    let result = qux(baz);
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
 }
