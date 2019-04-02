@@ -558,17 +558,31 @@ fn fuse_validate_concrete_field_constraints(universe: &Universe, constraints: &[
 
     let mut constraint_iter = constraints.into_iter();
 
+    let mut internal_field_constraints = HashMap::new();
     let mut first_constraint = constraint_iter.next().unwrap();
     // Flag to see if first constraint is a concrete type (i.e. int or a width constraint)
     let is_first_concrete_constraint = match first_constraint {
-        Type::WidthConstraint { .. } => false,
+        Type::WidthConstraint { 
+            ref fields,
+            ref field_map,
+        } => {
+
+            // Add first constraint to internal field constraints
+            // Gather internal field constraints to recurse later on
+            for (field, field_id) in field_map {
+                let concrete_constraint = fields.get(field_id).unwrap();
+                internal_field_constraints.entry(field)
+                        .or_insert(Vec::new())
+                        .push(concrete_constraint.clone());
+            }
+            false
+        },
         _ => true,
     };
 
     // Flag to see if constraint is a concrete type (i.e. int or a width constraint)
     let found_base_type_constraint = is_first_concrete_constraint;
 
-    let mut internal_field_constraints = HashMap::new();
 
     // Check for invalid constraints like:
     //      { foo: int } + { foo: String }
