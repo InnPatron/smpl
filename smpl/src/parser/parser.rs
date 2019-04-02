@@ -237,7 +237,7 @@ fn use_decl(tokens: &mut BufferedTokenizer) -> ParseErr<DeclStmt> {
 }
 
 fn where_clause(tokens: &mut BufferedTokenizer) 
-    -> ParseErr<HashMap<Ident, Vec<AstNode<TypeAnnotation>>>> {
+    -> ParseErr<WhereClause> {
     let _where = consume_token!(
         tokens,
         Token::Where,
@@ -280,7 +280,8 @@ fn where_clause(tokens: &mut BufferedTokenizer)
         }
     }
 
-    Ok(parameter_constraints)
+    let where_clause = WhereClause(parameter_constraints);
+    Ok(where_clause)
 }
 
 #[cfg(test)]
