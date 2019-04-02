@@ -73,11 +73,13 @@ pub fn resolve_types(synthesis: &Type, constraint: &Type) -> bool {
             field_map: ref constraint_map,
         }) => {
 
-            for (constraint_f, constraint_t) in constraint_width.iter() {
-                let synth = synth_width.get(constraint_f);
-                match synth {
-                    Some(synth_t) => {
-                        if resolve_types(synth_t, constraint_t) == false {
+            for (constraint_ident, constraint_field_id) in constraint_map.iter() {
+                let synth_id = synth_map.get(constraint_ident);
+                let constraint_type = constraint_width.get(constraint_field_id).unwrap();
+                match synth_id {
+                    Some(synth_id) => {
+                        let synth_type = synth_width.get(synth_id).unwrap();
+                        if resolve_types(synth_type, constraint_type) == false {
                             return false;
                         }
                     }
