@@ -39,7 +39,8 @@ pub enum Type {
     },
 
     WidthConstraint {
-        fields: HashMap<Ident, Type>,
+        fields: HashMap<FieldId, Type>,
+        field_map: HashMap<Ident, FieldId>,
     },
 
     Param(TypeParamId),
@@ -331,15 +332,23 @@ impl AbstractType {
                 }
 
                 // Perform width-constraint validation and fuse
+                let mut final_map = HashMap::new();
                 let mut final_constraints = HashMap::new();
                 for (field, constraints) in concrete_constraints {
-                    let final_constraint = fuse_validate_concrete_field_constraints(&constraints)?;
-                    if final_constraints.insert(field, final_constraint).is_some() {
+                    let field_id = universe.new_field_id();
+                    let final_constraint = fuse_validate_concrete_field_constraints(universe,
+                                                                                    &constraints)?;
+                    if final_constraints.insert(field_id, final_constraint).is_some() {
                         panic!("FUSE ERROR")
                     }
+
+                    final_map.insert(field, field_id);
                 }
 
-                Ok(Type::WidthConstraint { fields: final_constraints })
+                Ok(Type::WidthConstraint { 
+                    fields: final_constraints,
+                    field_map: final_map,
+                })
             }
 
             AbstractType::Param(ref param_id) => {
@@ -545,7 +554,7 @@ fn abstract_fuse_width_constraints(universe: &mut Universe,
 /// Validates type constraints
 /// If all type constraints pass validation, then all type constraints can be fused into one
 /// constraint
-fn fuse_validate_concrete_field_constraints(constraints: &[Type]) -> Result<Type, TypeError> {
+fn fuse_validate_concrete_field_constraints(universe: &Universe, constraints: &[Type]) -> Result<Type, TypeError> {
 
     let mut constraint_iter = constraints.into_iter();
 
@@ -559,7 +568,7 @@ fn fuse_validate_concrete_field_constraints(constraints: &[Type]) -> Result<Type
     // Flag to see if constraint is a concrete type (i.e. int or a width constraint)
     let found_base_type_constraint = is_first_concrete_constraint;
 
-    let mut internal_field_constraints: HashMap<Ident, Vec<Type>> = HashMap::new();
+    let mut internal_field_constraints = HashMap::new();
 
     // Check for invalid constraints like:
     //      { foo: int } + { foo: String }
@@ -569,7 +578,8 @@ fn fuse_validate_concrete_field_constraints(constraints: &[Type]) -> Result<Type
     for constraint in constraint_iter {
         match constraint {
             Type::WidthConstraint {
-                ref fields
+                ref fields,
+                ref field_map,
             } => {
                 if found_base_type_constraint {
                     // Error: found { foo: int } + { foo: { ... } }
@@ -577,8 +587,9 @@ fn fuse_validate_concrete_field_constraints(constraints: &[Type]) -> Result<Type
                 }
 
                 // Gather internal field constraints to recurse later on
-                for (field, concrete_constraint) in fields {
-                    internal_field_constraints.entry(field.clone())
+                for (field, field_id) in field_map {
+                    let concrete_constraint = fields.get(field_id).unwrap();
+                    internal_field_constraints.entry(field)
                             .or_insert(Vec::new())
                             .push(concrete_constraint.clone());
                 }
@@ -603,14 +614,22 @@ fn fuse_validate_concrete_field_constraints(constraints: &[Type]) -> Result<Type
         Ok(first_constraint.clone())
     } else {
         // Validate internal field constraints and fuse
+        let mut final_internal_map = HashMap::new();
         let mut final_internal_constraints = HashMap::new();
         for (field, constraints) in internal_field_constraints {
-            let field_constraint = fuse_validate_concrete_field_constraints(&constraints)?;
-            if final_internal_constraints.insert(field, field_constraint).is_some() {
+            let field_id = universe.new_field_id();
+
+            let field_constraint = fuse_validate_concrete_field_constraints(universe, &constraints)?;
+            if final_internal_constraints.insert(field_id, field_constraint).is_some() {
                 panic!("FUSE ERROR");
             }
+
+            final_internal_map.insert(field.clone(), field_id);
         }
 
-        Ok(Type::WidthConstraint { fields: final_internal_constraints })
+        Ok(Type::WidthConstraint { 
+            fields: final_internal_constraints,
+            field_map: final_internal_map,
+        })
     }
 }
