@@ -1,4 +1,5 @@
 use std::iter::Iterator;
+use std::collections::HashMap;
 
 use super::expr_parser::*;
 use super::parser_err::*;
@@ -233,6 +234,53 @@ fn use_decl(tokens: &mut BufferedTokenizer) -> ParseErr<DeclStmt> {
     let use_decl = DeclStmt::Use(AstNode::new(use_decl, span));
 
     Ok(use_decl)
+}
+
+fn where_clause(tokens: &mut BufferedTokenizer) 
+    -> ParseErr<HashMap<Ident, Vec<AstNode<TypeAnnotation>>>> {
+    let _where = consume_token!(
+        tokens,
+        Token::Where,
+        parser_state!("where-clause", "where"));
+
+    let mut parameter_constraints = HashMap::new();
+
+    loop {
+        let (_, parameter) = consume_token!(
+            tokens,
+            Token::Identifier(ident) => Ident(ident),
+            parser_state!("where-clause-constraints", "param"));
+        let colon = consume_token!(
+            tokens,
+            Token::Colon,
+            parser_state!("where-clause-constraints", "colon"));
+        let annotation = production!(
+            type_annotation(tokens),
+            parser_state!("where-clause-constraints", "annotation"));
+
+        parameter_constraints
+            .entry(parameter)
+            .or_insert(Vec::new())
+            .push(annotation);
+
+        if peek_token!(
+            tokens,
+            |tok| match tok {
+                Token::Comma => true,
+                _ => false
+            },
+            parser_state!("where-clause-constraints", "comma?")) {
+            let _comma = consume_token!(tokens,
+                                        Token::Comma,
+                                        parser_state!("where-clause-constraints", "comma"));
+        } else {
+            // No more commas
+            // Assume no more where clause constraints
+            break;
+        }
+    }
+
+    Ok(parameter_constraints)
 }
 
 #[cfg(test)]
