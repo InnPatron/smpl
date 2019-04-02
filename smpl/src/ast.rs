@@ -1,6 +1,7 @@
 use std::borrow::Borrow;
 use std::fmt;
 use std::slice::Iter;
+use std::collections::HashMap;
 
 use crate::span::Span;
 
@@ -124,6 +125,9 @@ pub struct Struct {
     pub annotations: Vec<Annotation>,
     pub type_params: Option<TypeParams>,
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct WhereClause(pub HashMap<Ident, Vec<AstNode<TypeAnnotation>>>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructBody(pub Option<Vec<StructField>>);
