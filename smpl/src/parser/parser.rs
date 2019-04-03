@@ -400,6 +400,22 @@ fn fn_decl(
         ));
     }
 
+    let where_clause = if peek_token!(
+        tokens,
+        |tok| match tok {
+            Token::Where => true,
+            _ => false,
+        },
+        parser_state!("fn-decl", "where-clause?")) {
+
+        Some(production!(
+                where_clause(tokens),
+                parser_state!("fn-decl", "where-clause")))
+
+    } else {
+        None
+    };
+
     let mut body: Option<AstNode<Block>> = None;
     if !is_builtin {
         body = Some(block(tokens)?);
@@ -422,6 +438,7 @@ fn fn_decl(
                 return_type: return_type,
                 annotations: annotations,
                 type_params: type_params,
+                where_clause: where_clause,
             },
             span,
         )))
@@ -454,6 +471,7 @@ fn fn_decl(
                 body: body,
                 annotations: annotations,
                 type_params: type_params,
+                where_clause: where_clause,
             },
             span,
         )))
