@@ -619,4 +619,48 @@ fn foo(v: { FOO: BAR} + base BAR, f: base BAR + {FOO: BAR, BING: BANG}) {
 
         let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
     }
+
+    #[test]
+    fn parse_generic_fn_constraint() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type T)(t: T) -> T
+    where T: base Foo {
+
+}
+
+fn bar(type T)(t: T) -> T
+    where T: base Foo,
+        T: base Bar,
+        T: { t: int } + {f : float},
+        T: int {
+
+}";
+
+        let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
+    }
+
+    #[test]
+    fn parse_generic_struct_constraint() {
+        let mod1 =
+"mod mod1;
+
+struct Foo(type T)
+    where T: base Foo  {
+    
+    t: T
+}
+
+struct Bar(type T)
+    where T: base Foo,
+        T: base Bar,
+        T: { t: int } + {f : float},
+        T: int {
+
+    t: T,
+}";
+
+        let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
+    }
 }
