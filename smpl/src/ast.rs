@@ -124,6 +124,7 @@ pub struct Struct {
     pub body: StructBody,
     pub annotations: Vec<Annotation>,
     pub type_params: Option<TypeParams>,
+    pub where_clause: Option<WhereClause>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

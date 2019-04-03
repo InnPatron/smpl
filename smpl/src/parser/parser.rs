@@ -555,6 +555,21 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
         None
     };
 
+    let where_clause = if peek_token!(
+        tokens,
+        |tok| match tok {
+            Token::Where => true,
+            _ => false,
+        },
+        parser_state!("struct-decl", "where-clause?")) {
+        
+        Some(production!(
+                where_clause(tokens),
+                parser_state!("struct-decl", "where-clause")))
+    } else {
+        None
+    };
+
     let _lbrace = consume_token!(
         tokens,
         Token::LBrace,
@@ -595,6 +610,7 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
             body: body,
             annotations: anns,
             type_params: type_params,
+            where_clause: where_clause,
         },
         overall_span,
     ))
