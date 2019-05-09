@@ -52,16 +52,62 @@ pub enum Type {
     Unit,
 }
 
+#[derive(Debug, Clone)]
+pub struct TypeParams {
+    params: Option<Vec<TypeParamId>>,
+}
+
+impl TypeParams {
+
+    pub fn new() -> TypeParams {
+        TypeParams {
+            params: None
+        }
+    }
+
+    pub fn addParam(&mut self, param: TypeParamId) {
+        match self.params {
+            Some(ref mut p) => p.push(param),
+            None => self.params = Some(vec![param]),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.params.map_or(0, |tp| tp.len())
+    }
+
+    pub fn iter(&self) -> TypeParamsIter {
+        TypeParamsIter {
+            params: self.params.map(|tp| tp.iter())
+        }
+    }
+}
+
+pub struct TypeParamsIter<'a> {
+    params: Option<std::slice::Iter<'a, TypeParamId>>
+}
+
+impl<'a> std::iter::Iterator for TypeParamsIter<'a> {
+    type Item = TypeParamId;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.params {
+            Some(iter) => iter.next().map(|id| *id),
+            None => None,
+        }
+    }
+}
+
 /// Use TypeCons and AbstractType for type constructor mapping and graphing
 #[derive(Debug, Clone)]
 pub enum TypeCons {
     UncheckedFunction {
-        type_params: Option<Vec<TypeParamId>>,
+        type_params: TypeParams,
         return_type: AbstractType,
     },
 
     Function {
-        type_params: Option<Vec<TypeParamId>>,
+        type_params: TypeParams,
         parameters: Vec<AbstractType>,
         return_type: AbstractType,
     },
@@ -73,7 +119,7 @@ pub enum TypeCons {
 
     Record {
         type_id: TypeId,
-        type_params: Option<Vec<TypeParamId>>,
+        type_params: TypeParams,
         fields: HashMap<FieldId, AbstractType>,
         field_map: HashMap<Ident, FieldId>,
     },
@@ -94,22 +140,22 @@ impl TypeCons {
         }
     }
 
-    fn type_params(&self) -> Option<&[TypeParamId]> {
+    fn type_params(&self) -> Option<&TypeParams> {
         match *self {
             TypeCons::Function {
                 ref type_params,
                 ..
-            } => type_params.as_ref().map(|v| v.as_slice()),
+            } => Some(type_params),
 
             TypeCons::Record {
                 ref type_params,
                 ..
-            } => type_params.as_ref().map(|v| v.as_slice()),
+            } => Some(type_params),
 
             TypeCons::UncheckedFunction {
                 ref type_params,
                 ..
-            } => type_params.as_ref().map(|v| v.as_slice()),
+            } => Some(type_params),
 
             _ => None,
         }
