@@ -12,89 +12,6 @@ use super::type_cons::*;
 
 type TypeParamMap = HashMap<Ident, (TypeParamId, Option<AbstractWidthConstraint>)>;
 
-fn type_param_map(
-    universe: &mut Universe,
-    type_params: Option<&AstTypeParams>,
-    where_clause: Option<&WhereClause>,
-    mut new_scope: ScopedData,
-) -> Result<(ScopedData, TypeParamMap), AnalysisError> {
-    let mut type_parameter_map = HashMap::new();
-
-    if let Some(params) = type_params {
-        for p in params.params.iter() {
-            // Check for type parameter naming conflict
-            if type_parameter_map.contains_key(p.data()) {
-                // Naming conflict
-                return Err(TypeError::ParameterNamingConflict {
-                    ident: p.data().clone(),
-                }
-                .into());
-            } else {
-                let type_param_id = universe.new_type_param_id();
-                // Insert type parameter into scope
-                new_scope.insert_type_param(p.data().clone(), type_param_id);
-                // Insert type parameter into set
-                type_parameter_map.insert(p.data().clone(), type_param_id);
-            }
-        }
-    }
-
-    let mut constraint_map = HashMap::new();
-    if let Some(where_clause) = where_clause {
-        for (ident, vec_ast_type_ann) in where_clause.0.iter() {
-
-            // Remove from type_parameter_map
-            match type_parameter_map.remove(ident) {
-
-                Some(tp) => {
-                    if vec_ast_type_ann.len() > 1 {
-                        // TODO: Allow multiple constraint declarations on one type param? 
-                        // where A: { ... }
-                        //       A: { ... }
-                        // For now, disallow to simplify...
-
-                        unimplemented!("Multiple declarations on one type param:{}", ident);
-                    }
-
-                    let ast_constraint = vec_ast_type_ann.get(0).unwrap();
-                    let abstract_type = type_app_from_annotation(universe, 
-                                                              &new_scope, 
-                                                              ast_constraint.data())?;
-
-                    if let AbstractType::WidthConstraint(constraint) = abstract_type {
-                        constraint_map.insert(ident.clone(), (tp.clone(), Some(constraint)));
-                    } else {
-                        // TODO: found non-constraint in constraint position
-                        unimplemented!("found non-constraint in constraint position");
-                    }
-
-                },
-
-                None => {
-                    // TODO: where clause with unknown TP
-                    unimplemented!();
-                }
-            }
-        }
-    }
-
-    // Any type param still left in type_parameter_map has no constraint
-    for (ident, id) in type_parameter_map.into_iter() {
-        constraint_map.insert(ident, (id.clone(), None));
-    }
-
-    Ok((new_scope, constraint_map))
-}
-
-fn type_params_from_param_map(map: TypeParamMap) -> TypeParams {
-    let mut type_params = TypeParams::new();
-    for (_ident, (id, constraint)) in map.into_iter() {
-        type_params.add_param(id, constraint);
-    }
-
-    type_params
-}
-
 // TODO: Store type constructors in Program
 pub fn generate_struct_type_cons(
     program: &mut Program,
@@ -373,4 +290,87 @@ pub fn generate_anonymous_fn_type(
     };
 
     Ok((scope, type_cons))
+}
+
+fn type_param_map(
+    universe: &mut Universe,
+    type_params: Option<&AstTypeParams>,
+    where_clause: Option<&WhereClause>,
+    mut new_scope: ScopedData,
+) -> Result<(ScopedData, TypeParamMap), AnalysisError> {
+    let mut type_parameter_map = HashMap::new();
+
+    if let Some(params) = type_params {
+        for p in params.params.iter() {
+            // Check for type parameter naming conflict
+            if type_parameter_map.contains_key(p.data()) {
+                // Naming conflict
+                return Err(TypeError::ParameterNamingConflict {
+                    ident: p.data().clone(),
+                }
+                .into());
+            } else {
+                let type_param_id = universe.new_type_param_id();
+                // Insert type parameter into scope
+                new_scope.insert_type_param(p.data().clone(), type_param_id);
+                // Insert type parameter into set
+                type_parameter_map.insert(p.data().clone(), type_param_id);
+            }
+        }
+    }
+
+    let mut constraint_map = HashMap::new();
+    if let Some(where_clause) = where_clause {
+        for (ident, vec_ast_type_ann) in where_clause.0.iter() {
+
+            // Remove from type_parameter_map
+            match type_parameter_map.remove(ident) {
+
+                Some(tp) => {
+                    if vec_ast_type_ann.len() > 1 {
+                        // TODO: Allow multiple constraint declarations on one type param? 
+                        // where A: { ... }
+                        //       A: { ... }
+                        // For now, disallow to simplify...
+
+                        unimplemented!("Multiple declarations on one type param:{}", ident);
+                    }
+
+                    let ast_constraint = vec_ast_type_ann.get(0).unwrap();
+                    let abstract_type = type_app_from_annotation(universe, 
+                                                              &new_scope, 
+                                                              ast_constraint.data())?;
+
+                    if let AbstractType::WidthConstraint(constraint) = abstract_type {
+                        constraint_map.insert(ident.clone(), (tp.clone(), Some(constraint)));
+                    } else {
+                        // TODO: found non-constraint in constraint position
+                        unimplemented!("found non-constraint in constraint position");
+                    }
+
+                },
+
+                None => {
+                    // TODO: where clause with unknown TP
+                    unimplemented!();
+                }
+            }
+        }
+    }
+
+    // Any type param still left in type_parameter_map has no constraint
+    for (ident, id) in type_parameter_map.into_iter() {
+        constraint_map.insert(ident, (id.clone(), None));
+    }
+
+    Ok((new_scope, constraint_map))
+}
+
+fn type_params_from_param_map(map: TypeParamMap) -> TypeParams {
+    let mut type_params = TypeParams::new();
+    for (_ident, (id, constraint)) in map.into_iter() {
+        type_params.add_param(id, constraint);
+    }
+
+    type_params
 }
