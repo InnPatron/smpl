@@ -1348,4 +1348,18 @@ fn bar() {
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _err = check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn generic_width_constraint() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type T)(t: T) -> int 
+    where T: {a: int, b: int} {
+
+    return t.a + t.b;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
 }
