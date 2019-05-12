@@ -252,11 +252,16 @@ impl AbstractType {
                     }
 
                     (Some(ref type_params), None) => {
-                        return Err(ApplicationError::Arity {
-                            expected: type_params.len(),
-                            found: 0,
+                        // None if TypeCons does not store any type parameters
+                        if type_params.len() != 0 {
+                            return Err(ApplicationError::Arity {
+                                expected: type_params.len(),
+                                found: 0,
+                            }
+                            .into());
                         }
-                        .into());
+
+                        None
                     }
 
                     (None, Some(ref type_args)) => {
