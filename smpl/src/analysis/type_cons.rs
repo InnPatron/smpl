@@ -79,12 +79,12 @@ impl TypeParams {
     }
 
     pub fn len(&self) -> usize {
-        self.params.map_or(0, |tp| tp.len())
+        self.params.as_ref().map_or(0, |tp| tp.len())
     }
 
     pub fn iter(&self) -> TypeParamsIter {
         TypeParamsIter {
-            params: self.params.map(|tp| tp.iter())
+            params: self.params.as_ref().map(|tp| tp.iter())
         }
     }
 }
@@ -98,7 +98,7 @@ impl<'a> std::iter::Iterator for TypeParamsIter<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.params {
-            Some(iter) => iter.next().map(|id| *id),
+            Some(ref mut iter) => iter.next().map(|id| *id),
             None => None,
         }
     }
