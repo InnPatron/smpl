@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::{
-    AnonymousFn, BuiltinFnParams, BuiltinFunction, Function, Ident, Struct, TypeParams,
+    AnonymousFn, BuiltinFnParams, BuiltinFunction, Function, Ident, Struct, TypeParams as AstTypeParams,
 };
 use crate::feature::*;
 
@@ -12,7 +12,7 @@ use super::type_cons::*;
 
 fn type_param_map(
     universe: &Universe,
-    type_params: Option<&TypeParams>,
+    type_params: Option<&AstTypeParams>,
     mut new_scope: ScopedData,
 ) -> Result<(ScopedData, HashMap<Ident, TypeParamId>), AnalysisError> {
     let mut type_parameter_map = HashMap::new();
@@ -85,16 +85,10 @@ pub fn generate_struct_type_cons(
         }
     }
 
-    let type_params = type_parameter_map
-        .values()
-        .map(|id| id.clone())
-        .collect::<Vec<_>>();
-
-    let type_params = if type_params.len() > 0 {
-        Some(type_params)
-    } else {
-        None
-    };
+    let mut type_params = TypeParams::empty();
+    for (_ident, tp_id) in type_parameter_map {
+        type_params.addParam(tp_id);
+    }
 
     let type_cons = TypeCons::Record {
         type_id: type_id,
@@ -162,16 +156,10 @@ pub fn generate_fn_type(
         }
     };
 
-    let type_params = type_parameter_map
-        .values()
-        .map(|id| id.clone())
-        .collect::<Vec<_>>();
-
-    let type_params = if type_params.len() > 0 {
-        Some(type_params)
-    } else {
-        None
-    };
+    let mut type_params = TypeParams::empty();
+    for (_ident, tp_id) in type_parameter_map {
+        type_params.addParam(tp_id);
+    }
 
     let type_cons = TypeCons::Function {
         type_params: type_params,
@@ -242,16 +230,10 @@ pub fn generate_builtin_fn_type(
             metadata.insert_unchecked_builtin_params(fn_id);
             features.add_feature(UNCHECKED_BUILTIN_FN_PARAMS);
 
-            let type_params = type_parameter_map
-                .values()
-                .map(|id| id.clone())
-                .collect::<Vec<_>>();
-
-            let type_params = if type_params.len() > 0 {
-                Some(type_params)
-            } else {
-                None
-            };
+            let mut type_params = TypeParams::empty();
+            for (_ident, tp_id) in type_parameter_map {
+                type_params.addParam(tp_id);
+            }
 
             let type_cons = TypeCons::UncheckedFunction {
                 type_params: type_params,
@@ -262,16 +244,10 @@ pub fn generate_builtin_fn_type(
         }
     };
 
-    let type_params = type_parameter_map
-        .values()
-        .map(|id| id.clone())
-        .collect::<Vec<_>>();
-
-    let type_params = if type_params.len() > 0 {
-        Some(type_params)
-    } else {
-        None
-    };
+    let mut type_params = TypeParams::empty();
+    for (_ident, tp_id) in type_parameter_map {
+        type_params.addParam(tp_id);
+    }
 
     let type_cons = TypeCons::Function {
         type_params: type_params,
@@ -337,7 +313,8 @@ pub fn generate_anonymous_fn_type(
         }
     };
 
-    let type_params = None;
+    // TODO: Type parameters on anonymous functions?
+    let type_params = TypeParams::empty();
 
     let type_cons = TypeCons::Function {
         type_params: type_params,
