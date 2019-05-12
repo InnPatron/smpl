@@ -61,6 +61,12 @@ impl TypeParams {
 
     pub fn new() -> TypeParams {
         TypeParams {
+            params: Some(Vec::new())
+        }
+    }
+
+    pub fn empty() -> TypeParams {
+        TypeParams {
             params: None
         }
     }
@@ -483,31 +489,27 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
         }
 
         TypeAnnotationRef::FnType(tp, args, ret_type) => {
-            let (local_type_params, new_scope) = match tp.map(|local_type_params| {
-                let mut new_scope = scope.clone();
-                let mut local_param_ids = Vec::new();
-                let local_type_param_id = universe.new_type_param_id();
+            let (local_type_params, new_scope) = match tp {
+                Some(local_type_params) => {
+                    let mut new_scope = scope.clone();
+                    let mut local_param_ids = TypeParams::new();
+                    let local_type_param_id = universe.new_type_param_id();
 
-                // Insert local type parameters into the current scope
-                for p in local_type_params.params.iter() {
-                    if new_scope.insert_type_param(p.data().clone(), local_type_param_id) {
-                        return Err(TypeError::TypeParameterNamingConflict {
-                            ident: p.data().clone(),
-                        });
+                    // Insert local type parameters into the current scope
+                    for p in local_type_params.params.iter() {
+                        if new_scope.insert_type_param(p.data().clone(), local_type_param_id) {
+                            return Err(TypeError::TypeParameterNamingConflict {
+                                ident: p.data().clone(),
+                            }.into());
+                        }
+
+                        local_param_ids.addParam(local_type_param_id);
                     }
 
-                    local_param_ids.push(local_type_param_id);
-                }
+                    (local_param_ids, Some(new_scope))
+                },
 
-                Ok((local_param_ids, new_scope))
-            }) {
-                Some(data) => {
-                    let data = data?;
-
-                    (Some(data.0), Some(data.1))
-                }
-
-                None => (None, None),
+                None => (TypeParams::empty(), None),
             };
 
             let scope = new_scope.as_ref().unwrap_or(scope);
