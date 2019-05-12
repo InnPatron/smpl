@@ -54,14 +54,14 @@ pub enum Type {
 
 #[derive(Debug, Clone)]
 pub struct TypeParams {
-    params: Option<Vec<TypeParamId>>,
+    params: Option<HashMap<TypeParamId, Option<AbstractWidthConstraint>>>,
 }
 
 impl TypeParams {
 
     pub fn new() -> TypeParams {
         TypeParams {
-            params: Some(Vec::new())
+            params: Some(HashMap::new())
         }
     }
 
@@ -73,8 +73,29 @@ impl TypeParams {
 
     pub fn addParam(&mut self, param: TypeParamId) {
         match self.params {
-            Some(ref mut p) => p.push(param),
-            None => self.params = Some(vec![param]),
+            Some(ref mut p) => {
+                p.insert(param, None);
+            }
+
+            None => {
+                let mut hm = HashMap::new();
+                hm.insert(param, None);
+                self.params = Some(hm);
+            }
+        }
+    }
+
+    pub fn constrained_param(&mut self, param: TypeParamId, constraint: AbstractWidthConstraint) {
+        match self.params {
+            Some(ref mut p) => {
+                p.insert(param, Some(constraint));
+            }
+
+            None => {
+                let mut hm = HashMap::new();
+                hm.insert(param, Some(constraint));
+                self.params = Some(hm);
+            }
         }
     }
 
@@ -90,15 +111,19 @@ impl TypeParams {
 }
 
 pub struct TypeParamsIter<'a> {
-    params: Option<std::slice::Iter<'a, TypeParamId>>
+    params: Option<std::collections::hash_map::Iter<'a, 
+        TypeParamId, 
+        Option<AbstractWidthConstraint>
+        >
+    >
 }
 
 impl<'a> std::iter::Iterator for TypeParamsIter<'a> {
-    type Item = TypeParamId;
+    type Item = (TypeParamId, Option<&'a AbstractWidthConstraint>);
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.params {
-            Some(ref mut iter) => iter.next().map(|id| *id),
+            Some(ref mut iter) => iter.next().map(|(id, wc)| (*id, wc.as_ref())),
             None => None,
         }
     }
@@ -229,7 +254,11 @@ impl AbstractType {
 
                         let mut param_map = param_map.clone();
 
-                        for (param_id, type_arg) in type_params.iter().zip(type_args.iter()) {
+                        for ((param_id, constraint), type_arg) in type_params
+                                .iter()
+                                .zip(type_args.iter()) {
+
+                            // TODO: Check width constraint
                             param_map.insert(param_id.clone(), type_arg.clone());
                         }
 
