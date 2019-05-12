@@ -713,7 +713,7 @@ mod tests {
         let tc = TypeCons::Function {
             parameters: params,
             return_type: return_type,
-            type_params: None,
+            type_params: TypeParams::empty(),
         };
 
         tc
