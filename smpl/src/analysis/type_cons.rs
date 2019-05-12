@@ -71,7 +71,7 @@ impl TypeParams {
         }
     }
 
-    pub fn addParam(&mut self, param: TypeParamId) {
+    pub fn add_param(&mut self, param: TypeParamId) {
         match self.params {
             Some(ref mut p) => {
                 p.insert(param, None);
@@ -535,7 +535,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                             }.into());
                         }
 
-                        local_param_ids.addParam(local_type_param_id);
+                        local_param_ids.add_param(local_type_param_id);
                     }
 
                     (local_param_ids, Some(new_scope))

@@ -87,7 +87,7 @@ pub fn generate_struct_type_cons(
 
     let mut type_params = TypeParams::empty();
     for (_ident, tp_id) in type_parameter_map {
-        type_params.addParam(tp_id);
+        type_params.add_param(tp_id);
     }
 
     let type_cons = TypeCons::Record {
@@ -158,7 +158,7 @@ pub fn generate_fn_type(
 
     let mut type_params = TypeParams::empty();
     for (_ident, tp_id) in type_parameter_map {
-        type_params.addParam(tp_id);
+        type_params.add_param(tp_id);
     }
 
     let type_cons = TypeCons::Function {
@@ -232,7 +232,7 @@ pub fn generate_builtin_fn_type(
 
             let mut type_params = TypeParams::empty();
             for (_ident, tp_id) in type_parameter_map {
-                type_params.addParam(tp_id);
+                type_params.add_param(tp_id);
             }
 
             let type_cons = TypeCons::UncheckedFunction {
@@ -246,7 +246,7 @@ pub fn generate_builtin_fn_type(
 
     let mut type_params = TypeParams::empty();
     for (_ident, tp_id) in type_parameter_map {
-        type_params.addParam(tp_id);
+        type_params.add_param(tp_id);
     }
 
     let type_cons = TypeCons::Function {
