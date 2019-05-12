@@ -1315,7 +1315,9 @@ struct Baz {
 }
 
 struct Baq {
-    s: String
+    s: String,
+    d: String,
+    x: int,
 }
 
 fn foo(a: {i: int, f: float, n: base Baq }) -> String {
@@ -1331,6 +1333,8 @@ fn qux(a: {i: int, f: float, n: {s: String} }) -> String {
 fn bar() {
     let baq = init Baq {
         s: \"FOO\",
+        d: \"BAR\",
+        x: 5
     };
     let baz = init Baz {
         f: 1.0,
