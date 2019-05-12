@@ -71,29 +71,15 @@ impl TypeParams {
         }
     }
 
-    pub fn add_param(&mut self, param: TypeParamId) {
+    pub fn add_param(&mut self, param: TypeParamId, constraint: Option<AbstractWidthConstraint>) {
         match self.params {
             Some(ref mut p) => {
-                p.insert(param, None);
+                p.insert(param, constraint);
             }
 
             None => {
                 let mut hm = HashMap::new();
-                hm.insert(param, None);
-                self.params = Some(hm);
-            }
-        }
-    }
-
-    pub fn constrained_param(&mut self, param: TypeParamId, constraint: AbstractWidthConstraint) {
-        match self.params {
-            Some(ref mut p) => {
-                p.insert(param, Some(constraint));
-            }
-
-            None => {
-                let mut hm = HashMap::new();
-                hm.insert(param, Some(constraint));
+                hm.insert(param, constraint);
                 self.params = Some(hm);
             }
         }
@@ -535,7 +521,9 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                             }.into());
                         }
 
-                        local_param_ids.add_param(local_type_param_id);
+                        // TODO: Can function type annotations introduce new type parameters?
+                        // If so, also need to implement constraint generation
+                        local_param_ids.add_param(local_type_param_id, None);
                     }
 
                     (local_param_ids, Some(new_scope))
