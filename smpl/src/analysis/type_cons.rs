@@ -169,16 +169,19 @@ impl TypeCons {
 }
 
 #[derive(Debug, Clone)]
+pub struct AbstractWidthConstraint {
+    base_types: Vec<AbstractType>,
+    fields: HashMap<Ident, Vec<AbstractType>>,
+}
+
+#[derive(Debug, Clone)]
 pub enum AbstractType {
     App {
         type_cons: TypeId,
         args: Option<Vec<AbstractType>>,
     },
 
-    WidthConstraint {
-        base_types: Vec<AbstractType>,
-        fields: HashMap<Ident, Vec<AbstractType>>,
-    },
+    WidthConstraint(AbstractWidthConstraint),
 
     Param(TypeParamId),
 }
@@ -340,10 +343,10 @@ impl AbstractType {
                 }
             },
 
-            AbstractType::WidthConstraint { 
+            AbstractType::WidthConstraint(AbstractWidthConstraint {
                 ref base_types,
                 ref fields,
-            } => {
+            }) => {
 
                 let mut concrete_constraints: HashMap<Ident, Vec<Type>> = HashMap::new();
 
@@ -591,10 +594,10 @@ fn abstract_fuse_width_constraints(universe: &mut Universe,
         }
     }
 
-    let width_constraint = AbstractType::WidthConstraint {
+    let width_constraint = AbstractType::WidthConstraint(AbstractWidthConstraint {
         base_types: bases,
         fields: constrained_fields,
-    };
+    });
 
     Ok(width_constraint)
 }
