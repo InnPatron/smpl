@@ -1355,8 +1355,11 @@ fn bar() {
 "mod mod1;
 
 fn foo(type T)(t: T) -> int 
-    where T: {a: int, b: int} {
+    where T: {a: int, b: int, c: { d: bool }} {
 
+    let qux: T = t;
+    let qak: {a: int, b: int} = t;
+    let bar: {d : bool } = t.c;
     return t.a + t.b;
 }";
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
