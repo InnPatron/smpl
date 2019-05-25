@@ -1365,4 +1365,48 @@ fn foo(type T)(t: T) -> int
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _err = check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn generic_width_constraint_invalid_bind() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type T)(t: T) -> int 
+    where T: {a: int, b: int, c: { d: bool }} {
+
+    let qux: int = t;
+    return t.a + t.b;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err())
+    }
+
+    #[test]
+    fn generic_width_constraint_invalid_return() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type T)(t: T) -> bool
+    where T: {a: int, b: int, c: { d: bool }} {
+
+    return t.a + t.b;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err())
+    }
+
+    #[test]
+    fn generic_width_constraint_invalid_field_bind() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type T)(t: T) -> int
+    where T: {a: int, b: int, c: { d: bool }} {
+
+    let bar: float = t.c;
+    return t.a + t.b;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err())
+    }
 }
