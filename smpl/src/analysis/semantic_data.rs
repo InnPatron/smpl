@@ -361,7 +361,7 @@ pub struct ScopedData {
     var_map: HashMap<Ident, VarId>,
     var_type_map: HashMap<VarId, Type>,
     fn_map: HashMap<ModulePath, FnId>,
-    type_param_map: HashMap<Ident, TypeParamId>,
+    type_param_map: HashMap<Ident, (TypeParamId, Option<AbstractType>)>,
 }
 
 impl ScopedData {
@@ -428,16 +428,25 @@ impl ScopedData {
             .ok_or(AnalysisError::UnknownFn(path.clone()))
     }
 
-    pub fn insert_type_param(&mut self, ident: Ident, id: TypeParamId) -> bool {
-        self.type_param_map.insert(ident, id).is_some()
+    pub fn insert_type_param(&mut self, 
+                             ident: Ident, 
+                             id: TypeParamId, 
+                             constraint: Option<AbstractType>) -> bool {
+        self.type_param_map.insert(ident, (id, constraint)).is_some()
     }
 
-    pub fn type_param(&self, ident: &Ident) -> Option<TypeParamId> {
-        self.type_param_map.get(ident).map(|id| id.clone())
+    pub fn type_param<'a, 'b>(&'a self, ident: &'b Ident) 
+        -> Option<(TypeParamId, Option<&'a AbstractType>)> {
+        self.type_param_map
+            .get(ident)
+            .map(|(id, constraint)| (id.clone(), constraint.as_ref()))
     }
 
-    pub fn type_params<'a>(&'a self) -> impl Iterator<Item = TypeParamId> + 'a {
-        self.type_param_map.values().map(|id| id.clone())
+    pub fn type_params<'a>(&'a self) 
+        -> impl Iterator<Item = (TypeParamId, Option<&'a AbstractType>)> + 'a {
+        self.type_param_map
+            .values()
+            .map(|(id, constraint)| (id.clone(), constraint.as_ref()))
     }
 
     pub fn all_types(&self) -> Vec<(&ModulePath, &TypeId)> {

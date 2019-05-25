@@ -26,6 +26,7 @@ pub fn generate_struct_type_cons(
         type_param_map(universe, 
                        struct_def.type_params.as_ref(), 
                        struct_def.where_clause.as_ref(),
+                       scope,
                        scope.clone())?;
 
     // Generate the constructor
@@ -84,6 +85,7 @@ pub fn generate_fn_type(
         type_param_map(universe, 
                        fn_def.type_params.as_ref(), 
                        fn_def.where_clause.as_ref(),
+                       scope,
                        scope.clone())?;
 
     let ret_type = match fn_def.return_type {
@@ -153,6 +155,7 @@ pub fn generate_builtin_fn_type(
         type_param_map(universe, 
                        fn_def.type_params.as_ref(), 
                        fn_def.where_clause.as_ref(), 
+                       scope,
                        scope.clone())?;
 
     let ret_type = match fn_def.return_type {
@@ -296,6 +299,7 @@ fn type_param_map(
     universe: &mut Universe,
     type_params: Option<&AstTypeParams>,
     where_clause: Option<&WhereClause>,
+    current_scope: &ScopedData,
     mut new_scope: ScopedData,
 ) -> Result<(ScopedData, TypeParamMap), AnalysisError> {
     let mut type_parameter_map = HashMap::new();
@@ -310,9 +314,7 @@ fn type_param_map(
                 }
                 .into());
             } else {
-                let type_param_id = universe.new_type_param_id();
-                // Insert type parameter into scope
-                new_scope.insert_type_param(p.data().clone(), type_param_id);
+                let type_param_id = universe.new_type_param_id(); 
                 // Insert type parameter into set
                 type_parameter_map.insert(p.data().clone(), type_param_id);
             }
@@ -341,7 +343,9 @@ fn type_param_map(
                                                               &new_scope, 
                                                               ast_constraint.data())?;
 
+                    new_scope.insert_type_param(ident.clone(), tp.clone(), Some(abstract_type.clone()));
                     if let AbstractType::WidthConstraint(constraint) = abstract_type {
+                        // Insert type parameter into scope
                         constraint_map.insert(ident.clone(), (tp.clone(), Some(constraint)));
                     } else {
                         // TODO: found non-constraint in constraint position
@@ -360,6 +364,7 @@ fn type_param_map(
 
     // Any type param still left in type_parameter_map has no constraint
     for (ident, id) in type_parameter_map.into_iter() {
+        new_scope.insert_type_param(ident.clone(), id, None);
         constraint_map.insert(ident, (id.clone(), None));
     }
 
