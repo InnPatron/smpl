@@ -514,24 +514,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
         TypeAnnotationRef::FnType(tp, args, ret_type) => {
             let (local_type_params, new_scope) = match tp {
                 Some(local_type_params) => {
-                    let mut new_scope = scope.clone();
-                    let mut local_param_ids = TypeParams::new();
-                    let local_type_param_id = universe.new_type_param_id();
-
-                    // Insert local type parameters into the current scope
-                    for p in local_type_params.params.iter() {
-                        if new_scope.insert_type_param(p.data().clone(), local_type_param_id) {
-                            return Err(TypeError::TypeParameterNamingConflict {
-                                ident: p.data().clone(),
-                            }.into());
-                        }
-
-                        // TODO: Can function type annotations introduce new type parameters?
-                        // If so, also need to implement constraint generation
-                        local_param_ids.add_param(local_type_param_id, None);
-                    }
-
-                    (local_param_ids, Some(new_scope))
+                    unimplemented!("FN type annotations CAN NOT introduce new type parameters");
                 },
 
                 None => (TypeParams::empty(), None),
