@@ -1409,4 +1409,68 @@ fn foo(type T)(t: T) -> int
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err())
     }
+
+    #[test]
+    fn generic_transitive_width_constraint() {
+        let mod1 =
+"mod mod1;
+
+struct Bar {
+    x: int,
+    y: int,
+    z: int,
+}
+
+fn baz() -> int {
+    let _bar = init Bar {
+        x: 5,
+        y: 6,
+        z: 7,
+    };
+
+    let result: { x: int, y: int } = foo(type Bar)(_bar);
+    let result: { x: int } = foo(type Bar)(_bar);
+    let result: Bar = foo(type Bar)(_bar);
+
+    return result.x + result.y;
+}
+
+fn foo(type T)(t: T) -> T
+    where T: {x: int, y: int} {
+    return t;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_ok())
+    }
+
+    #[test]
+    fn generic_invalid_transitive_width_constraint() {
+        let mod1 =
+"mod mod1;
+
+struct Bar {
+    x: int,
+    y: int,
+    z: int,
+}
+
+fn baz() -> int {
+    let _bar = init Bar {
+        x: 5,
+        y: 6,
+        z: 7,
+    };
+
+    let result: int = foo(type Bar)(_bar);
+
+    return result;
+}
+
+fn foo(type T)(t: T) -> T
+    where T: {x: int, y: int} {
+    return t;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err())
+    }
 }
