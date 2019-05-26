@@ -561,7 +561,7 @@ impl<'a> FnAnalyzer<'a> {
                                 // Missing fields -> struct is not fully initialized
                                 return Err(TypeError::StructNotFullyInitialized {
                                     type_name: type_name.clone(),
-                                    struct_type: unimplemented!(),
+                                    struct_type: struct_type.clone(),
                                     missing_fields: {
                                         field_map
                                             .iter()
