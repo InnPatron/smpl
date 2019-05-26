@@ -152,6 +152,10 @@ pub enum TypeError {
         found: Type,
     },
 
+    ConflictingConstraints {
+        constraints: Vec<Type>,
+    },
+
     // TODO: fill this in
     FnAnnLocalTypeParameter,
 

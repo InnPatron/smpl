@@ -660,7 +660,10 @@ fn fuse_validate_concrete_field_constraints(universe: &Universe, constraints: &[
             } => {
                 if found_base_type_constraint {
                     // Error: found { foo: int } + { foo: { ... } }
-                    unimplemented!()
+                    // TODO: Make this collect only conflicting constraints
+                    return Err(TypeError::ConflictingConstraints {
+                        constraints: constraints.iter().map(|c| c.clone()).collect()   
+                    });
                 }
 
                 // Gather internal field constraints to recurse later on
@@ -676,12 +679,19 @@ fn fuse_validate_concrete_field_constraints(universe: &Universe, constraints: &[
             _ => {
                 if !found_base_type_constraint {
                     // Error: found { foo: { ... } } + { foo: int }
-                    unimplemented!()
+                    // TODO: Make this collect only conflicting constraints
+                    return Err(TypeError::ConflictingConstraints {
+                        constraints: constraints.iter().map(|c| c.clone()).collect()   
+                    });
                 }
 
                 if !resolve_types(constraint, first_constraint) {
                     // Error: found { foo: int } + { foo: String }
-                    unimplemented!();
+                    // TODO: Make this collect only conflicting constraints
+                    return Err(TypeError::ConflictingConstraints {
+                        constraints: constraints.iter().map(|c| c.clone()).collect()   
+                    });
+
                 }
             }
         }
