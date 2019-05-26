@@ -356,7 +356,9 @@ fn type_param_map(
 
                 None => {
                     // TODO: where clause with unknown TP
-                    unimplemented!();
+                    return Err(TypeError::UnknownTypeParameter {
+                        ident: ident.clone()
+                    }.into());
                 }
             }
         }

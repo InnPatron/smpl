@@ -156,6 +156,10 @@ pub enum TypeError {
         constraints: Vec<Type>,
     },
 
+    UnknownTypeParameter {
+        ident: Ident,
+    },
+
     // TODO: fill this in
     FnAnnLocalTypeParameter,
 
