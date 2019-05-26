@@ -47,6 +47,7 @@ pub enum Token {
     FloatLiteral(f64),
     BoolLiteral(bool),
 
+    Base,
     Fn,
     Struct,
     Mod,
@@ -54,6 +55,7 @@ pub enum Token {
     Builtin,
     Unchecked,
     Type,
+    Where,
 
     Init,
 
@@ -123,6 +125,7 @@ impl std::fmt::Display for Token {
             FloatLiteral(fl) => write!(f, "{}", fl),
             BoolLiteral(b) => write!(f, "{}", b),
 
+            Base => write!(f, "base"),
             Fn => write!(f, "fn"),
             Struct => write!(f, "struct"),
             Mod => write!(f, "mod"),
@@ -131,6 +134,7 @@ impl std::fmt::Display for Token {
             Unchecked => write!(f, "UNCHECKED"),
 
             Type => write!(f, "type"),
+            Where => write!(f, "where"),
 
             Init => write!(f, "init"),
 
@@ -494,6 +498,7 @@ impl<'input> Tokenizer<'input> {
         let (end, ident) = self.take_while(start, is_ident_continue);
 
         let token = match ident {
+            "base" => Token::Base,
             "fn" => Token::Fn,
             "mod" => Token::Mod,
             "struct" => Token::Struct,
@@ -506,6 +511,7 @@ impl<'input> Tokenizer<'input> {
             "builtin" => Token::Builtin,
             "UNCHECKED" => Token::Unchecked,
             "type" => Token::Type,
+            "where" => Token::Where,
             "continue" => Token::Continue,
             "break" => Token::Break,
             "return" => Token::Return,

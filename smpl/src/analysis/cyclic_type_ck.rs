@@ -4,11 +4,11 @@ use petgraph::graph::{Graph, NodeIndex};
 
 use super::error::TypeError;
 use super::semantic_data::*;
-use super::type_cons::TypeApp;
+use super::type_cons::AbstractType;
 
 enum Node {
     Cons(TypeId),
-    App(TypeApp),
+    App(AbstractType),
 }
 
 type TypeGraph = Graph<Node, ()>;
@@ -71,7 +71,7 @@ pub fn cyclic_type_check(program: &Program) -> Result<(), TypeError> {
         .map(|_| ())
         .map_err(|cycle| {
             let app = match type_graph.node_weight(cycle.node_id()).unwrap() {
-                Node::Cons(ref c) => TypeApp::Applied {
+                Node::Cons(ref c) => AbstractType::App {
                     type_cons: *c,
                     args: None,
                 },
@@ -86,10 +86,10 @@ fn connect_app(
     graph: &mut TypeGraph,
     map: &HashMap<TypeId, NodeIndex>,
     from: NodeIndex,
-    to: &TypeApp,
+    to: &AbstractType,
 ) {
     match to {
-        TypeApp::Applied {
+        AbstractType::App {
             type_cons: ref type_cons_id,
             ref args,
         } => {

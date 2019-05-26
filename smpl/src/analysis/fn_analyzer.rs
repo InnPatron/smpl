@@ -16,6 +16,7 @@ use super::semantic_data::{
 use super::type_cons::*;
 use super::type_cons_gen::generate_anonymous_fn_type;
 use super::typed_ast::*;
+use super::type_resolver::resolve_types;
 
 struct FnAnalyzer<'a> {
     program: &'a mut Program,
@@ -213,7 +214,7 @@ fn resolve_bin_op(
         },
 
         Eq | InEq => {
-            if lhs == rhs {
+            if resolve_types(&rhs, &lhs) {
                 Type::Bool
             } else {
                 return Err(TypeError::LhsRhsInEq(lhs.clone(), rhs.clone(), span).into());
@@ -320,7 +321,10 @@ impl<'a> FnAnalyzer<'a> {
         for (index, field) in path_iter.enumerate() {
             let next_type;
             match current_type {
-                Type::Record {
+                Type::WidthConstraint {
+                    ref fields,
+                    ref field_map,
+                } | Type::Record {
                     ref fields,
                     ref field_map,
                     ..
@@ -454,7 +458,7 @@ impl<'a> FnAnalyzer<'a> {
                     };
 
                     // TODO: Take into account type arguments
-                    let struct_type = TypeApp::Applied {
+                    let struct_type = AbstractType::App {
                         type_cons: struct_type_id,
                         args: type_args,
                     }
@@ -541,7 +545,7 @@ impl<'a> FnAnalyzer<'a> {
                                 typed_tmp_id.set_type(tmp_type.clone());
 
                                 // Expression type the same as the field type?
-                                if tmp_type != *field_type {
+                                if !resolve_types(&tmp_type, &field_type) {
                                     return Err(TypeError::UnexpectedType {
                                         found: tmp_type,
                                         expected: field_type.clone(),
@@ -557,7 +561,7 @@ impl<'a> FnAnalyzer<'a> {
                                 // Missing fields -> struct is not fully initialized
                                 return Err(TypeError::StructNotFullyInitialized {
                                     type_name: type_name.clone(),
-                                    struct_type: unimplemented!(),
+                                    struct_type: struct_type.clone(),
                                     missing_fields: {
                                         field_map
                                             .iter()
@@ -603,7 +607,7 @@ impl<'a> FnAnalyzer<'a> {
                             f.fn_type().clone()
                         };
 
-                        let fn_type = TypeApp::Applied {
+                        let fn_type = AbstractType::App {
                             type_cons: fn_type_id,
                             args: None,
                         }
@@ -691,7 +695,7 @@ impl<'a> FnAnalyzer<'a> {
                                     for (index, (arg_type, param_type)) in
                                         arg_type_ids.iter().zip(fn_param_type_ids).enumerate()
                                     {
-                                        if arg_type != param_type {
+                                        if !resolve_types(&arg_type, &param_type) {
                                             return Err(TypeError::ArgMismatch {
                                                 fn_type: fn_value_tmp_type.clone(),
                                                 index: index,
@@ -752,7 +756,7 @@ impl<'a> FnAnalyzer<'a> {
 
                                 let expected_element_type = expected_element_type.as_ref().unwrap();
 
-                                if current_element_type != *expected_element_type {
+                                if !resolve_types(&current_element_type, expected_element_type) {
                                     return Err(TypeError::HeterogenousArray {
                                         expected: expected_element_type.clone(),
                                         found: current_element_type,
@@ -857,7 +861,7 @@ impl<'a> FnAnalyzer<'a> {
                         f.fn_type().clone()
                     };
 
-                    tmp_type = TypeApp::Applied {
+                    tmp_type = AbstractType::App {
                         type_cons: fn_type_id,
                         args: None,
                     }
@@ -893,7 +897,7 @@ impl<'a> FnAnalyzer<'a> {
                     analyze_fn(self.program, fn_id, self.module_id)?;
 
                     // TODO: Construct type directly
-                    tmp_type = TypeApp::Applied {
+                    tmp_type = AbstractType::App {
                         type_cons: fn_type_id,
                         args: None,
                     }
@@ -927,7 +931,7 @@ impl<'a> FnAnalyzer<'a> {
                         })
                         .collect::<Result<Vec<_>, _>>()?;
 
-                    tmp_type = TypeApp::Applied {
+                    tmp_type = AbstractType::App {
                         type_cons: fn_type_id,
                         args: Some(type_args),
                     }
@@ -1013,8 +1017,8 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         };
 
         var_decl.set_type(var_type.clone());
-
-        if var_type == expr_type {
+        
+        if resolve_types(&expr_type, &var_type) {
             self.current_scope
                 .insert_var(name, var_id, var_type.clone());
         } else {
@@ -1045,7 +1049,7 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
 
         let assignment_span = Span::combine(assignment.access_span(), assignment.value().span());
 
-        if expr_type != assignee_type {
+        if !resolve_types(&expr_type, &assignee_type) {
             return Err(TypeError::LhsRhsInEq(assignee_type, expr_type, assignment_span).into());
         }
 
@@ -1065,7 +1069,7 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
             None => Type::Unit,
         };
 
-        if expr_type != self.fn_return_type {
+        if !resolve_types(&expr_type, &self.fn_return_type) {
             return Err(TypeError::InEqFnReturn {
                 expr: expr_type,
                 fn_return: self.fn_return_type.clone(),
@@ -1087,7 +1091,7 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
 
         let expected = Type::Bool;
 
-        if expr_type != expected {
+        if !resolve_types(&expr_type, &expected) {
             return Err(TypeError::UnexpectedType {
                 found: expr_type,
                 expected: expected,
@@ -1119,7 +1123,7 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
 
         let expected = Type::Bool;
 
-        if expr_type != expected {
+        if !resolve_types(&expr_type, &expected) {
             return Err(TypeError::UnexpectedType {
                 found: expr_type,
                 expected: expected,

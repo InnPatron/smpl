@@ -1,4 +1,4 @@
-use crate::analysis::type_cons::{Type, TypeApp};
+use crate::analysis::type_cons::{Type, AbstractType};
 use crate::ast::*;
 use crate::err::Error;
 use crate::span::Span;
@@ -39,7 +39,7 @@ impl From<ControlFlowError> for AnalysisError {
 
 #[derive(Clone, Debug)]
 pub enum TypeError {
-    CyclicType(TypeApp),
+    CyclicType(AbstractType),
     LhsRhsInEq(Type, Type, Span),
     InEqFnReturn {
         expr: Type,
@@ -147,6 +147,21 @@ pub enum TypeError {
     ParameterizedParameter {
         ident: Ident,
     },
+
+    InvalidTypeConstraintBase {
+        found: Type,
+    },
+
+    ConflictingConstraints {
+        constraints: Vec<Type>,
+    },
+
+    UnknownTypeParameter {
+        ident: Ident,
+    },
+
+    // TODO: fill this in
+    FnAnnLocalTypeParameter,
 
     ApplicationError(ApplicationError),
 

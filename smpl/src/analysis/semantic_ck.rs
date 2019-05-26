@@ -1275,4 +1275,259 @@ fn foo(type A)(a1: A, a2: A, a3: A, f: fn (A, A, A) -> A) -> A {
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _err = check_program(vec![mod1]).unwrap();
     }
+
+    #[test]
+    fn width_constraint_call() {
+        let mod1 =
+"mod mod1;
+
+struct Baz {
+    f: float,
+    i: int,
+}
+
+fn foo(a: {i: int, f: float}) -> int {
+    let b: {i: int} = a;
+    return b.i;
+}
+
+fn bar() {
+    let baz = init Baz {
+        f: 1.0,
+        i: 5
+    };
+
+    let result = foo(baz);
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn width_constraint_nested() {
+        let mod1 =
+"mod mod1;
+
+struct Baz {
+    f: float,
+    i: int,
+    n: Baq,
+}
+
+struct Baq {
+    s: String,
+    d: String,
+    x: int,
+}
+
+fn foo(a: {i: int, f: float, n: base Baq }) -> String {
+    let n: {s: String} = a.n;
+    return n.s;
+}
+
+fn qux(a: {i: int, f: float, n: {s: String} }) -> String {
+    let n: {s: String} = a.n;
+    return n.s;
+}
+
+fn bar() {
+    let baq = init Baq {
+        s: \"FOO\",
+        d: \"BAR\",
+        x: 5
+    };
+    let baz = init Baz {
+        f: 1.0,
+        i: 5,
+        n: baq,
+    };
+
+    let result = foo(baz);
+    let result = qux(baz);
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn generic_width_constraint() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type T)(t: T) -> int 
+    where T: {a: int, b: int, c: { d: bool }} {
+
+    let qux: T = t;
+    let qak: {a: int, b: int} = t;
+    let bar: {d : bool } = t.c;
+    return t.a + t.b;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _err = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn generic_width_constraint_invalid_bind() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type T)(t: T) -> int 
+    where T: {a: int, b: int, c: { d: bool }} {
+
+    let qux: int = t;
+    return t.a + t.b;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err())
+    }
+
+    #[test]
+    fn generic_width_constraint_invalid_return() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type T)(t: T) -> bool
+    where T: {a: int, b: int, c: { d: bool }} {
+
+    return t.a + t.b;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err())
+    }
+
+    #[test]
+    fn generic_width_constraint_invalid_field_bind() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type T)(t: T) -> int
+    where T: {a: int, b: int, c: { d: bool }} {
+
+    let bar: float = t.c;
+    return t.a + t.b;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err())
+    }
+
+    #[test]
+    fn generic_transitive_width_constraint() {
+        let mod1 =
+"mod mod1;
+
+struct Bar {
+    x: int,
+    y: int,
+    z: int,
+}
+
+fn baz() -> int {
+    let _bar = init Bar {
+        x: 5,
+        y: 6,
+        z: 7,
+    };
+
+    let result: { x: int, y: int } = foo(type Bar)(_bar);
+    let result: { x: int } = foo(type Bar)(_bar);
+    let result: Bar = foo(type Bar)(_bar);
+
+    return result.x + result.y;
+}
+
+fn foo(type T)(t: T) -> T
+    where T: {x: int, y: int} {
+    return t;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_ok())
+    }
+
+    #[test]
+    fn generic_invalid_transitive_width_constraint() {
+        let mod1 =
+"mod mod1;
+
+struct Bar {
+    x: int,
+    y: int,
+    z: int,
+}
+
+fn baz() -> int {
+    let _bar = init Bar {
+        x: 5,
+        y: 6,
+        z: 7,
+    };
+
+    let result: int = foo(type Bar)(_bar);
+
+    return result;
+}
+
+fn foo(type T)(t: T) -> T
+    where T: {x: int, y: int} {
+    return t;
+}";
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err())
+    }
+
+    #[test]
+    fn width_constraint_multi_base() {
+        let mod1 =
+"mod mod1;
+
+struct Foo {
+    x: int
+}
+
+struct Bar {
+    y: int
+}
+
+struct Baz {
+    x: int,
+    y: int,
+}
+
+fn qux() {
+    let f: base Foo + base Bar = init Baz {
+        x: 5,
+        y: 5,
+    };
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let result = check_program(vec![mod1]).unwrap();
+
+    }
+
+    #[test]
+    fn width_constraint_conflicting() {
+        let mod1 =
+"mod mod1;
+
+fn foo(x: { i: String} + { i: int }) {
+
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err());
+    }
+
+    #[test]
+    fn generic_unknown_type_parameter() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type T)(t: T) 
+    where U: { x: int } {
+    
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err());
+    }
 }

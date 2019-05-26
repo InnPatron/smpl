@@ -10,6 +10,7 @@ use super::error::{AnalysisError, ControlFlowError};
 use super::expr_flow;
 use super::semantic_data::{LoopId, ScopedData, Universe};
 use super::type_cons::*;
+use super::type_resolver::resolve_types;
 use super::typed_ast;
 
 use super::control_data::*;
@@ -389,7 +390,7 @@ impl CFG {
         } = fn_type
         {
             let return_type = return_type.apply(universe, fn_scope)?;
-            if return_type == Type::Unit {
+            if resolve_types(&return_type, &Type::Unit) {
                 // TODO: Figure out how to get last line of function
                 append_node!(
                     cfg,
@@ -701,18 +702,18 @@ mod tests {
         }
     }
 
-    fn expected_app(tc: TypeId) -> TypeApp {
-        TypeApp::Applied {
+    fn expected_app(tc: TypeId) -> AbstractType {
+        AbstractType::App {
             type_cons: tc,
             args: None
         }
     }
 
-    fn fn_type_cons(params: Vec<TypeApp>, return_type: TypeApp) -> TypeCons {
+    fn fn_type_cons(params: Vec<AbstractType>, return_type: AbstractType) -> TypeCons {
         let tc = TypeCons::Function {
             parameters: params,
             return_type: return_type,
-            type_params: None,
+            type_params: TypeParams::empty(),
         };
 
         tc

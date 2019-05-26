@@ -1,4 +1,5 @@
 use std::iter::Iterator;
+use std::collections::HashMap;
 
 use super::expr_parser::*;
 use super::parser_err::*;
@@ -235,6 +236,54 @@ fn use_decl(tokens: &mut BufferedTokenizer) -> ParseErr<DeclStmt> {
     Ok(use_decl)
 }
 
+fn where_clause(tokens: &mut BufferedTokenizer) 
+    -> ParseErr<WhereClause> {
+    let _where = consume_token!(
+        tokens,
+        Token::Where,
+        parser_state!("where-clause", "where"));
+
+    let mut parameter_constraints = HashMap::new();
+
+    loop {
+        let (_, parameter) = consume_token!(
+            tokens,
+            Token::Identifier(ident) => Ident(ident),
+            parser_state!("where-clause-constraints", "param"));
+        let colon = consume_token!(
+            tokens,
+            Token::Colon,
+            parser_state!("where-clause-constraints", "colon"));
+        let annotation = production!(
+            type_annotation(tokens),
+            parser_state!("where-clause-constraints", "annotation"));
+
+        parameter_constraints
+            .entry(parameter)
+            .or_insert(Vec::new())
+            .push(annotation);
+
+        if peek_token!(
+            tokens,
+            |tok| match tok {
+                Token::Comma => true,
+                _ => false
+            },
+            parser_state!("where-clause-constraints", "comma?")) {
+            let _comma = consume_token!(tokens,
+                                        Token::Comma,
+                                        parser_state!("where-clause-constraints", "comma"));
+        } else {
+            // No more commas
+            // Assume no more where clause constraints
+            break;
+        }
+    }
+
+    let where_clause = WhereClause(parameter_constraints);
+    Ok(where_clause)
+}
+
 #[cfg(test)]
 pub fn testfn_decl(tokens: &mut BufferedTokenizer) -> ParseErr<Function> {
     let decl = fn_decl(tokens, vec![], false)?;
@@ -351,6 +400,22 @@ fn fn_decl(
         ));
     }
 
+    let where_clause = if peek_token!(
+        tokens,
+        |tok| match tok {
+            Token::Where => true,
+            _ => false,
+        },
+        parser_state!("fn-decl", "where-clause?")) {
+
+        Some(production!(
+                where_clause(tokens),
+                parser_state!("fn-decl", "where-clause")))
+
+    } else {
+        None
+    };
+
     let mut body: Option<AstNode<Block>> = None;
     if !is_builtin {
         body = Some(block(tokens)?);
@@ -373,6 +438,7 @@ fn fn_decl(
                 return_type: return_type,
                 annotations: annotations,
                 type_params: type_params,
+                where_clause: where_clause,
             },
             span,
         )))
@@ -405,6 +471,7 @@ fn fn_decl(
                 body: body,
                 annotations: annotations,
                 type_params: type_params,
+                where_clause: where_clause,
             },
             span,
         )))
@@ -506,6 +573,21 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
         None
     };
 
+    let where_clause = if peek_token!(
+        tokens,
+        |tok| match tok {
+            Token::Where => true,
+            _ => false,
+        },
+        parser_state!("struct-decl", "where-clause?")) {
+        
+        Some(production!(
+                where_clause(tokens),
+                parser_state!("struct-decl", "where-clause")))
+    } else {
+        None
+    };
+
     let _lbrace = consume_token!(
         tokens,
         Token::LBrace,
@@ -546,6 +628,7 @@ fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseEr
             body: body,
             annotations: anns,
             type_params: type_params,
+            where_clause: where_clause,
         },
         overall_span,
     ))
@@ -630,6 +713,7 @@ pub fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeA
         Module,
         FnType,
         ArrayType,
+        WidthConstraint,
         Err,
     }
 
@@ -639,6 +723,8 @@ pub fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeA
             Token::Fn => TypeAnnDec::FnType,
             Token::Identifier(_) => TypeAnnDec::Module,
             Token::LBracket => TypeAnnDec::ArrayType,
+            Token::Base => TypeAnnDec::WidthConstraint,
+            Token::LBrace => TypeAnnDec::WidthConstraint,
 
             _ => TypeAnnDec::Err,
         },
@@ -682,7 +768,115 @@ pub fn type_annotation(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<TypeA
             parser_state!("type-annotation", "array-type")
         )),
 
+        TypeAnnDec::WidthConstraint => {
+            let constraints = production!(
+                width_constraint_list(tokens),
+                parser_state!("type-annotation", "width-constraint-list")
+            );
+
+            let (constraints, constraints_span) = constraints.to_data();
+
+            Ok(AstNode::new(TypeAnnotation::WidthConstraint(constraints), constraints_span))
+        }
+
         TypeAnnDec::Err => unimplemented!(),
+    }
+}
+
+fn width_constraint_list(tokens: &mut BufferedTokenizer) 
+    -> ParseErr<AstNode<Vec<AstNode<WidthConstraint>>>> {
+
+    let first = production!(
+        width_constraint(tokens),
+        parser_state!("width-constraint-list", "constraint[0]")
+    );
+
+    let mut span = first.span();
+    let mut constraints = vec![first];
+    let mut counter = 1;
+    while peek_token!(
+        tokens,
+        |tok| match tok {
+            Token::Plus => true,
+            _ => false,
+        },
+        parser_state!("width-constraint-list", &format!("peek-constraint[{}]", counter))
+    ) {
+        let _plus = consume_token!(tokens,
+                                   Token::Plus,
+                                   parser_state!("width-constraint-list", "constraint-concat"));
+        let next_constraint = production!(
+            width_constraint(tokens),
+            parser_state!("width-constraint-list", &format!("constraint[{}]", counter))
+        );
+
+        span = LocationSpan::new(span.start(), next_constraint.span().end());
+        constraints.push(next_constraint);
+
+        counter += 1;
+    }
+
+    let constraints = AstNode::new(constraints, span);
+    Ok(constraints)
+}
+
+fn width_constraint(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<WidthConstraint>> {
+
+    enum WCDec {
+        Base,
+        Anon,
+        Error(Token),
+    }
+
+    match peek_token!(
+        tokens,
+        |tok| match tok {
+            Token::LBrace => WCDec::Anon,
+            Token::Base => WCDec::Base,
+            _ => WCDec::Error(tok.clone()),
+        },
+        parser_state!("width-constraint", "constraint-peek")) {
+
+        WCDec::Base => {
+            let (base_loc, _) = consume_token!(tokens, 
+                                               Token::Base,
+                                               parser_state!("width-constraint", "base"));
+            let (name, name_loc) = production!( 
+                                        type_annotation(tokens),
+                                        parser_state!("width-constraint", "constraint-base"))
+                .to_data();
+
+            let span = LocationSpan::new(base_loc.start(), name_loc.end());
+
+            let constraint = 
+                AstNode::new(WidthConstraint::BaseStruct(AstNode::new(name, name_loc)), span);
+
+            Ok(constraint)
+
+        },
+
+        WCDec::Anon => {
+            let (l_loc, _) = consume_token!(tokens, 
+                                            Token::LBrace,
+                                            parser_state!("width-constraint", "anonymous-open"));
+            let fields = production!(
+                struct_field_list(tokens),
+                parser_state!("width-constraint", "anonymous-struct")
+            )
+                .into_iter()
+                .map(|struct_field| (struct_field.name, struct_field.field_type))
+                .collect();
+
+            let (r_loc, _) = consume_token!(tokens, 
+                                            Token::RBrace,
+                                            parser_state!("width-constraint", "anonymous-close"));
+            let span = LocationSpan::new(l_loc.start(), r_loc.end());
+            let constraint = AstNode::new(WidthConstraint::Anonymous(fields), span);
+
+            Ok(constraint)
+        },
+
+        WCDec::Error(tok) => panic!("{}", tok),
     }
 }
 
