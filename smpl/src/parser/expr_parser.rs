@@ -784,26 +784,45 @@ pub fn expr_module_path(
 
 fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
     let (linit, _) = consume_token!(tokens, Token::Init, parser_state!("struct-init", "init"));
-    let (path, _) = production!(
-        full_module_binding(tokens),
-        parser_state!("struct init", "struct-type")
-    )
-    .to_data();
-
-    let type_args = if peek_token!(
+    
+    
+    let (path, type_args) = if peek_token!(
         tokens,
         |tok| match tok {
-            Token::LParen => true,
-            _ => false,
+            Token::LBrace => false,
+
+            _ => true
         },
-        parser_state!("struct-init", "type-app?")
+        parser_state!("struct-init", "anonymous?")
     ) {
-        Some(production!(
-            type_arg_list(tokens),
-            parser_state!("struct-init", "type-app")
-        ))
+
+        // Named struct init
+        let (path, _) = production!(
+            full_module_binding(tokens),
+            parser_state!("struct init", "struct-type")
+        )
+        .to_data();
+
+        let type_args = if peek_token!(
+            tokens,
+            |tok| match tok {
+                Token::LParen => true,
+                _ => false,
+            },
+            parser_state!("struct-init", "type-app?")
+        ) {
+            Some(production!(
+                type_arg_list(tokens),
+                parser_state!("struct-init", "type-app")
+            ))
+        } else {
+            None
+        };
+
+        (Some(path), type_args)
     } else {
-        None
+        // Anonymous struct init
+        (None, None)
     };
 
     let _lbrace = consume_token!(
@@ -835,20 +854,32 @@ fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
 
     let span = LocationSpan::new(linit.start(), lroc.end());
 
-    let struct_path = match type_args {
-        Some(args) => TypedPath::Parameterized(path, args),
+    if let Some(path) = path {
+        // Named struct init
+        let struct_path = match type_args {
+            Some(args) => TypedPath::Parameterized(path, args),
 
-        None => TypedPath::NillArity(path),
-    };
+            None => TypedPath::NillArity(path),
+        };
 
-    let struct_init = StructInit {
-        struct_name: struct_path,
-        field_init: init,
-    };
+        let struct_init = StructInit {
+            struct_name: struct_path,
+            field_init: init,
+        };
 
-    let struct_init = AstNode::new(struct_init, span);
+        let struct_init = AstNode::new(struct_init, span);
 
-    Ok(AstNode::new(Expr::StructInit(struct_init), span))
+        Ok(AstNode::new(Expr::StructInit(struct_init), span)) 
+    } else {
+        // Anonymous struct init
+        let struct_init = AnonStructInit {
+            field_init: init,
+        };
+
+        let struct_init = AstNode::new(struct_init, span);
+        Ok(AstNode::new(Expr::AnonStructInit(struct_init), span))
+    }
+
 }
 
 fn struct_field_init_list(
