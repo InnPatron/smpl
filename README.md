@@ -38,13 +38,23 @@ mod test;
 // From interpreter's stdlib 
 use log;
 
-struct Point {
+struct Point3d {
     x: int,
     y: int,
+	z: int,
 }
 
-fn default_point_x() -> int {
-    return 100;
+fn modify2d(type P)(point: P, x: int, y: int) -> P 
+	where P: { x: int, y: int } {
+
+	point.x = x;
+	point.y = y;
+
+	return point;
+}
+
+fn getX(point: { x: int }) -> int {
+	return point.x;
 }
 
 fn add(l: int, r: int) -> int {
@@ -52,25 +62,16 @@ fn add(l: int, r: int) -> int {
 }
 
 fn main() {
-    let a = default_point_x();
-    let b = 10;
-    
     let p = init Point {
-        x: a,
-        y: b,
+        x: 0,
+        y: 0,
+		z: 0,
     };
+
+	let p = modify2d(type Point)(p, 1, 2);
     
-    let result: String = "Success";
-
-    if a != p.x {
-        result = "Failure";
-    } elif b != p.x {
-        result = "Failure";
-    }
-
-    log::println(result);
-
-    log::println(add(a, 1) |> add(2));
+	// Should print '4'
+    log::println(add(getX(p), 1) |> add(2));
 }
 
 
