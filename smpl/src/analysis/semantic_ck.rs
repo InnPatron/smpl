@@ -1503,4 +1503,17 @@ fn qux() {
         let result = check_program(vec![mod1]).unwrap();
 
     }
+
+    #[test]
+    fn width_constraint_conflicting() {
+        let mod1 =
+"mod mod1;
+
+fn foo(x: { i: String} + { i: int }) {
+
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err());
+    }
 }
