@@ -272,6 +272,7 @@ pub enum Value {
     BinExpr(ast::BinOp, Typed<TmpId>, Typed<TmpId>),
     UniExpr(ast::UniOp, Typed<TmpId>),
     StructInit(StructInit),
+    AnonStructInit(AnonStructInit),
     ArrayInit(self::ArrayInit),
     Indexing(Indexing),
     ModAccess(self::ModAccess),
@@ -452,6 +453,100 @@ impl StructInit {
 
             None => Ok(()),
         }
+    }
+
+    pub fn struct_type(&self) -> Option<Type> {
+        let borrow = self.struct_type.borrow();
+        borrow.clone()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AnonStructInit {
+    field_init: Option<Vec<(ast::Ident, TmpId)>>,
+    struct_type: RefCell<Option<Type>>,
+    mapped_field_init: RefCell<Option<Vec<(FieldId, Typed<TmpId>)>>>,
+}
+
+impl AnonStructInit {
+    pub fn new(
+        field_init: Option<Vec<(ast::Ident, TmpId)>>,
+    ) -> AnonStructInit {
+        AnonStructInit {
+            struct_type: RefCell::new(None),
+            field_init: field_init,
+            mapped_field_init: RefCell::new(None),
+        }
+    }
+
+    fn set_struct_type(&self, app: Type) {
+        let mut borrow = self.struct_type.borrow_mut();
+        if borrow.is_some() {
+            panic!("Attempting to overwrite struct type of struct init",);
+        } else {
+            *borrow = Some(app);
+        }
+    }
+
+    pub fn field_init(&self) -> Option<Vec<(FieldId, Typed<TmpId>)>> {
+        self.mapped_field_init.borrow().clone()
+    }
+
+    pub fn init_order<'a>(&'a self) -> Option<impl Iterator<Item = &'a ast::Ident>> {
+        match self.field_init {
+            Some(ref vec) => Some(vec.iter().map(|(ref ident, _)| ident)),
+
+            None => None,
+        }
+    }
+
+    pub fn set_init(&self, universe: &Universe, expr: &Expr) -> Result<(), Vec<ast::Ident>> {
+        match self.field_init {
+            Some(ref map) => {
+                let mut result = Vec::new();
+
+                // Collect field types, field IDs
+                let mut field_map = HashMap::new();
+                let mut field_type_map = HashMap::new();
+                let mut conflicting_fields = Vec::new();
+                for &(ref ident, ref tmp_id) in map.iter() {
+                    let tmp = expr.get_tmp(*tmp_id);
+                    let tmp_type = tmp.value().get_type().unwrap();
+
+                    let typed_tmp = Typed::typed(tmp_id.clone(), tmp_type.clone());
+
+                    let field_id = universe.new_field_id();
+
+                    if field_map.insert(ident.clone(), field_id).is_some() {
+                        // Field initialized multiple times
+                        conflicting_fields.push(ident.clone());
+                    }
+                    field_type_map.insert(field_id, tmp_type);
+                    result.push((field_id, typed_tmp));
+                }
+
+                if conflicting_fields.len() > 0 {
+                    return Err(conflicting_fields);
+                }
+
+                // Set type and field init
+                *self.mapped_field_init.borrow_mut() = Some(result);
+                self.set_struct_type(Type::WidthConstraint {
+                    fields: field_type_map,
+                    field_map: field_map,
+                });
+
+            }
+
+            None => {
+                self.set_struct_type(Type::WidthConstraint {
+                    fields: HashMap::with_capacity(0),
+                    field_map: HashMap::with_capacity(0),
+                });
+            },
+        };
+
+        Ok(())
     }
 
     pub fn struct_type(&self) -> Option<Type> {

@@ -578,6 +578,11 @@ impl<'a> FnAnalyzer<'a> {
                     tmp_type = struct_type;
                 }
 
+                Value::AnonStructInit(ref init) => {
+                    init.set_init(self.program.universe_mut(), expr);
+                    tmp_type = init.struct_type().unwrap();
+                }
+
                 Value::Binding(ref var) => match self.current_scope.binding_info(var.ident())? {
                     BindingInfo::Var(var_id, type_id) => {
                         var.set_id(var_id);
