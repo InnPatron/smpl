@@ -1516,4 +1516,18 @@ fn foo(x: { i: String} + { i: int }) {
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err());
     }
+
+    #[test]
+    fn generic_unknown_type_parameter() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type T)(t: T) 
+    where U: { x: int } {
+    
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err());
+    }
 }
