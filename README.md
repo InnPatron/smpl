@@ -41,20 +41,20 @@ use log;
 struct Point3d {
     x: int,
     y: int,
-	z: int,
+    z: int,
 }
 
 fn modify2d(type P)(point: P, x: int, y: int) -> P 
-	where P: { x: int, y: int } {
+    where P: { x: int, y: int } {
 
-	point.x = x;
-	point.y = y;
+    point.x = x;
+    point.y = y;
 
-	return point;
+    return point;
 }
 
 fn getX(point: { x: int }) -> int {
-	return point.x;
+    return point.x;
 }
 
 fn add(l: int, r: int) -> int {
@@ -65,12 +65,12 @@ fn main() {
     let p = init Point {
         x: 0,
         y: 0,
-		z: 0,
+        z: 0,
     };
 
-	let p = modify2d(type Point)(p, 1, 2);
-    
-	// Should print '4'
+    let p = modify2d(type Point)(p, 1, 2);
+
+    // Should print '4'
     log::println(add(getX(p), 1) |> add(2));
 }
 
