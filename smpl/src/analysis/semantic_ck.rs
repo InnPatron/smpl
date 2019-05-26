@@ -1530,4 +1530,55 @@ fn foo(type T)(t: T)
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err());
     }
+
+    #[test]
+    fn generic_struct_init_type_arg() {
+        let mod1 =
+"mod mod1;
+
+struct Foo(type T) {
+    x: T
+}
+
+fn foo() {
+    let f: Foo(type int) = init Foo(type int) {
+        x: 5,
+    };
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let result = check_program(vec![mod1]).unwrap();
+
+    }
+
+    #[test]
+    fn generic_struct_init_width_constraint() {
+        let mod1 =
+"mod mod1;
+
+struct Bar {
+    y: bool,
+}
+
+struct Foo(type T) 
+    where T: { y: bool } {
+    x: T
+}
+
+fn foo() {
+    let b = init Bar {
+        y: false,
+    };
+
+    let f: Foo(type Bar) = init Foo(type Bar) {
+        x: b,
+    };
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let result = check_program(vec![mod1]).unwrap();
+
+    }
+
+
 }
