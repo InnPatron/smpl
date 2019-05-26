@@ -1473,4 +1473,34 @@ fn foo(type T)(t: T) -> T
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err())
     }
+
+    #[test]
+    fn width_constraint_multi_base() {
+        let mod1 =
+"mod mod1;
+
+struct Foo {
+    x: int
+}
+
+struct Bar {
+    y: int
+}
+
+struct Baz {
+    x: int,
+    y: int,
+}
+
+fn qux() {
+    let f: base Foo + base Bar = init Baz {
+        x: 5,
+        y: 5,
+    };
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let result = check_program(vec![mod1]).unwrap();
+
+    }
 }
