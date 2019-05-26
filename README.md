@@ -26,8 +26,8 @@ Popstcl has dynamic types and dynamic scoping, all of which I found painful to u
 * ~~Types and functions are brought into scope top-to-bottom.~~ Declarations can be in any order
 * ~~A lot of unimplemented features~~ It works...
 * Does not have the same semantics as Rust code
-* * No move semantics
-* * No concept of lifetime
+  * No move semantics
+  * No concept of lifetime
 * ~~No~~ Bare-bones standard library for the interpreter
 
 ## Example
