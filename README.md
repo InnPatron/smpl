@@ -15,11 +15,12 @@ Popstcl has dynamic types and dynamic scoping, all of which I found painful to u
 * Rust-like syntax.
 * Statically typed
 * Lexically scoped
-* Compiler with Rust code generator
+* ~~Compiler with Rust code generator~~
 * Embeddable (**asynchronous!**) interpreter
 * SMPL code is sandboxed (?)
 * Function piping
-* Basic generics
+* Width-based structural subtyping 
+* Generics (with width-based structural constraints)
 
 ## The Bad
 * ~~Types and functions are brought into scope top-to-bottom.~~ Declarations can be in any order
@@ -47,7 +48,7 @@ fn default_point_x() -> int {
 }
 
 fn add(l: int, r: int) -> int {
-	return l + r;
+    return l + r;
 }
 
 fn main() {
@@ -64,12 +65,12 @@ fn main() {
     if a != p.x {
         result = "Failure";
     } elif b != p.x {
-		result = "Failure";
-	}
+        result = "Failure";
+    }
 
-	log::println(result);
+    log::println(result);
 
-	log::println(add(a, 1) |> add(2));
+    log::println(add(a, 1) |> add(2));
 }
 
 

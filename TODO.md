@@ -14,3 +14,4 @@
 14. **Type-safe interpreter-Rust interface**
 15. Program and Interpreter Serialization
 16. ~~Generics~~
+17. Currying
