@@ -152,6 +152,9 @@ pub enum TypeError {
         found: Type,
     },
 
+    // TODO: fill this in
+    FnAnnLocalTypeParameter,
+
     ApplicationError(ApplicationError),
 
     UninstantiatedType,

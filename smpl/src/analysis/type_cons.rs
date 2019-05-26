@@ -521,7 +521,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
         TypeAnnotationRef::FnType(tp, args, ret_type) => {
             let (local_type_params, new_scope) = match tp {
                 Some(local_type_params) => {
-                    unimplemented!("FN type annotations CAN NOT introduce new type parameters");
+                    return Err(TypeError::FnAnnLocalTypeParameter.into());     
                 },
 
                 None => (TypeParams::empty(), None),
