@@ -393,8 +393,10 @@ impl AbstractType {
                             }
                         },
 
-                        _ => {
-                            unimplemented!()
+                        invalid_base => {
+                            return Err(TypeError::InvalidTypeConstraintBase {
+                                found: invalid_base
+                            });
                         },
                     }
                 }

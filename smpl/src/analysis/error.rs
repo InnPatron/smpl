@@ -148,6 +148,10 @@ pub enum TypeError {
         ident: Ident,
     },
 
+    InvalidTypeConstraintBase {
+        found: Type,
+    },
+
     ApplicationError(ApplicationError),
 
     UninstantiatedType,
