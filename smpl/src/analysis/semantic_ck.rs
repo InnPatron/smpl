@@ -1589,6 +1589,7 @@ fn foo() {
     let f: { x: int, y: bool } = init {
         y: true,
         x: 15,
+        z: \"bla\",
     };
 }
 ";
