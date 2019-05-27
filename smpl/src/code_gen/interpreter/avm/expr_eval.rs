@@ -471,6 +471,26 @@ fn eval_tmp(_program: &Program, context: &mut ExecutionContext, tmp: &Tmp) -> Tm
             Value::Struct(s)
         }
 
+        AbstractValue::AnonStructInit(ref init) => {
+            // Exactly the same as regular init
+            let mut s = Struct::new();
+
+            match init.field_init() {
+                Some(ref v) => {
+                    let init_order = init.init_order().unwrap();
+                    for (ident, (_, ref tmp)) in init_order.into_iter().zip(v.iter()) {
+                        let field_value =
+                            context.top().func_env.get_tmp(tmp.data().clone()).unwrap();
+                        s.set_field(ident.as_str().to_string(), field_value.clone());
+                    }
+                }
+
+                None => (),
+            }
+
+            Value::Struct(s)
+        }
+
         AbstractValue::ArrayInit(ref init) => match *init {
             ArrayInit::List(ref v) => Value::Array(
                 v.iter()
