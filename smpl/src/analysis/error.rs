@@ -104,6 +104,11 @@ pub enum TypeError {
         span: Span,
     },
 
+    InvalidInitialization {
+        fields: Vec<Ident>,
+        span: Span,
+    },
+
     UnknownField {
         name: Ident,
         struct_type: Type,
