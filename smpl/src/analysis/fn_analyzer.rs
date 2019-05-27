@@ -514,7 +514,7 @@ impl<'a> FnAnalyzer<'a> {
 
                     match init.field_init() {
                         Some(init_list) => {
-                            if init_list.len() != fields.len() {
+                            if init_list.len() < fields.len() {
                                 // Missing fields -> struct is not fully initialized
                                 return Err(TypeError::StructNotFullyInitialized {
                                     type_name: type_name.clone(),
@@ -534,7 +534,13 @@ impl<'a> FnAnalyzer<'a> {
                                     span: tmp.span(),
                                 }
                                 .into());
+                            } else if init_list.len() > fields.len() {
+                                return Err(TypeError::InvalidInitialization {
+                                    fields: init.init_order().unwrap().map(|i| i.clone()).collect(),
+                                    span: tmp.span(),
+                                }.into());
                             }
+
                             // Go threw initialization list and check expressions
                             for (ref id, ref typed_tmp_id) in init_list {
                                 let field_type = fields.get(id).unwrap();
