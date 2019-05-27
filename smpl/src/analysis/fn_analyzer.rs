@@ -579,7 +579,12 @@ impl<'a> FnAnalyzer<'a> {
                 }
 
                 Value::AnonStructInit(ref init) => {
-                    init.set_init(self.program.universe_mut(), expr);
+                    if let Err(duplicate_fields) = init.set_init(self.program.universe_mut(), expr) {
+                        return Err(TypeError::InvalidInitialization {
+                            fields: duplicate_fields,
+                            span: tmp.span(),
+                        }.into());
+                    }
                     tmp_type = init.struct_type().unwrap();
                 }
 
