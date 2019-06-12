@@ -71,6 +71,13 @@ pub fn resolve_types(synthesis: &Type, constraint: &Type) -> bool {
         }, WidthConstraint {
             fields: ref constraint_width,
             field_map: ref constraint_map,
+        }) | (Record {
+            fields: ref synth_width,
+            field_map: ref synth_map,
+            ..
+        }, WidthConstraint {
+            fields: ref constraint_width,
+            field_map: ref constraint_map,
         }) => {
 
             for (constraint_ident, constraint_field_id) in constraint_map.iter() {
@@ -89,33 +96,6 @@ pub fn resolve_types(synthesis: &Type, constraint: &Type) -> bool {
 
             true
         },
-
-        (Record {
-            fields: ref synth_field_id_map,
-            field_map: ref synth_ident_map,
-            ..
-        }, WidthConstraint {
-            fields: ref constraint_field_id_map,
-            field_map: ref constraint_ident_map,
-        }) => {
-
-            for (constraint_ident, constraint_field_id) in constraint_ident_map.iter() {
-                let synth_field_id = synth_ident_map.get(constraint_ident);
-                let constraint_t = constraint_field_id_map.get(constraint_field_id).unwrap();
-                match synth_field_id {
-                    Some(synth_field_id) => {
-                        let synth_t = synth_field_id_map.get(synth_field_id).unwrap();
-                        if resolve_types(synth_t, constraint_t) == false {
-                            return false;
-                        }
-                    }
-                    None => return false,
-                }
-            }
-
-            true
-        },
-
 
         _ => false,
     }
