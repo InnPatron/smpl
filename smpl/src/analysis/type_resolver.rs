@@ -110,13 +110,17 @@ fn resolve_param(synth: &Type, constraint: &Type) -> bool {
         }, WidthConstraint {
             fields: ref constraint_width,
             field_map: ref constraint_map,
-        }) | (Record {
+        }) | 
+        
+        // NOTE(alex): Synth width must be narrower than the nominal record constraint
+        // Calling with the nominal record value on the width constraint is allowed
+        (WidthConstraint {
             fields: ref synth_width,
             field_map: ref synth_map,
-            ..
-        }, WidthConstraint {
+        }, Record {
             fields: ref constraint_width,
             field_map: ref constraint_map,
+            ..
         }) => {
 
             // In function parameters, types must be contravariant
