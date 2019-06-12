@@ -1,8 +1,8 @@
 
 use super::type_cons::*;
+use super::type_cons::Type::*;
 
 pub fn resolve_types(synthesis: &Type, constraint: &Type) -> bool {
-    use super::type_cons::Type::*;
     match (synthesis, constraint) {
         (UncheckedFunction {
             return_type: ref synth_return,
@@ -25,8 +25,9 @@ pub fn resolve_types(synthesis: &Type, constraint: &Type) -> bool {
                 return false;
             }
 
+            // Function parameters must be contravariant
             for (sp, cp) in synth_params.iter().zip(constraint_params) {
-                if resolve_types(sp, cp) == false {
+                if resolve_param(sp, cp) == false {
                     return false;
                 }
             }
@@ -98,5 +99,47 @@ pub fn resolve_types(synthesis: &Type, constraint: &Type) -> bool {
         },
 
         _ => false,
+    }
+}
+
+fn resolve_param(synth: &Type, constraint: &Type) -> bool {
+    match (synth, constraint) {
+        (WidthConstraint {
+            fields: ref synth_width,
+            field_map: ref synth_map,
+        }, WidthConstraint {
+            fields: ref constraint_width,
+            field_map: ref constraint_map,
+        }) | (Record {
+            fields: ref synth_width,
+            field_map: ref synth_map,
+            ..
+        }, WidthConstraint {
+            fields: ref constraint_width,
+            field_map: ref constraint_map,
+        }) => {
+
+            // In function parameters, types must be contravariant
+            // In the case of width constraints, the synthesis type must be narrower than the constraint
+
+            // TODO(alex): Should the synthesis parameter be allowed to be a nominal record?
+            for (synth_ident, synth_field_id) in synth_map.iter() {
+                let constraint_id = constraint_map.get(synth_ident);
+                let synth_type = synth_width.get(synth_field_id).unwrap();
+                match constraint_id {
+                    Some(constraint_id) => {
+                        let constraint_type = constraint_width.get(constraint_id).unwrap();
+                        if resolve_types(synth_type, constraint_type) == false {
+                            return false;
+                        }
+                    }
+                    None => return false,
+                }
+            }
+
+            true
+        }
+
+        _ => resolve_types(synth, constraint)
     }
 }
