@@ -67,6 +67,27 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
             )
         }
 
+        AstExpr::AnonStructInit(init) => {
+            let (init, span) = init.to_data();
+            let field_init = init.field_init.map(|field_init_list| {
+                field_init_list
+                    .into_iter()
+                    .map(|(name, expr)| {
+                        let expr = flatten_expr(universe, scope, *expr).0;
+                        (name.data().clone(), expr)
+                    })
+                    .collect::<Vec<_>>()
+            });
+            (
+                scope.map_tmp(
+                    universe,
+                    Value::AnonStructInit(AnonStructInit::new(field_init)),
+                    span,
+                ),
+                span,
+            )
+        }
+
         AstExpr::Binding(ident) => {
             let span = ident.span();
             (

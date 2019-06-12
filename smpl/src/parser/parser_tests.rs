@@ -131,6 +131,46 @@ init NAME {
     }
 
     #[test]
+    fn test_parse_anonymous_struct_init() {
+        let init_1 = r##" init { }"##;
+        let init_2 = r##"
+init {
+    field1: 1 + 2,
+    field2: true
+}
+"##;
+
+        let init_1 = parse_expr_quick(init_1);
+        let init_2 = parse_expr_quick(init_2);
+
+        // Check init_1
+        {
+            let expected = Expr::AnonStructInit(dummy_node!(AnonStructInit {
+                field_init: None,
+            }));
+
+            assert_eq!(init_1, expected);
+        }
+
+        // Check init_2
+        {
+            let field_init = bin_expr!((int!(1 => BoxExpr), 
+                                        BinOp::Add, 
+                                        int!(2 => BoxExpr)) => BoxExpr);
+            let field2_init = boolean!(true => BoxExpr);
+
+            let expected = Expr::AnonStructInit(dummy_node!(AnonStructInit {
+                field_init: Some(vec![
+                    (dummy_node!(ident!("field1")), field_init),
+                    (dummy_node!(ident!("field2")), field2_init)
+                ]),
+            }));
+
+            assert_eq!(init_2, expected);
+        }
+    }
+
+    #[test]
     fn test_parse_complex_expr() {
         let input = r##"5 != 3 || "something" == false && true"##;
         let expr = parse_expr_quick(input);

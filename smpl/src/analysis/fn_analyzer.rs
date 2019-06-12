@@ -514,7 +514,7 @@ impl<'a> FnAnalyzer<'a> {
 
                     match init.field_init() {
                         Some(init_list) => {
-                            if init_list.len() != fields.len() {
+                            if init_list.len() < fields.len() {
                                 // Missing fields -> struct is not fully initialized
                                 return Err(TypeError::StructNotFullyInitialized {
                                     type_name: type_name.clone(),
@@ -534,7 +534,13 @@ impl<'a> FnAnalyzer<'a> {
                                     span: tmp.span(),
                                 }
                                 .into());
+                            } else if init_list.len() > fields.len() {
+                                return Err(TypeError::InvalidInitialization {
+                                    fields: init.init_order().unwrap().map(|i| i.clone()).collect(),
+                                    span: tmp.span(),
+                                }.into());
                             }
+
                             // Go threw initialization list and check expressions
                             for (ref id, ref typed_tmp_id) in init_list {
                                 let field_type = fields.get(id).unwrap();
@@ -576,6 +582,16 @@ impl<'a> FnAnalyzer<'a> {
                     }
 
                     tmp_type = struct_type;
+                }
+
+                Value::AnonStructInit(ref init) => {
+                    if let Err(duplicate_fields) = init.set_init(self.program.universe_mut(), expr) {
+                        return Err(TypeError::InvalidInitialization {
+                            fields: duplicate_fields,
+                            span: tmp.span(),
+                        }.into());
+                    }
+                    tmp_type = init.struct_type().unwrap();
                 }
 
                 Value::Binding(ref var) => match self.current_scope.binding_info(var.ident())? {
