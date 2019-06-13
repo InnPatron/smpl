@@ -104,6 +104,16 @@ pub fn resolve_types(synthesis: &Type, constraint: &Type) -> bool {
 
 fn resolve_param(synth: &Type, constraint: &Type) -> bool {
     match (synth, constraint) {
+
+        // If the constraint is a width constraint, the provided parameter type cannot be a nominal
+        // type. Values of nominal types may carry additional metadata that is generally difficult to
+        // construct from anonymous types. On the otherhand, its simple to strip this metadata from
+        // values of nominal types.
+        //
+        // The constraint being a width constriant means that in general, an anonymous struct will
+        // be provided to the concrete function.
+        (Record { .. }, WidthConstraint { .. }) => false,
+
         (WidthConstraint {
             fields: ref synth_width,
             field_map: ref synth_map,
