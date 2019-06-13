@@ -1612,4 +1612,72 @@ fn foo() {
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err());
     }
+
+    #[test]
+    fn valid_fn_subtyping() {
+        let mod1 =
+"mod mod1;
+struct Point {
+  x: int,
+  y: int,
+  z: int,
+}
+
+fn foo(p: {x: int}) -> int { return 0; }
+fn bar(p: Point) -> int { return 0; }
+fn qux(p: {x: int, y: int}) -> int { return 0; }
+
+fn test() {
+    let allowed1: fn(Point) -> int = foo; // Nominal parameter expected, narrower provided
+    let allowed2: fn(Point) -> int = qux; // Nominal parameter expected, narrower provided
+    let allowed3: fn({x: int, y: int}) -> int = foo; // Width constraint parameter expected, narrower provided
+    let allowed4: fn({x: int, y: int}) -> int = qux; // Width constraint parameter expected, exact provided
+    let allowed5: fn(Point) -> int = bar; // Nominal parameter expected, exact provided
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let program = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn invalid_fn_subtyping_wider() {
+        let mod1 =
+"mod mod1;
+struct Point {
+  x: int,
+  y: int,
+  z: int,
+}
+
+fn qux(p: {x: int, y: int}) -> int { return 0; }
+
+fn test() {
+    let disallowed1: fn({x: int}) -> int = qux; // Width constraint parameter expected, wider provided
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err());
+    }
+
+    #[test]
+    fn invalid_fn_subtyping_nominal() {
+        let mod1 =
+"mod mod1;
+struct Point {
+  x: int,
+  y: int,
+  z: int,
+}
+
+fn bar(p: Point) -> int { return 0; }
+
+fn test() {
+    let disallowed2: fn({x: int, y: int, z: int}) -> int = bar; // Width constraint parameter expected, nominal provided
+
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        assert!(check_program(vec![mod1]).is_err());
+    }
+
 }
