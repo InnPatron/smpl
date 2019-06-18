@@ -127,7 +127,7 @@ impl CFG {
     }
 
     fn generate_scoped_block<'a, 'b, T>(&'a mut self, universe: &'b Universe, mut instructions: T) 
-        -> Result<(), ControlFlowError> 
+        -> Result<BranchData, ControlFlowError> 
         where T: Iterator<Item=&'a ast::Stmt> {
         use crate::ast::*;
 
@@ -220,7 +220,10 @@ impl CFG {
         current_block.append(BlockNode::ExitScope);
         append_node!(self, previous, head, Node::Block(current_block));
         
-        Ok(())
+        Ok(BranchData {
+            head: head,
+            foot: previous,
+        })
     }
 }
 
