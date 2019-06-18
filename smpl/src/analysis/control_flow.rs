@@ -738,8 +738,8 @@ let b: int = 3;
         {
             irmatch!(*cfg.graph.node_weight(cfg.start).unwrap(); Node::Start => ());
             irmatch!(*cfg.graph.node_weight(cfg.end).unwrap(); Node::End => ());
-            // start -> enter_scope -> var decl -> var decl -> implicit return -> exit_scope -> end
-            assert_eq!(cfg.graph.node_count(), 7);
+            // start -> enter_scope -> block -> implicit return -> exit_scope -> end
+            assert_eq!(cfg.graph.node_count(), 6);
 
             let mut start_neighbors = neighbors!(cfg, cfg.start);
 
@@ -805,7 +805,7 @@ if (test) {
             // start -> enter_scope -> branch_split -> condition
             //      -[true]> {
             //          -> enter_scope
-            //          -> var decl
+            //          -> block
             //          -> exit_scope
             //      } ->        >>___ branch_merge ->
             //        -[false]> >>
