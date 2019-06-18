@@ -523,6 +523,12 @@ impl CFG {
                         },
 
                         ExprStmt::If(if_data) => {
+                            // Append current basic block if not empty
+                            if current_block.is_empty() == false {
+                                append_node!(self, head, previous, Node::Block(current_block));
+                                current_block = BasicBlock::new();
+                            }
+
                             let id = universe.new_branching_id();
                             // Append a branch split node indicator
                             append_node!(
