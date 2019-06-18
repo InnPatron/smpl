@@ -121,12 +121,15 @@ impl CFG {
 
         let (body, _) = body.to_data();
         let instructions = body.0;
-        cfg.generate_scoped_block(universe, instructions.iter())?;
+        cfg.generate_scoped_block(universe, instructions.iter(), None)?;
 
         Ok(cfg)
     }
 
-    fn generate_scoped_block<'a, 'b, T>(&'a mut self, universe: &'b Universe, mut instructions: T) 
+    fn generate_scoped_block<'a, 'b, T>(&'a mut self, 
+                                        universe: &'b Universe, 
+                                        mut instructions: T,
+                                        loop_data: Option<(graph::NodeIndex, graph::NodeIndex, LoopId)>) 
         -> Result<BranchData, ControlFlowError> 
         where T: Iterator<Item=&'a ast::Stmt> {
         use crate::ast::*;
@@ -135,7 +138,6 @@ impl CFG {
         let mut head: Option<graph::NodeIndex> = None;
 
         let mut current_block = BasicBlock::new();
-        let mut loop_data: Option<(graph::NodeIndex, graph::NodeIndex, LoopId)> = None;
 
         current_block.append(BlockNode::EnterScope);
 
@@ -208,6 +210,68 @@ impl CFG {
                                 None => return Err(ControlFlowError::BadContinue(span)),
                             }
                         },
+
+                        ExprStmt::While(while_data) => {
+
+                            // Append current basic block if not empty
+                            if current_block.is_empty() == false {
+                                append_node!(self, head, previous, Node::Block(current_block));
+                                current_block = BasicBlock::new();
+                            }
+
+                            let (block, _) = while_data.block.to_data();
+
+                            let loop_id = universe.new_loop_id();
+                            let loop_head = self.graph.add_node(Node::LoopHead(LoopData {
+                                loop_id: loop_id,
+                                span: Span::new(expr_stmt_span.start(), expr_stmt_span.start()),
+                            }));
+                            let loop_foot = self.graph.add_node(Node::LoopFoot(LoopData {
+                                loop_id: loop_id,
+                                span: Span::new(expr_stmt_span.end(), expr_stmt_span.end()),
+                            }));
+
+                            // Connect loop foot to loop head with a backedge
+                            self.graph.add_edge(loop_foot, loop_head, Edge::BackEdge);
+
+                            // Append the loop head to the graph
+                            append_node_index!(self, head, previous, loop_head);
+                            let instructions = block.0;
+                            let loop_body = self.generate_scoped_block(
+                                universe,
+                                instructions.iter(),
+                                Some((loop_head, loop_foot, loop_id)),
+                            )?;
+
+                            // Create the condition node
+                            let condition = {
+                                let (conditional, con_span) = while_data.conditional.to_data();
+                                let expr = expr_flow::flatten(universe, conditional);
+                                self.graph.add_node(Node::Condition(ExprData {
+                                    expr: expr,
+                                    span: con_span,
+                                }))
+                            };
+
+                            // Connect the loop head to the condition node
+                            append_node_index!(self, head, previous, condition);
+
+                            // Connect the condition node to the loop foot by the FALSE path
+                            self.graph.add_edge(condition, loop_foot, Edge::False);
+
+                            if let Some(loop_body_head) = loop_body.head {
+                                
+                                // Connect the condition node to the loop body by the TRUE path
+                                self.graph.add_edge(condition, loop_body_head, Edge::True);
+                                self.graph.add_edge(loop_body.foot.unwrap(), loop_foot, Edge::Normal);
+                            } else {
+                                // Empty loop body
+                                // Connect the condition node to the loop foot by the TRUE path
+                                self.graph.add_edge(condition, loop_foot, Edge::True);
+                            }
+
+                            previous = Some(loop_foot);
+                        }
 
                         _ => unimplemented!()
                     }
