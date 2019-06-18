@@ -1112,7 +1112,7 @@ if (test) {
         // loop_head(A) << loop_foot(A)
         //
 
-        assert_eq!(cfg.graph.node_count(), 10);
+        assert_eq!(cfg.graph.node_count(), 8);
 
         let mut start_neighbors = neighbors!(cfg, cfg.start);
         assert_eq!(start_neighbors.clone().count(), 1);
@@ -1157,26 +1157,13 @@ if (test) {
         let truth_target = truth_target.unwrap();
         let false_target = false_target.unwrap();
         match *node_w!(cfg, truth_target) {
-            Node::EnterScope => (),
-            ref n @ _ => panic!("Expected to find Node::EnterScope. Found {:?}", n),
-        }
-
-        let mut enter_neighbors = neighbors!(cfg, truth_target);
-        let exit = enter_neighbors.next().unwrap();
-        let mut exit_neighbors = neighbors!(cfg, exit);
-        match *node_w!(cfg, exit) {
-            Node::ExitScope => (),
-            ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
-        }
-
-        let foot = exit_neighbors.next().unwrap();
-        let mut foot_neighbors = neighbors!(cfg, foot);
-        match *node_w!(cfg, foot) {
             Node::LoopFoot(ref loop_data) => assert_eq!(loop_data.loop_id, loop_id),
             ref n @ _ => panic!("Expected to find Node::LoopFoot. Found {:?}", n),
         }
 
-        assert_eq!(foot, false_target);
+        let mut foot_neighbors = neighbors!(cfg, truth_target);
+
+        assert_eq!(truth_target, false_target);
 
         assert_eq!(foot_neighbors.clone().count(), 2);
 
