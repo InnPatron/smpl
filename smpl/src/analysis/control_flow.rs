@@ -734,26 +734,47 @@ let b: int = 3;
         {
             irmatch!(*cfg.graph.node_weight(cfg.start).unwrap(); Node::Start => ());
             irmatch!(*cfg.graph.node_weight(cfg.end).unwrap(); Node::End => ());
-            // start -> block -> implicit return -> end
+            // start -> enter_scope -> var decl -> var decl -> implicit return -> exit_scope -> end
             assert_eq!(cfg.graph.node_count(), 7);
 
             let mut start_neighbors = neighbors!(cfg, cfg.start);
 
-            let block_1 = start_neighbors.next().unwrap();
-            let mut block_1_neighbors = neighbors!(cfg, block_1);
-            match *node_w!(cfg, block_1) {
-                Node::Block(_) => (),
-                ref n @ _ => panic!("Expected to find Node::Block. Found {:?}", n),
+            let enter = start_neighbors.next().unwrap();
+            let mut enter_neighbors = neighbors!(cfg, enter);
+            match *node_w!(cfg, enter) {
+                Node::EnterScope => (),
+                ref n @ _ => panic!("Expected to find Node::EnterScope. Found {:?}", n),
             }
 
-            let ret = block_1_neighbors.next().unwrap();
+            let var_decl_1 = enter_neighbors.next().unwrap();
+            let mut var_decl_1_neighbors = neighbors!(cfg, var_decl_1);
+            match *node_w!(cfg, var_decl_1) {
+                Node::LocalVarDecl(_) => (),
+                ref n @ _ => panic!("Expected to find Node::LocalVarDecl. Found {:?}", n),
+            }
+
+            let var_decl_2 = var_decl_1_neighbors.next().unwrap();
+            let mut var_decl_2_neighbors = neighbors!(cfg, var_decl_2);
+            match *node_w!(cfg, var_decl_2) {
+                Node::LocalVarDecl(_) => (),
+                ref n @ _ => panic!("Expected to find Node::LocalVarDecl. Found {:?}", n),
+            }
+
+            let ret = var_decl_2_neighbors.next().unwrap();
             let mut ret_neighbors = neighbors!(cfg, ret);
             match *node_w!(cfg, ret) {
                 Node::Return(..) => (),
                 ref n @ _ => panic!("Expected to find Node::Return. Found {:?}", n),
             }
 
-            let end = ret_neighbors.next().unwrap();
+            let exit = ret_neighbors.next().unwrap();
+            let mut exit_neighbors = neighbors!(cfg, exit);
+            match *node_w!(cfg, exit) {
+                Node::ExitScope => (),
+                ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
+            }
+
+            let end = exit_neighbors.next().unwrap();
             let end_neighbors = neighbors!(cfg, end);
             assert_eq!(end_neighbors.count(), 0);
             match *node_w!(cfg, end) {
@@ -784,12 +805,14 @@ if (test) {
             irmatch!(*cfg.graph.node_weight(cfg.start).unwrap(); Node::Start => ());
             irmatch!(*cfg.graph.node_weight(cfg.end).unwrap(); Node::End => ());
 
-            // start -> block(enter_scope) -> branch_split -> condition
+            // start -> enter_scope -> branch_split -> condition
             //      -[true]> {
-            //          -> block
+            //          -> enter_scope
+            //          -> var decl
+            //          -> exit_scope
             //      } ->        >>___ branch_merge ->
             //        -[false]> >>
-            //      block(exit_scope) -> implicit return -> end
+            //      implicit return -> exit_scope -> end
             assert_eq!(cfg.graph.node_count(), 11);
 
             let mut start_neighbors = neighbors!(cfg, cfg.start);
@@ -797,8 +820,8 @@ if (test) {
             let enter = start_neighbors.next().unwrap();
             let mut enter_neighbors = neighbors!(cfg, enter);
             match *node_w!(cfg, enter) {
-                Node::Block(_) => (),
-                ref n @ _ => panic!("Expected to find Node::Block. Found {:?}", n),
+                Node::EnterScope => (),
+                ref n @ _ => panic!("Expected to find Node::EnterScope. Found {:?}", n),
             }
 
             let mut merge = None;
@@ -828,10 +851,35 @@ if (test) {
                             let target = edge.target();
 
                             match *cfg.graph.node_weight(target).unwrap() {
-                                Node::Block(_) => (),
+                                Node::EnterScope => {
+                                    let mut neighbors =
+                                        cfg.graph.neighbors_directed(target, Direction::Outgoing);
+                                    let decl = neighbors.next().unwrap();
+
+                                    match *cfg.graph.node_weight(decl).unwrap() {
+                                        Node::LocalVarDecl(_) => (),
+                                        ref n @ _ => panic!(
+                                            "Expected to find Node::LocalVarDecl. Found {:?}",
+                                            n
+                                        ),
+                                    }
+
+                                    let mut neighbors =
+                                        cfg.graph.neighbors_directed(decl, Direction::Outgoing);
+                                    let exit_scope = neighbors.next().unwrap();
+
+                                    match *cfg.graph.node_weight(exit_scope).unwrap() {
+                                        Node::ExitScope => (),
+
+                                        ref n @ _ => panic!(
+                                            "Expected to find Node::ExitScope. Found {:?}",
+                                            n
+                                        ),
+                                    }
+                                }
 
                                 ref n @ _ => {
-                                    panic!("Expected to find Node::Block. Found {:?}", n)
+                                    panic!("Expected to find Node::EnterScope. Found {:?}", n)
                                 }
                             }
 
@@ -856,29 +904,27 @@ if (test) {
 
             let merge = merge.unwrap();
 
-            let block = cfg.graph.neighbors(merge).next().unwrap();
-            let mut block_neighbors = neighbors!(cfg, block);
-            match *node_w!(cfg, block) {
-                Node::Block(_) => (),
-                ref n @ _ => panic!("Expected to find Node::Block. Found {:?}", n),
-            }
-
-            let return_n = block_neighbors.next().unwrap();
+            let return_n = cfg.graph.neighbors(merge).next().unwrap();
             let mut return_neighbors = neighbors!(cfg, return_n);
             match *node_w!(cfg, return_n) {
                 Node::Return(..) => (),
                 ref n @ _ => panic!("Expected to find Node::Return. Found {:?}", n),
             }
 
-            
+            let exit = return_neighbors.next().unwrap();
+            let mut exit_neighbors = neighbors!(cfg, exit);
+            match *node_w!(cfg, exit) {
+                Node::ExitScope => (),
+                ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
+            }
 
-            let end = return_neighbors.next().unwrap();
+            let end = exit_neighbors.next().unwrap();
             let end_neighbors = neighbors!(cfg, end);
             match *node_w!(cfg, end) {
                 Node::End => {
                     assert_eq!(end_neighbors.count(), 0);
                 }
-                ref n @ _ => panic!("Expected to find Node::End. Found {:?}", n),
+                ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
             }
         }
     }
@@ -905,17 +951,19 @@ if (test) {
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
         {
-            // start -> block(enter_scope) -> branch_split -> condition(B)
+            // start -> enter_scope -> branch_split -> condition(B)
             //      -[true]> {
-            //          block
+            //          enter_scope ->
+            //          local_var_decl ->
+            //          exit_scope ->
             //      } -> branch_merge(A)
             //
             //      -[false]> condition(C)
-            //           -[true]> block -> branch_merge(A)
+            //           -[true]> branch_merge(A)
             //
-            //           -[false]> block -> branch_merge(A)
+            //           -[false]> branch_merge(A)
             //
-            // branch_merge(A) -> block(exit_scope) -> implicit_return -> end
+            // branch_merge(A) -> implicit_return -> exit_scope -> end
             //
 
             assert_eq!(cfg.graph.node_count(), 12);
@@ -926,8 +974,8 @@ if (test) {
             let enter = start_neighbors.next().unwrap();
             let mut enter_neighbors = neighbors!(cfg, enter);
             match *node_w!(cfg, enter) {
-                Node::Block(_) => (),
-                ref n @ _ => panic!("Expected to find Node::Block. Found {:?}", n),
+                Node::EnterScope => (),
+                ref n @ _ => panic!("Expected to find Node::Enter. Found {:?}", n),
             }
 
             let branch_split = enter_neighbors.next().unwrap();
@@ -935,7 +983,7 @@ if (test) {
             match *node_w!(cfg, branch_split) {
                 Node::BranchSplit(_) => (), // Success
 
-                ref n @ _ => panic!("Expected a Node::BranchSplit. Found {:?}", n),
+                ref n @ _ => panic!("Expected a condition node. Found {:?}", n),
             }
 
             let condition_b = branch_split_neighbors.next().unwrap();
@@ -961,15 +1009,31 @@ if (test) {
 
             // condition b TRUE branch
 
-            let block_1 =
+            let enter =
                 condition_b_true.expect("Missing true edge connecting to variable declaration");
-            let mut block_1_neighbors = neighbors!(cfg, enter);
+            let mut enter_neighbors = neighbors!(cfg, enter);
             match *node_w!(cfg, enter) {
-                Node::Block(_) => (),
-                ref n @ _ => panic!("Expected Node::Block. Found {:?}", n),
+                Node::EnterScope => (),
+                ref n @ _ => panic!("Expected Node::EnterScope. Found {:?}", n),
             }
 
-            let merge = block_1_neighbors.next().unwrap();
+            let var_decl = enter_neighbors.next().unwrap();
+            let mut var_decl_neighbors = neighbors!(cfg, var_decl);
+            assert_eq!(var_decl_neighbors.clone().count(), 1);
+            match *node_w!(cfg, var_decl) {
+                Node::LocalVarDecl(_) => (),
+
+                ref n @ _ => panic!("Expected local variable declartion. Found {:?}", n),
+            }
+
+            let exit = var_decl_neighbors.next().unwrap();
+            let mut exit_neighbors = neighbors!(cfg, exit);
+            match *node_w!(cfg, exit) {
+                Node::ExitScope => (),
+                ref n @ _ => panic!("Expected Node::ExitScope. Found {:?}", n),
+            }
+
+            let merge = exit_neighbors.next().unwrap();
             match *node_w!(cfg, merge) {
                 Node::BranchMerge(_) => (),
 
@@ -995,42 +1059,22 @@ if (test) {
             let truth_target = truth_target.unwrap();
             let false_target = false_target.unwrap();
 
+            assert_eq!(truth_target, false_target);
             match *node_w!(cfg, truth_target) {
-                Node::Block(_) => (),
-                ref n @ _ => panic!("Expected Node::Block. Found {:?}", n),
+                Node::BranchMerge(_) => (),
+                ref n @ _ => panic!("Expected BranchMerge. Found {:?}", n),
             }
 
             match *node_w!(cfg, false_target) {
-                Node::Block(_) => (),
-                ref n @ _ => panic!("Expected Node::Block. Found {:?}", n),
-            }
-
-            let mut truth_neighbors = neighbors!(cfg, truth_target);
-            let branch_merge = truth_neighbors.next().unwrap();
-            match *node_w!(cfg, branch_merge) {
                 Node::BranchMerge(_) => (),
-                ref n @ _ => panic!("Expected Node::BranchMerge. Found {:?}", n),
+                ref n @ _ => panic!("Expected BranchMerge. Found {:?}", n),
             }
 
-            let mut false_neighbors = neighbors!(cfg, false_target);
-            let branch_merge = false_neighbors.next().unwrap();
-            match *node_w!(cfg, branch_merge) {
-                Node::BranchMerge(_) => (),
-                ref n @ _ => panic!("Expected Node::BranchMerge. Found {:?}", n),
-            }
-
+            let branch_merge = truth_target;
             let mut branch_merge_neighbors = neighbors!(cfg, branch_merge);
             assert_eq!(branch_merge_neighbors.clone().count(), 1);
 
-            let block_2 = branch_merge_neighbors.next().unwrap();
-            let mut block_2_neighbors = neighbors!(cfg, block_2);
-            match *node_w!(cfg, block_2) {
-                Node::Block(_) => (),
-                ref n @ _ => panic!("Expected to find Node::Block. Found {:?}", n),
-            }
-
-
-            let implicit_return = block_2_neighbors.next().unwrap();
+            let implicit_return = branch_merge_neighbors.next().unwrap();
             let mut implicit_return_neighbors = neighbors!(cfg, implicit_return);
             assert_eq!(implicit_return_neighbors.clone().count(), 1);
             match *node_w!(cfg, implicit_return) {
@@ -1038,7 +1082,14 @@ if (test) {
                 ref n @ _ => println!("Expected return node. Found {:?}", n),
             }
 
-            let end = implicit_return_neighbors.next().unwrap();
+            let exit = implicit_return_neighbors.next().unwrap();
+            let mut exit_neighbors = neighbors!(cfg, exit);
+            match *node_w!(cfg, exit) {
+                Node::ExitScope => (),
+                ref n @ _ => panic!("Expected to find Node::Exit. Found {:?}", n),
+            }
+
+            let end = exit_neighbors.next().unwrap();
             irmatch!(*node_w!(cfg, end); Node::End => ());
         }
     }
@@ -1060,10 +1111,10 @@ if (test) {
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
-        // start -> block(enter_scope) -> loop_head(A) -> condition(B)
-        //       -[true]> block(enter,exit scope) loop_foot(A)
+        // start -> enter_scope -> loop_head(A) -> condition(B)
+        //       -[true]> enter_scope exit_scope loop_foot(A)
         //       -[false]> loop_foot(A)
-        // loop_foot(A) -> block(edit_scope) -> implicit-return -> end
+        // loop_foot(A) -> implicit_return -> exit_scope -> end
         // loop_head(A) << loop_foot(A)
         //
 
@@ -1072,15 +1123,15 @@ if (test) {
         let mut start_neighbors = neighbors!(cfg, cfg.start);
         assert_eq!(start_neighbors.clone().count(), 1);
 
-        let block_1 = start_neighbors.next().unwrap();
-        let mut block_1_neighbors = neighbors!(cfg, block_1);
-        match *node_w!(cfg, block_1) {
-            Node::Block(_) => (),
+        let enter = start_neighbors.next().unwrap();
+        let mut enter_neighbors = neighbors!(cfg, enter);
+        match *node_w!(cfg, enter) {
+            Node::EnterScope => (),
             ref n @ _ => panic!("Expected to find Node::Enter. Found {:?}", n),
         }
 
         let loop_id;
-        let loop_head = block_1_neighbors.next().unwrap();
+        let loop_head = enter_neighbors.next().unwrap();
         match *node_w!(cfg, loop_head) {
             Node::LoopHead(ref loop_data) => loop_id = loop_data.loop_id,
             ref n @ _ => panic!("Expected to find Node::LoopHead. Found {:?}", n),
@@ -1112,13 +1163,19 @@ if (test) {
         let truth_target = truth_target.unwrap();
         let false_target = false_target.unwrap();
         match *node_w!(cfg, truth_target) {
-            Node::Block(_) => (),
-            ref n @ _ => panic!("Expected to find Node::Block. Found {:?}", n),
+            Node::EnterScope => (),
+            ref n @ _ => panic!("Expected to find Node::EnterScope. Found {:?}", n),
         }
 
-        let mut block_2_neighbors = neighbors!(cfg, truth_target);
+        let mut enter_neighbors = neighbors!(cfg, truth_target);
+        let exit = enter_neighbors.next().unwrap();
+        let mut exit_neighbors = neighbors!(cfg, exit);
+        match *node_w!(cfg, exit) {
+            Node::ExitScope => (),
+            ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
+        }
 
-        let foot = block_2_neighbors.next().unwrap();
+        let foot = exit_neighbors.next().unwrap();
         let mut foot_neighbors = neighbors!(cfg, foot);
         match *node_w!(cfg, foot) {
             Node::LoopFoot(ref loop_data) => assert_eq!(loop_data.loop_id, loop_id),
@@ -1129,14 +1186,7 @@ if (test) {
 
         assert_eq!(foot_neighbors.clone().count(), 2);
 
-        let block_3 = foot_neighbors.next().unwrap();
-        let mut block_3_neighbors = neighbors!(cfg, block_3);
-        match *node_w!(cfg, block_3) {
-            Node::Block(_) => (),
-            ref n @ _ => panic!("Expected to find Node::Block. Found {:?}", n),
-        }
-
-        let implicit_return = block_3_neighbors.next().unwrap();
+        let implicit_return = foot_neighbors.next().unwrap();
         let mut return_neighbors = neighbors!(cfg, implicit_return);
         assert_eq!(return_neighbors.clone().count(), 1);
         match *node_w!(cfg, implicit_return) {
@@ -1144,7 +1194,14 @@ if (test) {
             ref n @ _ => panic!("Expected return node. Found {:?}", n),
         }
 
-        let end = return_neighbors.next().unwrap();
+        let exit = return_neighbors.next().unwrap();
+        let mut exit_neighbors = neighbors!(cfg, exit);
+        match *node_w!(cfg, exit) {
+            Node::ExitScope => (),
+            ref n @ _ => panic!("Expected to find Node::ExitScope. Found {:?}", n),
+        }
+
+        let end = exit_neighbors.next().unwrap();
         let end_neighbors = neighbors!(cfg, end);
         assert_eq!(end_neighbors.count(), 0);
         match *node_w!(cfg, end) {
