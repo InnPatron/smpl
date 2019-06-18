@@ -121,7 +121,10 @@ impl CFG {
 
         let (body, _) = body.to_data();
         let instructions = body.0;
-        cfg.generate_scoped_block(universe, instructions.iter(), None)?;
+        let function_body = cfg.generate_scoped_block(universe, instructions.iter(), None)?;
+
+        cfg.graph.add_edge(cfg.start, function_body.head.unwrap(), Edge::Normal);
+        cfg.graph.add_edge(function_body.foot.unwrap(), cfg.end, Edge::Normal);
 
         Ok(cfg)
     }
