@@ -746,21 +746,14 @@ let b: int = 3;
                 ref n @ _ => panic!("Expected to find Node::EnterScope. Found {:?}", n),
             }
 
-            let var_decl_1 = enter_neighbors.next().unwrap();
-            let mut var_decl_1_neighbors = neighbors!(cfg, var_decl_1);
-            match *node_w!(cfg, var_decl_1) {
-                Node::LocalVarDecl(_) => (),
+            let block_1 = enter_neighbors.next().unwrap();
+            let mut block_1_neighbors = neighbors!(cfg, block_1);
+            match *node_w!(cfg, block_1) {
+                Node::Block(_) => (),
                 ref n @ _ => panic!("Expected to find Node::LocalVarDecl. Found {:?}", n),
             }
 
-            let var_decl_2 = var_decl_1_neighbors.next().unwrap();
-            let mut var_decl_2_neighbors = neighbors!(cfg, var_decl_2);
-            match *node_w!(cfg, var_decl_2) {
-                Node::LocalVarDecl(_) => (),
-                ref n @ _ => panic!("Expected to find Node::LocalVarDecl. Found {:?}", n),
-            }
-
-            let ret = var_decl_2_neighbors.next().unwrap();
+            let ret = block_1_neighbors.next().unwrap();
             let mut ret_neighbors = neighbors!(cfg, ret);
             match *node_w!(cfg, ret) {
                 Node::Return(..) => (),
@@ -857,7 +850,7 @@ if (test) {
                                     let decl = neighbors.next().unwrap();
 
                                     match *cfg.graph.node_weight(decl).unwrap() {
-                                        Node::LocalVarDecl(_) => (),
+                                        Node::Block(_) => (),
                                         ref n @ _ => panic!(
                                             "Expected to find Node::LocalVarDecl. Found {:?}",
                                             n
@@ -1021,7 +1014,7 @@ if (test) {
             let mut var_decl_neighbors = neighbors!(cfg, var_decl);
             assert_eq!(var_decl_neighbors.clone().count(), 1);
             match *node_w!(cfg, var_decl) {
-                Node::LocalVarDecl(_) => (),
+                Node::Block(_) => (),
 
                 ref n @ _ => panic!("Expected local variable declartion. Found {:?}", n),
             }
