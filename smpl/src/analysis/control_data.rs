@@ -48,15 +48,15 @@ pub enum BlockNode {
 
     Assignment(AssignmentData),
     LocalVarDecl(LocalVarDeclData),
-
-    EnterScope,
-    ExitScope, 
 }
 
 #[derive(Clone, Debug)]
 pub enum Node {
     Start,
     End,
+
+    EnterScope,
+    ExitScope, 
 
     Return(ReturnData),
     Break(LoopData),

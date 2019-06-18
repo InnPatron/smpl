@@ -391,8 +391,6 @@ impl CFG {
 
         let mut current_block = BasicBlock::new();
 
-        current_block.append(BlockNode::EnterScope);
-
         while let Some(next) = instructions.next() {
             match next {
                 Stmt::Expr(expr) => {
@@ -667,7 +665,6 @@ impl CFG {
             }
         }
 
-        current_block.append(BlockNode::ExitScope);
         append_node!(self, previous, head, Node::Block(current_block));
         
         Ok(BranchData {
