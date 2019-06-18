@@ -52,17 +52,17 @@ pub enum BlockNode {
     LocalVarDecl(LocalVarDeclData),
 
     EnterScope,
-    ExitScope,
-
-    Return(ReturnData),
-    Break(LoopData),
-    Continue(LoopData),
+    ExitScope, 
 }
 
 #[derive(Clone, Debug)]
 pub enum Node {
     Start,
     End,
+
+    Return(ReturnData),
+    Break(LoopData),
+    Continue(LoopData),
 
     Condition(ExprData),
     BranchSplit(BranchingData),

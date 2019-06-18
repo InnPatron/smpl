@@ -180,6 +180,103 @@ impl CFG {
         (true_branch.unwrap(), false_branch.unwrap())
     }
 
+    pub fn after_return(&self, id: graph::NodeIndex) -> graph::NodeIndex {
+        match *node_w!(self, id) {
+            Node::Return(..) => (),
+            _ => panic!("Should only be given a Node::Return"),
+        }
+
+        let mut neighbors = neighbors!(self, id);
+        let neighbor_count = neighbors.clone().count();
+
+        if neighbor_count == 2 {
+            let mut found_first_end = false;
+            for n in neighbors {
+                match *node_w!(self, n) {
+                    Node::End => {
+                        if found_first_end {
+                            return n;
+                        } else {
+                            found_first_end = true;
+                        }
+                    }
+                    _ => return n,
+                }
+            }
+        } else if neighbor_count == 1 {
+            return neighbors.next().unwrap();
+        } else {
+            panic!("Node::Return points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
+        }
+
+        unreachable!();
+    }
+
+    pub fn after_continue(&self, id: graph::NodeIndex) -> graph::NodeIndex {
+        match *node_w!(self, id) {
+            Node::Continue(_) => (),
+            _ => panic!("Should only be given a Node::Continue"),
+        }
+
+        let mut neighbors = neighbors!(self, id);
+        let neighbor_count = neighbors.clone().count();
+
+        if neighbor_count == 2 {
+            let mut found_first = false;
+            for n in neighbors {
+                match *node_w!(self, n) {
+                    Node::LoopHead(_) => {
+                        if found_first {
+                            return n;
+                        } else {
+                            found_first = true;
+                        }
+                    }
+                    _ => return n,
+                }
+            }
+        } else if neighbor_count == 1 {
+            return neighbors.next().unwrap();
+        } else {
+            panic!("Node::Continue points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
+        }
+
+        unreachable!();
+    }
+
+    pub fn after_break(&self, id: graph::NodeIndex) -> graph::NodeIndex {
+        match *node_w!(self, id) {
+            Node::Break(_) => (),
+            _ => panic!("Should only be given a Node::Break"),
+        }
+
+        let neighbors = neighbors!(self, id);
+        let neighbor_count = neighbors.clone().count();
+
+        if neighbor_count == 2 {
+            let mut found_first = false;
+            for n in neighbors {
+                match *node_w!(self, n) {
+                    Node::LoopFoot(_) => {
+                        if found_first {
+                            return n;
+                        } else {
+                            found_first = true;
+                        }
+                    }
+                    _ => return n,
+                }
+            }
+        } else if neighbor_count == 1 {
+
+        } else {
+            panic!("Node::Continue points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
+        }
+
+        unreachable!();
+    }
+
+
     pub fn node_weight(&self, node: graph::NodeIndex) -> &Node {
         self.graph.node_weight(node).unwrap()
     }
@@ -277,8 +374,12 @@ impl CFG {
 
                         // Append return node to current basic block
                         ExprStmt::Return(span, expr) => {
+                            if current_block.is_empty() == false {
+                                append_node!(self, head, previous, Node::Block(current_block));
+                                current_block = BasicBlock::new();
+                            }
                             let expr = expr.map(|expr| expr_flow::flatten(universe, expr));
-                            current_block.append(BlockNode::Return(ReturnData {
+                            append_node!(self, head, previous, Node::Return(ReturnData {
                                 expr: expr,
                                 span: span,
                             }));
@@ -288,7 +389,11 @@ impl CFG {
                         ExprStmt::Break(span) => {
                             match loop_data {
                                 Some((_, foot, loop_id)) => {
-                                    current_block.append(BlockNode::Break(LoopData {
+                                    if current_block.is_empty() == false {
+                                        append_node!(self, head, previous, Node::Block(current_block));
+                                        current_block = BasicBlock::new();
+                                    }
+                                    append_node!(self, head, previous, Node::Break(LoopData {
                                         loop_id: loop_id,
                                         span: span,
                                     }));
@@ -302,7 +407,12 @@ impl CFG {
                         ExprStmt::Continue(span) => {
                             match loop_data {
                                 Some((loop_head, _, loop_id)) => {
-                                    current_block.append(BlockNode::Continue(LoopData {
+                                    if current_block.is_empty() == false {
+                                        append_node!(self, head, previous, Node::Block(current_block));
+                                        current_block = BasicBlock::new();
+                                    }
+
+                                    append_node!(self, head, previous, Node::Continue(LoopData {
                                         loop_id: loop_id,
                                         span: span,
                                     }));
