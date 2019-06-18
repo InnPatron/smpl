@@ -94,254 +94,6 @@ impl CFG {
         self.graph.neighbors_directed(node, Direction::Incoming)
     }
 
-    pub fn after_loop_foot(&self, id: graph::NodeIndex) -> graph::NodeIndex {
-        let loop_id;
-        match *node_w!(self, id) {
-            Node::LoopFoot(ref data) => loop_id = data.loop_id,
-            _ => panic!("Should only be given a Node::LoopFoot"),
-        }
-
-        let neighbors = neighbors!(self, id);
-        let neighbor_count = neighbors.clone().count();
-
-        if neighbor_count != 2 {
-            panic!("Loop foot should always be pointing to LoopHead and the next Node. Need two directed neighbors, found {}", neighbor_count);
-        }
-
-        for n in neighbors {
-            match *node_w!(self, n) {
-                Node::LoopHead(ref data) => {
-                    if loop_id != data.loop_id {
-                        return n;
-                    }
-                }
-                _ => return n,
-            }
-        }
-        unreachable!();
-    }
-
-    ///
-    /// Returns (TRUE, FALSE) branch heads.
-    ///
-    pub fn after_condition(&self, id: graph::NodeIndex) -> (graph::NodeIndex, graph::NodeIndex) {
-        match *node_w!(self, id) {
-            Node::Condition(_) => (),
-            _ => panic!("Should only be given a Node::Condition"),
-        }
-
-        let edges = self.graph.edges_directed(id, Direction::Outgoing);
-        assert_eq!(edges.clone().count(), 2);
-
-        let mut true_branch = None;
-        let mut false_branch = None;
-        for e in edges {
-            match *e.weight() {
-                Edge::True => true_branch = Some(e.target()),
-                Edge::False => false_branch = Some(e.target()),
-                ref e @ _ => panic!("Unexpected edge {:?} coming out of a condition node.", e),
-            }
-        }
-
-        (true_branch.unwrap(), false_branch.unwrap())
-    }
-
-    pub fn after_return(&self, id: graph::NodeIndex) -> graph::NodeIndex {
-        match *node_w!(self, id) {
-            Node::Return(..) => (),
-            _ => panic!("Should only be given a Node::Return"),
-        }
-
-        let mut neighbors = neighbors!(self, id);
-        let neighbor_count = neighbors.clone().count();
-
-        if neighbor_count == 2 {
-            let mut found_first_end = false;
-            for n in neighbors {
-                match *node_w!(self, n) {
-                    Node::End => {
-                        if found_first_end {
-                            return n;
-                        } else {
-                            found_first_end = true;
-                        }
-                    }
-                    _ => return n,
-                }
-            }
-        } else if neighbor_count == 1 {
-            return neighbors.next().unwrap();
-        } else {
-            panic!("Node::Return points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
-        }
-
-        unreachable!();
-    }
-
-    pub fn after_continue(&self, id: graph::NodeIndex) -> graph::NodeIndex {
-        match *node_w!(self, id) {
-            Node::Continue(_) => (),
-            _ => panic!("Should only be given a Node::Continue"),
-        }
-
-        let mut neighbors = neighbors!(self, id);
-        let neighbor_count = neighbors.clone().count();
-
-        if neighbor_count == 2 {
-            let mut found_first = false;
-            for n in neighbors {
-                match *node_w!(self, n) {
-                    Node::LoopHead(_) => {
-                        if found_first {
-                            return n;
-                        } else {
-                            found_first = true;
-                        }
-                    }
-                    _ => return n,
-                }
-            }
-        } else if neighbor_count == 1 {
-            return neighbors.next().unwrap();
-        } else {
-            panic!("Node::Continue points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
-        }
-
-        unreachable!();
-    }
-
-    pub fn after_break(&self, id: graph::NodeIndex) -> graph::NodeIndex {
-        match *node_w!(self, id) {
-            Node::Break(_) => (),
-            _ => panic!("Should only be given a Node::Break"),
-        }
-
-        let neighbors = neighbors!(self, id);
-        let neighbor_count = neighbors.clone().count();
-
-        if neighbor_count == 2 {
-            let mut found_first = false;
-            for n in neighbors {
-                match *node_w!(self, n) {
-                    Node::LoopFoot(_) => {
-                        if found_first {
-                            return n;
-                        } else {
-                            found_first = true;
-                        }
-                    }
-                    _ => return n,
-                }
-            }
-        } else if neighbor_count == 1 {
-
-        } else {
-            panic!("Node::Continue points to {} neighbors. Nodes should never point towards more than 2 neighbors but at least 1 (except Node::End).", neighbor_count);
-        }
-
-        unreachable!();
-    }
-
-    pub fn start(&self) -> graph::NodeIndex {
-        self.start
-    }
-
-    pub fn end(&self) -> graph::NodeIndex {
-        self.end
-    }
-
-    pub fn after_start(&self) -> graph::NodeIndex {
-        self.next(self.start)
-    }
-
-    ///
-    /// Convenience function to get the next node in a linear sequence. If the current node has
-    /// multiple outgoing edge (such as Node::Condition, Node::Return, Node::Break, and
-    /// Node::Continue) or none (Node::End), return an error.
-    ///
-    pub fn next(&self, id: graph::NodeIndex) -> graph::NodeIndex {
-        let mut neighbors = self.graph.neighbors_directed(id, Direction::Outgoing);
-        if neighbors.clone().count() != 1 {
-            panic!("CFG::next() only works when a Node has 1 neighbor");
-        } else {
-            neighbors.next().unwrap()
-        }
-    }
-
-    pub fn previous(&self, id: graph::NodeIndex) -> graph::NodeIndex {
-        let mut neighbors = self.neighbors_in(id);
-        if neighbors.clone().count() != 1 {
-            panic!("CFG::previous() only works when a Node has 1 neighbor");
-        } else {
-            neighbors.next().unwrap()
-        }
-    }
-
-    pub fn before_branch_merge(&self, id: graph::NodeIndex) -> Vec<graph::NodeIndex> {
-        match *self.node_weight(id) {
-            Node::BranchMerge(_) => self.neighbors_in(id).collect(),
-
-            ref n @ _ => panic!(
-                "CFG::before_branch_merge() only works with Node::BranchMerge. Found {:?}",
-                n
-            ),
-        }
-    }
-
-    pub fn before_loop_foot(&self, id: graph::NodeIndex) -> graph::NodeIndex {
-        match *self.node_weight(id) {
-            Node::LoopFoot(ref loop_data) => {
-                let mut found_loop_break = false;
-                for n in self.neighbors_in(id) {
-                    match *self.node_weight(n) {
-                        Node::Break(ref break_data) => {
-                            if break_data.loop_id != loop_data.loop_id {
-                                return n;
-                            } else if found_loop_break {
-                                return n;
-                            } else {
-                                found_loop_break = true;
-                            }
-                        }
-                        _ => return n,
-                    }
-                }
-
-                unreachable!();
-            }
-
-            ref n @ _ => panic!(
-                "CFG::before_loop_foot() only works with Node::LoopFoot. Found {:?}",
-                n
-            ),
-        }
-    }
-
-    pub fn before_loop_head(&self, id: graph::NodeIndex) -> graph::NodeIndex {
-        match *self.node_weight(id) {
-            Node::LoopHead(ref loop_data) => {
-                for n in self.neighbors_in(id) {
-                    match *self.node_weight(n) {
-                        Node::Continue(ref cont_data) => {
-                            if cont_data.loop_id != loop_data.loop_id {
-                                return n;
-                            }
-                        }
-
-                        _ => return n,
-                    }
-                }
-
-                unreachable!();
-            }
-
-            ref n @ _ => panic!(
-                "CFG::before_loop_head() only works with Node::LoopHead. Found {:?}",
-                n
-            ),
-        }
-    }
-
     #[allow(unused_assignments)]
     ///
     /// Generate the control flow graph.
@@ -368,8 +120,10 @@ impl CFG {
         // Start with Node::Start
         let mut previous = Some(cfg.start);
         let mut head = previous;
+        let mut current_block = BasicBlock::new();
 
-        append_node!(cfg, head, previous, Node::EnterScope);
+        current_block.append(BlockNode::EnterScope);
+        append_node!(cfg, head, previous, Node::Block(current_block));
 
         let (body, _) = body.to_data();
         let instructions = body.0;
@@ -384,6 +138,7 @@ impl CFG {
 
         // Auto-insert Node::Return(None) if the return type is SmplType::Unit
 
+        let mut current_block = BasicBlock::new();
         if let TypeCons::Function {
             ref return_type,
             ..
@@ -392,19 +147,20 @@ impl CFG {
             let return_type = return_type.apply(universe, fn_scope)?;
             if resolve_types(&return_type, &Type::Unit) {
                 // TODO: Figure out how to get last line of function
-                append_node!(
-                    cfg,
-                    head,
-                    previous,
-                    Node::Return(ReturnData {
+                current_block.append(BlockNode::Return(ReturnData {
                         expr: None,
                         span: Span::dummy(),
-                    })
-                );
+                    }));
+                
             }
         }
-
-        append_node!(cfg, head, previous, Node::ExitScope);
+        current_block.append(BlockNode::ExitScope);
+        append_node!(
+                cfg,
+                head,
+                previous,
+                Node::Block(current_block)
+        );
         append_node_index!(cfg, head, previous, cfg.end);
 
         Ok(cfg)
@@ -424,6 +180,7 @@ impl CFG {
 
         let mut previous = None;
         let mut head = None;
+        let mut current_block = BasicBlock::new();
 
         // Go through all the instructions
         for stmt in instructions.into_iter() {
@@ -432,6 +189,19 @@ impl CFG {
                 match expr_stmt {
                     // All if statements begin and and with Node::BranchSplit and Node::BranchMerge
                     ExprStmt::If(if_data) => {
+                        // Append current basic block if not empty
+                        if current_block.is_empty() == false {
+                            append_node!(
+                                cfg,
+                                head,
+                                previous,
+                                Node::Block(current_block)
+                            );
+
+                            current_block = BasicBlock::new();
+                        }
+
+
                         let id = universe.new_branching_id();
                         append_node!(
                             cfg,
