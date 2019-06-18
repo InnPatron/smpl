@@ -14,6 +14,16 @@ pub struct BasicBlock {
 
 impl BasicBlock {
 
+    pub fn new() -> BasicBlock {
+        BasicBlock {
+            graph: Vec::new()
+        }
+    }
+
+    pub fn append(&mut self, node: BlockNode) {
+        self.graph.push(node);
+    }
+
     pub fn start(&self) -> usize {
         0
     }
@@ -24,6 +34,10 @@ impl BasicBlock {
 
     pub fn graph(&self) -> &[BlockNode] {
         &self.graph
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.graph.len() == 0
     }
 }
 
