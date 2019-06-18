@@ -108,9 +108,8 @@ pub fn analyze_fn(
 // TODO: maybe add reverse traverser?
 fn return_trace(cfg: &CFG) -> Result<(), AnalysisError> {
     let end = cfg.end();
-    let scope_exit = cfg.previous(end);
 
-    let unknown = cfg.previous(scope_exit);
+    let unknown = cfg.previous(end);
 
     let mut traced = HashSet::new();
     let mut node_stack = Vec::new();
