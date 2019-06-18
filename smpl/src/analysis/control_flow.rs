@@ -82,6 +82,104 @@ impl CFG {
         &self.graph
     }
 
+    pub fn start(&self) -> graph::NodeIndex {
+        self.start
+    }
+
+    pub fn after_start(&self) -> graph::NodeIndex {
+        self.next(self.start)
+    }
+
+    pub fn end(&self) -> graph::NodeIndex {
+        self.end
+    }
+
+    ///
+    /// Convenience function to get the next node in a linear sequence. If the current node has
+    /// multiple outgoing edge (such as Node::Condition, Node::Return, Node::Break, and
+    /// Node::Continue) or none (Node::End), return an error.
+    ///
+    pub fn next(&self, id: graph::NodeIndex) -> graph::NodeIndex {
+        let mut neighbors = self.graph.neighbors_directed(id, Direction::Outgoing);
+        if neighbors.clone().count() != 1 {
+            panic!("CFG::next() only works when a Node has 1 neighbor");
+        } else {
+            neighbors.next().unwrap()
+        }
+    }
+
+    pub fn previous(&self, id: graph::NodeIndex) -> graph::NodeIndex {
+        let mut neighbors = self.neighbors_in(id);
+        if neighbors.clone().count() != 1 {
+            panic!("CFG::previous() only works when a Node has 1 neighbor");
+        } else {
+            neighbors.next().unwrap()
+        }
+    }
+
+    pub fn before_branch_merge(&self, id: graph::NodeIndex) -> Vec<graph::NodeIndex> {
+        match *self.node_weight(id) {
+            Node::BranchMerge(_) => self.neighbors_in(id).collect(),
+
+            ref n @ _ => panic!(
+                "CFG::before_branch_merge() only works with Node::BranchMerge. Found {:?}",
+                n
+            ),
+        }
+    }
+
+    pub fn after_loop_foot(&self, id: graph::NodeIndex) -> graph::NodeIndex {
+        let loop_id;
+        match *node_w!(self, id) {
+            Node::LoopFoot(ref data) => loop_id = data.loop_id,
+            _ => panic!("Should only be given a Node::LoopFoot"),
+        }
+
+        let neighbors = neighbors!(self, id);
+        let neighbor_count = neighbors.clone().count();
+
+        if neighbor_count != 2 {
+            panic!("Loop foot should always be pointing to LoopHead and the next Node. Need two directed neighbors, found {}", neighbor_count);
+        }
+
+        for n in neighbors {
+            match *node_w!(self, n) {
+                Node::LoopHead(ref data) => {
+                    if loop_id != data.loop_id {
+                        return n;
+                    }
+                }
+                _ => return n,
+            }
+        }
+        unreachable!();
+    }
+
+    ///
+    /// Returns (TRUE, FALSE) branch heads.
+    ///
+    pub fn after_condition(&self, id: graph::NodeIndex) -> (graph::NodeIndex, graph::NodeIndex) {
+        match *node_w!(self, id) {
+            Node::Condition(_) => (),
+            _ => panic!("Should only be given a Node::Condition"),
+        }
+
+        let edges = self.graph.edges_directed(id, Direction::Outgoing);
+        assert_eq!(edges.clone().count(), 2);
+
+        let mut true_branch = None;
+        let mut false_branch = None;
+        for e in edges {
+            match *e.weight() {
+                Edge::True => true_branch = Some(e.target()),
+                Edge::False => false_branch = Some(e.target()),
+                ref e @ _ => panic!("Unexpected edge {:?} coming out of a condition node.", e),
+            }
+        }
+
+        (true_branch.unwrap(), false_branch.unwrap())
+    }
+
     pub fn node_weight(&self, node: graph::NodeIndex) -> &Node {
         self.graph.node_weight(node).unwrap()
     }
