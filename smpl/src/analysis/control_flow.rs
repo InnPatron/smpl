@@ -496,16 +496,13 @@ impl CFG {
                             // Connect the loop head to the condition node
                             append_node_index!(self, head, previous, condition);
 
-                            let scope_enter = self.graph.add_node(Node::EnterScope);
-                            let scope_exit = self.graph.add_node(Node::ExitScope);
-
-                            
-
-
                             // Connect the condition node to the loop foot by the FALSE path
                             self.graph.add_edge(condition, loop_foot, Edge::False);
 
                             if let Some(loop_body_head) = loop_body.head {
+
+                                let scope_enter = self.graph.add_node(Node::EnterScope);
+                                let scope_exit = self.graph.add_node(Node::ExitScope);
                                 
                                 // Connect the scope enter/exit to the loop body by the TRUE path
                                 self.graph.add_edge(condition, scope_enter, Edge::True);
