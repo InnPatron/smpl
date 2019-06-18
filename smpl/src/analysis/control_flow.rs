@@ -665,7 +665,9 @@ impl CFG {
             }
         }
 
-        append_node!(self, previous, head, Node::Block(current_block));
+        if current_block.is_empty() == false {
+            append_node!(self, previous, head, Node::Block(current_block));
+        }
         
         Ok(BranchData {
             head: head,
