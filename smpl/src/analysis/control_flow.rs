@@ -508,7 +508,7 @@ impl CFG {
                                 self.graph.add_edge(condition, scope_enter, Edge::True);
                                 
                                 // Connect the loop body to the scope enter and exit
-                                self.graph.add_edge(scope_enter, loop_body_head, Edge::True);
+                                self.graph.add_edge(scope_enter, loop_body_head, Edge::Normal);
                                 self.graph.add_edge(loop_body.foot.unwrap(), scope_exit, Edge::Normal);
 
                                 // Connect scope exit to loop foot
