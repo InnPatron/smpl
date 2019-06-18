@@ -318,64 +318,41 @@ impl CFG {
         let instructions = body.0;
         let function_body = cfg.generate_scoped_block(universe, instructions.into_iter(), None)?;
 
-        cfg.graph.add_edge(cfg.start, function_body.head.unwrap(), Edge::Normal);
-        cfg.graph.add_edge(function_body.foot.unwrap(), cfg.end, Edge::Normal);
+        let mut previous = Some(cfg.start);
+        let mut head = previous;
+        append_node!(cfg, head, previous, Node::EnterScope);
 
-        cfg.try_auto_return(universe, fn_type, fn_scope)?;
-
-        Ok(cfg)
-    }
-
-    fn try_auto_return(&mut self,
-                        universe: &Universe,
-                        fn_type: &TypeCons,
-                        fn_scope: &ScopedData) -> Result<(), AnalysisError> {
+        // Append the function body.
+        if let Some(branch_head) = function_body.head {
+            cfg.graph
+                .add_edge(previous.unwrap(), branch_head, Edge::Normal);
+            previous = Some(function_body.foot.unwrap());
+        }
 
         if let TypeCons::Function {
             ref return_type,
             ..
-        } = fn_type {
+        } = fn_type
+        {
             let return_type = return_type.apply(universe, fn_scope)?;
-            if resolve_types(&return_type, &Type::Unit) == false {
-
-                // Return type is not of Unit type. Do not insert any returns
-                return Ok(());
+            if resolve_types(&return_type, &Type::Unit) {
+                append_node!(
+                    cfg,
+                    head,
+                    previous,
+                    Node::Return(ReturnData {
+                        expr: None,
+                        span: Span::dummy(),
+                    })
+                );
             }
         }
+        
+        append_node!(cfg, head, previous, Node::ExitScope);
+        append_node_index!(cfg, head, previous, cfg.end);
 
 
-        // Inherent structure of function graph
-        let end = self.end;
-    
-        // Start at the end of the graph and insert returns if necessary
-        let unknown = self.previous(end);
-
-
-        if let Node::Return(_) = node_w!(self, unknown) {
-            // last node was a return node; no need to insert return
-            return Ok(())
-        }
-
-        let mut edges = self.graph.neighbors_directed(unknown, Direction::Outgoing).detach();
-        while let Some(e) = edges.next_edge(&self.graph) {
-
-            if let Edge::Normal = self.graph.edge_weight(e).unwrap() {
-                // Break edge e and insert Return node
-                self.graph.remove_edge(e);
-                let auto_return = self.graph.add_node(Node::Return(ReturnData {
-                    expr: None,
-                    span: Span::dummy(),
-                }));
-
-                self.graph.add_edge(unknown, auto_return, Edge::Normal);
-                self.graph.add_edge(auto_return, end, Edge::Normal);
-
-                // Should only be ONE normal edge regardless of node
-                // Therefore, done inserting auto-returns
-                break;
-            }
-        }
-        Ok(())
+        Ok(cfg)
     }
 
     fn generate_scoped_block<'a, 'b, T>(&'a mut self, 
