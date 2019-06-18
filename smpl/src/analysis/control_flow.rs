@@ -519,14 +519,22 @@ impl CFG {
                             // Connect the loop head to the condition node
                             append_node_index!(self, head, previous, condition);
 
+                            let scope_enter = self.graph.add_node(Node::EnterScope);
+                            let scope_exit = self.graph.add_node(Node::ExitScope);
+
+                            // Connect the loop body to the condition node TRUE path
+                            self.graph.add_edge(condition, scope_enter, Edge::True);
+                            self.graph.add_edge(scope_exit, loop_foot, Edge::Normal);
+
+
                             // Connect the condition node to the loop foot by the FALSE path
                             self.graph.add_edge(condition, loop_foot, Edge::False);
 
                             if let Some(loop_body_head) = loop_body.head {
                                 
-                                // Connect the condition node to the loop body by the TRUE path
-                                self.graph.add_edge(condition, loop_body_head, Edge::True);
-                                self.graph.add_edge(loop_body.foot.unwrap(), loop_foot, Edge::Normal);
+                                // Connect the scope enter/exit to the loop body by the TRUE path
+                                self.graph.add_edge(scope_enter, loop_body_head, Edge::True);
+                                self.graph.add_edge(loop_body.foot.unwrap(), scope_exit, Edge::Normal);
                             } else {
                                 // Empty loop body
                                 // Connect the condition node to the loop foot by the TRUE path
@@ -591,15 +599,24 @@ impl CFG {
                                 
                                 // Append the branch
                                 if let Some(branch_head) = branch_graph.head {
-                                    // Connect condition node to the branch body along TRUE path
-                                    self.graph.add_edge(condition_node, branch_head, Edge::True);
+                                    let scope_enter = self.graph.add_node(Node::EnterScope);
+                                    let scope_exit = self.graph.add_node(Node::ExitScope);
 
-                                    // Connect the branch body to the BranchMerge
+                                    // Connect condition node to the branch body along TRUE path
+                                    self.graph.add_edge(condition_node, scope_enter, Edge::True);
+                                    // Connect scope enter to branch body
+                                    self.graph.add_edge(scope_enter, branch_head, Edge::Normal);
+
+                                    // Connect the branch body to the ScopeExit
                                     self.graph.add_edge(
                                         branch_graph.foot.unwrap(),
-                                        merge_node,
+                                        scope_exit,
                                         Edge::Normal,
                                     );
+
+                                    // Connect the branch body to the merge
+                                    self.graph.add_edge(scope_exit, merge_node, Edge::Normal);
+
                                 } else {
                                     // Empty branch body
                                     // Connect condition node to BranchMerge along TRUE path
@@ -625,17 +642,23 @@ impl CFG {
                                                                    loop_data)?;
 
                                     if let Some(branch_head) = branch_graph.head {
+                                        let scope_enter = self.graph.add_node(Node::EnterScope);
+                                        let scope_exit = self.graph.add_node(Node::ExitScope);
+
                                         // Connect "else" branch to previous condition by the FALSE
                                         // path
                                         self.graph
-                                            .add_edge(previous.unwrap(), branch_head, Edge::False);
+                                            .add_edge(previous.unwrap(), scope_enter, Edge::False);
+                                        self.graph.add_edge(scope_enter, branch_head, Edge::Normal);
+
 
                                         // Connect the "else" branch to the BranchMerge
                                         self.graph.add_edge(
                                             branch_graph.foot.unwrap(),
-                                            merge_node,
+                                            scope_exit,
                                             Edge::Normal,
                                         );
+                                        self.graph.add_edge(scope_exit, merge_node, Edge::Normal);
                                     } else {
                                         // Empty branch body
                                         // Connect previous node to BranchMerge along FALSE path
