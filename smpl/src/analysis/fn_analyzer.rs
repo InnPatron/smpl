@@ -145,6 +145,8 @@ fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, A
 
         Node::BranchMerge(_) => Ok(Some(cfg.before_branch_merge(id))),
 
+        Node::ExitScope => Ok(Some(vec![cfg.previous(id)])),
+
         _ => return Err(ControlFlowError::MissingReturn.into()),
     }
 }
