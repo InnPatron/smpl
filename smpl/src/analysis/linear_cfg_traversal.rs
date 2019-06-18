@@ -115,33 +115,36 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 Ok(Some(self.graph.after_break(current)))
             }
 
-            Node::EnterScope => {
-                self.passenger.enter_scope(current)?;
-                self.previous_is_loop_head = false;
-                Ok(Some(self.graph.next(current)))
-            }
+            Node::Block(ref basic_block) => {
+                for n in basic_block.graph() {
+                    match *n {
+                        BlockNode::EnterScope => {
+                            self.passenger.enter_scope(current);
+                            self.previous_is_loop_head = false;
+                        },
 
-            Node::ExitScope => {
-                self.passenger.exit_scope(current)?;
-                self.previous_is_loop_head = false;
-                Ok(Some(self.graph.next(current)))
-            }
+                        BlockNode::ExitScope => {
+                            self.passenger.exit_scope(current);
+                            self.previous_is_loop_head = false;
+                        },
 
-            Node::LocalVarDecl(ref decl) => {
-                self.passenger.local_var_decl(current, decl)?;
-                self.previous_is_loop_head = false;
-                Ok(Some(self.graph.next(current)))
-            }
+                        BlockNode::LocalVarDecl(ref decl) => {
+                            self.passenger.local_var_decl(current, decl)?;
+                            self.previous_is_loop_head = false;
+                        },
 
-            Node::Assignment(ref assign) => {
-                self.passenger.assignment(current, assign)?;
-                self.previous_is_loop_head = false;
-                Ok(Some(self.graph.next(current)))
-            }
+                        BlockNode::Assignment(ref assign) => {
+                            self.passenger.assignment(current, assign)?;
+                            self.previous_is_loop_head = false;
+                        },
 
-            Node::Expr(ref expr) => {
-                self.passenger.expr(current, expr)?;
-                self.previous_is_loop_head = false;
+                        BlockNode::Expr(ref expr) => {
+                            self.passenger.expr(current, expr)?;
+                            self.previous_is_loop_head = false;
+                        }
+                    }
+                }
+
                 Ok(Some(self.graph.next(current)))
             }
 
