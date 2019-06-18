@@ -43,8 +43,6 @@ impl BasicBlock {
 
 #[derive(Clone, Debug)]
 pub enum BlockNode {
-    Start,
-    End,
 
     Expr(ExprData),
 
