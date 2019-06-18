@@ -316,7 +316,7 @@ impl CFG {
 
         let (body, _) = body.to_data();
         let instructions = body.0;
-        let function_body = cfg.generate_scoped_block(universe, instructions.iter(), None)?;
+        let function_body = cfg.generate_scoped_block(universe, instructions.into_iter(), None)?;
 
         cfg.graph.add_edge(cfg.start, function_body.head.unwrap(), Edge::Normal);
         cfg.graph.add_edge(function_body.foot.unwrap(), cfg.end, Edge::Normal);
@@ -329,7 +329,7 @@ impl CFG {
                                         mut instructions: T,
                                         loop_data: Option<(graph::NodeIndex, graph::NodeIndex, LoopId)>) 
         -> Result<BranchData, ControlFlowError> 
-        where T: Iterator<Item=&'a ast::Stmt> {
+        where T: Iterator<Item=ast::Stmt> {
         use crate::ast::*;
 
         let mut previous: Option<graph::NodeIndex> = None;
@@ -450,7 +450,7 @@ impl CFG {
                             let instructions = block.0;
                             let loop_body = self.generate_scoped_block(
                                 universe,
-                                instructions.iter(),
+                                instructions.into_iter(),
                                 Some((loop_head, loop_foot, loop_id)),
                             )?;
 
@@ -509,7 +509,9 @@ impl CFG {
                                 let instructions = block.0;
                                 // Generate the branch subgraph
                                 let branch_graph =
-                                    self.generate_scoped_block(universe, instructions.iter(), loop_data)?;
+                                    self.generate_scoped_block(universe, 
+                                                               instructions.into_iter(), 
+                                                               loop_data)?;
 
                                 // Generate the branch condition
                                 let condition_node = {
@@ -566,7 +568,9 @@ impl CFG {
 
                                     // Generate the "else" branch body
                                     let branch_graph =
-                                        self.generate_scoped_block(universe, instructions.iter(), loop_data)?;
+                                        self.generate_scoped_block(universe, 
+                                                                   instructions.into_iter(), 
+                                                                   loop_data)?;
 
                                     if let Some(branch_head) = branch_graph.head {
                                         // Connect "else" branch to previous condition by the FALSE
