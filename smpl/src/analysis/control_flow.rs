@@ -499,9 +499,7 @@ impl CFG {
                             let scope_enter = self.graph.add_node(Node::EnterScope);
                             let scope_exit = self.graph.add_node(Node::ExitScope);
 
-                            // Connect the loop body to the condition node TRUE path
-                            self.graph.add_edge(condition, scope_enter, Edge::True);
-                            self.graph.add_edge(scope_exit, loop_foot, Edge::Normal);
+                            
 
 
                             // Connect the condition node to the loop foot by the FALSE path
@@ -510,8 +508,14 @@ impl CFG {
                             if let Some(loop_body_head) = loop_body.head {
                                 
                                 // Connect the scope enter/exit to the loop body by the TRUE path
+                                self.graph.add_edge(condition, scope_enter, Edge::True);
+                                
+                                // Connect the loop body to the scope enter and exit
                                 self.graph.add_edge(scope_enter, loop_body_head, Edge::True);
                                 self.graph.add_edge(loop_body.foot.unwrap(), scope_exit, Edge::Normal);
+
+                                // Connect scope exit to loop foot
+                                self.graph.add_edge(scope_exit, loop_foot, Edge::Normal);
                             } else {
                                 // Empty loop body
                                 // Connect the condition node to the loop foot by the TRUE path
