@@ -36,6 +36,10 @@ impl BasicBlock {
         &self.graph
     }
 
+    pub fn len(&self) -> usize {
+        self.graph.len()
+    }
+
     pub fn is_empty(&self) -> bool {
         self.graph.len() == 0
     }
