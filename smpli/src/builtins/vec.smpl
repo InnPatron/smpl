@@ -1,0 +1,12 @@
+mod vec;
+
+#[opaque]
+struct Vec(type T) { }
+
+builtin fn new(type T)() -> Vec(type T);
+builtin fn len(type T)(v: Vec(type T)) -> int;
+builtin fn contains(type T)(v: Vec(type T), val: T) -> bool;
+builtin fn push(type T)(v: Vec(type T), val: T) -> Vec(type T);
+builtin fn insert(type T)(v: Vec(type T), i: int, val: T) -> Vec(type T);
+builtin fn get(type T)(v: Vec(type T), i: int) -> T;
+builtin fn remove(type T)(v: Vec(type T), i: int) -> Vec(type T);
