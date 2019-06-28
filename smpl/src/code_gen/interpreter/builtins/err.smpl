@@ -1,5 +1,0 @@
-mod err;
-
-builtin fn panic();
-builtin fn panic_msg(msg: String);
-builtin fn assert(a: bool);

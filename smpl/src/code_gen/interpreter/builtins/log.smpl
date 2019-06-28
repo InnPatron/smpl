@@ -1,4 +1,0 @@
-mod log;
-
-builtin fn print(UNCHECKED);
-builtin fn println(UNCHECKED);

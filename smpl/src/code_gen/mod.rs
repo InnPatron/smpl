@@ -1,5 +1,3 @@
-pub mod interpreter;
-
 struct StringEmitter {
     output: String,
     shift: u32,
