@@ -27,5 +27,3 @@ pub use self::parser::parse_module;
 
 pub use crate::analysis::check_program;
 pub use crate::analysis::Program;
-
-pub use self::code_gen::interpreter;
