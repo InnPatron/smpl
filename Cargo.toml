@@ -2,6 +2,7 @@
 members = [
 	"smpl",
 	"smplc",
+	"smpli",
 	"examples/tic-tac-toe",
 ]
 exclude = [
