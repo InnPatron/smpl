@@ -3,7 +3,10 @@ use petgraph::graph::NodeIndex;
 use super::control_data::*;
 use super::control_flow::*;
 
-pub trait Passenger<E> {
+/*
+ * Used for visiting the CFG with explicit recursive calls to basic blocks
+ */
+pub trait BlockyPassenger<E> {
     fn start(&mut self, id: NodeIndex) -> Result<(), E>;
     fn end(&mut self, id: NodeIndex) -> Result<(), E>;
     fn loop_head(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
@@ -12,9 +15,9 @@ pub trait Passenger<E> {
     fn br(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
     fn enter_scope(&mut self, id: NodeIndex) -> Result<(), E>;
     fn exit_scope(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn local_var_decl(&mut self, id: NodeIndex, decl: &LocalVarDeclData) -> Result<(), E>;
-    fn assignment(&mut self, id: NodeIndex, assign: &AssignmentData) -> Result<(), E>;
-    fn expr(&mut self, id: NodeIndex, expr: &ExprData) -> Result<(), E>;
+
+    fn block(&mut self, id: NodeIndex) -> Result<(), E>;
+    
     fn ret(&mut self, id: NodeIndex, rdata: &ReturnData) -> Result<(), E>;
 
     fn loop_condition(&mut self, id: NodeIndex, e: &ExprData) -> Result<(), E>;
@@ -30,16 +33,16 @@ pub trait Passenger<E> {
     fn branch_end_false_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E>;
 }
 
-pub struct Traverser<'a, 'b, E: 'b> {
+pub struct BlockyTraverser<'a, 'b, E: 'b> {
     graph: &'a CFG,
-    passenger: &'b mut Passenger<E>,
+    passenger: &'b mut BlockyPassenger<E>,
     previous_is_loop_head: bool,
     node_count: usize,
 }
 
-impl<'a, 'b, E> Traverser<'a, 'b, E> {
-    pub fn new(graph: &'a CFG, passenger: &'b mut Passenger<E>) -> Traverser<'a, 'b, E> {
-        Traverser {
+impl<'a, 'b, E> BlockyTraverser<'a, 'b, E> {
+    pub fn new(graph: &'a CFG, passenger: &'b mut BlockyPassenger<E>) -> BlockyTraverser<'a, 'b, E> {
+        BlockyTraverser {
             graph: graph,
             passenger: passenger,
             previous_is_loop_head: false,
@@ -128,25 +131,8 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
             }
 
             Node::Block(ref basic_block) => {
-                for n in basic_block.graph() {
-                    match *n {
-                        BlockNode::LocalVarDecl(ref decl) => {
-                            self.passenger.local_var_decl(current, decl)?;
-                            self.previous_is_loop_head = false;
-                        },
-
-                        BlockNode::Assignment(ref assign) => {
-                            self.passenger.assignment(current, assign)?;
-                            self.previous_is_loop_head = false;
-                        },
-
-                        BlockNode::Expr(ref expr) => {
-                            self.passenger.expr(current, expr)?;
-                            self.previous_is_loop_head = false;
-                        }
-                    }
-                }
-
+                self.passenger.block(current);
+                self.previous_is_loop_head = false;
                 Ok(Some(self.graph.next(current)))
             }
 

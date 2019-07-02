@@ -99,26 +99,34 @@ fn main() {
             main.cfg().next(scope_enter)
         };
         match *main.cfg().node_weight(fn_call) {
-            Node::Expr(ref edata) => {
-                let e = &edata.expr;
-                let mut iter = e.execution_order();
-                let tmp = e.get_tmp(*iter.last().unwrap());
-                match *tmp.value().data() {
-                    Value::FnCall(ref call) => {
-                        let fn_value = call.fn_value();
-                        let tmp = e.get_tmp(fn_value);
-                        if let Value::Binding(ref binding) = tmp.value().data() {
-                            ()
-                        } else {
-                            panic!("Function call not on binding");
+            Node::Block(ref block) => {
+                assert!(block.graph().len() == 1);
+                let mut iter = block.graph().iter();
+                let next = iter.next().unwrap();
+                match next {
+                    BlockNode::Expr(ref edata) => {
+                        let e = &edata.expr;
+                        let mut iter = e.execution_order();
+                        let tmp = e.get_tmp(*iter.last().unwrap());
+                        match *tmp.value().data() {
+                            Value::FnCall(ref call) => {
+                                let fn_value = call.fn_value();
+                                let tmp = e.get_tmp(fn_value);
+                                if let Value::Binding(ref binding) = tmp.value().data() {
+                                    ()
+                                } else {
+                                    panic!("Function call not on binding");
+                                }
+                            },
+
+                            ref v => panic!("Expected Value::FnCall. Found {:?}", v),
                         }
                     },
-
-                    ref v => panic!("Expected Value::FnCall. Found {:?}", v),
+                    ref n @ _ => panic!("Expected BlockNode::Expr. Found {:?}", n),
                 }
             }
             
-            ref n @ _ => panic!("Expected Node::Expr. Found {:?}", n),
+            ref n @ _ => panic!("Expected Node::Block. Found {:?}", n),
         }
     }
 

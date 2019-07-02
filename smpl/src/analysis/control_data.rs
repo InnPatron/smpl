@@ -1,31 +1,79 @@
+use petgraph::graph;
+use petgraph::visit::EdgeRef;
+use petgraph::Direction;
+
 use crate::span::Span;
 
 use super::semantic_data::{BranchingId, LoopId};
 use super::typed_ast;
 
 #[derive(Clone, Debug)]
+pub struct BasicBlock {
+    graph: Vec<BlockNode>,
+}
+
+impl BasicBlock {
+
+    pub fn new() -> BasicBlock {
+        BasicBlock {
+            graph: Vec::new()
+        }
+    }
+
+    pub fn append(&mut self, node: BlockNode) {
+        self.graph.push(node);
+    }
+
+    pub fn start(&self) -> usize {
+        0
+    }
+
+    pub fn end(&self) -> usize {
+        self.graph.len() - 1
+    }
+
+    pub fn graph(&self) -> &[BlockNode] {
+        &self.graph
+    }
+
+    pub fn len(&self) -> usize {
+        self.graph.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.graph.len() == 0
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum BlockNode {
+
+    Expr(ExprData),
+
+    Assignment(AssignmentData),
+    LocalVarDecl(LocalVarDeclData),
+}
+
+#[derive(Clone, Debug)]
 pub enum Node {
     Start,
     End,
 
-    Expr(ExprData),
-
-    BranchSplit(BranchingData),
-    BranchMerge(BranchingData),
-
-    Assignment(AssignmentData),
-    LocalVarDecl(LocalVarDeclData),
-    Condition(ExprData),
-
-    LoopHead(LoopData),
-    LoopFoot(LoopData),
-
     EnterScope,
-    ExitScope,
+    ExitScope, 
 
     Return(ReturnData),
     Break(LoopData),
     Continue(LoopData),
+
+    Condition(ExprData),
+    BranchSplit(BranchingData),
+    BranchMerge(BranchingData),
+
+    LoopHead(LoopData),
+    LoopFoot(LoopData),
+
+    Block(BasicBlock),
 }
 
 #[derive(Clone, Debug)]
