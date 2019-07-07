@@ -146,9 +146,8 @@ impl<'a> FirstPass<'a> {
         self.frames.push(Vec::new());
     }
 
-    fn consume_current_frame(&mut self) -> Vec<PartialInstruction> {
+    fn pop_current_frame(&mut self) -> Vec<PartialInstruction> {
         let current_frame = self.frames.pop().expect("Expected a frame. Found none.");
-        self.frames.push(Vec::new());
 
         current_frame
     }
