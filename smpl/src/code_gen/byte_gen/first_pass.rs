@@ -23,8 +23,33 @@ enum State {
 }
 
 struct LoopFrame {
-    condition: Vec<PartialInstruction>,
-    body: Vec<PartialInstruction>,
+    condition: Option<Vec<PartialInstruction>>,
+    body: Option<Vec<PartialInstruction>>,
+}
+
+impl LoopFrame {
+    fn new() -> LoopFrame {
+        LoopFrame {
+            condition: None,
+            body: None
+        }
+    }
+
+    fn set_condition(&mut self, condition: Vec<PartialInstruction>) {
+        if self.condition.is_some() {
+            panic!("Attempting to double set the loop condition.");
+        } 
+
+        self.condition = Some(condition);
+    }
+
+    fn set_body(&mut self, body: Vec<PartialInstruction>) {
+        if self.body.is_some() {
+            panic!("Attempting to double set the loop body.");
+        } 
+
+        self.body = Some(body);
+    }
 }
 
 struct BranchFrame {
@@ -94,6 +119,10 @@ impl<'a> FirstPass<'a> {
 
     fn get_branch_frame_mut(&mut self, id: BranchingId) -> &mut BranchFrame {
         self.branches.get_mut(&id).expect("Expected a branch frame. Found none.")
+    }
+
+    fn get_loop_frame_mut(&mut self, id: LoopId) -> &mut LoopFrame {
+        self.loops.get_mut(&id).expect("Expected a loop frame. Found none.")
     }
 
     fn push_to_current_frame(&mut self, instr: PartialInstruction) {
