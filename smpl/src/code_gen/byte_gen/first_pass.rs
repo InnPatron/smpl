@@ -11,25 +11,49 @@ type FirstPassError = ();
 
 enum PartialInstruction {
     Instruction(Instruction),
-    UnresolvedLoopJump(LoopId),
-    UnresolvedBranchJump(BranchingId),
+    LoopBody(LoopId),
+    BranchBodies(BranchingId),
+}
+
+#[derive(Debug, Clone, Copy)]
+enum State {
+    Branching(BranchingId),
+    Loop(LoopId),
+    Normal,
+}
+
+struct BranchFrame {
+    conditions: Vec<(Vec<PartialInstruction>, Vec<PartialInstruction>)>,
+    default: Vec<PartialInstruction>
 }
 
 struct FirstPass<'a> {
     cfg: &'a CFG,
     instructions: Vec<PartialInstruction>,
-    loop_jump_heads: HashMap<LoopId, usize>,
-    loop_jump_feet: HashMap<LoopId, usize>,
-    branch_jump_merge: HashMap<BranchingId, usize>,
+    loops: HashMap<LoopId, Vec<PartialInstruction>>,
+    branches: HashMap<BranchingId, BranchFrame>,
+    current_frame: Vec<PartialInstruction>,
+    states: Vec<State>,
 }
 
 impl<'a> FirstPass<'a> {
     fn current_index(&self) -> usize {
         self.instructions.len()
     }
+
+    fn current_state(&self) -> State {
+        self.states
+            .last()
+            .map(|state| state.clone())
+            .expect("Expected a state. Found none.")
+    }
+
+    fn push_state(&mut self, state: State) { 
+        self.states.push(state);
+    }
 }
 
-impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
+impl<'a> BlockyPassenger<FirstPassError> for FirstPass<'a> {
     fn start(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
         Ok(())
     }
@@ -62,17 +86,9 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn local_var_decl(&mut self, id: NodeIndex, decl: &LocalVarDeclData) -> Result<(), FirstPassError> {
+    fn block(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
         Ok(())
-    }
-
-    fn assignment(&mut self, id: NodeIndex, assign: &AssignmentData) -> Result<(), FirstPassError> {
-        Ok(())
-    }
-
-    fn expr(&mut self, id: NodeIndex, expr: &ExprData) -> Result<(), FirstPassError> {
-        Ok(())
-    }
+    } 
 
     fn ret(&mut self, id: NodeIndex, rdata: &ReturnData) -> Result<(), FirstPassError> {
         Ok(())
