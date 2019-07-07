@@ -163,10 +163,35 @@ impl<'a> BlockyPassenger<FirstPassError> for FirstPass<'a> {
     }
 
     fn loop_head(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), FirstPassError> {
+        // Mark in the current frame that there should be a loop with LoopId(#) inserted here
+        self.push_to_current_frame(PartialInstruction::LoopBody(ld.loop_id));
+
+        // Make a new frame for the loop body
+        self.new_frame();
+
+        // Change the current state
+        self.push_state(State::Loop(ld.loop_id));
+
+        // Setup loop frame
+        self.new_loop_frame(ld.loop_id);
+
         Ok(())
     }
 
     fn loop_foot(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), FirstPassError> {
+        // Exiting the loop
+
+        // Change the state to old state
+        let old_state = self.pop_state();
+
+        // Sanity check to make sure the generated code is for the correct loop
+        assert_eq!(old_state, State::Loop(ld.loop_id));
+
+        // Set the loop frame's loop body to the current frame
+        let loop_body = self.pop_current_frame();
+        let loop_frame = self.get_loop_frame_mut(ld.loop_id);
+        loop_frame.set_body(loop_body);
+
         Ok(())
     }
 
