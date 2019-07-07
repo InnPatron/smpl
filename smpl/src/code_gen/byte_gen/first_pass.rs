@@ -88,6 +88,10 @@ impl<'a> FirstPass<'a> {
         self.states.push(state);
     }
 
+    fn pop_state(&mut self) -> State {
+        self.states.pop().unwrap()
+    }
+
     fn get_branch_frame_mut(&mut self, id: BranchingId) -> &mut BranchFrame {
         self.branches.get_mut(&id).expect("Expected a branch frame. Found none.")
     }
