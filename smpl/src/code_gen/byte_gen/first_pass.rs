@@ -117,6 +117,18 @@ impl<'a> FirstPass<'a> {
         self.states.pop().unwrap()
     }
 
+    fn new_branch_frame(&mut self, id: BranchingId) {
+        if self.branches.insert(id, BranchFrame::new()).is_some() {
+            panic!("Attempting to override branch frames.");
+        }
+    }
+
+    fn new_loop_frame(&mut self, id: LoopId) {
+        if self.loops.insert(id, LoopFrame::new()).is_some() {
+            panic!("Attempting to override loop frames.");
+        }
+    }
+
     fn get_branch_frame_mut(&mut self, id: BranchingId) -> &mut BranchFrame {
         self.branches.get_mut(&id).expect("Expected a branch frame. Found none.")
     }
