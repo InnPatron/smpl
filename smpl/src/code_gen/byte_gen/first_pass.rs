@@ -205,10 +205,12 @@ impl<'a> BlockyPassenger<FirstPassError> for FirstPass<'a> {
     }
 
     fn cont(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), FirstPassError> {
+        self.push_to_current_frame(PartialInstruction::Continue(ld.loop_id));
         Ok(())
     }
 
     fn br(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), FirstPassError> {
+        self.push_to_current_frame(PartialInstruction::Break(ld.loop_id));
         Ok(())
     }
 
