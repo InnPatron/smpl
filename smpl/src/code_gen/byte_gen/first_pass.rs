@@ -13,6 +13,8 @@ enum PartialInstruction {
     Instruction(Instruction),
     LoopBody(LoopId),
     BranchBodies(BranchingId),
+    Continue(LoopId),
+    Break(LoopId),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
