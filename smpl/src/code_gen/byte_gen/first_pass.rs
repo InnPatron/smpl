@@ -22,6 +22,11 @@ enum State {
     Normal,
 }
 
+struct LoopFrame {
+    condition: Vec<PartialInstruction>,
+    body: Vec<PartialInstruction>,
+}
+
 struct BranchFrame {
     conditions: Vec<(Vec<PartialInstruction>, Option<Vec<PartialInstruction>>)>,
     default: Option<Vec<PartialInstruction>>
@@ -61,7 +66,7 @@ impl BranchFrame {
 struct FirstPass<'a> {
     cfg: &'a CFG,
     instructions: Vec<PartialInstruction>,
-    loops: HashMap<LoopId, Vec<PartialInstruction>>,
+    loops: HashMap<LoopId, LoopFrame>,
     branches: HashMap<BranchingId, BranchFrame>,
     frames: Vec<Vec<PartialInstruction>>,
     states: Vec<State>,
