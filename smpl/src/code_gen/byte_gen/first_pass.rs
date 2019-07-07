@@ -15,7 +15,7 @@ enum PartialInstruction {
     BranchBodies(BranchingId),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum State {
     Branching(BranchingId),
     Loop(LoopId),
