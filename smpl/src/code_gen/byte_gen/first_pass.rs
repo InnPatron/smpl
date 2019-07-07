@@ -17,6 +17,7 @@ enum PartialInstruction {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum State {
+    Start,
     Branching(BranchingId),
     Loop(LoopId),
     Normal,
@@ -155,10 +156,16 @@ impl<'a> FirstPass<'a> {
 
 impl<'a> BlockyPassenger<FirstPassError> for FirstPass<'a> {
     fn start(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
+        self.push_state(State::Start);
         Ok(())
     }
 
     fn end(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
+        
+        // Sanity check. Should always end on the "Start" state
+        let old_state = self.pop_state();
+        assert_eq!(old_state, State::Start);
+
         Ok(())
     }
 
