@@ -105,6 +105,10 @@ impl<'a> FirstPass<'a> {
         self.instructions.len()
     }
 
+    fn current_frame_mut(&mut self) -> &mut Vec<PartialInstruction> {
+        self.frames.last_mut().expect("Expected a frame. Found none.")
+    }
+
     fn current_state(&self) -> State {
         self.states
             .last()
