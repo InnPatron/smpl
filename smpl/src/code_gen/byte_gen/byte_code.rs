@@ -26,7 +26,7 @@ pub enum Instruction {
     Invert(Location, Arg),
     
     FnCall(Location, Location, Vec<Arg>),
-    Return(Arg),
+    Return(Option<Arg>),
 
     Jump(JumpTarget),
     JumpCondition(JumpTarget, Arg),
