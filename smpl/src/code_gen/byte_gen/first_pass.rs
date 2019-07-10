@@ -242,6 +242,14 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
     }
 
     fn local_var_decl(&mut self, id: NodeIndex, decl: &LocalVarDeclData) -> Result<(), FirstPassError> {
+
+        let init_instructions = byte_expr::translate_expr(decl.decl.init_expr());
+        self.extend_current_frame(init_instructions.into_iter());
+
+        let store_location = Location::Namespace(byte_expr::var_id(decl.decl.var_id()));
+        let value = Arg::Location(Location::Tmp(byte_expr::tmp_id(decl.decl.init_expr().last())));
+        self.push_to_current_frame(Instruction::Store(store_location, value));
+
         Ok(())
     }
 
