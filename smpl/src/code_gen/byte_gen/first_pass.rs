@@ -259,9 +259,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
 
             // Append return expression instructions to current frame
             let return_instructions = byte_expr::translate_expr(return_expr);
-            self.current_frame_mut().extend(
-                return_instructions.into_iter().map(|instr| PartialInstruction::Instruction(instr))
-            );
+            self.extend_current_frame(return_instructions.into_iter());
 
             // Append return instruction
             let return_value = byte_expr::tmp_id(return_expr.last());
