@@ -6,6 +6,7 @@ use crate::analysis::*;
 use crate::analysis::metadata::*;
 
 use super::byte_code::*;
+use super::byte_expr;
 
 type FirstPassError = ();
 
@@ -231,6 +232,26 @@ impl<'a> BlockyPassenger<FirstPassError> for FirstPass<'a> {
     } 
 
     fn ret(&mut self, id: NodeIndex, rdata: &ReturnData) -> Result<(), FirstPassError> {
+        if let Some(ref return_expr) = rdata.expr {
+            // Return expression
+
+            // Append return expression instructions to current frame
+            let return_instructions = byte_expr::translate_expr(return_expr);
+            self.current_frame_mut().extend(
+                return_instructions.into_iter().map(|instr| PartialInstruction::Instruction(instr))
+            );
+
+            // Append return instruction
+            let return_value = byte_expr::tmp_id(return_expr.last());
+            let return_value_location = Arg::Location(Location::Tmp(return_value));
+            self.push_to_current_frame(
+                PartialInstruction::Instruction(Instruction::Return(Some(return_value_location)))
+            );
+
+        } else {
+            // No return expression
+            self.push_to_current_frame(PartialInstruction::Instruction(Instruction::Return(None)));
+        }
         Ok(())
     }
 
