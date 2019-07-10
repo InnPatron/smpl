@@ -116,6 +116,13 @@ impl<'a> FirstPass<'a> {
         self.frames.last_mut().expect("Expected a frame. Found none.")
     }
 
+    fn extend_current_frame<I, Item>(&mut self, i: I)
+    where I: Iterator<Item=Item>,
+          Item: Into<PartialInstruction> {
+
+        self.current_frame_mut().extend(i.map(|item| item.into()));
+    }
+
     fn current_state(&self) -> State {
         self.states
             .last()
