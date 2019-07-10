@@ -113,18 +113,18 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
     }
 }
 
-fn field_id(id: FieldId) -> String {
+pub fn field_id(id: FieldId) -> String {
     format!("_field{}", id.raw())
 }
 
-fn tmp_id(id: TmpId) -> String {
+pub fn tmp_id(id: TmpId) -> String {
     format!("_tmp{}", id.raw())
 }
 
-fn var_id(id: VarId) -> String {
+pub fn var_id(id: VarId) -> String {
     format!("_var{}", id.raw())
 }
 
-fn fn_id(id: FnId) -> String {
+pub fn fn_id(id: FnId) -> String {
     format!("_fn{}", id.raw())
 }
