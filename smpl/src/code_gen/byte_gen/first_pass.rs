@@ -18,6 +18,12 @@ enum PartialInstruction {
     Break(LoopId),
 }
 
+impl From<Instruction> for PartialInstruction {
+    fn from(instr: Instruction) -> PartialInstruction {
+        PartialInstruction::Instruction(instr)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum State {
     Start,
