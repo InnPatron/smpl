@@ -151,9 +151,10 @@ impl<'a> FirstPass<'a> {
         self.loops.get_mut(&id).expect("Expected a loop frame. Found none.")
     }
 
-    fn push_to_current_frame(&mut self, instr: PartialInstruction) {
+    fn push_to_current_frame<T>(&mut self, instr: T) 
+    where T: Into<PartialInstruction> {
         let current_frame = self.frames.last_mut().expect("Expected a frame. Found none.");
-        current_frame.push(instr);
+        current_frame.push(instr.into());
     }
 
     fn new_frame(&mut self) {
@@ -250,13 +251,11 @@ impl<'a> BlockyPassenger<FirstPassError> for FirstPass<'a> {
             // Append return instruction
             let return_value = byte_expr::tmp_id(return_expr.last());
             let return_value_location = Arg::Location(Location::Tmp(return_value));
-            self.push_to_current_frame(
-                PartialInstruction::Instruction(Instruction::Return(Some(return_value_location)))
-            );
+            self.push_to_current_frame(Instruction::Return(Some(return_value_location)));
 
         } else {
             // No return expression
-            self.push_to_current_frame(PartialInstruction::Instruction(Instruction::Return(None)));
+            self.push_to_current_frame(Instruction::Return(None));
         }
         Ok(())
     }
