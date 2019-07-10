@@ -168,7 +168,7 @@ impl<'a> FirstPass<'a> {
     }
 }
 
-impl<'a> BlockyPassenger<FirstPassError> for FirstPass<'a> {
+impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
     fn start(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
         self.push_state(State::Start);
         Ok(())
@@ -234,9 +234,17 @@ impl<'a> BlockyPassenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn block(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
+    fn local_var_decl(&mut self, id: NodeIndex, decl: &LocalVarDeclData) -> Result<(), FirstPassError> {
         Ok(())
-    } 
+    }
+
+    fn assignment(&mut self, id: NodeIndex, assign: &AssignmentData) -> Result<(), FirstPassError> {
+        Ok(())
+    }
+
+    fn expr(&mut self, id: NodeIndex, expr: &ExprData) -> Result<(), FirstPassError> {
+        Ok(())
+    }
 
     fn ret(&mut self, id: NodeIndex, rdata: &ReturnData) -> Result<(), FirstPassError> {
         if let Some(ref return_expr) = rdata.expr {
