@@ -42,7 +42,10 @@ pub enum Instruction {
 pub struct JumpTarget;
 
 #[derive(Debug)]
-pub struct Location(pub String);
+pub enum Location {
+    Namespace(String),
+    Tmp(String),
+}
 
 #[derive(Debug)]
 pub enum Arg {

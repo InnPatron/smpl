@@ -23,13 +23,13 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
 
     match *value.data() {
         Value::Literal(ref lit) => match *lit {
-            Literal::String(ref string) => Store(Location(store), Arg::String(string.to_string())),
+            Literal::String(ref string) => Store(Location::Tmp(store), Arg::String(string.to_string())),
 
-            Literal::Int(int) => Store(Location(store), Arg::Int(int)),
+            Literal::Int(int) => Store(Location::Tmp(store), Arg::Int(int)),
 
-            Literal::Float(float) => Store(Location(store), Arg::Float(float)),
+            Literal::Float(float) => Store(Location::Tmp(store), Arg::Float(float)),
 
-            Literal::Bool(boolean) => Store(Location(store), Arg::Bool(boolean)),
+            Literal::Bool(boolean) => Store(Location::Tmp(store), Arg::Bool(boolean)),
         },
 
         Value::Binding(ref var) => {
@@ -40,7 +40,7 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
                 BindingId::Var(id) => var_id(id),
             };
 
-            Store(Location(store), Arg::Location(Location(value)))
+            Store(Location::Tmp(store), Arg::Location(Location::Namespace(value)))
         },
 
         Value::FieldAccess(ref access) => {
@@ -50,34 +50,34 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
         Value::BinExpr(ref op, ref lhs, ref rhs) => {
             use crate::ast::BinOp;
 
-            let lhs = Arg::Location(Location(tmp_id(*lhs.data())));
-            let rhs = Arg::Location(Location(tmp_id(*rhs.data())));
+            let lhs = Arg::Location(Location::Tmp(tmp_id(*lhs.data())));
+            let rhs = Arg::Location(Location::Tmp(tmp_id(*rhs.data())));
             match op {
-                BinOp::Add => Add(Location(store), lhs, rhs),
-                BinOp::Sub => Sub(Location(store), lhs, rhs),
-                BinOp::Mul => Mul(Location(store), lhs, rhs),
-                BinOp::Div => Div(Location(store), lhs, rhs),
-                BinOp::Mod => Mod(Location(store), lhs, rhs),
+                BinOp::Add => Add(Location::Tmp(store), lhs, rhs),
+                BinOp::Sub => Sub(Location::Tmp(store), lhs, rhs),
+                BinOp::Mul => Mul(Location::Tmp(store), lhs, rhs),
+                BinOp::Div => Div(Location::Tmp(store), lhs, rhs),
+                BinOp::Mod => Mod(Location::Tmp(store), lhs, rhs),
 
-                BinOp::LogicalAnd => And(Location(store), lhs, rhs),
-                BinOp::LogicalOr => Or(Location(store), lhs, rhs),
-                BinOp::GreaterEq => GEq(Location(store), lhs, rhs),
-                BinOp::LesserEq => LEq(Location(store), lhs, rhs),
-                BinOp::Greater => GE(Location(store), lhs, rhs),
-                BinOp::Lesser => LE(Location(store), lhs, rhs),
+                BinOp::LogicalAnd => And(Location::Tmp(store), lhs, rhs),
+                BinOp::LogicalOr => Or(Location::Tmp(store), lhs, rhs),
+                BinOp::GreaterEq => GEq(Location::Tmp(store), lhs, rhs),
+                BinOp::LesserEq => LEq(Location::Tmp(store), lhs, rhs),
+                BinOp::Greater => GE(Location::Tmp(store), lhs, rhs),
+                BinOp::Lesser => LE(Location::Tmp(store), lhs, rhs),
 
-                BinOp::Eq => Eq(Location(store), lhs, rhs),
-                BinOp::InEq => InEq(Location(store), lhs, rhs),
+                BinOp::Eq => Eq(Location::Tmp(store), lhs, rhs),
+                BinOp::InEq => InEq(Location::Tmp(store), lhs, rhs),
             }
         }
 
         Value::UniExpr(ref op, ref tmp) => {
             use crate::ast::UniOp;
 
-            let tmp = Arg::Location(Location(tmp_id(*tmp.data())));
+            let tmp = Arg::Location(Location::Tmp(tmp_id(*tmp.data())));
             match op {
-                UniOp::Negate => Negate(Location(store), tmp),
-                UniOp::LogicalInvert => Invert(Location(store), tmp),
+                UniOp::Negate => Negate(Location::Tmp(store), tmp),
+                UniOp::LogicalInvert => Invert(Location::Tmp(store), tmp),
 
                 _ => unimplemented!(),
             }
@@ -87,14 +87,14 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
             
             let args = match fn_call.args() {
                 Some(args) => args.iter().map(|tmp| {
-                    Arg::Location(Location(tmp_id(*tmp.data())))
+                    Arg::Location(Location::Tmp(tmp_id(*tmp.data())))
                 }).collect(),
                 None => Vec::new(),
             };
 
-            let to_call = Location(tmp_id(fn_call.fn_value()));
+            let to_call = Location::Tmp(tmp_id(fn_call.fn_value()));
 
-            FnCall(Location(store), to_call, args)
+            FnCall(Location::Tmp(store), to_call, args)
         }
 
         Value::StructInit(ref struct_init) => unimplemented!(),
