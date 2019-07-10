@@ -258,6 +258,8 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
     }
 
     fn expr(&mut self, id: NodeIndex, expr: &ExprData) -> Result<(), FirstPassError> {
+        let expr_instructions = byte_expr::translate_expr(&expr.expr);
+        self.extend_current_frame(expr_instructions.into_iter());
         Ok(())
     }
 
