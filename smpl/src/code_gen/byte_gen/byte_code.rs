@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 pub struct Block {
     instructions: Vec<Instruction>,
 }
@@ -43,8 +45,21 @@ pub struct JumpTarget;
 
 #[derive(Debug)]
 pub enum Location {
+    Field {
+        root: String,
+        path: Vec<FieldAccess>,
+    },
     Namespace(String),
     Tmp(String),
+}
+
+#[derive(Debug)]
+pub enum FieldAccess {
+    Field(String),
+    FieldIndex {
+        field: String,
+        index_tmp: String
+    }
 }
 
 #[derive(Debug)]
@@ -55,4 +70,19 @@ pub enum Arg {
     Float(f64),
     Bool(bool),
     String(String),
+    Struct(Struct),
+}
+
+#[derive(Debug)]
+pub struct Struct {
+    field_map: HashMap<String, StructField>
+}
+
+#[derive(Debug)]
+pub enum StructField {
+    Int(i64),
+    Float(i64),
+    Bool(bool),
+    String(String),
+    Struct(Box<Struct>),
 }
