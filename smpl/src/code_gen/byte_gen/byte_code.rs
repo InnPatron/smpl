@@ -45,8 +45,9 @@ pub struct JumpTarget;
 
 #[derive(Debug)]
 pub enum Location {
-    Field {
+    Compound {
         root: String,
+        root_index: Option<String>,
         path: Vec<FieldAccess>,
     },
     Namespace(String),
