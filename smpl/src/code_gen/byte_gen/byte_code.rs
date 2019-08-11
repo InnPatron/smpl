@@ -58,7 +58,7 @@ pub enum FieldAccess {
     Field(String),
     FieldIndex {
         field: String,
-        index_tmp: Arg
+        index_tmp: String
     }
 }
 
