@@ -254,6 +254,56 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
     }
 
     fn assignment(&mut self, id: NodeIndex, assign: &AssignmentData) -> Result<(), FirstPassError> {
+        let assignment = &assign.assignment;
+        let assignee = assignment.assignee();
+
+        // Generate lhs tmps
+        let access_tmps = byte_expr::translate_expr(assignment.access());
+
+        // Generate rhs tmps
+        let value_tmps = byte_expr::translate_expr(assignment.value());
+        let value = Arg::Location(Location::Tmp(byte_expr::tmp_id(assignment.value().last())));
+
+        // Create location to store rhs value
+        let internal_path = assignee.path();
+        let assign_root_var = 
+            byte_expr::var_id(internal_path.root_var_id());
+        let assign_root_indexing_expr = internal_path.root_indexing_expr()
+            .map(|tmp_id| byte_expr::tmp_id(tmp_id));
+        let path: Vec<_> = internal_path
+            .path()
+            .iter()
+            .map(|path_segment| {
+                match path_segment {
+                    PathSegment::Ident(ref field) => {
+                        super::byte_code::FieldAccess::Field(field.name().to_string())
+                    }
+
+                    PathSegment::Indexing(ref field, ref index_tmp) => {
+                        super::byte_code::FieldAccess::FieldIndex {
+                            field: field.name().to_string(),
+                            index_tmp: byte_expr::tmp_id(*index_tmp),
+                        }
+                    }
+                }
+            }).collect();
+
+        // If assignment has field accesses or indexing, location is Location::Compound
+        let assign_location = if path.len() > 0 || assign_root_indexing_expr.is_some() {
+            Location::Compound {
+                root: assign_root_var,
+                root_index: assign_root_indexing_expr,
+                path: path,
+            }
+        } else {
+            Location::Namespace(assign_root_var)
+        };
+
+        // Emit access expressions before evaluating the assignment
+        // Emit storage instruction last
+        self.extend_current_frame(access_tmps.into_iter());
+        self.extend_current_frame(value_tmps.into_iter());
+        self.push_to_current_frame(Instruction::Store(assign_location, value));
         Ok(())
     }
 
