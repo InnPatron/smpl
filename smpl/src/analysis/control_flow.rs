@@ -1013,22 +1013,33 @@ if (test) {
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
         {
-            // start -> enter_scope -> branch_split -> condition(B)
+            // start -> enter_scope
+            //   branch_split(A) -> condition(B)
             //      -[true]> {
             //          enter_scope ->
             //          local_var_decl ->
-            //          exit_scope ->
-            //      } -> branch_merge(A)
+            //          exit_scope
+            //      }
             //
-            //      -[false]> condition(C)
-            //           -[true]> branch_merge(A)
+            //      -[false]> {
+            //          branch_split(C) -> condition(D)
+            //          -[true]> {
+            //              scope_enter ->
+            //              scope_exit
+            //          }
             //
-            //           -[false]> branch_merge(A)
+            //          -[false]> {
+            //              scope_enter ->
+            //              scope_exit
+            //          }
             //
-            // branch_merge(A) -> implicit_return -> exit_scope -> end
-            //
+            //          branch_merge(C) ->
+            //      }
+            //    branch_merge(A) -> implicit_return -> exit_scope ->
+            // end
 
-            assert_eq!(cfg.graph.node_count(), 12);
+
+            assert_eq!(cfg.graph.node_count(), 18);
 
             let mut start_neighbors = neighbors!(cfg, cfg.start);
             assert_eq!(start_neighbors.clone().count(), 1);
@@ -1040,15 +1051,15 @@ if (test) {
                 ref n @ _ => panic!("Expected to find Node::Enter. Found {:?}", n),
             }
 
-            let branch_split = enter_neighbors.next().unwrap();
-            let mut branch_split_neighbors = neighbors!(cfg, branch_split);
-            match *node_w!(cfg, branch_split) {
+            let branch_split_A = enter_neighbors.next().unwrap();
+            let mut branch_split_neighbors_A = neighbors!(cfg, branch_split_A);
+            match *node_w!(cfg, branch_split_A) {
                 Node::BranchSplit(_) => (), // Success
 
                 ref n @ _ => panic!("Expected a condition node. Found {:?}", n),
             }
 
-            let condition_b = branch_split_neighbors.next().unwrap();
+            let condition_b = branch_split_neighbors_A.next().unwrap();
             match *node_w!(cfg, condition_b) {
                 Node::Condition(_) => (), // Success
 
@@ -1056,14 +1067,15 @@ if (test) {
             }
 
             let condition_b_edges = edges!(cfg, condition_b);
-            let mut condition_c = None;
+            let mut branch_split_c = None;
             let mut condition_b_true = None;
 
+            dbg!(condition_b_edges.clone().collect::<Vec<_>>());
             assert_eq!(condition_b_edges.clone().count(), 2);
             for edge in condition_b_edges {
                 match *edge.weight() {
                     Edge::True => condition_b_true = Some(edge.target()),
-                    Edge::False => condition_c = Some(edge.target()),
+                    Edge::False => branch_split_c = Some(edge.target()),
 
                     ref e @ _ => panic!("Expected true or false edge. Found {:?}", e),
                 }
@@ -1102,14 +1114,21 @@ if (test) {
                 ref n @ _ => panic!("Expected Node::BranchMerge. Found {:?}", n),
             }
 
-            // condition b FALSE branch (condition c)
-            let condition_c = condition_c.expect("Missing false edge connecting to Condition C");
-            let condition_c_edges = edges!(cfg, condition_c);
+            // condition b FALSE branch (branch_split_c)
+            let branch_split_c = branch_split_c.expect("Missing false edge connecting to branch split C");
+            let mut branch_split_c_neighbors = neighbors!(cfg, branch_split_c);
+
+            let condition_d = branch_split_c_neighbors.next().unwrap();
+            match *node_w!(cfg, condition_d) {
+                Node::Condition(_) => (),
+                ref n @ _ => panic!("Expected Node::Condition. Found {:?}", n),
+            }
+            let condition_d_edges = edges!(cfg, condition_d);
             let mut truth_target = None;
             let mut false_target = None;
 
-            assert_eq!(condition_c_edges.clone().count(), 2);
-            for edge in condition_c_edges {
+            assert_eq!(condition_d_edges.clone().count(), 2);
+            for edge in condition_d_edges {
                 match *edge.weight() {
                     Edge::True => truth_target = Some(edge.target()),
                     Edge::False => false_target = Some(edge.target()),
@@ -1118,25 +1137,67 @@ if (test) {
                 }
             }
 
-            let truth_target = truth_target.unwrap();
-            let false_target = false_target.unwrap();
+            {
+                let enter =
+                    truth_target.expect("Missing true edge connecting to empty block");
+                let mut enter_neighbors = neighbors!(cfg, enter);
+                match *node_w!(cfg, enter) {
+                    Node::EnterScope => (),
+                    ref n @ _ => panic!("Expected Node::EnterScope. Found {:?}", n),
+                }
 
-            assert_eq!(truth_target, false_target);
-            match *node_w!(cfg, truth_target) {
+                let exit = enter_neighbors.next().unwrap();
+                let mut exit_neighbors = neighbors!(cfg, exit);
+                match *node_w!(cfg, exit) {
+                    Node::ExitScope => (),
+                    ref n @ _ => panic!("Expected Node::ExitScope. Found {:?}", n),
+                }
+
+
+                let merge = exit_neighbors.next().unwrap();
+                match *node_w!(cfg, merge) {
+                    Node::BranchMerge(_) => (),
+
+                    ref n @ _ => panic!("Expected Node::BranchMerge. Found {:?}", n),
+                }
+            }
+
+            let merge_c = {
+                let enter =
+                    false_target.expect("Missing true edge connecting to empty block");
+                let mut enter_neighbors = neighbors!(cfg, enter);
+                match *node_w!(cfg, enter) {
+                    Node::EnterScope => (),
+                    ref n @ _ => panic!("Expected Node::EnterScope. Found {:?}", n),
+                }
+
+                let exit = enter_neighbors.next().unwrap();
+                let mut exit_neighbors = neighbors!(cfg, exit);
+                match *node_w!(cfg, exit) {
+                    Node::ExitScope => (),
+                    ref n @ _ => panic!("Expected Node::ExitScope. Found {:?}", n),
+                }
+
+
+                let merge = exit_neighbors.next().unwrap();
+                match *node_w!(cfg, merge) {
+                    Node::BranchMerge(_) => (),
+
+                    ref n @ _ => panic!("Expected Node::BranchMerge. Found {:?}", n),
+                }
+
+                merge
+            };
+
+            let mut merge_c_neighbors = neighbors!(cfg, merge_c);
+            let merge_a = merge_c_neighbors.next().unwrap();
+            let mut merge_a_neighbors = neighbors!(cfg, merge_a);
+            match *node_w!(cfg, merge_a) {
                 Node::BranchMerge(_) => (),
                 ref n @ _ => panic!("Expected BranchMerge. Found {:?}", n),
             }
 
-            match *node_w!(cfg, false_target) {
-                Node::BranchMerge(_) => (),
-                ref n @ _ => panic!("Expected BranchMerge. Found {:?}", n),
-            }
-
-            let branch_merge = truth_target;
-            let mut branch_merge_neighbors = neighbors!(cfg, branch_merge);
-            assert_eq!(branch_merge_neighbors.clone().count(), 1);
-
-            let implicit_return = branch_merge_neighbors.next().unwrap();
+            let implicit_return = merge_a_neighbors.next().unwrap();
             let mut implicit_return_neighbors = neighbors!(cfg, implicit_return);
             assert_eq!(implicit_return_neighbors.clone().count(), 1);
             match *node_w!(cfg, implicit_return) {
