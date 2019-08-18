@@ -685,7 +685,7 @@ impl CFG {
                                 self.graph.add_edge(merge, previous_foot, Edge::Normal);
 
                                 previous_branch = BranchData {
-                                    head: Some(previous_head),
+                                    head: Some(branch_head),
                                     foot: Some(merge),
                                 };
                             }
