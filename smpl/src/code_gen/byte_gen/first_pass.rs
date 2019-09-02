@@ -63,30 +63,42 @@ impl LoopFrame {
 }
 
 struct BranchFrame {
-    condition: Vec<PartialInstruction>,
-    true_branch: Vec<PartialInstruction>,
-    false_branch: Vec<PartialInstruction>,
+    condition: Option<Vec<PartialInstruction>>,
+    true_branch: Option<Vec<PartialInstruction>>,
+    false_branch: Option<Vec<PartialInstruction>>,
 }
 
 impl BranchFrame {
     fn new() -> BranchFrame {
         BranchFrame {
-            condition: Vec::new(),
-            true_branch: Vec::new(),
-            false_branch: Vec::new(),
+            condition: None,
+            true_branch: None,
+            false_branch: None,
         }
     }
 
-    fn push_condition<T: Iterator<Item=PartialInstruction>>(&mut self, instrs: T) {
-        self.condition.extend(instrs);
+    fn set_condition(&mut self, condition: Vec<PartialInstruction>) {
+        if self.condition.is_some() {
+            panic!("Attempting to double set the condition.");
+        } 
+
+        self.condition = Some(condition);
     }
 
-    fn push_true_body<T: Iterator<Item=PartialInstruction>>(&mut self, instrs: T) {
-        self.true_branch.extend(instrs);
+    fn set_true_branch(&mut self, body: Vec<PartialInstruction>) {
+        if self.true_branch.is_some() {
+            panic!("Attempting to double set the true body.");
+        } 
+
+        self.true_branch = Some(body);
     }
 
-    fn push_false_body<T: Iterator<Item=PartialInstruction>>(&mut self, instrs: T) {
-        self.false_branch.extend(instrs);
+    fn set_false_branch(&mut self, body: Vec<PartialInstruction>) {
+        if self.false_branch.is_some() {
+            panic!("Attempting to double set the false body.");
+        } 
+
+        self.false_branch = Some(body);
     }
 }
 
