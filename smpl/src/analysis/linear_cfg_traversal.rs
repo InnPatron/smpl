@@ -6,7 +6,7 @@ use super::control_flow::*;
 pub trait Passenger<E> {
     fn start(&mut self, id: NodeIndex) -> Result<(), E>;
     fn end(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn loop_head(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
+    fn loop_head(&mut self, id: NodeIndex, ld: &LoopData, expr: &ExprData) -> Result<(), E>;
     fn loop_foot(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
     fn cont(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
     fn br(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
@@ -17,7 +17,6 @@ pub trait Passenger<E> {
     fn expr(&mut self, id: NodeIndex, expr: &ExprData) -> Result<(), E>;
     fn ret(&mut self, id: NodeIndex, rdata: &ReturnData) -> Result<(), E>;
 
-    fn loop_condition(&mut self, id: NodeIndex, e: &ExprData) -> Result<(), E>;
     fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
 
@@ -91,10 +90,43 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 Ok(Some(self.graph.next(current)))
             }
 
-            Node::LoopHead(ref data) => {
-                self.passenger.loop_head(current, data)?;
+            Node::LoopHead(ref branch_data, ref expr_data) => {
+                self.passenger.loop_head(current, branch_data, expr_data)?;
+                let (true_path, false_path) = self.graph.after_condition(current);
+                self.passenger.loop_start_true_path(true_path)?;
+
+                let mut current_node = true_path;
+                let mut found_foot = false;
+                for _ in 0..self.node_count {
+                    match *self.graph.node_weight(current_node) {
+                        Node::LoopFoot(_) => {
+                            self.passenger.loop_end_true_path(current_node)?;
+                            found_foot = true;
+                            break;
+                        }
+
+                        _ => (),
+                    }
+
+                    match self.visit_node(current_node)? {
+                        Some(next) => current_node = next,
+                        None => return Ok(None),
+                    }
+                }
+
+                if found_foot == false {
+                    panic!(
+                        "Traversed the rest of the graph but did not find a Node::LoopFoot."
+                    );
+                }
+
+                match *self.graph.node_weight(false_path) {
+                    Node::LoopFoot(_) => (),
+                    ref n @ _ => println!("Loop condition should be connected to Node::LoopFoot along the false path. Found {:?}.", n),
+                }
+
                 self.previous_is_loop_head = true;
-                Ok(Some(self.graph.next(current)))
+                Ok(Some(self.graph.after_loop_foot(false_path)))
             }
 
             Node::LoopFoot(ref data) => {
@@ -160,42 +192,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 if self.previous_is_loop_head {
                     // Loop condition
                     self.previous_is_loop_head = false;
-                    self.passenger.loop_condition(current, condition)?;
-
-                    let (true_path, false_path) = self.graph.after_condition(current);
-                    self.passenger.loop_start_true_path(true_path)?;
-
-                    let mut current_node = true_path;
-                    let mut found_foot = false;
-                    for _ in 0..self.node_count {
-                        match *self.graph.node_weight(current_node) {
-                            Node::LoopFoot(_) => {
-                                self.passenger.loop_end_true_path(current_node)?;
-                                found_foot = true;
-                                break;
-                            }
-
-                            _ => (),
-                        }
-
-                        match self.visit_node(current_node)? {
-                            Some(next) => current_node = next,
-                            None => return Ok(None),
-                        }
-                    }
-
-                    if found_foot == false {
-                        panic!(
-                            "Traversed the rest of the graph but did not find a Node::LoopFoot."
-                        );
-                    }
-
-                    match *self.graph.node_weight(false_path) {
-                        Node::LoopFoot(_) => (),
-                        ref n @ _ => println!("Loop condition should be connected to Node::LoopFoot along the false path. Found {:?}.", n),
-                    }
-
-                    Ok(Some(self.graph.after_loop_foot(false_path)))
+                    unimplemented!();   
                 } else {
                     // Branch condition
                     self.passenger.branch_condition(current, condition)?;

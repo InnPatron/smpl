@@ -70,7 +70,7 @@ pub enum Node {
     BranchSplit(BranchingData),
     BranchMerge(BranchingData),
 
-    LoopHead(LoopData),
+    LoopHead(LoopData, ExprData),
     LoopFoot(LoopData),
 
     Block(BasicBlock),
