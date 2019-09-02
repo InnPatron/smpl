@@ -12,8 +12,8 @@ type FirstPassError = ();
 
 enum PartialInstruction {
     Instruction(Instruction),
-    LoopBody(LoopId),
-    BranchBodies(BranchingId),
+    Loop(LoopId),
+    Branch(BranchingId),
     Continue(LoopId),
     Break(LoopId),
 }
@@ -184,7 +184,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
 
     fn loop_head(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), FirstPassError> {
         // Mark in the current frame that there should be a loop with LoopId(#) inserted here
-        self.push_to_current_frame(PartialInstruction::LoopBody(ld.loop_id));
+        self.push_to_current_frame(PartialInstruction::Loop(ld.loop_id));
 
         // Make a new frame for the loop body
         self.new_frame();
