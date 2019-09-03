@@ -138,6 +138,12 @@ impl<'a> FirstPass<'a> {
         self.states.push(state);
     }
 
+    fn peek_state(&self) -> State {
+        self.states.last()
+            .map(|s| s.clone())
+            .unwrap()
+    }
+
     fn pop_state(&mut self) -> State {
         self.states.pop().unwrap()
     }
@@ -352,27 +358,85 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn branch_split(&mut self, id: NodeIndex, b: &BranchingData, condition: &ExprData) -> Result<(), FirstPassError> {
+    fn branch_split(&mut self, id: NodeIndex, b: &BranchingData, condition: &ExprData) 
+        -> Result<(), FirstPassError> {
+        // Mark in the current frame that there should be a branch with Branch(#) inserted here
+        self.push_to_current_frame(PartialInstruction::Branch(b.branch_id));
+
+        // Setup branch frame
+        self.new_branch_frame(b.branch_id);
+
+        let frame = self.get_branch_frame_mut(b.branch_id);
+        let condition_instructions = byte_expr::translate_expr(&condition.expr)
+            .into_iter()
+            .map(|instr| PartialInstruction::Instruction(instr));
+        frame.set_condition(condition_instructions);
+
+
+        // Change the current state
+        self.push_state(State::Branching(b.branch_id));
+
         Ok(())
     }
 
     fn branch_merge(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), FirstPassError> {
+        // Exiting a branch
+
+        // Change the state to old state
+        let old_state = self.pop_state();
+
+        // Sanity check to make sure the generated code is for the correct loop
+        assert_eq!(old_state, State::Branching(b.branch_id));
+
+        // Branch frame should already be set in branch_end_true_path() and branch_end_false_path()
         Ok(())
     }
 
     fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
+        // Make a new frame for the true body
+        self.new_frame();
+
         Ok(())
     }
 
     fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
+        // Make a new frame for the false body
+        self.new_frame();
+        
         Ok(())
     }
 
     fn branch_end_true_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), FirstPassError> {
+        // Pop the current frame as the body of the true path
+        let true_instructions = self.pop_current_frame();
+
+        let state = self.peek_state();
+        let branch_id = match state {
+            State::Branching(id) => id,
+
+            state => panic!("branch_end_true_path() encountered invalid state: {:?}", self.states),
+        };
+        // Set the true path in the frame
+        let frame = self.get_branch_frame_mut(branch_id);
+        frame.set_true_branch(true_instructions.into_iter());
+
         Ok(())
     }
 
     fn branch_end_false_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), FirstPassError> {
+        // Pop the current frame as the body of the false path
+        let false_instructions = self.pop_current_frame();
+
+        let state = self.peek_state();
+        let branch_id = match state {
+            State::Branching(id) => id,
+
+            state => panic!("branch_end_true_path() encountered invalid state: {:?}", self.states),
+        };
+
+        // Set the false path in the frame
+        let frame = self.get_branch_frame_mut(branch_id);
+        frame.set_true_branch(false_instructions.into_iter());
         Ok(())
     }
 }
