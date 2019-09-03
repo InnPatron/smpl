@@ -66,11 +66,10 @@ pub enum Node {
     Break(LoopData),
     Continue(LoopData),
 
-    Condition(ExprData),
-    BranchSplit(BranchingData),
+    BranchSplit(BranchingData, ExprData),
     BranchMerge(BranchingData),
 
-    LoopHead(LoopData),
+    LoopHead(LoopData, ExprData),
     LoopFoot(LoopData),
 
     Block(BasicBlock),
