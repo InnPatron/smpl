@@ -168,7 +168,18 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
             }
         }
 
-        Value::Indexing(ref indexing) => unimplemented!(),
+        Value::Indexing(ref indexing) => {
+            let array_tmp = tmp_id(indexing.array.data().clone());
+            let indexer_tmp = tmp_id(indexing.indexer.data().clone());
+
+            let access_location = Location::Compound {
+                root: array_tmp,
+                root_index: Some(indexer_tmp),
+                path: Vec::with_capacity(0),
+            };
+
+            Store(Location::Tmp(store), Arg::Location(access_location))
+        }
 
         Value::ModAccess(_) => unimplemented!(),
 
