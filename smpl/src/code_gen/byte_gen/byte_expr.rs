@@ -196,7 +196,17 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
             Store(Location::Tmp(store), Arg::Location(location))
         }
 
-        Value::AnonStructInit(_) => unimplemented!(),
+        Value::AnonStructInit(ref struct_init) => {
+            let field_init = struct_init.field_init().unwrap();
+
+            let mut map = HashMap::new();
+            for (field, typed_tmp_id) in field_init.into_iter() {
+                let tmp = typed_tmp_id.data().clone();
+                map.insert(field_id(field), Arg::Location(Location::Tmp(tmp_id(tmp))));
+            }
+
+            StoreStructure(Location::Tmp(store), map)
+        }
 
         Value::TypeInst(_) => unimplemented!(),
     }
