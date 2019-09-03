@@ -98,7 +98,7 @@ impl CFG {
 
     ///
     /// Convenience function to get the next node in a linear sequence. If the current node has
-    /// multiple outgoing edge (such as Node::Condition, Node::Return, Node::Break, and
+    /// multiple outgoing edge (such as Node::Return, Node::Break, and
     /// Node::Continue) or none (Node::End), return an error.
     ///
     pub fn next(&self, id: graph::NodeIndex) -> graph::NodeIndex {
@@ -157,6 +157,7 @@ impl CFG {
         unreachable!();
     }
 
+    ///
     /// Expects id of LoopHead or BranchSplit
     /// Returns (TRUE, FALSE) branch heads.
     ///
@@ -358,6 +359,13 @@ impl CFG {
         Ok(cfg)
     }
 
+    ///
+    /// Generates a block of code encapsualted by ScopeEnter and ScopeExit.
+    ///
+    /// Expression statements (assignment, local declaration), expressions ('1 + 2;') are placed
+    /// into a basic block. Whenever a non-basic block structure is encountered, the current basic
+    /// block is appended to the graph.
+    ///
     fn generate_scoped_block<'a, 'b, T>(&'a mut self, 
                                         universe: &'b Universe, 
                                         mut instructions: T,
@@ -373,6 +381,8 @@ impl CFG {
 
         while let Some(next) = instructions.next() {
             match next {
+
+                // Added to current basic block
                 Stmt::Expr(expr) => {
                     let (ast_expr, span) = expr.to_data();
                     let expr = expr_flow::flatten(universe, ast_expr);
@@ -456,6 +466,12 @@ impl CFG {
 
                         ExprStmt::While(while_data) => {
 
+                            // Generate a fragment of a CFG beginning with LoopHead and ending with
+                            //   LoopFoot.
+                            // LoopHead connects to the loop body via a TRUE edge (or to the LoopFoot
+                            //   in the case of an empty body)
+                            // LoopHead connects to the LoopFoot via a FALSE edge
+
                             // Append current basic block if not empty
                             if current_block.is_empty() == false {
                                 append_node!(self, head, previous, Node::Block(current_block));
@@ -524,19 +540,20 @@ impl CFG {
 
                         ExprStmt::If(if_data) => {
                             // If statements are broken down into "stacked branches"
-                            // 1) Each condition node is preceded by a Branch Split
-                            // 2) Each True path is ended by Branch Merge
-                            // 3) The False path is stacked on top of the True path
-                            //    a) Another conditional branch (beginning with a Branch Split,
-                            //      ending with a Branch Merge)
-                            //    b) The default branch (The start of the else block is connected
-                            //      directly to the previous condition)
-                            // 4) The end of the False path connects to the previous' Branch Merge
+                            // 1) Each BranchSplit represents a conditional split
+                            // 2) Each True path is ended by a BranchMerge
+                            // 3) The next branch's BranchSplit is connected to the previous BranchSplit via the
+                            //    False path
+                            // 4) The default branch's head connects directly to the previous
+                            //    BranchSplit via the False path
+                            // 5) The end of the current False path connects to the previous' BranchMerge
 
 
-                            // Generates a scoped branch 
-                            // Begins with EnterScope and ends with ExitScope
-                            // Does NOT include MergeNodes
+                            // Generates a scoped fragment of the CFG suitable for easy branching.
+                            // If it is a conditional branch, generate the branch with a BranchSplit 
+                            //   and BranchMerge at the heads.
+                            // If it is the default branch (i.e. no condition), do not generate a
+                            //   BranchSplit or BranchMerge (keep ScopeEnter, ScopeExit)
                             fn generate_branch(cfg: &mut CFG, universe: &Universe, body: AstNode<Block>, 
                                               condition: Option<AstNode<Expr>>,
                                               loop_data: InternalLoopData)
@@ -575,7 +592,8 @@ impl CFG {
                                     (None, Some(_)) => unreachable!(),
                                 }
 
-                                // Generate the branch condition
+                                // Generate the BranchSplit and BranchMerge
+                                // Make those the new head and foot of the body, respectively
                                 match condition {
                                     Some(ast_condition) => {
                                         let branch_id = universe.new_branching_id();
@@ -628,6 +646,7 @@ impl CFG {
                                                                Some(first_branch.conditional),
                                                                loop_data)?;
 
+                            // Append the first branch to the overall CFG
                             append_node_index!(
                                 self,
                                 head,
@@ -662,8 +681,10 @@ impl CFG {
 
 
 
-                                // Connect false edge of previous condition node to current merge
+                                // Connect false edge of previous BranchSplit to current
+                                //   BranchSplit
                                 self.graph.add_edge(previous_head, branch_head, Edge::False);
+                                // Connect current BranchMerge to previous BranchMerge ("stacking")
                                 self.graph.add_edge(branch_foot, previous_foot, Edge::Normal);
 
                                 previous_branch = BranchData {
@@ -676,7 +697,8 @@ impl CFG {
                                 .expect("generate_branch() head should always be Some");
                             let previous_foot = previous_branch.foot
                                 .expect("generate_branch() foot should always be Some");
-                            // Run out of conditional branches.
+
+                            // No more conditional branches.
                             // Check for the "else" branch.
                             match if_data.default_block {
                                 Some(block) => {
@@ -692,15 +714,15 @@ impl CFG {
                                     let else_foot = else_branch.foot
                                         .expect("generate_branch() foot should always be Some");
 
-                                    // Connect false edge of previous condition node to head of
-                                    // else branch
+                                    // Connect false edge of previous BranchMerge to head of
+                                    // the else branch
                                     self.graph.add_edge(previous_head, else_head, Edge::False);
                                     self.graph.add_edge(else_foot, previous_foot, Edge::Normal);
                                 }
 
                                 None => {
-                                    // No default branch ("else"). Connect the last condition node to the
-                                    // merge node with a false edge.
+                                    // No default branch ("else"). Connect the previous BranchSplit
+                                    //   to the previous BranchMerge with a FALSE edge
                                     self.graph.add_edge(previous_head, 
                                                         previous_foot, 
                                                         Edge::False);
@@ -708,7 +730,7 @@ impl CFG {
                                 }
                             }
 
-                            // All other nodes added after the branching.
+                            // All other nodes are added after any branching.
                             previous = Some(first_branch_foot);
                         },
                     }
