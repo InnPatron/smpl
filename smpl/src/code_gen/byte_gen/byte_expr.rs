@@ -44,7 +44,41 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
         },
 
         Value::FieldAccess(ref access) => {
-            unimplemented!()
+            let internal_path = access.path();
+            let root_var = 
+                var_id(internal_path.root_var_id());
+            let root_indexing_expr = internal_path.root_indexing_expr()
+                .map(|tmp| tmp_id(tmp));
+            let path: Vec<_> = internal_path
+                .path()
+                .iter()
+                .map(|path_segment| {
+                    match path_segment {
+                        PathSegment::Ident(ref field) => {
+                            super::byte_code::FieldAccess::Field(field.name().to_string())
+                        }
+
+                        PathSegment::Indexing(ref field, ref index_tmp) => {
+                            super::byte_code::FieldAccess::FieldIndex {
+                                field: field.name().to_string(),
+                                index_tmp: tmp_id(*index_tmp),
+                            }
+                        }
+                    }
+                }).collect();
+
+            // If assignment has field accesses or indexing, location is Location::Compound
+            let assign_location = if path.len() > 0 || root_indexing_expr.is_some() {
+                Location::Compound {
+                    root: root_var,
+                    root_index: root_indexing_expr,
+                    path: path,
+                }
+            } else {
+                Location::Namespace(root_var)
+            };
+
+            Get(assign_location)
         }
 
         Value::BinExpr(ref op, ref lhs, ref rhs) => {
