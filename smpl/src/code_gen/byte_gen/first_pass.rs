@@ -124,7 +124,7 @@ impl BranchFrame {
 
 pub struct FirstPass<'a> {
     cfg: &'a CFG,
-    instructions: Vec<PartialInstruction>,
+    instructions: Option<Vec<PartialInstruction>>,
     loops: HashMap<LoopId, LoopFrame>,
     branches: HashMap<BranchingId, BranchFrame>,
     frames: Vec<Vec<PartialInstruction>>,
@@ -132,8 +132,16 @@ pub struct FirstPass<'a> {
 }
 
 impl<'a> FirstPass<'a> {
-    fn current_index(&self) -> usize {
-        self.instructions.len()
+
+    pub fn new(cfg: &CFG) -> FirstPass {
+        FirstPass {
+            cfg: cfg,
+            instructions: None,
+            loops: HashMap::new(),
+            branches: HashMap::new(),
+            frames: Vec::new(),
+            states: Vec::new(),
+        }
     }
 
     fn current_frame_mut(&mut self) -> &mut Vec<PartialInstruction> {
