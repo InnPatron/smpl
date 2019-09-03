@@ -98,7 +98,7 @@ impl CFG {
 
     ///
     /// Convenience function to get the next node in a linear sequence. If the current node has
-    /// multiple outgoing edge (such as Node::Condition, Node::Return, Node::Break, and
+    /// multiple outgoing edge (such as Node::Return, Node::Break, and
     /// Node::Continue) or none (Node::End), return an error.
     ///
     pub fn next(&self, id: graph::NodeIndex) -> graph::NodeIndex {
@@ -146,7 +146,7 @@ impl CFG {
 
         for n in neighbors {
             match *node_w!(self, n) {
-                Node::LoopHead(ref data) => {
+                Node::LoopHead(ref data, _) => {
                     if loop_id != data.loop_id {
                         return n;
                     }
@@ -158,11 +158,13 @@ impl CFG {
     }
 
     ///
+    /// Expects id of LoopHead or BranchSplit
     /// Returns (TRUE, FALSE) branch heads.
     ///
-    pub fn after_condition(&self, id: graph::NodeIndex) -> (graph::NodeIndex, graph::NodeIndex) {
+    pub fn after_conditional(&self, id: graph::NodeIndex) -> (graph::NodeIndex, graph::NodeIndex) {
         match *node_w!(self, id) {
-            Node::Condition(_) => (),
+            Node::LoopHead(..) => (),
+            Node::BranchSplit(..) => (),
             _ => panic!("Should only be given a Node::Condition"),
         }
 
@@ -227,7 +229,7 @@ impl CFG {
             let mut found_first = false;
             for n in neighbors {
                 match *node_w!(self, n) {
-                    Node::LoopHead(_) => {
+                    Node::LoopHead(..) => {
                         if found_first {
                             return n;
                         } else {
@@ -357,6 +359,13 @@ impl CFG {
         Ok(cfg)
     }
 
+    ///
+    /// Generates a block of code encapsualted by ScopeEnter and ScopeExit.
+    ///
+    /// Expression statements (assignment, local declaration), expressions ('1 + 2;') are placed
+    /// into a basic block. Whenever a non-basic block structure is encountered, the current basic
+    /// block is appended to the graph.
+    ///
     fn generate_scoped_block<'a, 'b, T>(&'a mut self, 
                                         universe: &'b Universe, 
                                         mut instructions: T,
@@ -372,6 +381,8 @@ impl CFG {
 
         while let Some(next) = instructions.next() {
             match next {
+
+                // Added to current basic block
                 Stmt::Expr(expr) => {
                     let (ast_expr, span) = expr.to_data();
                     let expr = expr_flow::flatten(universe, ast_expr);
@@ -455,6 +466,12 @@ impl CFG {
 
                         ExprStmt::While(while_data) => {
 
+                            // Generate a fragment of a CFG beginning with LoopHead and ending with
+                            //   LoopFoot.
+                            // LoopHead connects to the loop body via a TRUE edge (or to the LoopFoot
+                            //   in the case of an empty body)
+                            // LoopHead connects to the LoopFoot via a FALSE edge
+
                             // Append current basic block if not empty
                             if current_block.is_empty() == false {
                                 append_node!(self, head, previous, Node::Block(current_block));
@@ -464,14 +481,23 @@ impl CFG {
                             let (block, _) = while_data.block.to_data();
 
                             let loop_id = universe.new_loop_id();
-                            let loop_head = self.graph.add_node(Node::LoopHead(LoopData {
+
+                            let expr_data = {
+                                let (conditional, con_span) = while_data.conditional.to_data();
+                                let expr = expr_flow::flatten(universe, conditional);
+                                ExprData {
+                                    expr: expr,
+                                    span: con_span,
+                                }
+                            };
+
+                            let loop_data = LoopData {
                                 loop_id: loop_id,
                                 span: Span::new(expr_stmt_span.start(), expr_stmt_span.start()),
-                            }));
-                            let loop_foot = self.graph.add_node(Node::LoopFoot(LoopData {
-                                loop_id: loop_id,
-                                span: Span::new(expr_stmt_span.end(), expr_stmt_span.end()),
-                            }));
+                            };
+
+                            let loop_head = self.graph.add_node(Node::LoopHead(loop_data.clone(), expr_data));
+                            let loop_foot = self.graph.add_node(Node::LoopFoot(loop_data));
 
                             // Connect loop foot to loop head with a backedge
                             self.graph.add_edge(loop_foot, loop_head, Edge::BackEdge);
@@ -484,22 +510,10 @@ impl CFG {
                                 instructions.into_iter(),
                                 Some((loop_head, loop_foot, loop_id)),
                             )?;
-
-                            // Create the condition node
-                            let condition = {
-                                let (conditional, con_span) = while_data.conditional.to_data();
-                                let expr = expr_flow::flatten(universe, conditional);
-                                self.graph.add_node(Node::Condition(ExprData {
-                                    expr: expr,
-                                    span: con_span,
-                                }))
-                            };
-
-                            // Connect the loop head to the condition node
-                            append_node_index!(self, head, previous, condition);
+                            
 
                             // Connect the condition node to the loop foot by the FALSE path
-                            self.graph.add_edge(condition, loop_foot, Edge::False);
+                            self.graph.add_edge(loop_head, loop_foot, Edge::False);
 
                             if let Some(loop_body_head) = loop_body.head {
 
@@ -507,7 +521,7 @@ impl CFG {
                                 let scope_exit = self.graph.add_node(Node::ExitScope);
                                 
                                 // Connect the scope enter/exit to the loop body by the TRUE path
-                                self.graph.add_edge(condition, scope_enter, Edge::True);
+                                self.graph.add_edge(loop_head, scope_enter, Edge::True);
                                 
                                 // Connect the loop body to the scope enter and exit
                                 self.graph.add_edge(scope_enter, loop_body_head, Edge::Normal);
@@ -518,7 +532,7 @@ impl CFG {
                             } else {
                                 // Empty loop body
                                 // Connect the condition node to the loop foot by the TRUE path
-                                self.graph.add_edge(condition, loop_foot, Edge::True);
+                                self.graph.add_edge(loop_head, loop_foot, Edge::True);
                             }
 
                             previous = Some(loop_foot);
@@ -526,19 +540,20 @@ impl CFG {
 
                         ExprStmt::If(if_data) => {
                             // If statements are broken down into "stacked branches"
-                            // 1) Each condition node is preceded by a Branch Split
-                            // 2) Each True path is ended by Branch Merge
-                            // 3) The False path is stacked on top of the True path
-                            //    a) Another conditional branch (beginning with a Branch Split,
-                            //      ending with a Branch Merge)
-                            //    b) The default branch (The start of the else block is connected
-                            //      directly to the previous condition)
-                            // 4) The end of the False path connects to the previous' Branch Merge
+                            // 1) Each BranchSplit represents a conditional split
+                            // 2) Each True path is ended by a BranchMerge
+                            // 3) The next branch's BranchSplit is connected to the previous BranchSplit via the
+                            //    False path
+                            // 4) The default branch's head connects directly to the previous
+                            //    BranchSplit via the False path
+                            // 5) The end of the current False path connects to the previous' BranchMerge
 
 
-                            // Generates a scoped branch 
-                            // Begins with EnterScope and ends with ExitScope
-                            // Does NOT include MergeNodes
+                            // Generates a scoped fragment of the CFG suitable for easy branching.
+                            // If it is a conditional branch, generate the branch with a BranchSplit 
+                            //   and BranchMerge at the heads.
+                            // If it is the default branch (i.e. no condition), do not generate a
+                            //   BranchSplit or BranchMerge (keep ScopeEnter, ScopeExit)
                             fn generate_branch(cfg: &mut CFG, universe: &Universe, body: AstNode<Block>, 
                                               condition: Option<AstNode<Expr>>,
                                               loop_data: InternalLoopData)
@@ -577,23 +592,34 @@ impl CFG {
                                     (None, Some(_)) => unreachable!(),
                                 }
 
-                                // Generate the branch condition
-                                let condition_node = condition.map(|ast_condition| {
-                                    let (conditional, con_span) = ast_condition.to_data();
-                                    let expr = expr_flow::flatten(universe, conditional);
-                                    cfg.graph.add_node(Node::Condition(ExprData {
-                                        expr: expr,
-                                        span: con_span,
-                                    }))
-                                });
+                                // Generate the BranchSplit and BranchMerge
+                                // Make those the new head and foot of the body, respectively
+                                match condition {
+                                    Some(ast_condition) => {
+                                        let branch_id = universe.new_branching_id();
 
-                                match condition_node {
-                                    Some(condition_node) => {
-                                        cfg.graph.add_edge(condition_node, scope_enter, Edge::True);
+                                        let (conditional, con_span) = ast_condition.to_data();
+                                        let expr = expr_flow::flatten(universe, conditional);
+                                        let expr_data = ExprData {
+                                            expr: expr,
+                                            span: con_span,
+                                        };
+
+                                        let branching_data = BranchingData {
+                                            branch_id: branch_id,
+                                        };
+
+                                        let split_node = cfg.graph
+                                            .add_node(Node::BranchSplit(branching_data.clone(), expr_data));
+                                        let merge_node = cfg.graph
+                                            .add_node(Node::BranchMerge(branching_data.clone()));
+
+                                        cfg.graph.add_edge(split_node, scope_enter, Edge::True);
+                                        cfg.graph.add_edge(scope_exit, merge_node, Edge::Normal);
 
                                         Ok(BranchData {
-                                            head: Some(condition_node),
-                                            foot: Some(scope_exit),
+                                            head: Some(split_node),
+                                            foot: Some(merge_node),
                                         })
                                     }
 
@@ -613,23 +639,6 @@ impl CFG {
                             let mut branches = if_data.branches.into_iter();
 
                             // Generate the first branch
-                            let first_id = universe.new_branching_id();
-                            let first_split = self
-                                .graph
-                                .add_node(Node::BranchSplit(BranchingData { branch_id: first_id }));
-                            let first_merge = self
-                                .graph
-                                .add_node(Node::BranchMerge(BranchingData { branch_id: first_id }));
-
-                            // Append a branch split node indicator
-                            append_node_index!(
-                                self,
-                                head,
-                                previous,
-                                first_split,
-                                Edge::Normal
-                            );
-
                             let first_branch = branches.next().unwrap();
                             let first_branch = generate_branch(self, 
                                                                universe,
@@ -637,19 +646,21 @@ impl CFG {
                                                                Some(first_branch.conditional),
                                                                loop_data)?;
 
-                            self.graph.add_edge(first_split, 
-                                                first_branch.head
-                                                    .expect("generate_branch() head should always be Some"), 
-                                                Edge::True);
-                            self.graph.add_edge(first_branch.foot
-                                                    .expect("generate_branch() foot should always be Some"), 
-                                                first_merge,
-                                                Edge::Normal);
+                            // Append the first branch to the overall CFG
+                            append_node_index!(
+                                self,
+                                head,
+                                previous,
+                                first_branch.head
+                                    .expect("generate_branch() head should always be Some"),
+                                Edge::Normal
+                            );
 
-                            let mut previous_branch: BranchData = BranchData {
-                                head: first_branch.head, // condition node
-                                foot: Some(first_merge),
-                            };
+                            let first_branch_foot = first_branch.foot
+                                .expect("generate_branch() foot should always be Some");
+
+
+                            let mut previous_branch: BranchData = first_branch;
                             // Stack the branches
                             for branch in branches {
                                 let branch = generate_branch(self, 
@@ -657,14 +668,6 @@ impl CFG {
                                                              branch.block, 
                                                              Some(branch.conditional),
                                                              loop_data)?;
-
-                                let branch_id = universe.new_branching_id();
-                                let split = self
-                                    .graph
-                                    .add_node(Node::BranchSplit(BranchingData { branch_id: branch_id }));
-                                let merge = self
-                                    .graph
-                                    .add_node(Node::BranchMerge(BranchingData { branch_id: branch_id }));
 
                                 let branch_head = branch.head
                                     .expect("generate_branch() head should always be Some");
@@ -677,16 +680,16 @@ impl CFG {
                                     .expect("generate_branch() foot should always be Some");
 
 
-                                self.graph.add_edge(split, branch_head, Edge::Normal);
-                                self.graph.add_edge(branch_foot, merge, Edge::Normal);
 
-                                // Connect false edge of previous condition node to current merge
-                                self.graph.add_edge(previous_head, split, Edge::False);
-                                self.graph.add_edge(merge, previous_foot, Edge::Normal);
+                                // Connect false edge of previous BranchSplit to current
+                                //   BranchSplit
+                                self.graph.add_edge(previous_head, branch_head, Edge::False);
+                                // Connect current BranchMerge to previous BranchMerge ("stacking")
+                                self.graph.add_edge(branch_foot, previous_foot, Edge::Normal);
 
                                 previous_branch = BranchData {
                                     head: Some(branch_head),
-                                    foot: Some(merge),
+                                    foot: Some(branch_foot),
                                 };
                             }
 
@@ -694,7 +697,8 @@ impl CFG {
                                 .expect("generate_branch() head should always be Some");
                             let previous_foot = previous_branch.foot
                                 .expect("generate_branch() foot should always be Some");
-                            // Run out of conditional branches.
+
+                            // No more conditional branches.
                             // Check for the "else" branch.
                             match if_data.default_block {
                                 Some(block) => {
@@ -710,15 +714,15 @@ impl CFG {
                                     let else_foot = else_branch.foot
                                         .expect("generate_branch() foot should always be Some");
 
-                                    // Connect false edge of previous condition node to head of
-                                    // else branch
+                                    // Connect false edge of previous BranchMerge to head of
+                                    // the else branch
                                     self.graph.add_edge(previous_head, else_head, Edge::False);
                                     self.graph.add_edge(else_foot, previous_foot, Edge::Normal);
                                 }
 
                                 None => {
-                                    // No default branch ("else"). Connect the last condition node to the
-                                    // merge node with a false edge.
+                                    // No default branch ("else"). Connect the previous BranchSplit
+                                    //   to the previous BranchMerge with a FALSE edge
                                     self.graph.add_edge(previous_head, 
                                                         previous_foot, 
                                                         Edge::False);
@@ -726,8 +730,8 @@ impl CFG {
                                 }
                             }
 
-                            // All other nodes added after the branching.
-                            previous = Some(first_merge);
+                            // All other nodes are added after any branching.
+                            previous = Some(first_branch_foot);
                         },
                     }
                 }
@@ -867,7 +871,7 @@ if (test) {
             irmatch!(*cfg.graph.node_weight(cfg.start).unwrap(); Node::Start => ());
             irmatch!(*cfg.graph.node_weight(cfg.end).unwrap(); Node::End => ());
 
-            // start -> enter_scope -> branch_split -> condition
+            // start -> enter_scope -> branch_split
             //      -[true]> {
             //          -> enter_scope
             //          -> block
@@ -875,7 +879,7 @@ if (test) {
             //      } ->        >>___ branch_merge ->
             //        -[false]> >>
             //      implicit return -> exit_scope -> end
-            assert_eq!(cfg.graph.node_count(), 11);
+            assert_eq!(cfg.graph.node_count(), 10);
 
             let mut start_neighbors = neighbors!(cfg, cfg.start);
 
@@ -892,15 +896,15 @@ if (test) {
             let mut branch_split_neighbors = neighbors!(cfg, branch_split);
 
             match *node_w!(cfg, branch_split) {
-                Node::BranchSplit(_) => (),
+                Node::BranchSplit(..) => (),
                 ref n @ _ => panic!("Expected BranchSplit node. Found {:?}", n),
             }
 
             // Check condition node
-            let condition = branch_split_neighbors.next().expect("Looking for condition node");
+            let condition = branch_split;
             let condition_node = cfg.graph.node_weight(condition).unwrap();
             {
-                if let Node::Condition(_) = *condition_node {
+                if let Node::BranchSplit(..) = *condition_node {
                     let mut edges = cfg.graph.edges_directed(condition, Direction::Outgoing);
                     assert_eq!(edges.clone().count(), 2);
 
@@ -1014,7 +1018,7 @@ if (test) {
 
         {
             // start -> enter_scope
-            //   branch_split(A) -> condition(B)
+            //   branch_split(A)
             //      -[true]> {
             //          enter_scope ->
             //          local_var_decl ->
@@ -1022,7 +1026,7 @@ if (test) {
             //      }
             //
             //      -[false]> {
-            //          branch_split(C) -> condition(D)
+            //          branch_split(C)
             //          -[true]> {
             //              scope_enter ->
             //              scope_exit
@@ -1039,7 +1043,7 @@ if (test) {
             // end
 
 
-            assert_eq!(cfg.graph.node_count(), 18);
+            assert_eq!(cfg.graph.node_count(), 16);
 
             let mut start_neighbors = neighbors!(cfg, cfg.start);
             assert_eq!(start_neighbors.clone().count(), 1);
@@ -1054,37 +1058,28 @@ if (test) {
             let branch_split_A = enter_neighbors.next().unwrap();
             let mut branch_split_neighbors_A = neighbors!(cfg, branch_split_A);
             match *node_w!(cfg, branch_split_A) {
-                Node::BranchSplit(_) => (), // Success
+                Node::BranchSplit(..) => (), // Success
 
                 ref n @ _ => panic!("Expected a condition node. Found {:?}", n),
             }
 
-            let condition_b = branch_split_neighbors_A.next().unwrap();
-            match *node_w!(cfg, condition_b) {
-                Node::Condition(_) => (), // Success
-
-                ref n @ _ => panic!("Expected a condition node. Found {:?}", n),
-            }
-
-            let condition_b_edges = edges!(cfg, condition_b);
+            let branch_split_A_edges = edges!(cfg, branch_split_A);
             let mut branch_split_c = None;
-            let mut condition_b_true = None;
+            let mut branch_split_A_true = None;
 
-            dbg!(condition_b_edges.clone().collect::<Vec<_>>());
-            assert_eq!(condition_b_edges.clone().count(), 2);
-            for edge in condition_b_edges {
+            assert_eq!(branch_split_A_edges.clone().count(), 2);
+            for edge in branch_split_A_edges {
                 match *edge.weight() {
-                    Edge::True => condition_b_true = Some(edge.target()),
+                    Edge::True => branch_split_A_true = Some(edge.target()),
                     Edge::False => branch_split_c = Some(edge.target()),
 
                     ref e @ _ => panic!("Expected true or false edge. Found {:?}", e),
                 }
             }
 
-            // condition b TRUE branch
-
+            // branch split a TRUE branch
             let enter =
-                condition_b_true.expect("Missing true edge connecting to variable declaration");
+                branch_split_A_true.expect("Missing true edge connecting to variable declaration");
             let mut enter_neighbors = neighbors!(cfg, enter);
             match *node_w!(cfg, enter) {
                 Node::EnterScope => (),
@@ -1118,17 +1113,13 @@ if (test) {
             let branch_split_c = branch_split_c.expect("Missing false edge connecting to branch split C");
             let mut branch_split_c_neighbors = neighbors!(cfg, branch_split_c);
 
-            let condition_d = branch_split_c_neighbors.next().unwrap();
-            match *node_w!(cfg, condition_d) {
-                Node::Condition(_) => (),
-                ref n @ _ => panic!("Expected Node::Condition. Found {:?}", n),
-            }
-            let condition_d_edges = edges!(cfg, condition_d);
+            
+            let branch_split_c_edges = edges!(cfg, branch_split_c);
             let mut truth_target = None;
             let mut false_target = None;
 
-            assert_eq!(condition_d_edges.clone().count(), 2);
-            for edge in condition_d_edges {
+            assert_eq!(branch_split_c_edges.clone().count(), 2);
+            for edge in branch_split_c_edges {
                 match *edge.weight() {
                     Edge::True => truth_target = Some(edge.target()),
                     Edge::False => false_target = Some(edge.target()),
@@ -1234,14 +1225,14 @@ if (test) {
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
-        // start -> enter_scope -> loop_head(A) -> condition(B)
-        //       -[true]> enter_scope exit_scope loop_foot(A)
+        // start -> enter_scope -> loop_head(A)
+        //       -[true]> loop_foot(A)
         //       -[false]> loop_foot(A)
         // loop_foot(A) -> implicit_return -> exit_scope -> end
         // loop_head(A) << loop_foot(A)
         //
 
-        assert_eq!(cfg.graph.node_count(), 8);
+        assert_eq!(cfg.graph.node_count(), 7);
 
         let mut start_neighbors = neighbors!(cfg, cfg.start);
         assert_eq!(start_neighbors.clone().count(), 1);
@@ -1256,25 +1247,19 @@ if (test) {
         let loop_id;
         let loop_head = enter_neighbors.next().unwrap();
         match *node_w!(cfg, loop_head) {
-            Node::LoopHead(ref loop_data) => loop_id = loop_data.loop_id,
+            Node::LoopHead(ref loop_data, _) => loop_id = loop_data.loop_id,
             ref n @ _ => panic!("Expected to find Node::LoopHead. Found {:?}", n),
         }
 
         let mut head_neighbors = neighbors!(cfg, loop_head);
-        assert_eq!(head_neighbors.clone().count(), 1);
-
-        let condition = head_neighbors.next().unwrap();
-        match *node_w!(cfg, condition) {
-            Node::Condition(_) => (),
-            ref n @ _ => panic!("Expected condition node. Found {:?}", n),
-        }
-
-        let condition_edges = edges!(cfg, condition);
-        assert_eq!(condition_edges.clone().count(), 2);
+        assert_eq!(head_neighbors.clone().count(), 2);
+        
+        let head_edges = edges!(cfg, loop_head);
+        assert_eq!(head_edges.clone().count(), 2);
 
         let mut truth_target = None;
         let mut false_target = None;
-        for edge in condition_edges {
+        for edge in head_edges {
             match *edge.weight() {
                 Edge::True => truth_target = Some(edge.target()),
                 Edge::False => false_target = Some(edge.target()),

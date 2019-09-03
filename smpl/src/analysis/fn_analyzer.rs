@@ -972,7 +972,23 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn branch_split(&mut self, _id: NodeIndex, _: &BranchingData) -> Result<(), AnalysisError> {
+    fn branch_split(&mut self, _id: NodeIndex, _: &BranchingData, condition: &ExprData) 
+        -> Result<(), AnalysisError> {
+
+        let condition = &condition.expr;
+        let expr_type = self.resolve_expr(condition)?;
+
+        let expected = Type::Bool;
+
+        if !resolve_types(&expr_type, &expected) {
+            return Err(TypeError::UnexpectedType {
+                found: expr_type,
+                expected: expected,
+                span: condition.span(),
+            }
+            .into());
+        }
+
         Ok(())
     }
 
@@ -980,7 +996,21 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn loop_head(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), AnalysisError> {
+    fn loop_head(&mut self, _id: NodeIndex, _ld: &LoopData, condition: &ExprData) -> Result<(), AnalysisError> {
+        let condition = &condition.expr;
+        let expr_type = self.resolve_expr(condition)?;
+
+        let expected = Type::Bool;
+
+        if !resolve_types(&expr_type, &expected) {
+            return Err(TypeError::UnexpectedType {
+                found: expr_type,
+                expected: expected,
+                span: condition.span(),
+            }
+            .into());
+        }
+
         Ok(())
     }
 
@@ -1097,28 +1127,6 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         Ok(())
     }
 
-    fn loop_condition(
-        &mut self,
-        _id: NodeIndex,
-        condition: &ExprData,
-    ) -> Result<(), AnalysisError> {
-        let condition = &condition.expr;
-        let expr_type = self.resolve_expr(condition)?;
-
-        let expected = Type::Bool;
-
-        if !resolve_types(&expr_type, &expected) {
-            return Err(TypeError::UnexpectedType {
-                found: expr_type,
-                expected: expected,
-                span: condition.span(),
-            }
-            .into());
-        }
-
-        Ok(())
-    }
-
     fn loop_start_true_path(&mut self, _id: NodeIndex) -> Result<(), AnalysisError> {
         // Do nothing
         Ok(())
@@ -1126,28 +1134,6 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
 
     fn loop_end_true_path(&mut self, _id: NodeIndex) -> Result<(), AnalysisError> {
         // Do nothing
-        Ok(())
-    }
-
-    fn branch_condition(
-        &mut self,
-        _id: NodeIndex,
-        condition: &ExprData,
-    ) -> Result<(), AnalysisError> {
-        let condition = &condition.expr;
-        let expr_type = self.resolve_expr(condition)?;
-
-        let expected = Type::Bool;
-
-        if !resolve_types(&expr_type, &expected) {
-            return Err(TypeError::UnexpectedType {
-                found: expr_type,
-                expected: expected,
-                span: condition.span(),
-            }
-            .into());
-        }
-
         Ok(())
     }
 
