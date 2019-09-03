@@ -70,7 +70,7 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
                 }).collect();
 
             // If assignment has field accesses or indexing, location is Location::Compound
-            let assign_location = if path.len() > 0 || root_indexing_expr.is_some() {
+            let field_access_location = if path.len() > 0 || root_indexing_expr.is_some() {
                 Location::Compound {
                     root: root_var,
                     root_index: root_indexing_expr,
@@ -80,7 +80,7 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
                 Location::Namespace(root_var)
             };
 
-            Get(assign_location)
+            Store(Location::Tmp(store), Arg::Location(field_access_location))
         }
 
         Value::BinExpr(ref op, ref lhs, ref rhs) => {

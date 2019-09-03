@@ -10,7 +10,6 @@ pub enum Instruction {
     StoreStructure(Location, HashMap<String, Arg>),
     StoreArray1(Location, Vec<Arg>),
     StoreArray2(Location, Arg, u64),
-    Get(Location),
 
     Add(Location, Arg, Arg),
     Sub(Location, Arg, Arg),
