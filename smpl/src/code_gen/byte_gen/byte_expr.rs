@@ -188,7 +188,13 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
             Store(Location::Tmp(store), Arg::Location(location))
         }
 
-        Value::AnonymousFn(_) => unimplemented!(),
+        Value::AnonymousFn(ref anon_fn) => {
+            // Anonymous functions should already be emitted
+            let func = fn_id(anon_fn.fn_id());
+            let location = Location::Namespace(func);
+
+            Store(Location::Tmp(store), Arg::Location(location))
+        }
 
         Value::AnonStructInit(_) => unimplemented!(),
 
