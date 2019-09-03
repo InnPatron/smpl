@@ -201,11 +201,18 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         // Make a new frame for the loop body
         self.new_frame();
 
-        // Change the current state
-        self.push_state(State::Loop(ld.loop_id));
-
         // Setup loop frame
         self.new_loop_frame(ld.loop_id);
+
+        let frame = self.get_loop_frame_mut(ld.loop_id);
+        let condition_instructions = byte_expr::translate_expr(&condition.expr)
+            .into_iter()
+            .map(|instr| PartialInstruction::Instruction(instr));
+        frame.set_condition(condition_instructions);
+        
+
+        // Change the current state
+        self.push_state(State::Loop(ld.loop_id));
 
         Ok(())
     }
