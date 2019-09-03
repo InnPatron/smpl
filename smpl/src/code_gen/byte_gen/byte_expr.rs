@@ -181,7 +181,12 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
             Store(Location::Tmp(store), Arg::Location(access_location))
         }
 
-        Value::ModAccess(_) => unimplemented!(),
+        Value::ModAccess(ref mod_access) => {
+            let func = fn_id(mod_access.fn_id().unwrap());
+            let location = Location::Namespace(func);
+
+            Store(Location::Tmp(store), Arg::Location(location))
+        }
 
         Value::AnonymousFn(_) => unimplemented!(),
 
