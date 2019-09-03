@@ -849,7 +849,7 @@ if (test) {
             irmatch!(*cfg.graph.node_weight(cfg.start).unwrap(); Node::Start => ());
             irmatch!(*cfg.graph.node_weight(cfg.end).unwrap(); Node::End => ());
 
-            // start -> enter_scope -> branch_split -> condition
+            // start -> enter_scope -> branch_split
             //      -[true]> {
             //          -> enter_scope
             //          -> block
@@ -857,7 +857,7 @@ if (test) {
             //      } ->        >>___ branch_merge ->
             //        -[false]> >>
             //      implicit return -> exit_scope -> end
-            assert_eq!(cfg.graph.node_count(), 11);
+            assert_eq!(cfg.graph.node_count(), 10);
 
             let mut start_neighbors = neighbors!(cfg, cfg.start);
 
@@ -874,15 +874,15 @@ if (test) {
             let mut branch_split_neighbors = neighbors!(cfg, branch_split);
 
             match *node_w!(cfg, branch_split) {
-                Node::BranchSplit(_) => (),
+                Node::BranchSplit(..) => (),
                 ref n @ _ => panic!("Expected BranchSplit node. Found {:?}", n),
             }
 
             // Check condition node
-            let condition = branch_split_neighbors.next().expect("Looking for condition node");
+            let condition = branch_split;
             let condition_node = cfg.graph.node_weight(condition).unwrap();
             {
-                if let Node::Condition(_) = *condition_node {
+                if let Node::BranchSplit(..) = *condition_node {
                     let mut edges = cfg.graph.edges_directed(condition, Direction::Outgoing);
                     assert_eq!(edges.clone().count(), 2);
 
@@ -996,7 +996,7 @@ if (test) {
 
         {
             // start -> enter_scope
-            //   branch_split(A) -> condition(B)
+            //   branch_split(A)
             //      -[true]> {
             //          enter_scope ->
             //          local_var_decl ->
@@ -1004,7 +1004,7 @@ if (test) {
             //      }
             //
             //      -[false]> {
-            //          branch_split(C) -> condition(D)
+            //          branch_split(C)
             //          -[true]> {
             //              scope_enter ->
             //              scope_exit
@@ -1021,7 +1021,7 @@ if (test) {
             // end
 
 
-            assert_eq!(cfg.graph.node_count(), 18);
+            assert_eq!(cfg.graph.node_count(), 16);
 
             let mut start_neighbors = neighbors!(cfg, cfg.start);
             assert_eq!(start_neighbors.clone().count(), 1);
@@ -1036,37 +1036,28 @@ if (test) {
             let branch_split_A = enter_neighbors.next().unwrap();
             let mut branch_split_neighbors_A = neighbors!(cfg, branch_split_A);
             match *node_w!(cfg, branch_split_A) {
-                Node::BranchSplit(_) => (), // Success
+                Node::BranchSplit(..) => (), // Success
 
                 ref n @ _ => panic!("Expected a condition node. Found {:?}", n),
             }
 
-            let condition_b = branch_split_neighbors_A.next().unwrap();
-            match *node_w!(cfg, condition_b) {
-                Node::Condition(_) => (), // Success
-
-                ref n @ _ => panic!("Expected a condition node. Found {:?}", n),
-            }
-
-            let condition_b_edges = edges!(cfg, condition_b);
+            let branch_split_A_edges = edges!(cfg, branch_split_A);
             let mut branch_split_c = None;
-            let mut condition_b_true = None;
+            let mut branch_split_A_true = None;
 
-            dbg!(condition_b_edges.clone().collect::<Vec<_>>());
-            assert_eq!(condition_b_edges.clone().count(), 2);
-            for edge in condition_b_edges {
+            assert_eq!(branch_split_A_edges.clone().count(), 2);
+            for edge in branch_split_A_edges {
                 match *edge.weight() {
-                    Edge::True => condition_b_true = Some(edge.target()),
+                    Edge::True => branch_split_A_true = Some(edge.target()),
                     Edge::False => branch_split_c = Some(edge.target()),
 
                     ref e @ _ => panic!("Expected true or false edge. Found {:?}", e),
                 }
             }
 
-            // condition b TRUE branch
-
+            // branch split a TRUE branch
             let enter =
-                condition_b_true.expect("Missing true edge connecting to variable declaration");
+                branch_split_A_true.expect("Missing true edge connecting to variable declaration");
             let mut enter_neighbors = neighbors!(cfg, enter);
             match *node_w!(cfg, enter) {
                 Node::EnterScope => (),
@@ -1100,17 +1091,13 @@ if (test) {
             let branch_split_c = branch_split_c.expect("Missing false edge connecting to branch split C");
             let mut branch_split_c_neighbors = neighbors!(cfg, branch_split_c);
 
-            let condition_d = branch_split_c_neighbors.next().unwrap();
-            match *node_w!(cfg, condition_d) {
-                Node::Condition(_) => (),
-                ref n @ _ => panic!("Expected Node::Condition. Found {:?}", n),
-            }
-            let condition_d_edges = edges!(cfg, condition_d);
+            
+            let branch_split_c_edges = edges!(cfg, branch_split_c);
             let mut truth_target = None;
             let mut false_target = None;
 
-            assert_eq!(condition_d_edges.clone().count(), 2);
-            for edge in condition_d_edges {
+            assert_eq!(branch_split_c_edges.clone().count(), 2);
+            for edge in branch_split_c_edges {
                 match *edge.weight() {
                     Edge::True => truth_target = Some(edge.target()),
                     Edge::False => false_target = Some(edge.target()),
@@ -1216,14 +1203,14 @@ if (test) {
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
-        // start -> enter_scope -> loop_head(A) -> condition(B)
-        //       -[true]> enter_scope exit_scope loop_foot(A)
+        // start -> enter_scope -> loop_head(A)
+        //       -[true]> loop_foot(A)
         //       -[false]> loop_foot(A)
         // loop_foot(A) -> implicit_return -> exit_scope -> end
         // loop_head(A) << loop_foot(A)
         //
 
-        assert_eq!(cfg.graph.node_count(), 8);
+        assert_eq!(cfg.graph.node_count(), 7);
 
         let mut start_neighbors = neighbors!(cfg, cfg.start);
         assert_eq!(start_neighbors.clone().count(), 1);
@@ -1238,25 +1225,19 @@ if (test) {
         let loop_id;
         let loop_head = enter_neighbors.next().unwrap();
         match *node_w!(cfg, loop_head) {
-            Node::LoopHead(ref loop_data) => loop_id = loop_data.loop_id,
+            Node::LoopHead(ref loop_data, _) => loop_id = loop_data.loop_id,
             ref n @ _ => panic!("Expected to find Node::LoopHead. Found {:?}", n),
         }
 
         let mut head_neighbors = neighbors!(cfg, loop_head);
-        assert_eq!(head_neighbors.clone().count(), 1);
-
-        let condition = head_neighbors.next().unwrap();
-        match *node_w!(cfg, condition) {
-            Node::Condition(_) => (),
-            ref n @ _ => panic!("Expected condition node. Found {:?}", n),
-        }
-
-        let condition_edges = edges!(cfg, condition);
-        assert_eq!(condition_edges.clone().count(), 2);
+        assert_eq!(head_neighbors.clone().count(), 2);
+        
+        let head_edges = edges!(cfg, loop_head);
+        assert_eq!(head_edges.clone().count(), 2);
 
         let mut truth_target = None;
         let mut false_target = None;
-        for edge in condition_edges {
+        for edge in head_edges {
             match *edge.weight() {
                 Edge::True => truth_target = Some(edge.target()),
                 Edge::False => false_target = Some(edge.target()),
