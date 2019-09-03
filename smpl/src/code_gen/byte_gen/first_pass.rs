@@ -8,9 +8,9 @@ use crate::analysis::metadata::*;
 use super::byte_code::*;
 use super::byte_expr;
 
-type FirstPassError = ();
+pub type FirstPassError = ();
 
-enum PartialInstruction {
+pub enum PartialInstruction {
     Instruction(Instruction),
     Loop(LoopId),
     Branch(BranchingId),
@@ -32,7 +32,7 @@ enum State {
     Normal,
 }
 
-struct LoopFrame {
+pub struct LoopFrame {
     condition: Option<Vec<PartialInstruction>>,
     body: Option<Vec<PartialInstruction>>,
 }
@@ -60,9 +60,17 @@ impl LoopFrame {
 
         self.body = Some(body.collect());
     }
+
+    pub fn get_condition(&self) -> &[PartialInstruction] {
+        self.condition.as_ref().expect("Condition none")
+    }
+
+    pub fn get_true_branch(&self) -> &[PartialInstruction] {
+        self.body.as_ref().expect("Branch none")
+    }
 }
 
-struct BranchFrame {
+pub struct BranchFrame {
     condition: Option<Vec<PartialInstruction>>,
     true_branch: Option<Vec<PartialInstruction>>,
     false_branch: Option<Vec<PartialInstruction>>,
@@ -100,9 +108,21 @@ impl BranchFrame {
 
         self.false_branch = Some(body.collect());
     }
+
+    pub fn get_condition(&self) -> &[PartialInstruction] {
+        self.condition.as_ref().expect("Condition none")
+    }
+
+    pub fn get_true_branch(&self) -> &[PartialInstruction] {
+        self.true_branch.as_ref().expect("True branch none")
+    }
+
+    pub fn get_false_branch(&self) -> &[PartialInstruction] {
+        self.false_branch.as_ref().expect("False branch none")
+    }
 }
 
-struct FirstPass<'a> {
+pub struct FirstPass<'a> {
     cfg: &'a CFG,
     instructions: Vec<PartialInstruction>,
     loops: HashMap<LoopId, LoopFrame>,
