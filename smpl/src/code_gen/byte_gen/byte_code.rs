@@ -41,10 +41,22 @@ pub enum Instruction {
     JumpLE(JumpTarget, Arg, Arg),
     JumpG(JumpTarget, Arg, Arg),
     JumpL(JumpTarget, Arg, Arg),
+
+    RelJump(RelJumpTarget),
+    RelJumpCondition(RelJumpTarget, Arg),
+    RelJumpE(RelJumpTarget, Arg, Arg),
+    RelJumpNE(RelJumpTarget, Arg, Arg),
+    RelJumpGE(RelJumpTarget, Arg, Arg),
+    RelJumpLE(RelJumpTarget, Arg, Arg),
+    RelJumpG(RelJumpTarget, Arg, Arg),
+    RelJumpL(RelJumpTarget, Arg, Arg),
 }
 
 #[derive(Debug)]
-pub struct JumpTarget;
+pub struct JumpTarget(u64);
+
+#[derive(Debug)]
+pub struct RelJumpTarget(u64);
 
 #[derive(Debug)]
 pub enum Location {
