@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::analysis::*;
 use super::byte_code::*;
 
@@ -131,7 +133,17 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
             FnCall(Location::Tmp(store), to_call, args)
         }
 
-        Value::StructInit(ref struct_init) => unimplemented!(),
+        Value::StructInit(ref struct_init) => {
+            let field_init = struct_init.field_init().unwrap();
+
+            let mut map = HashMap::new();
+            for (field, typed_tmp_id) in field_init.into_iter() {
+                let tmp = typed_tmp_id.data().clone();
+                map.insert(field_id(field), Arg::Location(Location::Tmp(tmp_id(tmp))));
+            }
+
+            StoreStructure(Location::Tmp(store), map)
+        },
 
         Value::ArrayInit(ref a) => unimplemented!(),
 
