@@ -20,9 +20,8 @@ pub trait Passenger<E> {
     fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
 
-    fn branch_split(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E>;
+    fn branch_split(&mut self, id: NodeIndex, b: &BranchingData, e: &ExprData) -> Result<(), E>;
     fn branch_merge(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E>;
-    fn branch_condition(&mut self, id: NodeIndex, e: &ExprData) -> Result<(), E>;
     fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn branch_end_true_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E>;
@@ -78,10 +77,68 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 Ok(Some(self.graph.next(current)))
             }
 
-            Node::BranchSplit(ref branch_data) => {
-                self.passenger.branch_split(current, branch_data)?;
+            Node::BranchSplit(ref branch_data, ref expr_data) => {
+                self.passenger.branch_split(current, branch_data, expr_data)?;
+
+                let (true_path, false_path) = self.graph.after_condition(current);
+
+                self.passenger.branch_start_true_path(true_path)?;
+
+                let mut merge = None;
+
+                // True path
+                let mut current_node = true_path;
+                for _ in 0..self.node_count {
+                    match *self.graph.node_weight(current_node) {
+                        Node::BranchMerge(ref branch_data) => {
+                            self.passenger
+                                .branch_end_true_path(current_node, branch_data)?;
+                            merge = Some(current_node);
+                            break;
+                        }
+
+                        _ => (),
+                    }
+
+                    match self.visit_node(current_node)? {
+                        Some(next) => current_node = next,
+                        None => return Ok(None),
+                    }
+                }
+
+                if merge.is_none() {
+                    panic!("Traversed entire graph and did not find Condition::BranchMerge");
+                }
+
+                self.passenger.branch_start_false_path(false_path)?;
+
+                // False path
+                let mut current_node = false_path;
+                let mut merge = None;
+                for _ in 0..self.node_count {
+                    match *self.graph.node_weight(current_node) {
+                        Node::BranchMerge(ref branch_data) => {
+                            self.passenger
+                                .branch_end_false_path(current_node, branch_data)?;
+                            merge = Some(current_node);
+                            break;
+                        }
+
+                        _ => (),
+                    }
+
+                    match self.visit_node(current_node)? {
+                        Some(next) => current_node = next,
+                        None => return Ok(None),
+                    }
+                }
+
+                if merge.is_none() {
+                    panic!("Traversed entire graph and did not find Condition::BranchMerge");
+                }
+
                 self.previous_is_loop_head = false;
-                Ok(Some(self.graph.next(current)))
+                Ok(Some(self.graph.next(merge.unwrap())))
             }
 
             Node::BranchMerge(ref branch_data) => {
@@ -195,66 +252,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     unimplemented!();   
                 } else {
                     // Branch condition
-                    self.passenger.branch_condition(current, condition)?;
-
-                    let (true_path, false_path) = self.graph.after_condition(current);
-
-                    self.passenger.branch_start_true_path(true_path)?;
-
-                    let mut merge = None;
-
-                    // True path
-                    let mut current_node = true_path;
-                    for _ in 0..self.node_count {
-                        match *self.graph.node_weight(current_node) {
-                            Node::BranchMerge(ref branch_data) => {
-                                self.passenger
-                                    .branch_end_true_path(current_node, branch_data)?;
-                                merge = Some(current_node);
-                                break;
-                            }
-
-                            _ => (),
-                        }
-
-                        match self.visit_node(current_node)? {
-                            Some(next) => current_node = next,
-                            None => return Ok(None),
-                        }
-                    }
-
-                    if merge.is_none() {
-                        panic!("Traversed entire graph and did not find Condition::BranchMerge");
-                    }
-
-                    self.passenger.branch_start_false_path(false_path)?;
-
-                    // False path
-                    let mut current_node = false_path;
-                    let mut merge = None;
-                    for _ in 0..self.node_count {
-                        match *self.graph.node_weight(current_node) {
-                            Node::BranchMerge(ref branch_data) => {
-                                self.passenger
-                                    .branch_end_false_path(current_node, branch_data)?;
-                                merge = Some(current_node);
-                                break;
-                            }
-
-                            _ => (),
-                        }
-
-                        match self.visit_node(current_node)? {
-                            Some(next) => current_node = next,
-                            None => return Ok(None),
-                        }
-                    }
-
-                    if merge.is_none() {
-                        panic!("Traversed entire graph and did not find Condition::BranchMerge");
-                    }
-
-                    Ok(Some(self.graph.next(merge.unwrap())))
+                    unimplemented!();   
                 }
             }
         }

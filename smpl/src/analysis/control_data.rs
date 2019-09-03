@@ -67,7 +67,7 @@ pub enum Node {
     Continue(LoopData),
 
     Condition(ExprData),
-    BranchSplit(BranchingData),
+    BranchSplit(BranchingData, ExprData),
     BranchMerge(BranchingData),
 
     LoopHead(LoopData, ExprData),

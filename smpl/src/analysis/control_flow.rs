@@ -575,22 +575,32 @@ impl CFG {
                                 }
 
                                 // Generate the branch condition
-                                let condition_node = condition.map(|ast_condition| {
-                                    let (conditional, con_span) = ast_condition.to_data();
-                                    let expr = expr_flow::flatten(universe, conditional);
-                                    cfg.graph.add_node(Node::Condition(ExprData {
-                                        expr: expr,
-                                        span: con_span,
-                                    }))
-                                });
+                                match condition {
+                                    Some(ast_condition) => {
+                                        let branch_id = universe.new_branching_id();
 
-                                match condition_node {
-                                    Some(condition_node) => {
-                                        cfg.graph.add_edge(condition_node, scope_enter, Edge::True);
+                                        let (conditional, con_span) = ast_condition.to_data();
+                                        let expr = expr_flow::flatten(universe, conditional);
+                                        let expr_data = ExprData {
+                                            expr: expr,
+                                            span: con_span,
+                                        };
+
+                                        let branching_data = BranchingData {
+                                            branch_id: branch_id,
+                                        };
+
+                                        let split_node = cfg.graph
+                                            .add_node(Node::BranchSplit(branching_data.clone(), expr_data));
+                                        let merge_node = cfg.graph
+                                            .add_node(Node::BranchMerge(branching_data.clone()));
+
+                                        cfg.graph.add_edge(split_node, scope_enter, Edge::True);
+                                        cfg.graph.add_edge(scope_exit, merge_node, Edge::Normal);
 
                                         Ok(BranchData {
-                                            head: Some(condition_node),
-                                            foot: Some(scope_exit),
+                                            head: Some(split_node),
+                                            foot: Some(merge_node),
                                         })
                                     }
 
@@ -610,23 +620,6 @@ impl CFG {
                             let mut branches = if_data.branches.into_iter();
 
                             // Generate the first branch
-                            let first_id = universe.new_branching_id();
-                            let first_split = self
-                                .graph
-                                .add_node(Node::BranchSplit(BranchingData { branch_id: first_id }));
-                            let first_merge = self
-                                .graph
-                                .add_node(Node::BranchMerge(BranchingData { branch_id: first_id }));
-
-                            // Append a branch split node indicator
-                            append_node_index!(
-                                self,
-                                head,
-                                previous,
-                                first_split,
-                                Edge::Normal
-                            );
-
                             let first_branch = branches.next().unwrap();
                             let first_branch = generate_branch(self, 
                                                                universe,
@@ -634,19 +627,20 @@ impl CFG {
                                                                Some(first_branch.conditional),
                                                                loop_data)?;
 
-                            self.graph.add_edge(first_split, 
-                                                first_branch.head
-                                                    .expect("generate_branch() head should always be Some"), 
-                                                Edge::True);
-                            self.graph.add_edge(first_branch.foot
-                                                    .expect("generate_branch() foot should always be Some"), 
-                                                first_merge,
-                                                Edge::Normal);
+                            append_node_index!(
+                                self,
+                                head,
+                                previous,
+                                first_branch.head
+                                    .expect("generate_branch() head should always be Some"),
+                                Edge::Normal
+                            );
 
-                            let mut previous_branch: BranchData = BranchData {
-                                head: first_branch.head, // condition node
-                                foot: Some(first_merge),
-                            };
+                            let first_branch_foot = first_branch.foot
+                                .expect("generate_branch() foot should always be Some");
+
+
+                            let mut previous_branch: BranchData = first_branch;
                             // Stack the branches
                             for branch in branches {
                                 let branch = generate_branch(self, 
@@ -654,14 +648,6 @@ impl CFG {
                                                              branch.block, 
                                                              Some(branch.conditional),
                                                              loop_data)?;
-
-                                let branch_id = universe.new_branching_id();
-                                let split = self
-                                    .graph
-                                    .add_node(Node::BranchSplit(BranchingData { branch_id: branch_id }));
-                                let merge = self
-                                    .graph
-                                    .add_node(Node::BranchMerge(BranchingData { branch_id: branch_id }));
 
                                 let branch_head = branch.head
                                     .expect("generate_branch() head should always be Some");
@@ -674,16 +660,14 @@ impl CFG {
                                     .expect("generate_branch() foot should always be Some");
 
 
-                                self.graph.add_edge(split, branch_head, Edge::Normal);
-                                self.graph.add_edge(branch_foot, merge, Edge::Normal);
 
                                 // Connect false edge of previous condition node to current merge
-                                self.graph.add_edge(previous_head, split, Edge::False);
-                                self.graph.add_edge(merge, previous_foot, Edge::Normal);
+                                self.graph.add_edge(previous_head, branch_head, Edge::False);
+                                self.graph.add_edge(branch_foot, previous_foot, Edge::Normal);
 
                                 previous_branch = BranchData {
                                     head: Some(branch_head),
-                                    foot: Some(merge),
+                                    foot: Some(branch_foot),
                                 };
                             }
 
@@ -724,7 +708,7 @@ impl CFG {
                             }
 
                             // All other nodes added after the branching.
-                            previous = Some(first_merge);
+                            previous = Some(first_branch_foot);
                         },
                     }
                 }
