@@ -208,7 +208,13 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
             StoreStructure(Location::Tmp(store), map)
         }
 
-        Value::TypeInst(_) => unimplemented!(),
+        Value::TypeInst(ref type_inst) => {
+            // NOTE(alex): only allowed to do type instantiations on functions right now
+            let func = fn_id(type_inst.get_id().unwrap());
+            let location = Location::Namespace(func);
+
+            Store(Location::Tmp(store), Arg::Location(location))
+        }
     }
 }
 
