@@ -157,12 +157,13 @@ impl CFG {
         unreachable!();
     }
 
-    ///
+    /// Expects id of LoopHead or BranchSplit
     /// Returns (TRUE, FALSE) branch heads.
     ///
-    pub fn after_condition(&self, id: graph::NodeIndex) -> (graph::NodeIndex, graph::NodeIndex) {
+    pub fn after_conditional(&self, id: graph::NodeIndex) -> (graph::NodeIndex, graph::NodeIndex) {
         match *node_w!(self, id) {
-            Node::Condition(_) => (),
+            Node::LoopHead(..) => (),
+            Node::BranchSplit(..) => (),
             _ => panic!("Should only be given a Node::Condition"),
         }
 

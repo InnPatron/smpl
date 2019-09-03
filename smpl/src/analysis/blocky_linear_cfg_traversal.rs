@@ -34,7 +34,6 @@ pub trait BlockyPassenger<E> {
 pub struct BlockyTraverser<'a, 'b, E: 'b> {
     graph: &'a CFG,
     passenger: &'b mut BlockyPassenger<E>,
-    previous_is_loop_head: bool,
     node_count: usize,
 }
 
@@ -43,7 +42,6 @@ impl<'a, 'b, E> BlockyTraverser<'a, 'b, E> {
         BlockyTraverser {
             graph: graph,
             passenger: passenger,
-            previous_is_loop_head: false,
             node_count: graph.graph().node_count(),
         }
     }
@@ -70,20 +68,18 @@ impl<'a, 'b, E> BlockyTraverser<'a, 'b, E> {
         match *self.graph.node_weight(current) {
             Node::End => {
                 self.passenger.end(current)?;
-                self.previous_is_loop_head = false;
                 Ok(None)
             }
 
             Node::Start => {
                 self.passenger.start(current)?;
-                self.previous_is_loop_head = false;
                 Ok(Some(self.graph.next(current)))
             }
 
             Node::BranchSplit(ref branch_data, ref expr_data) => {
                 self.passenger.branch_split(current, branch_data, expr_data)?;
 
-                let (true_path, false_path) = self.graph.after_condition(current);
+                let (true_path, false_path) = self.graph.after_conditional(current);
 
                 self.passenger.branch_start_true_path(true_path)?;
 
@@ -140,20 +136,18 @@ impl<'a, 'b, E> BlockyTraverser<'a, 'b, E> {
                     panic!("Traversed entire graph and did not find Condition::BranchMerge");
                 }
 
-                self.previous_is_loop_head = false;
                 Ok(Some(self.graph.next(merge.unwrap())))
             }
 
             Node::BranchMerge(ref branch_data) => {
                 self.passenger.branch_merge(current, branch_data)?;
-                self.previous_is_loop_head = false;
                 Ok(Some(self.graph.next(current)))
             }
 
             Node::LoopHead(ref branch_data, ref expr_data) => {
                 self.passenger.loop_head(current, branch_data, expr_data)?;
 
-                let (true_path, false_path) = self.graph.after_condition(current);
+                let (true_path, false_path) = self.graph.after_conditional(current);
                 self.passenger.loop_start_true_path(true_path)?;
 
                 let mut current_node = true_path;
@@ -186,61 +180,42 @@ impl<'a, 'b, E> BlockyTraverser<'a, 'b, E> {
                     ref n @ _ => println!("Loop condition should be connected to Node::LoopFoot along the false path. Found {:?}.", n),
                 }
 
-                self.previous_is_loop_head = true;
                 Ok(Some(self.graph.after_loop_foot(false_path)))
             }
 
             Node::LoopFoot(ref data) => {
                 self.passenger.loop_foot(current, data)?;
-                self.previous_is_loop_head = false;
                 Ok(Some(self.graph.after_loop_foot(current)))
             }
 
             Node::Continue(ref data) => {
                 self.passenger.cont(current, data)?;
-                self.previous_is_loop_head = false;
                 Ok(Some(self.graph.after_continue(current)))
             }
 
             Node::Break(ref data) => {
                 self.passenger.br(current, data)?;
-                self.previous_is_loop_head = false;
                 Ok(Some(self.graph.after_break(current)))
             }
 
             Node::EnterScope => {
                 self.passenger.enter_scope(current);
-                self.previous_is_loop_head = false;
                 Ok(Some(self.graph.next(current)))
             }
 
             Node::ExitScope => {
                 self.passenger.exit_scope(current);
-                self.previous_is_loop_head = false;
                 Ok(Some(self.graph.next(current)))
             }
 
             Node::Block(ref basic_block) => {
                 self.passenger.block(current);
-                self.previous_is_loop_head = false;
                 Ok(Some(self.graph.next(current)))
             }
 
             Node::Return(ref rdata) => {
                 self.passenger.ret(current, rdata)?;
-                self.previous_is_loop_head = false;
                 Ok(Some(self.graph.after_return(current)))
-            }
-
-            Node::Condition(ref condition) => {
-                if self.previous_is_loop_head {
-                    // Loop condition
-                    self.previous_is_loop_head = false;
-                    unimplemented!();
-                } else {
-                    // Branch condition
-                    unimplemented!();
-                }
             }
         }
     }
