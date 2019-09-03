@@ -216,6 +216,10 @@ impl<'a> FirstPass<'a> {
 impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
     fn start(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
         self.push_state(State::Start);
+
+        // This frame represents the entire function
+        self.new_frame();
+
         Ok(())
     }
 
@@ -224,6 +228,16 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         // Sanity check. Should always end on the "Start" state
         let old_state = self.pop_state();
         assert_eq!(old_state, State::Start);
+
+        // Only one frame remaining (the one pushed in start())
+        // This should be the frame for the entire CFG
+        let function_body = self.pop_current_frame();
+
+        if self.instructions.is_none() {
+            self.instructions = Some(function_body)
+        } else {
+            panic!("FirstPass.instructions should only be set in end()");
+        }
 
         Ok(())
     }
