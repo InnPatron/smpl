@@ -194,7 +194,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn loop_head(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), FirstPassError> {
+    fn loop_head(&mut self, id: NodeIndex, ld: &LoopData, condition: &ExprData) -> Result<(), FirstPassError> {
         // Mark in the current frame that there should be a loop with LoopId(#) inserted here
         self.push_to_current_frame(PartialInstruction::Loop(ld.loop_id));
 
@@ -337,10 +337,6 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn loop_condition(&mut self, id: NodeIndex, e: &ExprData) -> Result<(), FirstPassError> {
-        Ok(())
-    }
-
     fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
         Ok(())
     }
@@ -349,15 +345,11 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn branch_split(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), FirstPassError> {
+    fn branch_split(&mut self, id: NodeIndex, b: &BranchingData, condition: &ExprData) -> Result<(), FirstPassError> {
         Ok(())
     }
 
     fn branch_merge(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), FirstPassError> {
-        Ok(())
-    }
-
-    fn branch_condition(&mut self, id: NodeIndex, e: &ExprData) -> Result<(), FirstPassError> {
         Ok(())
     }
 
