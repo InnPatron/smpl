@@ -131,6 +131,16 @@ pub struct FirstPass<'a> {
     states: Vec<State>,
 }
 
+impl<'a> From<FirstPass<'a>> for super::second_pass::SecondPass {
+    fn from(fp: FirstPass) -> super::second_pass::SecondPass {
+        super::second_pass::SecondPass::new(
+            fp.instructions.expect("FirstPass.instructions should be set to some"),
+            fp.loops,
+            fp.branches
+        )
+    }
+}
+
 impl<'a> FirstPass<'a> {
 
     pub fn new(cfg: &CFG) -> FirstPass {
