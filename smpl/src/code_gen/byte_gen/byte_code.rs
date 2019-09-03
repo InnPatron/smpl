@@ -7,6 +7,8 @@ pub struct Block {
 #[derive(Debug)]
 pub enum Instruction {
     Store(Location, Arg),
+    StoreStructure(Location, HashMap<String, Arg>),
+    Get(Location),
 
     Add(Location, Arg, Arg),
     Sub(Location, Arg, Arg),
