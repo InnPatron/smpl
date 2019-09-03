@@ -45,20 +45,20 @@ impl LoopFrame {
         }
     }
 
-    fn set_condition(&mut self, condition: Vec<PartialInstruction>) {
+    fn set_condition<I: Iterator<Item=PartialInstruction>>(&mut self, condition: I) {
         if self.condition.is_some() {
             panic!("Attempting to double set the loop condition.");
         } 
 
-        self.condition = Some(condition);
+        self.condition = Some(condition.collect());
     }
 
-    fn set_body(&mut self, body: Vec<PartialInstruction>) {
+    fn set_body<I: Iterator<Item=PartialInstruction>>(&mut self, body: I) {
         if self.body.is_some() {
             panic!("Attempting to double set the loop body.");
         } 
 
-        self.body = Some(body);
+        self.body = Some(body.collect());
     }
 }
 
@@ -77,28 +77,28 @@ impl BranchFrame {
         }
     }
 
-    fn set_condition(&mut self, condition: Vec<PartialInstruction>) {
+    fn set_condition<I: Iterator<Item=PartialInstruction>>(&mut self, condition: I) {
         if self.condition.is_some() {
             panic!("Attempting to double set the condition.");
         } 
 
-        self.condition = Some(condition);
+        self.condition = Some(condition.collect());
     }
 
-    fn set_true_branch(&mut self, body: Vec<PartialInstruction>) {
+    fn set_true_branch<I: Iterator<Item=PartialInstruction>>(&mut self, body: I) {
         if self.true_branch.is_some() {
             panic!("Attempting to double set the true body.");
         } 
 
-        self.true_branch = Some(body);
+        self.true_branch = Some(body.collect());
     }
 
-    fn set_false_branch(&mut self, body: Vec<PartialInstruction>) {
+    fn set_false_branch<I: Iterator<Item=PartialInstruction>>(&mut self, body: I) {
         if self.false_branch.is_some() {
             panic!("Attempting to double set the false body.");
         } 
 
-        self.false_branch = Some(body);
+        self.false_branch = Some(body.collect());
     }
 }
 
@@ -222,7 +222,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         // Set the loop frame's loop body to the current frame
         let loop_body = self.pop_current_frame();
         let loop_frame = self.get_loop_frame_mut(ld.loop_id);
-        loop_frame.set_body(loop_body);
+        loop_frame.set_body(loop_body.into_iter());
 
         Ok(())
     }
