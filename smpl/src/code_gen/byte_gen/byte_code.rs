@@ -8,6 +8,8 @@ pub struct Block {
 pub enum Instruction {
     Store(Location, Arg),
     StoreStructure(Location, HashMap<String, Arg>),
+    StoreArray1(Location, Vec<Arg>),
+    StoreArray2(Location, Arg, u64),
     Get(Location),
 
     Add(Location, Arg, Arg),

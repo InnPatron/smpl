@@ -145,7 +145,28 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
             StoreStructure(Location::Tmp(store), map)
         },
 
-        Value::ArrayInit(ref a) => unimplemented!(),
+        Value::ArrayInit(ref array_init) => {
+            match array_init {
+                ArrayInit::List(ref typed_tmp_vec) => {
+                   let list = typed_tmp_vec
+                       .iter() 
+                       .map(|typed_tmp| {
+                           let tmp_id = tmp_id(typed_tmp.data().clone());
+                           Arg::Location(Location::Tmp(tmp_id))
+                       })
+                       .collect();
+                   StoreArray1(Location::Tmp(store), list)
+                }
+
+                ArrayInit::Value(ref typed_tmp, ref number) => {
+                    let init_value = tmp_id(typed_tmp.data().clone());
+
+                    StoreArray2(Location::Tmp(store), 
+                                Arg::Location(Location::Tmp(init_value)), 
+                                *number)
+                }
+            }
+        }
 
         Value::Indexing(ref indexing) => unimplemented!(),
 
