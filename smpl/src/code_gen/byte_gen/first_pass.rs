@@ -8,9 +8,9 @@ use crate::analysis::metadata::*;
 use super::byte_code::*;
 use super::byte_expr;
 
-pub type FirstPassError = ();
+pub(super) type FirstPassError = ();
 
-pub enum PartialInstruction {
+pub(super) enum PartialInstruction {
     Instruction(Instruction),
     Loop(LoopId),
     Branch(BranchingId),
@@ -32,7 +32,7 @@ enum State {
     Normal,
 }
 
-pub struct LoopFrame {
+pub(super) struct LoopFrame {
     condition: Option<Vec<PartialInstruction>>,
     body: Option<Vec<PartialInstruction>>,
 }
@@ -61,16 +61,16 @@ impl LoopFrame {
         self.body = Some(body.collect());
     }
 
-    pub fn get_condition(&self) -> &[PartialInstruction] {
+    pub(super) fn get_condition(&self) -> &[PartialInstruction] {
         self.condition.as_ref().expect("Condition none")
     }
 
-    pub fn get_true_branch(&self) -> &[PartialInstruction] {
+    pub(super) fn get_true_branch(&self) -> &[PartialInstruction] {
         self.body.as_ref().expect("Branch none")
     }
 }
 
-pub struct BranchFrame {
+pub(super) struct BranchFrame {
     condition: Option<Vec<PartialInstruction>>,
     true_branch: Option<Vec<PartialInstruction>>,
     false_branch: Option<Vec<PartialInstruction>>,
@@ -109,20 +109,20 @@ impl BranchFrame {
         self.false_branch = Some(body.collect());
     }
 
-    pub fn get_condition(&self) -> &[PartialInstruction] {
+    pub(super) fn get_condition(&self) -> &[PartialInstruction] {
         self.condition.as_ref().expect("Condition none")
     }
 
-    pub fn get_true_branch(&self) -> &[PartialInstruction] {
+    pub(super) fn get_true_branch(&self) -> &[PartialInstruction] {
         self.true_branch.as_ref().expect("True branch none")
     }
 
-    pub fn get_false_branch(&self) -> &[PartialInstruction] {
+    pub(super) fn get_false_branch(&self) -> &[PartialInstruction] {
         self.false_branch.as_ref().expect("False branch none")
     }
 }
 
-pub struct FirstPass<'a> {
+pub(super) struct FirstPass<'a> {
     cfg: &'a CFG,
     instructions: Option<Vec<PartialInstruction>>,
     loops: HashMap<LoopId, LoopFrame>,
@@ -143,7 +143,7 @@ impl<'a> From<FirstPass<'a>> for super::second_pass::SecondPass {
 
 impl<'a> FirstPass<'a> {
 
-    pub fn new(cfg: &CFG) -> FirstPass {
+    pub(super) fn new(cfg: &CFG) -> FirstPass {
         FirstPass {
             cfg: cfg,
             instructions: None,
