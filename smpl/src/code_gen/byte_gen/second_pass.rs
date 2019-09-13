@@ -90,7 +90,52 @@ impl SecondPass {
                     instructions.push(PartialInstruction::LoopEnd(loop_id.clone()));
                 }
 
-                PartialInstructionFP::Branch(branch_id) => unimplemented!(),
+                PartialInstructionFP::Branch(branch_id) => {
+                    let branch_frame = self.branches
+                        .get(branch_id)
+                        .expect(&format!("Missing: {:?}", branch_id));
+
+                    let condition = branch_frame.get_condition();
+                    let result_arg = branch_frame.get_result_location();
+                    let true_branch = branch_frame.get_true_branch();
+                    let false_branch = branch_frame.get_false_branch();
+
+                    // Marked as 'mut' for append purposes
+                    let mut condition = self.flatten(condition);
+                    let mut true_branch = self.flatten(true_branch);
+                    let mut false_branch = self.flatten(false_branch);
+
+                    // Append condition instructions
+                    instructions.append(&mut condition);
+
+                    // Append instruction to jump to the succeed branch
+                    // Emit false branch first in order to chain any conditions 
+                    //   while minimizing the number of jump instructions
+                    // +2 to go after false branch and true branch skip
+                    let true_rel_jump_target: i64 =
+                        (false_branch.len() as i64) + 2;
+                    let true_rel_jump_instr = Instruction::RelJumpCondition(
+                        RelJumpTarget::new(true_rel_jump_target),
+                        result_arg.clone()
+                    );
+                    instructions.push(true_rel_jump_instr.into());
+
+                    // Append the false branch
+                    instructions.append(&mut false_branch);
+
+                    // Append instruction to jump over the succeed branch
+                    // +1 to go to instruction just after the true branch
+                    let true_skip_rel_jump_target: i64 =
+                        (true_branch.len() as i64) + 2;
+                    let true_skip_rel_jump_instr = Instruction::RelJump(
+                        RelJumpTarget::new(true_skip_rel_jump_target)
+                    );
+                    instructions.push(true_skip_rel_jump_instr.into());
+
+                    // Append the true branch
+                    instructions.append(&mut true_branch);
+                }
+
                 PartialInstructionFP::Continue(loop_id) => {
                     instructions.push(PartialInstruction::Continue(loop_id.clone()));
                 }
