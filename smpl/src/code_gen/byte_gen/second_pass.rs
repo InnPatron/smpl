@@ -9,6 +9,8 @@ use super::byte_code::*;
 #[derive(Debug, Clone)]
 pub enum PartialInstruction {
     Instruction(Instruction),
+    LoopBegin(LoopId),              // Marker instruction, points to before loop condition
+    LoopEnd(LoopId),                // Marker instruction, points to after looper instruction
     Continue(LoopId),
     Break(LoopId),
 }
@@ -54,6 +56,9 @@ impl SecondPass {
                     let body = loop_frame.get_condition();
                     let result_arg = loop_frame.get_result_location();
 
+                    // Append marker instruction for start of loop
+                    instructions.push(PartialInstruction::LoopBegin(loop_id.clone()));
+
                     // Append the condition instructions
                     instructions.append(&mut self.flatten(condition));
 
@@ -80,6 +85,9 @@ impl SecondPass {
                         RelJumpTarget::new(looper_rel_target)
                     );
                     instructions.push(loop_instr.into());
+
+                    // Append marker instruction for end of loop
+                    instructions.push(PartialInstruction::LoopEnd(loop_id.clone()));
                 }
 
                 PartialInstructionFP::Branch(branch_id) => unimplemented!(),
