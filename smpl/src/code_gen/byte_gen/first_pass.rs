@@ -33,6 +33,7 @@ enum State {
 }
 
 pub(super) struct LoopFrame {
+    result_location: Option<Arg>,
     condition: Option<Vec<PartialInstruction>>,
     body: Option<Vec<PartialInstruction>>,
 }
@@ -40,9 +41,18 @@ pub(super) struct LoopFrame {
 impl LoopFrame {
     fn new() -> LoopFrame {
         LoopFrame {
+            result_location: None,
             condition: None,
             body: None
         }
+    }
+
+    fn set_result_location(&mut self, loc: Arg) {
+        if self.result_location.is_some() {
+            panic!("Attempting to double set the result location");
+        }
+
+        self.result_location = Some(loc);
     }
 
     fn set_condition<I: Iterator<Item=PartialInstruction>>(&mut self, condition: I) {
@@ -68,9 +78,14 @@ impl LoopFrame {
     pub(super) fn get_true_branch(&self) -> &[PartialInstruction] {
         self.body.as_ref().expect("Branch none")
     }
+
+    pub(super) fn get_result_location(&self) -> &Arg {
+        self.result_location.as_ref().expect("Result location none")
+    }
 }
 
 pub(super) struct BranchFrame {
+    result_location: Option<Arg>,
     condition: Option<Vec<PartialInstruction>>,
     true_branch: Option<Vec<PartialInstruction>>,
     false_branch: Option<Vec<PartialInstruction>>,
@@ -79,10 +94,19 @@ pub(super) struct BranchFrame {
 impl BranchFrame {
     fn new() -> BranchFrame {
         BranchFrame {
+            result_location: None,
             condition: None,
             true_branch: None,
             false_branch: None,
         }
+    }
+
+    fn set_result_location(&mut self, loc: Arg) {
+        if self.result_location.is_some() {
+            panic!("Attempting to double set the result location");
+        }
+
+        self.result_location = Some(loc);
     }
 
     fn set_condition<I: Iterator<Item=PartialInstruction>>(&mut self, condition: I) {
@@ -119,6 +143,10 @@ impl BranchFrame {
 
     pub(super) fn get_false_branch(&self) -> &[PartialInstruction] {
         self.false_branch.as_ref().expect("False branch none")
+    }
+
+    pub(super) fn get_result_location(&self) -> &Arg {
+        self.result_location.as_ref().expect("Result location none")
     }
 }
 
@@ -267,6 +295,9 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
             .into_iter()
             .map(|instr| PartialInstruction::Instruction(instr));
         frame.set_condition(condition_instructions);
+
+        let result_location = Arg::Location(Location::Tmp(byte_expr::tmp_id(condition.expr.last())));
+        frame.set_result_location(result_location);
         
 
         // Change the current state
@@ -423,6 +454,9 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
             .into_iter()
             .map(|instr| PartialInstruction::Instruction(instr));
         frame.set_condition(condition_instructions);
+
+        let result_location = Arg::Location(Location::Tmp(byte_expr::tmp_id(condition.expr.last())));
+        frame.set_result_location(result_location);
 
 
         // Change the current state
