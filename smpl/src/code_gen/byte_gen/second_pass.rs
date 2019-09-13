@@ -39,6 +39,10 @@ impl SecondPass {
         }
     }
 
+    pub(super) fn flatten_main_body(self) -> Vec<PartialInstruction> {
+        self.flatten(&self.main_body)
+    }
+
     fn flatten(&self, partial_instrs: &[PartialInstructionFP]) -> Vec<PartialInstruction> {
         let mut instructions: Vec<PartialInstruction> = Vec::new();
 
