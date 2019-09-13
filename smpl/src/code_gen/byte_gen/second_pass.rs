@@ -39,7 +39,7 @@ impl SecondPass {
         }
     }
 
-    pub(super) fn flatten_main_body(self) -> Vec<PartialInstruction> {
+    pub(super) fn pass(self) -> Vec<PartialInstruction> {
         self.flatten(&self.main_body)
     }
 
