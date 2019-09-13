@@ -7,7 +7,7 @@ use super::first_pass::PartialInstruction as PartialInstructionFP;
 use super::byte_code::*;
 
 #[derive(Debug, Clone)]
-pub enum PartialInstruction {
+pub(super) enum PartialInstruction {
     Instruction(Instruction),
     LoopBegin(LoopId),              // Marker instruction, points to before loop condition
     LoopEnd(LoopId),                // Marker instruction, points to after looper instruction
