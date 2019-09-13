@@ -1,3 +1,5 @@
+pub mod byte_gen;
+
 struct StringEmitter {
     output: String,
     shift: u32,
