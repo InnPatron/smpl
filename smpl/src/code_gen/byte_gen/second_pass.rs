@@ -43,6 +43,7 @@ impl SecondPass {
         self.flatten(&self.main_body)
     }
 
+    /// Goes over a slice of first pass partial instructions and inlines branches and loops
     fn flatten(&self, partial_instrs: &[PartialInstructionFP]) -> Vec<PartialInstruction> {
         let mut instructions: Vec<PartialInstruction> = Vec::new();
 
