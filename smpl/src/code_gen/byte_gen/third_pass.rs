@@ -56,7 +56,7 @@ impl ThirdPass {
 
                     if (*loop_end_index < index) {
                         panic!("Attempting to break to a loop end {} before the continue instruction {}",
-                               loop_begin_index,
+                               loop_end_index,
                                index
                         );
                     }
