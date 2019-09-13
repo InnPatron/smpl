@@ -37,7 +37,7 @@ impl ThirdPass {
                         .get(&loop_id)
                         .expect(&format!("Could not find start index for loop id: {:?}", loop_id));
 
-                    if (*loop_begin_index > index) {
+                    if *loop_begin_index > index {
                         panic!("Attempting to continue to a loop start {} after the continue instruction {}",
                                loop_begin_index,
                                index
@@ -54,7 +54,7 @@ impl ThirdPass {
                         .get(&loop_id)
                         .expect(&format!("Could not find end index for loop id: {:?}", loop_id));
 
-                    if (*loop_end_index < index) {
+                    if *loop_end_index < index {
                         panic!("Attempting to break to a loop end {} before the continue instruction {}",
                                loop_end_index,
                                index
