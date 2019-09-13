@@ -69,14 +69,14 @@ impl JumpTarget {
 
 
 #[derive(Debug, Clone, Copy)]
-pub struct RelJumpTarget(u64);
+pub struct RelJumpTarget(i64);
 
 impl RelJumpTarget {
-    pub fn new(t: u64) -> RelJumpTarget {
+    pub fn new(t: i64) -> RelJumpTarget {
         RelJumpTarget(t)
     }
 
-    pub fn relative_target(&self) -> u64 {
+    pub fn relative_target(&self) -> i64 {
         self.0
     }
 }
