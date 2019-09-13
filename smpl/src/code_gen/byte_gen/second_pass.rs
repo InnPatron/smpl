@@ -3,16 +3,30 @@ use std::collections::HashMap;
 use crate::analysis::*;
 use crate::analysis::metadata::*;
 use super::first_pass::*;
+use super::first_pass::PartialInstruction as PartialInstructionFP;
 use super::byte_code::*;
 
+#[derive(Debug, Clone)]
+pub enum PartialInstruction {
+    Instruction(Instruction),
+    Continue(LoopId),
+    Break(LoopId),
+}
+
+impl From<Instruction> for PartialInstruction {
+    fn from(instr: Instruction) -> PartialInstruction {
+        PartialInstruction::Instruction(instr)
+    }
+}
+
 pub(super) struct SecondPass {
-    main_body: Vec<PartialInstruction>,
+    main_body: Vec<PartialInstructionFP>,
     loops: HashMap<LoopId, LoopFrame>,
     branches: HashMap<BranchingId, BranchFrame>,
 }
 
 impl SecondPass {
-    pub(super) fn new(main_body: Vec<PartialInstruction>,
+    pub(super) fn new(main_body: Vec<PartialInstructionFP>,
                 loops: HashMap<LoopId, LoopFrame>,
                 branches: HashMap<BranchingId, BranchFrame>) -> SecondPass {
 
@@ -23,16 +37,16 @@ impl SecondPass {
         }
     }
 
-    fn flatten(&self, partial_instrs: &[PartialInstruction]) -> Vec<Instruction> {
-        let mut instructions: Vec<Instruction> = Vec::new();
+    fn flatten(&self, partial_instrs: &[PartialInstructionFP]) -> Vec<PartialInstruction> {
+        let mut instructions: Vec<PartialInstruction> = Vec::new();
 
         for instr in partial_instrs {
             match instr  {
-                PartialInstruction::Instruction(ref instr) => {
-                    instructions.push((*instr).clone());
+                PartialInstructionFP::Instruction(ref instr) => {
+                    instructions.push((*instr).clone().into());
                 }
 
-                PartialInstruction::Loop(ref loop_id) => {
+                PartialInstructionFP::Loop(ref loop_id) => {
                     let loop_frame = self.loops
                         .get(loop_id)
                         .expect(&format!("Could not find: {:?}", loop_id));
@@ -52,7 +66,7 @@ impl SecondPass {
                         RelJumpTarget::new(skip_loop_rel_target),
                         result_arg.clone()
                     );
-                    instructions.push(skip_loop_instr);
+                    instructions.push(skip_loop_instr.into());
 
                     // Append the body instructions
                     instructions.append(&mut self.flatten(body));
@@ -65,12 +79,12 @@ impl SecondPass {
                     let loop_instr = Instruction::RelJump(
                         RelJumpTarget::new(looper_rel_target)
                     );
-                    instructions.push(loop_instr);
+                    instructions.push(loop_instr.into());
                 }
 
-                PartialInstruction::Branch(branch_id) => unimplemented!(),
-                PartialInstruction::Continue(loop_id) => unimplemented!(), 
-                PartialInstruction::Break(loop_id) => unimplemented!(),
+                PartialInstructionFP::Branch(branch_id) => unimplemented!(),
+                PartialInstructionFP::Continue(loop_id) => unimplemented!(), 
+                PartialInstructionFP::Break(loop_id) => unimplemented!(),
             }
         }
 
