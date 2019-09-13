@@ -4,7 +4,7 @@ pub struct Block {
     instructions: Vec<Instruction>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Instruction {
     Store(Location, Arg),
     StoreStructure(Location, HashMap<String, Arg>),
@@ -54,13 +54,34 @@ pub enum Instruction {
     RelJumpL(RelJumpTarget, Arg, Arg),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct JumpTarget(u64);
 
-#[derive(Debug)]
+impl JumpTarget {
+    pub fn new(t: u64) -> JumpTarget {
+        JumpTarget(t)
+    }
+
+    pub fn absolute_target(&self) -> u64 {
+        self.0
+    }
+}
+
+
+#[derive(Debug, Clone, Copy)]
 pub struct RelJumpTarget(u64);
 
-#[derive(Debug)]
+impl RelJumpTarget {
+    pub fn new(t: u64) -> RelJumpTarget {
+        RelJumpTarget(t)
+    }
+
+    pub fn relative_target(&self) -> u64 {
+        self.0
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum Location {
     Compound {
         root: String,
@@ -71,7 +92,7 @@ pub enum Location {
     Tmp(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FieldAccess {
     Field(String),
     FieldIndex {
@@ -80,7 +101,7 @@ pub enum FieldAccess {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Arg {
     Location(Location),
     FieldAccess(Location, Vec<String>),
@@ -91,12 +112,12 @@ pub enum Arg {
     Struct(Struct),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Struct {
     field_map: HashMap<String, StructField>
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum StructField {
     Int(i64),
     Float(i64),
