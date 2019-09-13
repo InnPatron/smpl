@@ -195,12 +195,12 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
             }
 
             Node::EnterScope => {
-                self.passenger.enter_scope(current);
+                self.passenger.enter_scope(current)?;
                 Ok(Some(self.graph.next(current)))
             }
 
             Node::ExitScope => {
-                self.passenger.exit_scope(current);
+                self.passenger.exit_scope(current)?;
                 Ok(Some(self.graph.next(current)))
             }
 
