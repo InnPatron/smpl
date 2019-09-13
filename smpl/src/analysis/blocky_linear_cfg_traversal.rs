@@ -199,17 +199,17 @@ impl<'a, 'b, E> BlockyTraverser<'a, 'b, E> {
             }
 
             Node::EnterScope => {
-                self.passenger.enter_scope(current);
+                self.passenger.enter_scope(current)?;
                 Ok(Some(self.graph.next(current)))
             }
 
             Node::ExitScope => {
-                self.passenger.exit_scope(current);
+                self.passenger.exit_scope(current)?;
                 Ok(Some(self.graph.next(current)))
             }
 
             Node::Block(ref basic_block) => {
-                self.passenger.block(current);
+                self.passenger.block(current)?;
                 Ok(Some(self.graph.next(current)))
             }
 
