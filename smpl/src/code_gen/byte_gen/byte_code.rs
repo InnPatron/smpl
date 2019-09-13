@@ -34,7 +34,8 @@ pub enum Instruction {
     Return(Option<Arg>),
 
     Jump(JumpTarget),
-    JumpCondition(JumpTarget, Arg),
+    JumpCondition(JumpTarget, Arg),                     // Jump when Arg is true
+    JumpNegateCondition(JumpTarget, Arg),               // Jump when Arg is false
     JumpE(JumpTarget, Arg, Arg),
     JumpNE(JumpTarget, Arg, Arg),
     JumpGE(JumpTarget, Arg, Arg),
@@ -43,7 +44,8 @@ pub enum Instruction {
     JumpL(JumpTarget, Arg, Arg),
 
     RelJump(RelJumpTarget),
-    RelJumpCondition(RelJumpTarget, Arg),
+    RelJumpCondition(RelJumpTarget, Arg),               // Jump when Arg is true
+    RelJumpNegateCondition(RelJumpTarget, Arg),         // Jump when Arg is false
     RelJumpE(RelJumpTarget, Arg, Arg),
     RelJumpNE(RelJumpTarget, Arg, Arg),
     RelJumpGE(RelJumpTarget, Arg, Arg),
