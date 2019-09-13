@@ -83,8 +83,13 @@ impl SecondPass {
                 }
 
                 PartialInstructionFP::Branch(branch_id) => unimplemented!(),
-                PartialInstructionFP::Continue(loop_id) => unimplemented!(), 
-                PartialInstructionFP::Break(loop_id) => unimplemented!(),
+                PartialInstructionFP::Continue(loop_id) => {
+                    instructions.push(PartialInstruction::Continue(loop_id.clone()));
+                }
+                
+                PartialInstructionFP::Break(loop_id) => {
+                    instructions.push(PartialInstruction::Break(loop_id.clone()));
+                }
             }
         }
 
