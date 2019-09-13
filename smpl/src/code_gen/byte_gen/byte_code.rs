@@ -1,9 +1,5 @@
 use std::collections::HashMap;
 
-pub struct Block {
-    instructions: Vec<Instruction>,
-}
-
 #[derive(Debug, Clone)]
 pub enum Instruction {
     Store(Location, Arg),
