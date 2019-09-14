@@ -20,6 +20,7 @@ pub struct Metadata {
     array_types: HashMap<ModuleId, Vec<TypeId>>,
     main: Option<(FnId, ModuleId)>,
 
+    module_map: HashMap<Ident, ModuleId>,
     fn_map: HashMap<(ModuleId, Ident), FnId>,
     builtin: HashSet<FnId>,
 
@@ -39,6 +40,7 @@ impl Metadata {
             field_ordering: HashMap::new(),
             array_types: HashMap::new(),
             main: None,
+            module_map: HashMap::new(),
             fn_map: HashMap::new(),
             builtin: HashSet::new(),
             unchecked_builtins_params: HashSet::new(),
@@ -63,6 +65,16 @@ impl Metadata {
 
     pub fn is_builtin_params_unchecked(&self, id: FnId) -> bool {
         self.unchecked_builtins_params.contains(&id)
+    }
+
+    pub fn map_module(&mut self, name: Ident, mod_id: ModuleId) {
+        if self.module_map.insert(name, mod_id).is_some() {
+            panic!("Overriding {:?}", mod_id);
+        }
+    }
+
+    pub fn get_module<T: Into<Ident>>(&self, name: T) -> Option<ModuleId> {
+       self.module_map.get(&name.into()).map(|id| id.clone())
     }
 
     pub fn insert_module_fn(&mut self, mod_id: ModuleId, name: Ident, fn_id: FnId) {

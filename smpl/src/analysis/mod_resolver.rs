@@ -274,11 +274,11 @@ fn raw_mod_data(
     program: &mut Program,
     modules: Vec<ParsedModule>,
 ) -> Result<(HashMap<ModuleId, RawModData>, Vec<(ModuleId, ModuleSource)>), AnalysisError> {
-    let (universe, _metadata, _) = program.analysis_context();
     let mut mod_map = HashMap::new();
     let mut source_map = Vec::new();
 
-    for module in modules {
+    for module in modules { 
+
         let mut struct_reserve = HashMap::new();
         let mut fn_reserve = HashMap::new();
         let mut builtin_fn_reserve = HashMap::new();
@@ -290,21 +290,21 @@ fn raw_mod_data(
                 DeclStmt::Struct(d) => {
                     struct_reserve.insert(
                         d.data().name.data().clone().clone(),
-                        ReservedType(universe.new_type_id(), d),
+                        ReservedType(program.universe_mut().new_type_id(), d),
                     );
                 }
 
                 DeclStmt::Function(d) => {
                     fn_reserve.insert(
                         d.data().name.data().clone(),
-                        ReservedFn(universe.new_fn_id(), d),
+                        ReservedFn(program.universe_mut().new_fn_id(), d),
                     );
                 }
 
                 DeclStmt::BuiltinFunction(d) => {
                     builtin_fn_reserve.insert(
                         d.data().name.data().clone(),
-                        ReservedBuiltinFn(universe.new_fn_id(), d),
+                        ReservedBuiltinFn(program.universe_mut().new_fn_id(), d),
                     );
                 }
 
@@ -322,6 +322,11 @@ fn raw_mod_data(
             reserved_builtins: builtin_fn_reserve,
             uses: uses,
         };
+
+        // Map module name to id
+        program
+            .metadata_mut()
+            .map_module(raw.name.data().clone(), module.id);
 
         let id = raw.id;
         mod_map.insert(id, raw);
