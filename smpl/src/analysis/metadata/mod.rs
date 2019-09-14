@@ -69,8 +69,8 @@ impl Metadata {
         self.fn_map.insert((mod_id, name), fn_id);
     }
 
-    pub fn module_fn(&self, mod_id: ModuleId, name: Ident) -> Option<FnId> {
-        self.fn_map.get(&(mod_id, name)).map(|id| id.clone())
+    pub fn module_fn<T: Into<Ident>>(&self, mod_id: ModuleId, name: T) -> Option<FnId> {
+        self.fn_map.get(&(mod_id, name.into())).map(|id| id.clone())
     }
 
     pub fn insert_field_ordering(&mut self, id: TypeId, data: FieldOrdering) {
