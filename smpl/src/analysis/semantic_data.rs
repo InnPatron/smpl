@@ -71,7 +71,7 @@ impl Program {
 pub struct Universe {
     generated_type_cons_map: RefCell<HashMap<TypeId, TypeCons>>,
     type_cons_map: HashMap<TypeId, TypeCons>,
-    fn_map: HashMap<FnId, Rc<Function>>,
+    fn_map: HashMap<FnId, Function>,
     builtin_fn_map: HashMap<FnId, BuiltinFunction>,
     module_map: HashMap<ModuleId, Module>,
     module_name: HashMap<Ident, ModuleId>,
@@ -192,7 +192,7 @@ impl Universe {
             fn_scope: fn_scope,
         };
 
-        if self.fn_map.insert(fn_id, Rc::new(function)).is_some() {
+        if self.fn_map.insert(fn_id, function).is_some() {
             panic!(
                 "Attempting to override Function with FnId {} in the Universe",
                 fn_id.0
@@ -241,8 +241,8 @@ impl Universe {
         })
     }
 
-    pub fn get_fn(&self, id: FnId) -> Rc<Function> {
-        self.fn_map.get(&id).unwrap().clone()
+    pub fn get_fn(&self, id: FnId) -> &Function {
+        self.fn_map.get(&id).unwrap()
     }
 
     pub fn get_builtin_fn(&self, id: FnId) -> &BuiltinFunction {
@@ -296,10 +296,10 @@ impl Universe {
             .collect()
     }
 
-    pub fn all_fns(&self) -> Vec<(FnId, Rc<Function>)> {
+    pub fn all_fns(&self) -> Vec<(FnId, &Function)> {
         self.fn_map
             .iter()
-            .map(|(id, f)| (id.clone(), f.clone()))
+            .map(|(id, f)| (id.clone(), f))
             .collect()
     }
 
