@@ -21,6 +21,7 @@ pub struct Metadata {
     main: Option<(FnId, ModuleId)>,
 
     module_map: HashMap<Ident, ModuleId>,
+    module_reverse_map: HashMap<ModuleId, String>,
     fn_map: HashMap<(ModuleId, Ident), FnId>,
     builtin: HashSet<FnId>,
 
@@ -41,6 +42,7 @@ impl Metadata {
             array_types: HashMap::new(),
             main: None,
             module_map: HashMap::new(),
+            module_reverse_map: HashMap::new(),
             fn_map: HashMap::new(),
             builtin: HashSet::new(),
             unchecked_builtins_params: HashSet::new(),
@@ -68,13 +70,24 @@ impl Metadata {
     }
 
     pub(super) fn map_module(&mut self, name: Ident, mod_id: ModuleId) {
-        if self.module_map.insert(name, mod_id).is_some() {
+        if self.module_map.insert(name.clone(), mod_id).is_some() {
+            panic!("Overriding {:?}", mod_id);
+        }
+
+        if self.module_reverse_map.insert(mod_id, name.to_string()).is_some() {
             panic!("Overriding {:?}", mod_id);
         }
     }
 
     pub fn get_module<T: Into<Ident>>(&self, name: T) -> Option<ModuleId> {
        self.module_map.get(&name.into()).map(|id| id.clone())
+    }
+
+    pub fn get_module_by_id(&self, id: ModuleId) -> Option<String> {
+        self.module_reverse_map
+            .get(&id)
+            .clone()
+            .map(|name| name.to_string())
     }
 
     pub(super) fn insert_module_fn(&mut self, mod_id: ModuleId, name: Ident, fn_id: FnId) {
