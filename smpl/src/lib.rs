@@ -24,6 +24,7 @@ pub use self::err::Error;
 pub use self::module::{ParsedModule, UnparsedModule};
 
 pub use self::parser::parse_module;
+pub use crate::analysis::{ TypeId, FnId, ModuleId };
 
 pub use crate::analysis::check_program;
 pub use crate::analysis::Program;
