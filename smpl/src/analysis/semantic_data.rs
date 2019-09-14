@@ -36,13 +36,13 @@ impl Program {
         }
     }
 
-    pub fn analysis_context<'a>(
+    pub(super) fn analysis_context<'a>(
         &'a mut self,
     ) -> (&'a mut Universe, &'a mut Metadata, &'a mut PresentFeatures) {
         (&mut self.universe, &mut self.metadata, &mut self.features)
     }
 
-    pub fn universe(&self) -> &Universe {
+    pub(super) fn universe(&self) -> &Universe {
         &self.universe
     }
 
@@ -54,15 +54,15 @@ impl Program {
         &self.features
     }
 
-    pub fn universe_mut(&mut self) -> &mut Universe {
+    pub(super) fn universe_mut(&mut self) -> &mut Universe {
         &mut self.universe
     }
 
-    pub fn metadata_mut(&mut self) -> &mut Metadata {
+    pub(super) fn metadata_mut(&mut self) -> &mut Metadata {
         &mut self.metadata
     }
 
-    pub fn features_mut(&mut self) -> &mut PresentFeatures {
+    pub(super) fn features_mut(&mut self) -> &mut PresentFeatures {
         &mut self.features
     }
 }
