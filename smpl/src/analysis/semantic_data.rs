@@ -28,7 +28,7 @@ pub struct Program {
 }
 
 impl Program {
-    pub fn new(universe: Universe, metadata: Metadata, features: PresentFeatures) -> Program {
+    pub(super) fn new(universe: Universe, metadata: Metadata, features: PresentFeatures) -> Program {
         Program {
             universe: universe,
             metadata: metadata,
