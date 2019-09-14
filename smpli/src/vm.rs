@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::env::Env;
-use crate::err::VmError;
+use crate::err::*;
 use crate::module::VmModule;
 use crate::std_options::Std;
 use crate::value::Value;
@@ -63,11 +63,19 @@ impl AVM {
         fn_name: String,
         builtin: BuiltinFn,
     ) -> Result<(), VmError> {
+        let module_name = self.program
+            .metadata()
+            .get_module_by_id(mod_id).unwrap();
+
+        let module_fn_pair = ModuleFnPair {
+            module: module_name,
+            function: fn_name.clone(),
+        };
         let fn_id = self
             .program
             .metadata()
             .module_fn(mod_id, fn_name.clone())
-            .ok_or(VmError::NotAFn(mod_id, fn_name.clone()))?;
+            .ok_or(VmError::NotAFn(module_fn_pair.clone()))?;
 
         if self.program.metadata().is_builtin(fn_id) {
 
@@ -78,10 +86,10 @@ impl AVM {
             if self.builtins.insert(fn_id, builtin).is_none() {
                 Ok(())
             } else {
-                Err(VmError::BuiltinCollision(mod_id, fn_name))
+                Err(VmError::BuiltinCollision(module_fn_pair))
             }
         } else {
-            Err(VmError::NotABuiltin(mod_id, fn_name))
+            Err(VmError::NotABuiltin(module_fn_pair))
         }
     }
 

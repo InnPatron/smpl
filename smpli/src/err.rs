@@ -3,12 +3,13 @@ use failure::Fail;
 use smpl::ModuleId;
 use smpl::Error as StaticError;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum VmError {
     StaticError(StaticError),
-    BuiltinCollision(ModuleId, String),
-    NotABuiltin(ModuleId, String),
-    NotAFn(ModuleId, String),
+    BuiltinCollision(ModuleFnPair),
+    NotABuiltin(ModuleFnPair),
+    NotAFn(ModuleFnPair),
+    NotAModule(String),
 }
 
 impl<T> From<T> for VmError where T: Into<StaticError> {
@@ -17,7 +18,13 @@ impl<T> From<T> for VmError where T: Into<StaticError> {
     }
 }
 
-#[derive(Fail, Debug)]
+#[derive(Debug, Clone)]
+pub struct ModuleFnPair {
+    pub module: String,
+    pub function: String,
+}
+
+#[derive(Fail, Debug, Clone)]
 pub enum InternalError {
     #[fail(display = "Invalid number of arguments. Found {}. {}", _0, _1)]
     InvalidArgCount(usize, ExpectedArgCount),
@@ -32,7 +39,7 @@ pub enum InternalError {
     },
 }
 
-#[derive(Fail, Debug)]
+#[derive(Fail, Debug, Clone)]
 pub enum ExpectedArgCount {
     #[fail(display = "Expected {}..={}", _0, _1)]
     Range(usize, usize),
