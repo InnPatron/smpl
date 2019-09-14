@@ -46,7 +46,7 @@ impl Program {
         &self.universe
     }
 
-    pub fn all_fns(&self) -> Vec<(FnId, &Function)> {
+    pub fn all_fns(&self) -> impl Iterator<Item=(FnId, &Function)> {
         self.universe.all_fns()
     }
 
@@ -300,11 +300,10 @@ impl Universe {
             .collect()
     }
 
-    pub fn all_fns(&self) -> Vec<(FnId, &Function)> {
+    pub fn all_fns(&self) -> impl Iterator<Item=(FnId, &Function)> {
         self.fn_map
             .iter()
             .map(|(id, f)| (id.clone(), f))
-            .collect()
     }
 
     pub fn all_modules(&self) -> Vec<(&Ident, &ModuleId)> {
