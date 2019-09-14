@@ -25,3 +25,4 @@ pub use self::semantic_ck::check_program;
 pub use self::semantic_data::*;
 pub use self::semantic_data::{Function, Module, Program};
 pub use self::typed_ast::*;
+pub use self::type_cons::Type;
