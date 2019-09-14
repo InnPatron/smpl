@@ -522,7 +522,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
 
         // Set the false path in the frame
         let frame = self.get_branch_frame_mut(branch_id);
-        frame.set_true_branch(false_instructions.into_iter());
+        frame.set_false_branch(false_instructions.into_iter());
         Ok(())
     }
 }
