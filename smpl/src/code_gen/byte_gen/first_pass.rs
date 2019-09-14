@@ -75,7 +75,7 @@ impl LoopFrame {
         self.condition.as_ref().expect("Condition none")
     }
 
-    pub(super) fn get_true_branch(&self) -> &[PartialInstruction] {
+    pub(super) fn get_body(&self) -> &[PartialInstruction] {
         self.body.as_ref().expect("Branch none")
     }
 

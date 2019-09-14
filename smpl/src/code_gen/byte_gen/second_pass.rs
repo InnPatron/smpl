@@ -58,7 +58,7 @@ impl SecondPass {
                         .get(loop_id)
                         .expect(&format!("Could not find: {:?}", loop_id));
                     let condition = loop_frame.get_condition();
-                    let body = loop_frame.get_condition();
+                    let body = loop_frame.get_body();
                     let result_arg = loop_frame.get_result_location();
 
                     // Append marker instruction for start of loop
