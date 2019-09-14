@@ -1,6 +1,6 @@
 use failure::Error;
 
-use crate::analysis::{FnId, TypeId};
+use smpl::{FnId, TypeId};
 
 use super::value::Value;
 

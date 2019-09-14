@@ -1,8 +1,7 @@
 use failure::Fail;
 
-use crate::analysis::error::AnalysisError;
-use crate::analysis::ModuleId;
-use crate::err::Error as StaticError;
+use smpl::ModuleId;
+use smpl::Error as StaticError;
 
 #[derive(Debug)]
 pub enum VmError {
@@ -12,14 +11,8 @@ pub enum VmError {
     NotAFn(ModuleId, String),
 }
 
-impl From<StaticError> for VmError {
-    fn from(e: StaticError) -> VmError {
-        VmError::StaticError(e)
-    }
-}
-
-impl From<AnalysisError> for VmError {
-    fn from(e: AnalysisError) -> VmError {
+impl<T> From<T> for VmError where T: Into<StaticError> {
+    fn from(e: T) -> VmError {
         VmError::StaticError(e.into())
     }
 }
@@ -55,7 +48,7 @@ pub enum ExpectedArgCount {
 #[macro_export]
 macro_rules! no_args {
     ($args: expr) => {{
-        use crate::code_gen::interpreter::err::*;
+        use crate::err::*;
         match $args {
             Some(args) => Err(InternalError::InvalidArgCount(
                 args.len(),
@@ -70,7 +63,7 @@ macro_rules! no_args {
 #[macro_export]
 macro_rules! exact_args {
     ($exact: expr, $args: expr) => {{
-        use crate::code_gen::interpreter::err::*;
+        use crate::err::*;
         match $args {
             Some(args) => {
                 if args.len() != $exact {
@@ -100,7 +93,7 @@ macro_rules! exact_args {
 #[macro_export]
 macro_rules! min_args {
     ($min: expr, $args: expr) => {{
-        use crate::code_gen::interpreter::err::*;
+        use crate::err::*;
         match $args {
             Some(args) => {
                 if args.len() < $min {
@@ -129,7 +122,7 @@ macro_rules! min_args {
 #[macro_export]
 macro_rules! max_args {
     ($max: expr, $args: expr) => {{
-        use crate::code_gen::interpreter::err::*;
+        use crate::err::*;
         match $args {
             Some(args) => {
                 if args.len() > $max {
@@ -152,7 +145,7 @@ macro_rules! max_args {
 macro_rules! arg_range_inclusive {
     // Assume min_inclusive is greater than 1
     ($min_inclusive: expr, $max_inclusive: expr, $args: expr) => {{
-        use crate::code_gen::interpreter::err::*;
+        use crate::err::*;
         match $args {
             Some(args) => {
                 if $min_inclusive <= args.len() && $max_inclusive >= args.len() {
