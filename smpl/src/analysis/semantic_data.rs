@@ -490,7 +490,7 @@ impl Function {
         self.cfg.clone()
     }
 
-    pub fn fn_scope(&self) -> &ScopedData {
+    pub(super) fn fn_scope(&self) -> &ScopedData {
         &self.fn_scope
     }
 }
