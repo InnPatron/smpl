@@ -46,6 +46,10 @@ impl Program {
         &self.universe
     }
 
+    pub fn all_fns(&self) -> Vec<(FnId, &Function)> {
+        self.universe.all_fns()
+    }
+
     pub fn metadata(&self) -> &Metadata {
         &self.metadata
     }
