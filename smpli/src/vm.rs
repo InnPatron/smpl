@@ -1,8 +1,8 @@
 use failure::Error;
-use smpl::{ FnId, ModuleId, Program, check_program };
+use smpl::{ FnId, ModuleId, Program };
 
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::env::Env;
 use crate::err::VmError;
@@ -12,8 +12,11 @@ use crate::value::Value;
 
 use crate::vm_i::*;
 
+use smpl::byte_gen;
+
 pub struct AVM {
     program: Program,
+    compiled: HashMap<FnId, Arc<byte_gen::ByteCodeFunction>>,
     builtins: HashMap<FnId, BuiltinFn>,
 }
 
@@ -30,10 +33,18 @@ impl AVM {
             })
             .collect();
 
-        let program = check_program(modules)?;
+        let program = smpl::check_program(modules)?;
 
+        let mut compiled_fns = HashMap::new();
+        for (fn_id, raw_fn_ref) in program.all_fns() {
+            let compiled = byte_gen::compile_to_byte_code(raw_fn_ref);
+            if compiled_fns.insert(fn_id, Arc::new(compiled)).is_some() {
+                panic!("Multiple functions with ID {}. Should not have passed check_program()", fn_id);
+            }
+        }
         let mut vm = AVM {
             program: program,
+            compiled: compiled_fns,
             builtins: HashMap::new(),
         };
 
@@ -59,6 +70,11 @@ impl AVM {
             .ok_or(VmError::NotAFn(mod_id, fn_name.clone()))?;
 
         if self.program.metadata().is_builtin(fn_id) {
+
+            if (self.compiled.get(&fn_id).is_some()) {
+                panic!("ID {} was a builtin function but has a function definition.", fn_id);
+            }
+
             if self.builtins.insert(fn_id, builtin).is_none() {
                 Ok(())
             } else {
