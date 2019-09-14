@@ -1,13 +1,10 @@
 use failure::Error;
+use smpl::{UnparsedModule, parse_module};
 
-use crate::{exact_args, no_args};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::module::*;
-use crate::parser::parse_module;
-
-use crate::code_gen::interpreter::*;
+use crate::*;
 
 pub const MOD_VEC: &'static str = "vec";
 pub const VEC_NEW: &'static str = "new";

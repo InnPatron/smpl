@@ -1,10 +1,7 @@
 use failure::Error;
+use smpl::{UnparsedModule, parse_module};
 
-use crate::exact_args;
-use crate::module::*;
-use crate::parser::parse_module;
-
-use crate::code_gen::interpreter::*;
+use crate::*;
 
 pub const MOD_MATH: &'static str = "math";
 
