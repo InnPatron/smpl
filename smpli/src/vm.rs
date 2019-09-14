@@ -70,15 +70,13 @@ impl AVM {
     }
 
     pub fn query_module(&self, module: &str, name: &str) -> Result<Option<FnHandle>, String> {
-        let module = Ident(module.to_string());
-        let name = Ident(name.to_string());
-        let mod_id = self.program.universe().module_id(&module);
+        let mod_id = self.program.metadata().get_module(module.to_string());
 
         match mod_id {
             Some(mod_id) => Ok(self
                 .program
                 .metadata()
-                .module_fn(mod_id, name)
+                .module_fn(mod_id, name.to_string())
                 .map(|fn_id| fn_id.into())),
 
             None => Err(format!("Module '{}' does not exist", module)),
