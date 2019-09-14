@@ -4,6 +4,8 @@ mod first_pass;
 mod second_pass;
 mod third_pass;
 
+use crate::analysis::Function;
+
 pub use byte_code::{
     Instruction,
     JumpTarget,
@@ -54,11 +56,13 @@ impl ByteCodeFunction {
 }
 
 /// Takes a CFG and transforms it into valid and executable bytecode
-pub fn compile_to_byte_code(cfg: &CFG) -> ByteCodeFunction {
+pub fn compile_to_byte_code(function: &Function) -> ByteCodeFunction {
+
+    let cfg = function.cfg();
 
     // Goes through the CFG and collects the main function body, loops, and branches
     //   into organized groups of instructions with metadata
-    let mut first_pass = first_pass::FirstPass::new(cfg);
+    let mut first_pass = first_pass::FirstPass::new(&*cfg);
     {
         let traverser = Traverser::new(&*cfg, &mut first_pass);
 
