@@ -61,7 +61,7 @@ impl Executor {
                 }
             }
 
-            executor.stack.push(StackInfo::ByteCode(stack_info))
+            executor.stack.push(StackInfo::ByteCodeStack(stack_info))
         }
         
         Ok(executor)
@@ -74,7 +74,7 @@ impl Executor {
 
 #[derive(Debug)]
 enum StackInfo {
-    ByteCode(ByteCodeStack),
+    ByteCodeStack(ByteCodeStack),
 
     Builtin {
         id: FnId,
