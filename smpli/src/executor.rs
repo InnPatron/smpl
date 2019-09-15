@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::cell::RefCell;
 
 use smpl::{ FnId, Program, byte_gen };
 use smpl::byte_gen::{ to_fn_param, InstructionPointerType };
@@ -89,7 +90,8 @@ struct ByteCodeStack {
     current_fn: Arc<byte_gen::ByteCodeFunction>,
     compiled: CompiledProgram,
     env: Env,
-    instruction_pointer: InstructionPointerType
+    instruction_pointer: InstructionPointerType,
+    return_register: RefCell<Option<Value>>,
 }
 
 impl ByteCodeStack {
@@ -102,7 +104,8 @@ impl ByteCodeStack {
             current_fn: current_fn,
             compiled: compiled,
             env: env,
-            instruction_pointer: 0
+            instruction_pointer: 0,
+            return_register: RefCell::new(None),
         }
     }
 }
