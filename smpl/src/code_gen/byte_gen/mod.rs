@@ -20,7 +20,7 @@ pub use byte_code::{
 
 use crate::analysis::{Traverser, CFG};
 
-#[derive(Clone)] 
+#[derive(Debug, Clone)] 
 pub struct ByteCodeFunction {
     instructions: Vec<Instruction>,
     validated_flag: bool,
