@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+pub type InstructionPointerType = u64;
+
 #[derive(Debug, Clone)]
 pub enum Instruction {
     Store(Location, Arg),
@@ -51,14 +53,14 @@ pub enum Instruction {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct JumpTarget(u64);
+pub struct JumpTarget(InstructionPointerType);
 
 impl JumpTarget {
-    pub fn new(t: u64) -> JumpTarget {
+    pub fn new(t: InstructionPointerType) -> JumpTarget {
         JumpTarget(t)
     }
 
-    pub fn absolute_target(&self) -> u64 {
+    pub fn absolute_target(&self) -> InstructionPointerType {
         self.0
     }
 }

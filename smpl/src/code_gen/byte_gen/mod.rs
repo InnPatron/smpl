@@ -15,6 +15,7 @@ pub use byte_code::{
     Arg,
     Struct,
     StructField,
+    InstructionPointerType,
 };
 
 use crate::analysis::{Traverser, CFG};
