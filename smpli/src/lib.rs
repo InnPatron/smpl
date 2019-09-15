@@ -19,6 +19,7 @@ mod value;
 mod builtins;
 mod std_options;
 mod module;
+mod executor;
 
 pub use value:: {
     Value,
