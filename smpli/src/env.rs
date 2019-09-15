@@ -22,7 +22,7 @@ impl Env {
             .map(|rc| rc.borrow().clone())
     }
 
-    pub fn get(&self, name: &str) -> Option<Value> {
+    pub fn get_value(&self, name: &str) -> Option<Value> {
         self.env.get(name).map(|r| (*r.borrow()).clone())
     }
 
