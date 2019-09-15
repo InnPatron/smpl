@@ -16,6 +16,7 @@ mod mod_resolver;
 pub mod type_cons;
 mod type_cons_gen;
 mod type_resolver;
+pub mod type_api;
 
 pub use self::control_data::*;
 pub use self::control_flow::CFG;
