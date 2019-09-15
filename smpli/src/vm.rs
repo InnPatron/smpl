@@ -4,19 +4,26 @@ use smpl::{ FnId, ModuleId, Program };
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::env::Env;
 use crate::err::*;
 use crate::module::VmModule;
 use crate::std_options::Std;
 use crate::value::Value;
-
+use crate::executor::Executor;
 use crate::vm_i::*;
 
 use smpl::byte_gen;
 
+pub type CompiledProgram = 
+    Arc<HashMap<FnId, Arc<byte_gen::ByteCodeFunction>>>;
+
+#[derive(Debug, Clone)]
+pub struct SpawnOptions {
+    type_check: bool
+}
+
 pub struct AVM {
     program: Program,
-    compiled: HashMap<FnId, Arc<byte_gen::ByteCodeFunction>>,
+    compiled: CompiledProgram,
     builtins: HashMap<FnId, BuiltinFn>,
 }
 
@@ -44,7 +51,7 @@ impl AVM {
         }
         let mut vm = AVM {
             program: program,
-            compiled: compiled_fns,
+            compiled: Arc::new(compiled_fns),
             builtins: HashMap::new(),
         };
 
@@ -107,18 +114,18 @@ impl AVM {
         }
     }
 
+    pub fn spawn_executor(&self, fn_handle: FnHandle, 
+                          args: Option<Vec<Value>>, 
+                          spawn_options: SpawnOptions) -> Result<Executor, InternalError> {
+
+        if spawn_options.type_check {
+            unimplemented!();
+        } else {
+            Executor::new(&self.program, fn_handle.id(), self.compiled.clone(), args)
+        }
+    }
+
     pub fn program(&self) -> &Program {
         &self.program
     }
-}
-
-pub struct StackInfo {
-    pub func: FnId,
-    pub func_env: Env,
-}
-
-pub enum ExecResult<T, E> {
-    Ok(T),
-    Pending,
-    Err(E),
 }
