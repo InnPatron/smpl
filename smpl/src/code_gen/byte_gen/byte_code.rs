@@ -28,8 +28,9 @@ pub enum Instruction {
     Negate(Location, Arg),
     Invert(Location, Arg),
     
-    FnCall(Location, Location, Vec<Arg>),
+    FnCall(Location, Vec<Arg>),     // Function to call, args
     Return(Option<Arg>),
+    TakeReturn(Location),           // Where to store return value
 
     Jump(JumpTarget),
     JumpCondition(JumpTarget, Arg),                     // Jump when Arg is true

@@ -8,13 +8,13 @@ pub fn translate_expr(expr: &Expr) -> Vec<Instruction> {
 
     let mut translated = Vec::new();
     for tmp in execution_order {
-        translated.push(translate_tmp(expr.get_tmp(*tmp)));
+        translated.extend(translate_tmp(expr.get_tmp(*tmp)));
     }
 
     translated
 }
 
-fn translate_tmp(tmp: &Tmp) -> Instruction {
+fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
     use super::byte_code::Instruction::*;
     use super::byte_code::Arg;
 
@@ -23,7 +23,7 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
 
     let store = tmp_id(id);
 
-    match *value.data() {
+    let single = match *value.data() {
         Value::Literal(ref lit) => match *lit {
             Literal::String(ref string) => Store(Location::Tmp(store), Arg::String(string.to_string())),
 
@@ -130,7 +130,10 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
 
             let to_call = Location::Tmp(tmp_id(fn_call.fn_value()));
 
-            FnCall(Location::Tmp(store), to_call, args)
+            let fn_call = FnCall(to_call, args);
+            let result_store = TakeReturn(Location::Tmp(store));
+
+            return vec![fn_call, result_store];
         }
 
         Value::StructInit(ref struct_init) => {
@@ -214,7 +217,9 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
 
             Store(Location::Tmp(store), Arg::Location(location))
         }
-    }
+    };
+
+    vec![single]
 }
 
 pub fn tmp_id(id: TmpId) -> String {
