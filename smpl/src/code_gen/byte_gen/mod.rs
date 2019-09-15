@@ -18,6 +18,11 @@ pub use byte_code::{
     InstructionPointerType,
 };
 
+pub use byte_expr::{
+    var_id as to_fn_param,
+    fn_id as to_fn_id,
+};
+
 use crate::analysis::{Traverser, CFG};
 
 #[derive(Debug, Clone)] 
