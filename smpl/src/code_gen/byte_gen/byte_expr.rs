@@ -134,12 +134,12 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
         }
 
         Value::StructInit(ref struct_init) => {
-            let field_init = struct_init.field_init().unwrap();
+            let field_init = struct_init.raw_field_init().unwrap();
 
             let mut map = HashMap::new();
             for (field, typed_tmp_id) in field_init.into_iter() {
                 let tmp = typed_tmp_id.data().clone();
-                map.insert(field_id(field), Arg::Location(Location::Tmp(tmp_id(tmp))));
+                map.insert(field.to_string(), Arg::Location(Location::Tmp(tmp_id(tmp))));
             }
 
             StoreStructure(Location::Tmp(store), map)
@@ -197,12 +197,11 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
         }
 
         Value::AnonStructInit(ref struct_init) => {
-            let field_init = struct_init.field_init().unwrap();
+            let field_init = struct_init.raw_field_init().unwrap();
 
             let mut map = HashMap::new();
-            for (field, typed_tmp_id) in field_init.into_iter() {
-                let tmp = typed_tmp_id.data().clone();
-                map.insert(field_id(field), Arg::Location(Location::Tmp(tmp_id(tmp))));
+            for (field, tmp) in field_init.into_iter() {
+                map.insert(field.to_string(), Arg::Location(Location::Tmp(tmp_id(*tmp))));
             }
 
             StoreStructure(Location::Tmp(store), map)
@@ -216,10 +215,6 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
             Store(Location::Tmp(store), Arg::Location(location))
         }
     }
-}
-
-pub fn field_id(id: FieldId) -> String {
-    format!("_field{}", id.raw())
 }
 
 pub fn tmp_id(id: TmpId) -> String {
