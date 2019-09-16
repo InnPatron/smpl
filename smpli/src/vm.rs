@@ -1,5 +1,6 @@
 use failure::Error;
-use smpl::{ FnId, ModuleId, Program };
+use smpl::{ FnId, ModuleId };
+use smpl::metadata::Metadata;
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -24,7 +25,7 @@ pub struct SpawnOptions {
 }
 
 pub struct AVM {
-    program: Program,
+    metadata: Arc<Metadata>,
     compiled: CompiledProgram,
     builtins: MappedBuiltins,
 }
@@ -52,7 +53,7 @@ impl AVM {
             }
         }
         let mut vm = AVM {
-            program: program,
+            metadata: Arc::new(program.metadata().clone()),
             compiled: Arc::new(compiled_fns),
             builtins: Arc::new(HashMap::new()),
         };
@@ -74,8 +75,7 @@ impl AVM {
         fn_name: String,
         builtin: BuiltinFn,
     ) -> Result<(), VmError> {
-        let module_name = self.program
-            .metadata()
+        let module_name = self.metadata
             .get_module_by_id(mod_id).unwrap();
 
         let module_fn_pair = ModuleFnPair {
@@ -83,12 +83,11 @@ impl AVM {
             function: fn_name.clone(),
         };
         let fn_id = self
-            .program
-            .metadata()
+            .metadata
             .module_fn(mod_id, fn_name.clone())
             .ok_or(VmError::NotAFn(module_fn_pair.clone()))?;
 
-        if self.program.metadata().is_builtin(fn_id) {
+        if self.metadata.is_builtin(fn_id) {
 
             if (self.compiled.get(&fn_id).is_some()) {
                 panic!("ID {} was a builtin function but has a function definition.", fn_id);
@@ -108,12 +107,11 @@ impl AVM {
     }
 
     pub fn query_module(&self, module: &str, name: &str) -> Result<Option<FnHandle>, String> {
-        let mod_id = self.program.metadata().get_module(module.to_string());
+        let mod_id = self.metadata.get_module(module.to_string());
 
         match mod_id {
             Some(mod_id) => Ok(self
-                .program
-                .metadata()
+                .metadata
                 .module_fn(mod_id, name.to_string())
                 .map(|fn_id| fn_id.into())),
 
@@ -128,15 +126,11 @@ impl AVM {
         if spawn_options.type_check {
             unimplemented!();
         } else {
-            Executor::new(&self.program, 
+            Executor::new(self.metadata.clone(), 
                           fn_handle.id(), 
                           self.compiled.clone(), 
                           self.builtins.clone(),
                           args)
         }
-    }
-
-    pub fn program(&self) -> &Program {
-        &self.program
     }
 }
