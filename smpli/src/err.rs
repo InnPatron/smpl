@@ -2,6 +2,7 @@ use failure::Fail;
 
 use smpl::ModuleId;
 use smpl::Error as StaticError;
+use smpl::byte_gen::InstructionPointerType;
 
 #[derive(Debug, Clone)]
 pub enum VmError {
@@ -36,6 +37,12 @@ pub enum InternalError {
         index: usize,
         found: String,
         expected: String,
+    },
+
+    #[fail(display = "Invalid instruction pointer {}. Max: {}", ip, max)]
+    InstructionPointerOutOfBounds {
+        ip: InstructionPointerType,
+        max: usize
     },
 }
 
