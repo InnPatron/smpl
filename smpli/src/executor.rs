@@ -198,7 +198,45 @@ impl Executor {
 
     fn execute_instruction(instruction: &Instruction, ip: InstructionPointerType,
                            env: &mut Env) -> Result<ExecuteAction, InternalError> {
-        unimplemented!()
+
+        match instruction {
+            Instruction::Store(ref loc, ref arg) => unimplemented!(),
+            Instruction::StoreStructure(ref loc, ref string_value_map) => unimplemented!(),
+            Instruction::StoreArray1(ref loc, ref value) => unimplemented!(),
+            Instruction::StoreArray2(ref loc, ref value, size) => unimplemented!(),
+
+            Instruction::Add(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::Sub(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::Mul(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::Div(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::Mod(ref loc, ref arg1, ref arg2) => unimplemented!(),
+
+            Instruction::And(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::Or(ref loc, ref arg1, ref arg2) => unimplemented!(),
+
+            Instruction::GEq(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::LEq(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::GE(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::LE(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::Eq(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::InEq(ref loc, ref arg1, ref arg2) => unimplemented!(),
+
+            Instruction::Negate(ref loc, ref arg1) => unimplemented!(),
+            Instruction::Invert(ref loc, ref arg1) => unimplemented!(),
+
+            Instruction::FnCall(ref loc, ref args) => unimplemented!(),
+            Instruction::Return(ref return_value) => unimplemented!(),
+            Instruction::TakeReturn(ref loc) => unimplemented!(),
+
+            Instruction::Jump(ref jump_target) => unimplemented!(),
+            Instruction::JumpCondition(ref jump_target, ref arg1) => unimplemented!(),
+            Instruction::JumpNegateCondition(ref jump_target, ref arg1) => unimplemented!(),
+
+            Instruction::RelJump(ref rel_jump_target) => unimplemented!(),
+            Instruction::RelJumpCondition(ref rel_jump_target, ref arg1) => unimplemented!(),
+            Instruction::RelJumpNegateCondition(ref rel_jump_target, ref arg1) => unimplemented!(),
+
+        }
     }
 }
 
