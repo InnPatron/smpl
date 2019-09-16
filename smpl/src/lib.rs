@@ -26,7 +26,6 @@ pub use self::module::{ParsedModule, UnparsedModule};
 pub use self::parser::parse_module;
 pub use crate::analysis::{ TypeId, FnId, ModuleId };
 
-pub use crate::analysis::check_program;
-pub use crate::analysis::Program;
+pub use crate::analysis::{ Program, check_program, metadata };
 
 pub use crate::code_gen::byte_gen;
