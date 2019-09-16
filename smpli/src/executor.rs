@@ -73,7 +73,7 @@ impl Executor {
         Ok(executor)
     }
 
-    fn execute_instruction(&mut self) {
+    fn step(&mut self) {
         match self.top {
             StackInfo::BuiltinStack(BuiltinStack {
                 ref id,
