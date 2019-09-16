@@ -91,7 +91,6 @@ pub enum FieldAccess {
 #[derive(Debug, Clone)]
 pub enum Arg {
     Location(Location),
-    FieldAccess(Location, Vec<String>),
     Int(i64),
     Float(f64),
     Bool(bool),
