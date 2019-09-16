@@ -7,6 +7,7 @@ use smpl::byte_gen::{ to_fn_param, InstructionPointerType };
 use crate::err::*;
 use crate::env::Env;
 use crate::value::Value;
+use crate::vm_i::BuiltinFn;
 use crate::vm::{ MappedBuiltins, CompiledProgram };
 
 pub enum ExecResult<T, E> {
@@ -31,12 +32,10 @@ impl Executor {
                       args: Option<Vec<Value>>) -> Result<Executor, InternalError> {
 
         let current = if program.metadata().is_builtin(fn_id) {
-            StackInfo::Builtin {
-                id: fn_id, 
-                compiled: compiled.clone(),
-                builtins: builtins.clone(),
-                args: args,
-            }
+            StackInfo::BuiltinStack(BuiltinStack::new(fn_id, 
+                                                      compiled.clone(), 
+                                                      builtins.clone(), 
+                                                      args)) 
 
         } else {
 
@@ -76,12 +75,14 @@ impl Executor {
 
     fn execute_instruction(&mut self) {
         match self.top {
-            StackInfo::Builtin {
+            StackInfo::BuiltinStack(BuiltinStack {
                 ref id,
+                ref current_fn,
                 ref compiled,
                 ref builtins,
-                ref args
-            } => unimplemented!(),
+                ref args,
+                ref mut return_register,
+            }) => unimplemented!(),
 
             StackInfo::ByteCodeStack(ByteCodeStack {
                 ref id,
@@ -102,11 +103,33 @@ impl Executor {
 enum StackInfo {
     ByteCodeStack(ByteCodeStack),
 
-    Builtin {
-        id: FnId,
-        compiled: CompiledProgram,
-        builtins: MappedBuiltins,
-        args: Option<Vec<Value>>,
+    BuiltinStack(BuiltinStack),
+}
+
+#[derive(Debug)]
+struct BuiltinStack {
+    id: FnId,
+    current_fn: Arc<BuiltinFn>,
+    compiled: CompiledProgram,
+    builtins: MappedBuiltins,
+    args: Option<Vec<Value>>,
+    return_register: Option<Value>,
+}
+
+impl BuiltinStack {
+    fn new(id: FnId, compiled: CompiledProgram, 
+           builtins: MappedBuiltins, args: Option<Vec<Value>>) -> BuiltinStack {
+
+        let current_fn = builtins.get(&id).unwrap().clone();
+
+        BuiltinStack {
+            id: id,
+            current_fn: current_fn,
+            compiled: compiled,
+            builtins: builtins,
+            args: args,
+            return_register: None,
+        }
     }
 }
 
