@@ -13,8 +13,6 @@ pub use byte_code::{
     Location,
     FieldAccess,
     Arg,
-    Struct,
-    StructField,
     InstructionPointerType,
 };
 

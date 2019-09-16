@@ -96,19 +96,4 @@ pub enum Arg {
     Float(f64),
     Bool(bool),
     String(String),
-    Struct(Struct),
-}
-
-#[derive(Debug, Clone)]
-pub struct Struct {
-    field_map: HashMap<String, StructField>
-}
-
-#[derive(Debug, Clone)]
-pub enum StructField {
-    Int(i64),
-    Float(i64),
-    Bool(bool),
-    String(String),
-    Struct(Box<Struct>),
 }
