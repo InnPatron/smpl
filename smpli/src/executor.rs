@@ -3,8 +3,9 @@ use std::cell::RefCell;
 
 use failure::Error;
 
-use smpl::{ FnId, Program, byte_gen };
-use smpl::byte_gen::{ to_fn_param, InstructionPointerType };
+use smpl::{ FnId, byte_gen };
+use smpl::metadata::Metadata;
+use smpl::byte_gen::{ to_fn_param, InstructionPointerType, Instruction };
 
 use crate::err::*;
 use crate::env::Env;
@@ -20,6 +21,7 @@ pub enum ExecResult<T, E> {
 
 #[derive(Debug)]
 pub struct Executor {
+    metadata: Arc<Metadata>,
     top: StackInfo,
     stack: Vec<StackInfo>,
     compiled: CompiledProgram,
@@ -28,21 +30,46 @@ pub struct Executor {
 }
 
 impl Executor {
-    pub(super) fn new(program: &Program,
+    pub(super) fn new(metadata: Arc<Metadata>,
                       fn_id: FnId, 
                       compiled: CompiledProgram,
                       builtins: MappedBuiltins,
                       args: Option<Vec<Value>>) -> Result<Executor, InternalError> {
 
-        let current = if program.metadata().is_builtin(fn_id) {
-            StackInfo::BuiltinStack(BuiltinStack::new(fn_id, 
+        let current = 
+            Executor::create_stack_info(&*metadata, 
+                                        fn_id, 
+                                        compiled.clone(), 
+                                        builtins.clone(), 
+                                        args)?;
+
+        let executor = Executor {
+            metadata: metadata,
+            top: current,
+            stack: Vec::new(),
+            compiled: compiled,
+            builtins: builtins,
+            return_register: None,
+        };
+        
+        Ok(executor)
+    }
+
+    fn create_stack_info(metadata: &Metadata,
+                      fn_id: FnId, 
+                      compiled: CompiledProgram,
+                      builtins: MappedBuiltins,
+                      args: Option<Vec<Value>>) -> Result<StackInfo, InternalError> {
+
+        if metadata.is_builtin(fn_id) {
+            Ok(StackInfo::BuiltinStack(BuiltinStack::new(fn_id, 
                                                       compiled.clone(), 
                                                       builtins.clone(), 
-                                                      args)) 
+                                                      args)))
 
         } else {
 
-            let param_info: &[_]= program.metadata().function_param_ids(fn_id);
+            let param_info: &[_]= metadata.function_param_ids(fn_id);
 
             let args_len = args.as_ref().map(|v| v.len()).unwrap_or(0);
 
@@ -63,18 +90,8 @@ impl Executor {
                 }
             }
 
-            StackInfo::ByteCodeStack(stack_info)
-        };
-
-        let executor = Executor {
-            top: current,
-            stack: Vec::new(),
-            compiled: compiled.clone(),
-            builtins: builtins,
-            return_register: None,
-        };
-        
-        Ok(executor)
+            Ok(StackInfo::ByteCodeStack(stack_info))
+        }
     }
 
     fn step(&mut self) -> Result<(), Error> {
@@ -103,7 +120,6 @@ impl Executor {
 
         }
     }
-        
 }
 
 #[derive(Debug)]
