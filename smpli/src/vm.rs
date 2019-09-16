@@ -15,6 +15,8 @@ use smpl::byte_gen;
 
 pub type CompiledProgram = 
     Arc<HashMap<FnId, Arc<byte_gen::ByteCodeFunction>>>;
+pub type MappedBuiltins = 
+    Arc<HashMap<FnId, Arc<BuiltinFn>>>;
 
 #[derive(Debug, Clone)]
 pub struct SpawnOptions {
@@ -24,7 +26,7 @@ pub struct SpawnOptions {
 pub struct AVM {
     program: Program,
     compiled: CompiledProgram,
-    builtins: HashMap<FnId, BuiltinFn>,
+    builtins: MappedBuiltins,
 }
 
 impl AVM {
@@ -52,7 +54,7 @@ impl AVM {
         let mut vm = AVM {
             program: program,
             compiled: Arc::new(compiled_fns),
-            builtins: HashMap::new(),
+            builtins: Arc::new(HashMap::new()),
         };
 
         for (mod_id, map) in builtins.into_iter() {
@@ -64,6 +66,8 @@ impl AVM {
         Ok(vm)
     }
 
+    // Only callable during initialization OR when all executors dropped
+    //   due to Arc::get_mut(self.builtins) requirement
     fn map_builtin(
         &mut self,
         mod_id: ModuleId,
@@ -90,7 +94,10 @@ impl AVM {
                 panic!("ID {} was a builtin function but has a function definition.", fn_id);
             }
 
-            if self.builtins.insert(fn_id, builtin).is_none() {
+            if Arc::get_mut(&mut self.builtins)
+                    .expect("self.builtins should not be ref'd anywhere else")
+                    .insert(fn_id, Arc::new(builtin)).is_none() {
+
                 Ok(())
             } else {
                 Err(VmError::BuiltinCollision(module_fn_pair))
@@ -121,7 +128,11 @@ impl AVM {
         if spawn_options.type_check {
             unimplemented!();
         } else {
-            Executor::new(&self.program, fn_handle.id(), self.compiled.clone(), args)
+            Executor::new(&self.program, 
+                          fn_handle.id(), 
+                          self.compiled.clone(), 
+                          self.builtins.clone(),
+                          args)
         }
     }
 
