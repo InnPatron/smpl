@@ -35,22 +35,10 @@ pub enum Instruction {
     Jump(JumpTarget),
     JumpCondition(JumpTarget, Arg),                     // Jump when Arg is true
     JumpNegateCondition(JumpTarget, Arg),               // Jump when Arg is false
-    JumpE(JumpTarget, Arg, Arg),
-    JumpNE(JumpTarget, Arg, Arg),
-    JumpGE(JumpTarget, Arg, Arg),
-    JumpLE(JumpTarget, Arg, Arg),
-    JumpG(JumpTarget, Arg, Arg),
-    JumpL(JumpTarget, Arg, Arg),
 
     RelJump(RelJumpTarget),
     RelJumpCondition(RelJumpTarget, Arg),               // Jump when Arg is true
     RelJumpNegateCondition(RelJumpTarget, Arg),         // Jump when Arg is false
-    RelJumpE(RelJumpTarget, Arg, Arg),
-    RelJumpNE(RelJumpTarget, Arg, Arg),
-    RelJumpGE(RelJumpTarget, Arg, Arg),
-    RelJumpLE(RelJumpTarget, Arg, Arg),
-    RelJumpG(RelJumpTarget, Arg, Arg),
-    RelJumpL(RelJumpTarget, Arg, Arg),
 }
 
 #[derive(Debug, Clone, Copy)]
