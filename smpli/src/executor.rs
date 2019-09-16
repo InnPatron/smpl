@@ -24,6 +24,7 @@ pub struct Executor {
     stack: Vec<StackInfo>,
     compiled: CompiledProgram,
     builtins: MappedBuiltins,
+    return_register: Option<Value>,
 }
 
 impl Executor {
@@ -70,6 +71,7 @@ impl Executor {
             stack: Vec::new(),
             compiled: compiled.clone(),
             builtins: builtins,
+            return_register: None,
         };
         
         Ok(executor)
@@ -80,14 +82,13 @@ impl Executor {
             StackInfo::BuiltinStack(BuiltinStack {
                 ref current_fn,
                 ref mut args,
-                ref mut return_register,
                 ..
             }) => {
                 // TODO(alex): If StackInfo is going to be used for inspecting,
                 //   need args.clone() instead of args.take()
                 let result = (*current_fn)(args.take())?;
 
-                *return_register = Some(result);
+                self.return_register = Some(result);
                 Ok(())
             }
 
@@ -98,7 +99,6 @@ impl Executor {
                 ref builtins,
                 ref mut env,
                 ref mut instruction_pointer,
-                ref mut return_register,
             }) => unimplemented!(),
 
         }
@@ -120,7 +120,6 @@ struct BuiltinStack {
     compiled: CompiledProgram,
     builtins: MappedBuiltins,
     args: Option<Vec<Value>>,
-    return_register: Option<Value>,
 }
 
 impl BuiltinStack {
@@ -135,7 +134,6 @@ impl BuiltinStack {
             compiled: compiled,
             builtins: builtins,
             args: args,
-            return_register: None,
         }
     }
 }
@@ -148,7 +146,6 @@ struct ByteCodeStack {
     builtins: MappedBuiltins,
     env: Env,
     instruction_pointer: InstructionPointerType,
-    return_register: Option<Value>,
 }
 
 impl ByteCodeStack {
@@ -163,7 +160,6 @@ impl ByteCodeStack {
             builtins: builtins,
             env: env,
             instruction_pointer: 0,
-            return_register: None,
         }
     }
 }
