@@ -95,7 +95,7 @@ impl Executor {
     }
 
     fn step(&mut self) -> Result<(), Error> {
-        match self.top {
+        let exec_action = match self.top {
             StackInfo::BuiltinStack(BuiltinStack {
                 ref current_fn,
                 ref mut args,
@@ -105,8 +105,7 @@ impl Executor {
                 //   need args.clone() instead of args.take()
                 let result = (*current_fn)(args.take())?;
 
-                self.return_register = Some(result);
-                Ok(())
+                ExecuteAction::PopStack(result)
             }
 
             StackInfo::ByteCodeStack(ByteCodeStack {
@@ -116,10 +115,61 @@ impl Executor {
                 ref builtins,
                 ref mut env,
                 ref mut instruction_pointer,
-            }) => unimplemented!(),
+            }) => {
+                let instructions = current_fn.instructions();
 
+                let instruction = instructions
+                    .get(*instruction_pointer as usize)
+                    .ok_or(InternalError::InstructionPointerOutOfBounds {
+                        ip: *instruction_pointer,
+                        max: instructions.len()
+                    })?;
+
+                let execute_action = Executor::execute_instruction(
+                    instruction,
+                    *instruction_pointer,
+                    env
+                )?;
+
+                match execute_action {
+                    ExecuteAction::PushStack(_) | ExecuteAction::IncrementIP => {
+                        *instruction_pointer += 1; 
+                    }
+
+                    ExecuteAction::UpdateIP(new_ip) => {
+                        *instruction_pointer = new_ip;
+                    }
+
+                    ExecuteAction::PopStack(_) => (),
+                };
+
+                execute_action
+            }
+
+        };
+
+        match exec_action {
+            ExecuteAction::PushStack(stack) => unimplemented!(),
+
+            ExecuteAction::PopStack(value) => unimplemented!(),
+
+            ExecuteAction::IncrementIP | ExecuteAction::UpdateIP(_) => {
+                Ok(())
+            }
         }
     }
+
+    fn execute_instruction(instruction: &Instruction, ip: InstructionPointerType,
+                           env: &mut Env) -> Result<ExecuteAction, InternalError> {
+        unimplemented!()
+    }
+}
+
+enum ExecuteAction {
+    IncrementIP,
+    UpdateIP(InstructionPointerType),
+    PushStack(StackInfo),
+    PopStack(Value),
 }
 
 #[derive(Debug)]
