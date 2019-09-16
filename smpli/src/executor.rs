@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use std::cell::RefCell;
 
+use failure::Error;
+
 use smpl::{ FnId, Program, byte_gen };
 use smpl::byte_gen::{ to_fn_param, InstructionPointerType };
 
@@ -73,16 +75,21 @@ impl Executor {
         Ok(executor)
     }
 
-    fn step(&mut self) {
+    fn step(&mut self) -> Result<(), Error> {
         match self.top {
             StackInfo::BuiltinStack(BuiltinStack {
-                ref id,
                 ref current_fn,
-                ref compiled,
-                ref builtins,
-                ref args,
+                ref mut args,
                 ref mut return_register,
-            }) => unimplemented!(),
+                ..
+            }) => {
+                // TODO(alex): If StackInfo is going to be used for inspecting,
+                //   need args.clone() instead of args.take()
+                let result = (*current_fn)(args.take())?;
+
+                *return_register = Some(result);
+                Ok(())
+            }
 
             StackInfo::ByteCodeStack(ByteCodeStack {
                 ref id,
