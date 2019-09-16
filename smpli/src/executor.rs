@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use std::cell::RefCell;
+use std::mem;
 
 use failure::Error;
 
@@ -27,6 +28,7 @@ pub struct Executor {
     compiled: CompiledProgram,
     builtins: MappedBuiltins,
     return_register: Option<Value>,
+    finished: bool,
 }
 
 impl Executor {
@@ -50,6 +52,7 @@ impl Executor {
             compiled: compiled,
             builtins: builtins,
             return_register: None,
+            finished: false,
         };
         
         Ok(executor)
@@ -149,9 +152,43 @@ impl Executor {
         };
 
         match exec_action {
-            ExecuteAction::PushStack(stack) => unimplemented!(),
+            ExecuteAction::PushStack(mut stack_frame) => {
+                
+                // Push the new stack frame by swapping it with self.top
+                //  The old top is pushed onto the stack
+                mem::swap(&mut stack_frame, &mut self.top);
 
-            ExecuteAction::PopStack(value) => unimplemented!(),
+                let old_top = stack_frame;
+                self.stack.push(old_top);
+
+                Ok(())
+            }
+
+            ExecuteAction::PopStack(value) => {
+                match self.stack.pop() {
+
+                    Some(mut stack_top) => { 
+                        // Swap the Executor's top StackInfo and swap it with the top of the
+                        //   internal stack
+                        // Drop the old top
+                        mem::swap(&mut stack_top, &mut self.top);
+                        let _to_drop = stack_top;
+
+                        self.return_register = Some(value);
+
+                        Ok(())
+                    }
+ 
+                    // No more stack frames to pop
+                    // Finished execution of the orignal function
+                    None => {
+                        
+                        self.finished = true;
+                        self.return_register = Some(value);
+                        Ok(())
+                    }
+                }
+            }
 
             ExecuteAction::IncrementIP | ExecuteAction::UpdateIP(_) => {
                 Ok(())
