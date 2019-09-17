@@ -33,7 +33,7 @@ fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let string = args.pop().unwrap();
     let string = irmatch!(string; Value::String(s) => s);
 
-    Ok(Value::Int(string.len() as i32))
+    Ok(Value::Int(string.len() as i64))
 }
 
 fn to_string(args: Option<Vec<Value>>) -> Result<Value, Error> {

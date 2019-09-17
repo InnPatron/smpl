@@ -51,7 +51,7 @@ fn int_to_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
     let a = args.remove(0);
     match a {
-        Value::Int(i) => Ok(Value::Float(i as f32)),
+        Value::Int(i) => Ok(Value::Float(i as f64)),
         _ => unreachable!(),
     }
 }
@@ -61,7 +61,7 @@ fn float_to_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
     let a = args.remove(0);
     match a {
-        Value::Float(f) => Ok(Value::Int(f as i32)),
+        Value::Float(f) => Ok(Value::Int(f as i64)),
         _ => unreachable!(),
     }
 }
@@ -92,7 +92,7 @@ fn string_to_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let a = args.remove(0);
     match a {
         Value::String(s) => {
-            Ok(Value::Float(s.parse::<f32>().map_err(|_| {
+            Ok(Value::Float(s.parse::<f64>().map_err(|_| {
                 ConversionError(s, ConversionTarget::Float)
             })?))
         }
@@ -106,7 +106,7 @@ fn string_to_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let a = args.remove(0);
     match a {
         Value::String(s) => Ok(Value::Int(
-            s.parse::<i32>()
+            s.parse::<i64>()
                 .map_err(|_| ConversionError(s, ConversionTarget::Int))?,
         )),
         _ => unreachable!(),
