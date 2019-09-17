@@ -6,11 +6,11 @@ use failure::Error;
 
 use smpl::{ FnId, byte_gen };
 use smpl::metadata::Metadata;
-use smpl::byte_gen::{ to_fn_param, InstructionPointerType, Instruction };
+use smpl::byte_gen::{ to_fn_param, InstructionPointerType, Instruction, Location, Arg };
 
 use crate::err::*;
 use crate::env::Env;
-use crate::value::Value;
+use crate::value::{ Value, ReferableValue };
 use crate::vm_i::BuiltinFn;
 use crate::vm::{ MappedBuiltins, CompiledProgram };
 
@@ -196,11 +196,54 @@ impl Executor {
         }
     }
 
+    fn fetch(env: &Env, location: &Location) -> ReferableValue {
+
+        match location {
+            Location::Compound { .. } => unimplemented!(),
+
+            Location::Namespace(ref name) => {
+                env.ref_value(name).unwrap()
+            }
+
+            Location::Tmp(ref name) => {
+                env.ref_tmp(name).unwrap()
+            }
+        }
+    }
+
+    fn store(env: &mut Env, location: &Location, value: Value) {
+        match location {
+            Location::Compound { .. } => unimplemented!(),
+
+            Location::Namespace(ref name) => {
+                env.map_value(name.clone(), value);
+            }
+
+            Location::Tmp(ref name) => {
+                env.map_tmp(name.clone(), value);
+            }
+        }
+
+    }
+
     fn execute_instruction(instruction: &Instruction, ip: InstructionPointerType,
                            env: &mut Env) -> Result<ExecuteAction, InternalError> {
 
         match instruction {
-            Instruction::Store(ref loc, ref arg) => unimplemented!(),
+            Instruction::Store(ref store_loc, ref arg) => {
+                let to_store = match arg {
+                    Arg::Location(ref arg_loc) => Executor::fetch(env, arg_loc).clone_value(),
+                    Arg::Int(ref i) => Value::Int(*i),
+                    Arg::Float(ref f) => Value::Float(*f),
+                    Arg::Bool(ref b) => Value::Bool(*b),
+                    Arg::String(ref s) => Value::String(s.clone()),
+                };
+
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            },
+
             Instruction::StoreStructure(ref loc, ref string_value_map) => unimplemented!(),
             Instruction::StoreArray1(ref loc, ref value) => unimplemented!(),
             Instruction::StoreArray2(ref loc, ref value, size) => unimplemented!(),
@@ -238,6 +281,11 @@ impl Executor {
 
         }
     }
+}
+
+enum FetchResult {
+    Value(Value),
+    ValueRef(ReferableValue) 
 }
 
 enum ExecuteAction {
