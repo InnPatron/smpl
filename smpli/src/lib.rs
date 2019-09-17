@@ -22,6 +22,7 @@ mod module;
 mod executor;
 
 pub use value:: {
+    ReferableValue,
     Value,
     Struct
 };
