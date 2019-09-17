@@ -72,11 +72,11 @@ fn contains(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
     let data = vec_struct.ref_field(VEC_DATA_KEY).unwrap();
 
-    let borrow = data.borrow();
+    let borrow = data.inner_ref();
     let data = irmatch!(*borrow; Value::Array(ref a) => a);
 
     for element in data {
-        let element = element.borrow();
+        let element = element.inner_ref();
         if *element == to_search {
             return Ok(Value::Bool(true));
         }
@@ -98,14 +98,14 @@ fn insert(args: Option<Vec<Value>>) -> Result<Value, Error> {
     {
         let data = vec_struct.ref_field(VEC_DATA_KEY).unwrap();
 
-        let mut borrow = data.borrow_mut();
+        let mut borrow = data.inner_ref_mut();
         let data = irmatch!(*borrow; Value::Array(ref mut a) => a);
-        data.insert(index as usize, Rc::new(RefCell::new(to_insert)));
+        data.insert(index as usize, ReferableValue::new(to_insert));
     }
 
     {
         let len = vec_struct.ref_field(VEC_LEN_KEY).unwrap();
-        let mut borrow = len.borrow_mut();
+        let mut borrow = len.inner_ref_mut();
         let len = irmatch!(*borrow; Value::Int(ref mut i) => i);
         *len += 1;
     }
@@ -124,14 +124,14 @@ fn push(args: Option<Vec<Value>>) -> Result<Value, Error> {
     {
         let data = vec_struct.ref_field(VEC_DATA_KEY).unwrap();
 
-        let mut borrow = data.borrow_mut();
+        let mut borrow = data.inner_ref_mut();
         let data = irmatch!(*borrow; Value::Array(ref mut a) => a);
-        data.push(Rc::new(RefCell::new(to_insert)));
+        data.push(ReferableValue::new(to_insert));
     }
 
     {
         let len = vec_struct.ref_field(VEC_LEN_KEY).unwrap();
-        let mut borrow = len.borrow_mut();
+        let mut borrow = len.inner_ref_mut();
         let len = irmatch!(*borrow; Value::Int(ref mut i) => i);
         *len += 1;
     }
@@ -150,7 +150,7 @@ fn get(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
     let data = vec_struct.ref_field(VEC_DATA_KEY).unwrap();
 
-    let borrow = data.borrow();
+    let borrow = data.inner_ref();
     let data = irmatch!(*borrow; Value::Array(ref a) => a);
 
     let index: usize = if smpl_index < 0 {
@@ -161,7 +161,7 @@ fn get(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
     let item = data
         .get(index)
-        .map(|rc| (*rc.borrow()).clone())
+        .map(|rc| rc.clone_value())
         .ok_or(VecError::IndexOutOfRange(smpl_index, data.len()))?;
 
     Ok(item)
@@ -178,7 +178,7 @@ fn remove(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
     {
         let data = vec_struct.ref_field(VEC_DATA_KEY).unwrap();
-        let mut borrow = data.borrow_mut();
+        let mut borrow = data.inner_ref_mut();
         let data = irmatch!(*borrow; Value::Array(ref mut a) => a);
 
         let index: usize = if smpl_index < 0 {
@@ -196,7 +196,7 @@ fn remove(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
     {
         let len = vec_struct.ref_field(VEC_LEN_KEY).unwrap();
-        let mut borrow = len.borrow_mut();
+        let mut borrow = len.inner_ref_mut();
         let len = irmatch!(*borrow; Value::Int(ref mut i) => i);
         *len -= 1;
     }
