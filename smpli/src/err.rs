@@ -44,6 +44,13 @@ pub enum InternalError {
         ip: InstructionPointerType,
         max: usize
     },
+
+    #[fail(display = "Integer {} out of the range [{}, {}", v, min_inclusive, max_inclusive)]
+    IntegerOutOfRange {
+        v: i64,
+        min_inclusive: i64,
+        max_inclusive: i64,
+    },
 }
 
 #[derive(Fail, Debug, Clone)]
