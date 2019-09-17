@@ -41,8 +41,8 @@ impl ReferableValue {
 
 #[derive(Debug, PartialEq)]
 pub enum Value {
-    Int(i32),
-    Float(f32),
+    Int(i64),
+    Float(f64),
     Bool(bool),
     String(String),
     Array(Vec<ReferableValue>),
