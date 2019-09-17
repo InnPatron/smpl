@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{ RefCell, Ref, RefMut };
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
@@ -6,12 +6,46 @@ use std::rc::Rc;
 use super::vm_i::FnHandle;
 
 #[derive(Debug, PartialEq)]
+pub struct ReferableValue(Rc<RefCell<Value>>);
+
+impl ReferableValue {
+    pub fn new(v: Value) -> ReferableValue {
+        ReferableValue(Rc::new(RefCell::new(v)))
+    }
+
+    pub fn ref_val(&self) -> Rc<RefCell<Value>> {
+        self.0.clone()
+    }
+
+    pub fn clone_value(&self) -> Value {
+        self.0.borrow().clone()
+    }
+
+    pub fn ref_clone(&self) -> ReferableValue {
+        ReferableValue(self.0.clone())
+    }
+
+    pub fn inner_ref(&self) -> Ref<Value> {
+        self.0.borrow()
+    }
+
+    pub fn inner_ref_mut(&self) -> RefMut<Value> {
+        self.0.borrow_mut()
+    }
+
+    pub fn hard_clone(&self) -> ReferableValue {
+        ReferableValue::new(self.clone_value())
+    }
+}
+
+
+#[derive(Debug, PartialEq)]
 pub enum Value {
     Int(i32),
     Float(f32),
     Bool(bool),
     String(String),
-    Array(Vec<Rc<RefCell<Value>>>),
+    Array(Vec<ReferableValue>),
     Function(FnHandle),
     Struct(Struct),
     Unit,
@@ -30,10 +64,7 @@ impl Clone for Value {
 
             Value::Array(ref a) => Value::Array(
                 a.into_iter()
-                    .map(|rc| {
-                        let borrow = rc.borrow();
-                        Rc::new(RefCell::new((*borrow).clone()))
-                    })
+                    .map(|rc| ReferableValue::new(rc.clone_value()))
                     .collect(),
             ),
 
@@ -56,8 +87,7 @@ impl fmt::Display for Value {
             Value::Array(ref a) => {
                 write!(f, "[ ")?;
                 for value in a {
-                    let value = value.borrow();
-                    write!(f, "{},", value)?
+                    write!(f, "{},", value.0.borrow())?
                 }
                 write!(f, " ]")
             }
@@ -65,8 +95,7 @@ impl fmt::Display for Value {
             Value::Struct(ref s) => {
                 write!(f, "{{ ")?;
                 for (k, v) in s.fields() {
-                    let v = v.borrow();
-                    write!(f, "{}: {},", k, v)?;
+                    write!(f, "{}: {},", k, v.0.borrow())?;
                 }
                 write!(f, " }}")
             }
@@ -79,7 +108,7 @@ impl fmt::Display for Value {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Struct(HashMap<String, Rc<RefCell<Value>>>);
+pub struct Struct(HashMap<String, ReferableValue>);
 
 impl Struct {
     pub fn new() -> Struct {
@@ -88,20 +117,20 @@ impl Struct {
 
     pub fn set_field(&mut self, name: String, v: Value) -> Option<Value> {
         self.0
-            .insert(name, Rc::new(RefCell::new(v)))
-            .map(|rc| rc.borrow().clone())
+            .insert(name, ReferableValue::new(v))
+            .map(|rv| rv.clone_value())
     }
 
     pub fn get_field(&self, name: &str) -> Option<Value> {
-        self.0.get(name).map(|rc| (*rc.borrow()).clone())
+        self.0.get(name).map(|rv| rv.clone_value())
     }
 
-    pub fn ref_field(&self, name: &str) -> Option<Rc<RefCell<Value>>> {
-        self.0.get(name).map(|rc| rc.clone())
+    pub fn ref_field(&self, name: &str) -> Option<ReferableValue> {
+        self.0.get(name).map(|rc| rc.ref_clone())
     }
 
-    pub fn fields(&self) -> impl Iterator<Item = (&str, Rc<RefCell<Value>>)> {
-        self.0.iter().map(|(k, v)| (k.as_str(), v.clone()))
+    pub fn fields(&self) -> impl Iterator<Item = (&str, ReferableValue)> {
+        self.0.iter().map(|(k, v)| (k.as_str(), v.ref_clone()))
     }
 }
 
@@ -111,8 +140,7 @@ impl Clone for Struct {
             self.0
                 .iter()
                 .map(|(key, rc)| {
-                    let borrow = rc.borrow();
-                    (key.clone(), Rc::new(RefCell::new((*borrow).clone())))
+                    (key.clone(), rc.hard_clone())
                 })
                 .collect(),
         )
