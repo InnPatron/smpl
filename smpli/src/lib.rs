@@ -10,7 +10,7 @@ extern crate irmatch;
 // mod vm_tests;
 
 #[macro_use]
-mod err;
+pub mod err;
 
 mod vm;
 mod vm_i;
