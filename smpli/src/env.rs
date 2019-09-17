@@ -2,12 +2,12 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use super::value::Value;
+use super::value::{ Value, ReferableValue };
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Env {
-    env: HashMap<String, Rc<RefCell<Value>>>,
-    tmp_store: HashMap<String, Rc<RefCell<Value>>>,
+    env: HashMap<String, ReferableValue>,
+    tmp_store: HashMap<String, ReferableValue>,
 }
 
 impl Env {
@@ -20,30 +20,30 @@ impl Env {
 
     pub fn map_value(&mut self, name: String, value: Value) -> Option<Value> {
         self.env
-            .insert(name, Rc::new(RefCell::new(value)))
-            .map(|rc| rc.borrow().clone())
+            .insert(name, ReferableValue::new(value))
+            .map(|rv| rv.clone_value())
     }
 
     pub fn map_tmp(&mut self, name: String, value: Value) -> Option<Value> {
         self.tmp_store
-            .insert(name, Rc::new(RefCell::new(value)))
-            .map(|rc| rc.borrow().clone())
+            .insert(name, ReferableValue::new(value))
+            .map(|rv| rv.clone_value())
     }
 
     pub fn get_value(&self, name: &str) -> Option<Value> {
-        self.env.get(name).map(|r| (*r.borrow()).clone())
+        self.env.get(name).map(|r| r.clone_value())
     }
 
-    pub fn ref_value(&self, name: &str) -> Option<Rc<RefCell<Value>>> {
-        self.env.get(name).map(|r| r.clone())
+    pub fn ref_value(&self, name: &str) -> Option<ReferableValue> {
+        self.env.get(name).map(|r| r.ref_clone())
     }
 
     pub fn get_tmp(&self, name: &str) -> Option<Value> {
-        self.tmp_store.get(name).map(|r| (*r.borrow()).clone())
+        self.tmp_store.get(name).map(|r| r.clone_value())
     }
 
-    pub fn ref_tmp(&self, name: &str) -> Option<Rc<RefCell<Value>>> {
-        self.tmp_store.get(name).map(|r| r.clone())
+    pub fn ref_tmp(&self, name: &str) -> Option<ReferableValue> {
+        self.tmp_store.get(name).map(|r| r.ref_clone())
     }
 
     pub fn wipe_tmps(&mut self) {
