@@ -479,7 +479,14 @@ impl Executor {
                 }
             },
 
-            Instruction::Return(ref return_value) => unimplemented!(),
+            Instruction::Return(ref return_value) => {
+                let return_value = return_value
+                    .as_ref()
+                    .map(|a| Executor::arg_to_value(env, a))
+                    .unwrap_or(Value::Unit);
+                Ok(ExecuteAction::PopStack(return_value))
+            }
+
             Instruction::TakeReturn(ref store_loc) => unimplemented!(),
 
             Instruction::Jump(ref jump_target) => unimplemented!(),
