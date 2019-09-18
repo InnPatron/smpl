@@ -54,6 +54,19 @@ pub enum InternalError {
 
     #[fail(display = "InvalidInstruction: {}", _0)]
     InvalidInstruction(IIReason),
+
+    #[fail(display = "Runtime instruction error: {}", _0)]
+    RuntimeInstructionError(RuntimeInstructionError),
+}
+
+#[derive(Fail, Debug, Clone)]
+pub enum RuntimeInstructionError {
+    // TODO: canonical string representation of instructions
+    #[fail(display = "Expected int in: {:?}", _0)]
+    ExpectedInt(Instruction), 
+
+    #[fail(display = "Expected float in: {:?}", _0)]
+    ExpectedFloat(Instruction), 
 }
 
 #[derive(Fail, Debug, Clone)]
