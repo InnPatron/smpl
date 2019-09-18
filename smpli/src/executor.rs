@@ -131,7 +131,8 @@ impl Executor {
                 let execute_action = Executor::execute_instruction(
                     instruction,
                     *instruction_pointer,
-                    env
+                    env,
+                    &mut self.return_register,
                 )?;
 
                 match execute_action {
@@ -245,7 +246,8 @@ impl Executor {
     }
 
     fn execute_instruction(instruction: &Instruction, ip: InstructionPointerType,
-                           env: &mut Env) -> Result<ExecuteAction, InternalError> {
+                           env: &mut Env, return_register: &mut Option<Value>) 
+        -> Result<ExecuteAction, InternalError> {
 
         macro_rules! integer_from_arg {
             ($arg: expr, $instr: expr) => {{
