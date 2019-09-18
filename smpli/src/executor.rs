@@ -10,7 +10,7 @@ use smpl::byte_gen::{ to_fn_param, InstructionPointerType, Instruction, Location
 
 use crate::err::*;
 use crate::env::Env;
-use crate::value::{ Value, ReferableValue };
+use crate::value::{ Value, ReferableValue, Struct };
 use crate::vm_i::BuiltinFn;
 use crate::vm::{ MappedBuiltins, CompiledProgram };
 
@@ -411,7 +411,20 @@ impl Executor {
                 Ok(ExecuteAction::IncrementIP)
             },
 
-            Instruction::StoreStructure(ref store_loc, ref string_value_map) => unimplemented!(),
+            Instruction::StoreStructure(ref store_loc, ref string_value_map) => {
+                let mut internal_struct = Struct::new(); 
+
+                string_value_map
+                    .iter()
+                    .for_each(|(key, arg)| {
+                        let value = Executor::arg_to_value(env, arg);
+                        internal_struct.set_field(key.clone(), value);
+                    });
+
+                Executor::store(env, store_loc, Value::Struct(internal_struct));
+
+                Ok(ExecuteAction::IncrementIP)
+            }
 
             Instruction::StoreArray1(ref store_loc, ref value) => {
                 let internal_array: Vec<ReferableValue> = value
