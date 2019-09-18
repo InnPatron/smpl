@@ -208,12 +208,31 @@ fn remove(args: Option<Vec<Value>>) -> Result<Value, Error> {
 #[cfg_attr(rustfmt, rustfmt_skip)]
 mod tests {
 
-use crate::module::*;
+use smpl::*;
 use super::*;
 
 macro_rules! wrap_input {
     ($input: expr) => {{ 
         UnparsedModule::anonymous($input)
+    }}
+}
+
+macro_rules! vec_test {
+    ($mod: expr, $mod_name: expr, $fn_name: expr, $args: expr) => {{
+
+        let mut modules = vec![vm_module(), 
+            VmModule::new(parse_module(wrap_input!($mod)).unwrap())];
+
+        let mut vm = AVM::new(Std::no_std(), modules).unwrap();
+
+        let fn_handle = vm.query_module($mod_name, $fn_name).unwrap().unwrap();
+        let result = vm.spawn_executor(fn_handle, $args, SpawnOptions {
+            type_check: false    
+        })
+            .unwrap()
+            .execute_sync()
+            .unwrap();
+        result
     }}
 }
 
@@ -228,14 +247,7 @@ fn vec_new() {
     let v: vec::Vec(type int)= vec::new(type int)();
 }
 ";
-    let mut modules = vec![vm_module(), 
-        VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
-
-    let mut vm = AVM::new(Std::no_std(), modules).unwrap();
-
-    let fn_handle = vm.query_module("mod1", "vec_new").unwrap().unwrap();
-
-    let result = vm.eval_fn_sync(fn_handle).unwrap();
+    let result = vec_test!(mod1, "mod1", "vec_new", None);
 
     assert_eq!(Value::Unit, result);
 }
@@ -255,14 +267,8 @@ v = vec::push(type int)(v, 456);
 return vec::len(type int)(v);
 }
 ";
-    let mut modules = vec![vm_module(), 
-        VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
-    let mut vm = AVM::new(Std::no_std(), modules).unwrap();
-
-    let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
-
-    let result = vm.eval_fn_sync(fn_handle).unwrap();
+    let result = vec_test!(mod1, "mod1", "test", None);
 
     assert_eq!(Value::Int(2), result);
 }
@@ -285,14 +291,9 @@ let b = vec::get(type int)(v, 1);
 return a * b;
 }
 ";
-    let mut modules = vec![vm_module(), 
-        VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
 
-    let mut vm = AVM::new(Std::no_std(), modules).unwrap();
 
-    let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
-
-    let result = vm.eval_fn_sync(fn_handle).unwrap();
+    let result = vec_test!(mod1, "mod1", "test", None);
 
     assert_eq!(Value::Int(123 * 456), result);
 }
@@ -315,14 +316,8 @@ v = vec::remove(type int)(v, 1);
 return vec::get(type int)(v, 1);
 }
 ";
-    let mut modules = vec![vm_module(), 
-        VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
-
-    let mut vm = AVM::new(Std::no_std(), modules).unwrap();
-
-    let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
-
-    let result = vm.eval_fn_sync(fn_handle).unwrap();
+    
+    let result = vec_test!(mod1, "mod1", "test", None);
 
     assert_eq!(Value::Int(789), result);
 }
@@ -346,14 +341,8 @@ let a = vec::get(type int)(v, 0);
 return a;
 }
 ";
-    let mut modules = vec![vm_module(), 
-        VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
-
-    let mut vm = AVM::new(Std::no_std(), modules).unwrap();
-
-    let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
-
-    let result = vm.eval_fn_sync(fn_handle).unwrap();
+    
+    let result = vec_test!(mod1, "mod1", "test", None);
 
     assert_eq!(Value::Int(1337), result);
 }
@@ -391,17 +380,12 @@ v = vec::push(type int)(v, 7);
 return vec::contains(type int)(v, 20);
 }
 ";
-    let mut modules = vec![vm_module(), 
-        VmModule::new(parse_module(wrap_input!(mod1)).unwrap())];
-    let mut vm = AVM::new(Std::no_std(), modules).unwrap(); 
-    let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
-
-    let result = vm.eval_fn_sync(fn_handle).unwrap();
+    
+    let result = vec_test!(mod1, "mod1", "test", None);
 
     assert_eq!(Value::Bool(true), result);
 
-    let fn_handle = vm.query_module("mod1", "test2").unwrap().unwrap();
-    let result = vm.eval_fn_sync(fn_handle).unwrap();
+    let result = vec_test!(mod1, "mod1", "test2", None);
 
     assert_eq!(Value::Bool(false), result);
 }
