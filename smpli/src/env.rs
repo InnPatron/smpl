@@ -46,6 +46,14 @@ impl Env {
         self.tmp_store.get(name).map(|r| r.ref_clone())
     }
 
+    pub fn get(&self, name: &str) -> Option<Value> {
+        self.get_value(name).or(self.get_tmp(name))
+    }
+
+    pub fn get_ref(&self, name: &str) -> Option<ReferableValue> {
+        self.ref_value(name).or(self.ref_tmp(name))
+    }
+
     pub fn wipe_tmps(&mut self) {
         self.tmp_store.clear();
     }
