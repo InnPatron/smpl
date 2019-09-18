@@ -137,7 +137,17 @@ impl Executor {
 
                 match execute_action {
                     ExecuteAction::PushStack(..) | ExecuteAction::IncrementIP => {
-                        *instruction_pointer += 1; 
+                        let (result, overflow) =
+                            instruction_pointer.overflowing_add(1);
+                        if overflow {
+                            Err(InternalError::RuntimeInstructionError(
+                                    RuntimeInstructionError::IPOverflow {
+                                        current: *instruction_pointer,
+                                        addition: 1,
+                                    }))?;
+                        } else {
+                            *instruction_pointer = result;
+                        }
                     }
 
                     ExecuteAction::SetIP(new_ip) => {
