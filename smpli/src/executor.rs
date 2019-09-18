@@ -569,9 +569,31 @@ impl Executor {
                 Ok(action)
             }
 
-            Instruction::RelJump(ref rel_jump_target) => unimplemented!(),
-            Instruction::RelJumpCondition(ref rel_jump_target, ref arg1) => unimplemented!(),
-            Instruction::RelJumpNegateCondition(ref rel_jump_target, ref arg1) => unimplemented!(),
+            Instruction::RelJump(ref rel_jump_target) => {
+                Ok(ExecuteAction::AddIP(rel_jump_target.relative_target()))
+            }
+
+            Instruction::RelJumpCondition(ref rel_jump_target, ref arg1) => {
+                let condition = bool_from_arg!(arg1, instruction);
+                let action = if condition {
+                    ExecuteAction::AddIP(rel_jump_target.relative_target()) 
+                } else {
+                    ExecuteAction::IncrementIP
+                };
+
+                Ok(action)
+            }
+
+            Instruction::RelJumpNegateCondition(ref rel_jump_target, ref arg1) => {
+                let condition = bool_from_arg!(arg1, instruction);
+                let action = if !condition {
+                    ExecuteAction::AddIP(rel_jump_target.relative_target()) 
+                } else {
+                    ExecuteAction::IncrementIP
+                };
+
+                Ok(action)
+            }
 
         }
     }
