@@ -492,7 +492,20 @@ impl Executor {
             Instruction::Eq(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
             Instruction::InEq(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
 
-            Instruction::Negate(ref store_loc, ref arg1) => unimplemented!(),
+            Instruction::Negate(ref store_loc, ref arg1) => {
+                let to_store = match Executor::arg_to_value(env, arg1) {
+                    Value::Int(i) => Value::Int(-i),
+                    Value::Float(f) => Value::Float(-f),
+
+                    _ => return Err(InternalError::RuntimeInstructionError(
+                        RuntimeInstructionError::ExpectedInt(instruction.clone())))
+
+                };
+
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
 
             Instruction::Invert(ref store_loc, ref arg1) => {
                 let b = bool_from_arg!(arg1, instruction);
