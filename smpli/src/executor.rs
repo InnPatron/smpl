@@ -375,6 +375,33 @@ impl Executor {
             }}
         }
 
+        macro_rules! comp_int_op {
+            ($env: expr, $instruction: expr, $store_loc: expr, $arg1: expr, $arg2: expr, $op: tt) => {{
+
+                let lhs = integer_from_arg!($arg1, $instruction);
+                let rhs = integer_from_arg!($arg2, $instruction);
+
+                let to_store = Value::Bool(lhs $op rhs);
+                Executor::store($env, $store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }}
+        }
+
+        macro_rules! comp_float_op {
+            ($env: expr, $instruction: expr, $store_loc: expr, $arg1: expr, $arg2: expr, $op: tt) => {{
+
+                let lhs = float_from_arg!($arg1, $instruction);
+                let rhs = float_from_arg!($arg2, $instruction);
+
+                let to_store = Value::Bool(lhs $op rhs);
+                Executor::store($env, $store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }}
+        }
+
+
         match instruction {
             Instruction::Store(ref store_loc, ref arg) => {
                 let to_store = Executor::arg_to_value(env, arg);
@@ -438,15 +465,29 @@ impl Executor {
                 Ok(ExecuteAction::IncrementIP)
             }
 
-            Instruction::GEqI(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::LEqI(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::GEI(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::LEI(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::GEqI(ref store_loc, ref arg1, ref arg2) => 
+                comp_int_op!(env, instruction, store_loc, arg1, arg2, >=),
 
-            Instruction::GEqF(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::LEqF(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::GEF(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::LEF(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::LEqI(ref store_loc, ref arg1, ref arg2) => 
+                comp_int_op!(env, instruction, store_loc, arg1, arg2, <=),
+
+            Instruction::GEI(ref store_loc, ref arg1, ref arg2) => 
+                comp_int_op!(env, instruction, store_loc, arg1, arg2, >),
+
+            Instruction::LEI(ref store_loc, ref arg1, ref arg2) => 
+                comp_int_op!(env, instruction, store_loc, arg1, arg2, <),
+
+            Instruction::GEqF(ref store_loc, ref arg1, ref arg2) => 
+                comp_float_op!(env, instruction, store_loc, arg1, arg2, >=),
+
+            Instruction::LEqF(ref store_loc, ref arg1, ref arg2) => 
+                comp_float_op!(env, instruction, store_loc, arg1, arg2, <=),
+
+            Instruction::GEF(ref store_loc, ref arg1, ref arg2) => 
+                comp_float_op!(env, instruction, store_loc, arg1, arg2, >),
+
+            Instruction::LEF(ref store_loc, ref arg1, ref arg2) => 
+                comp_float_op!(env, instruction, store_loc, arg1, arg2, <),
 
             Instruction::Eq(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
             Instruction::InEq(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
