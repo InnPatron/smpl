@@ -267,6 +267,25 @@ impl Executor {
             }}
         }
 
+        macro_rules! bool_from_arg {
+            ($arg: expr, $instr: expr) => {{
+                let from_arg = match $arg {
+                    Arg::Location(ref arg_loc) => Executor::fetch(env, arg_loc).clone_value(),
+                    Arg::Bool(ref b) => Value::Bool(*b),
+
+                    _ => return Err(InternalError::InvalidInstruction(
+                        IIReason::ExpectedBool($instr.clone()))),
+                };
+
+                match from_arg {
+                    Value::Bool(b) => b,
+
+                    _ => return Err(InternalError::RuntimeInstructionError(
+                        RuntimeInstructionError::ExpectedBool($instr.clone()))),
+                }
+            }}
+        }
+
         match instruction {
             Instruction::Store(ref store_loc, ref arg) => {
                 let to_store = match arg {
@@ -386,8 +405,25 @@ impl Executor {
                 Ok(ExecuteAction::IncrementIP)
             }
 
-            Instruction::And(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::Or(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::And(ref store_loc, ref arg1, ref arg2) => {
+                let lhs = bool_from_arg!(arg1, instruction);
+                let rhs = bool_from_arg!(arg2, instruction);
+
+                let to_store = Value::Bool(lhs && rhs);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
+
+            Instruction::Or(ref store_loc, ref arg1, ref arg2) => {
+                let lhs = bool_from_arg!(arg1, instruction);
+                let rhs = bool_from_arg!(arg2, instruction);
+
+                let to_store = Value::Bool(lhs || rhs);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
 
             Instruction::GEq(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
             Instruction::LEq(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
