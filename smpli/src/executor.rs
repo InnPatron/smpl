@@ -489,7 +489,16 @@ impl Executor {
                 Ok(ExecuteAction::PopStack(return_value))
             }
 
-            Instruction::TakeReturn(ref store_loc) => unimplemented!(),
+            Instruction::TakeReturn(ref store_loc) => {
+                let to_store = return_register
+                    .take()
+                    .ok_or(InternalError::RuntimeInstructionError(
+                            RuntimeInstructionError::NoReturnValue(ip)))?;
+
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
 
             Instruction::Jump(ref jump_target) => unimplemented!(),
             Instruction::JumpCondition(ref jump_target, ref arg1) => unimplemented!(),

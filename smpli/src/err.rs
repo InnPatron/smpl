@@ -73,6 +73,9 @@ pub enum RuntimeInstructionError {
 
     #[fail(display = "Expected function in: {:?}", _0)]
     ExpectedFunction(Instruction),
+
+    #[fail(display = "No return found for instruction at {}", _0)]
+    NoReturnValue(InstructionPointerType),
 }
 
 #[derive(Fail, Debug, Clone)]
