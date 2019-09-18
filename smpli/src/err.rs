@@ -2,7 +2,7 @@ use failure::Fail;
 
 use smpl::ModuleId;
 use smpl::Error as StaticError;
-use smpl::byte_gen::InstructionPointerType;
+use smpl::byte_gen::{ Instruction, InstructionPointerType };
 
 #[derive(Debug, Clone)]
 pub enum VmError {
@@ -51,6 +51,19 @@ pub enum InternalError {
         min_inclusive: i64,
         max_inclusive: i64,
     },
+
+    #[fail(display = "InvalidInstruction: {}", _0)]
+    InvalidInstruction(IIReason),
+}
+
+#[derive(Fail, Debug, Clone)]
+pub enum IIReason {
+    // TODO: canonical string representation of instructions
+    #[fail(display = "Expected int in: {:?}", _0)]
+    ExpectedInt(Instruction), 
+
+    #[fail(display = "Expected float in: {:?}", _0)]
+    ExpectedFloat(Instruction), 
 }
 
 #[derive(Fail, Debug, Clone)]
