@@ -115,6 +115,10 @@ impl Struct {
         Struct(HashMap::new())
     }
 
+    pub fn new_init(init: HashMap<String, ReferableValue>) -> Struct {
+        Struct(init)
+    }
+
     pub fn set_field(&mut self, name: String, v: Value) -> Option<Value> {
         self.0
             .insert(name, ReferableValue::new(v))
