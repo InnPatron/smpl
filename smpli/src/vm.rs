@@ -21,7 +21,7 @@ pub type MappedBuiltins =
 
 #[derive(Debug, Clone)]
 pub struct SpawnOptions {
-    type_check: bool
+    pub type_check: bool
 }
 
 pub struct AVM {
