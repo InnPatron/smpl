@@ -58,6 +58,14 @@ impl Executor {
         Ok(executor)
     }
 
+    pub fn execute_sync(mut self) -> Result<Value, Error> {
+        while !self.finished {
+            self.step()?;
+        }
+
+        Ok(self.return_register.take().unwrap_or(Value::Unit))
+    }
+
     fn create_stack_info(metadata: &Metadata,
                       fn_id: FnId, 
                       compiled: CompiledProgram,
