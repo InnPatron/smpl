@@ -76,6 +76,18 @@ pub enum RuntimeInstructionError {
 
     #[fail(display = "No return found for instruction at {}", _0)]
     NoReturnValue(InstructionPointerType),
+
+    #[fail(display = "Attempting to add {} to current IP({}) results in underflow", addition, current)]
+    IPUnderflow {
+        current: InstructionPointerType,
+        addition: i64,
+    },
+
+    #[fail(display = "Attempting to add {} to current IP({}) results in overflow", addition, current)]
+    IPOverflow {
+        current: InstructionPointerType,
+        addition: i64,
+    },
 }
 
 #[derive(Fail, Debug, Clone)]

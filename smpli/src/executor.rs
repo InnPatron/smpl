@@ -140,8 +140,41 @@ impl Executor {
                         *instruction_pointer += 1; 
                     }
 
-                    ExecuteAction::UpdateIP(new_ip) => {
+                    ExecuteAction::SetIP(new_ip) => {
                         *instruction_pointer = new_ip;
+                    }
+
+                    ExecuteAction::AddIP(to_add) => {
+                        // Overflow/underflow catching
+                        if to_add >= 0 {
+                            let (result, overflow) = 
+                                instruction_pointer.overflowing_add(to_add as u64);
+
+                            if overflow {
+                                Err(InternalError::RuntimeInstructionError(
+                                    RuntimeInstructionError::IPOverflow {
+                                        current: *instruction_pointer,
+                                        addition: to_add,
+                                    }))?;
+                            } else {
+                                *instruction_pointer = result; 
+                            }
+                        } else {
+                            let (result, underflow) =
+                                instruction_pointer.overflowing_sub((-to_add) as u64);
+
+                            if underflow {
+                                Err(InternalError::RuntimeInstructionError(
+                                    RuntimeInstructionError::IPUnderflow {
+                                        current: *instruction_pointer,
+                                        addition: to_add,
+                                    }))?;
+                            } else {
+                                *instruction_pointer = result; 
+                            }
+
+                        }
+
                     }
 
                     ExecuteAction::PopStack(_) => (),
@@ -199,7 +232,7 @@ impl Executor {
                 }
             }
 
-            ExecuteAction::IncrementIP | ExecuteAction::UpdateIP(_) => {
+            ExecuteAction::IncrementIP | ExecuteAction::SetIP(_) | ExecuteAction::AddIP(_) => {
                 Ok(())
             }
         }
@@ -500,9 +533,31 @@ impl Executor {
                 Ok(ExecuteAction::IncrementIP)
             }
 
-            Instruction::Jump(ref jump_target) => unimplemented!(),
-            Instruction::JumpCondition(ref jump_target, ref arg1) => unimplemented!(),
-            Instruction::JumpNegateCondition(ref jump_target, ref arg1) => unimplemented!(),
+            Instruction::Jump(ref jump_target) => {
+                Ok(ExecuteAction::SetIP(jump_target.absolute_target()))
+            }
+
+            Instruction::JumpCondition(ref jump_target, ref arg1) => {
+                let condition = bool_from_arg!(arg1, instruction);
+                let action = if condition {
+                    ExecuteAction::SetIP(jump_target.absolute_target()) 
+                } else {
+                    ExecuteAction::IncrementIP
+                };
+
+                Ok(action)
+            }
+
+            Instruction::JumpNegateCondition(ref jump_target, ref arg1) => {
+                let condition = bool_from_arg!(arg1, instruction);
+                let action = if !condition {
+                    ExecuteAction::SetIP(jump_target.absolute_target()) 
+                } else {
+                    ExecuteAction::IncrementIP
+                };
+
+                Ok(action)
+            }
 
             Instruction::RelJump(ref rel_jump_target) => unimplemented!(),
             Instruction::RelJumpCondition(ref rel_jump_target, ref arg1) => unimplemented!(),
@@ -519,7 +574,8 @@ enum FetchResult {
 
 enum ExecuteAction {
     IncrementIP,
-    UpdateIP(InstructionPointerType),
+    SetIP(InstructionPointerType),
+    AddIP(i64),
     PushStack(FnId, Option<Vec<Value>>),
     PopStack(Value),
 }
