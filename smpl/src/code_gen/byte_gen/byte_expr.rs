@@ -112,10 +112,11 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
 
                 BinOp::LogicalAnd => And(Location::Tmp(store), lhs, rhs),
                 BinOp::LogicalOr => Or(Location::Tmp(store), lhs, rhs),
-                BinOp::GreaterEq => GEq(Location::Tmp(store), lhs, rhs),
-                BinOp::LesserEq => LEq(Location::Tmp(store), lhs, rhs),
-                BinOp::Greater => GE(Location::Tmp(store), lhs, rhs),
-                BinOp::Lesser => LE(Location::Tmp(store), lhs, rhs),
+
+                BinOp::GreaterEq => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, GEqI, GEqF),
+                BinOp::LesserEq => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, LEqI, LEqF),
+                BinOp::Greater => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, GEI, GEF),
+                BinOp::Lesser => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, LEI, LEF),
 
                 BinOp::Eq => Eq(Location::Tmp(store), lhs, rhs),
                 BinOp::InEq => InEq(Location::Tmp(store), lhs, rhs),

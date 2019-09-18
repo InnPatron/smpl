@@ -24,10 +24,16 @@ pub enum Instruction {
     And(Location, Arg, Arg),
     Or(Location, Arg, Arg),
 
-    GEq(Location, Arg, Arg),
-    LEq(Location, Arg, Arg),
-    GE(Location, Arg, Arg),
-    LE(Location, Arg, Arg),
+    GEqI(Location, Arg, Arg),
+    LEqI(Location, Arg, Arg),
+    GEI(Location, Arg, Arg),
+    LEI(Location, Arg, Arg),
+
+    GEqF(Location, Arg, Arg),
+    LEqF(Location, Arg, Arg),
+    GEF(Location, Arg, Arg),
+    LEF(Location, Arg, Arg),
+
     Eq(Location, Arg, Arg),
     InEq(Location, Arg, Arg),
 

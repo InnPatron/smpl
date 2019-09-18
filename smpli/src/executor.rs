@@ -482,10 +482,16 @@ impl Executor {
                 Ok(ExecuteAction::IncrementIP)
             }
 
-            Instruction::GEq(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::LEq(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::GE(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::LE(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::GEqI(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::LEqI(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::GEI(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::LEI(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
+
+            Instruction::GEqF(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::LEqF(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::GEF(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::LEF(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
+
             Instruction::Eq(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
             Instruction::InEq(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
 
