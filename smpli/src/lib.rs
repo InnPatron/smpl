@@ -29,3 +29,8 @@ pub use value:: {
 };
 
 pub use module::VmModule;
+
+pub use std_options::*;
+
+pub use vm::{ SpawnOptions, AVM };
+pub use executor::Executor;
