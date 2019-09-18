@@ -6,7 +6,7 @@ use failure::Error;
 
 use smpl::{ FnId, byte_gen };
 use smpl::metadata::Metadata;
-use smpl::byte_gen::{ to_fn_param, InstructionPointerType, Instruction, Location, Arg };
+use smpl::byte_gen::{ to_fn_param, InstructionPointerType, Instruction, Location, Arg, FieldAccess };
 
 use crate::err::*;
 use crate::env::Env;
@@ -251,7 +251,115 @@ impl Executor {
     fn fetch(env: &Env, location: &Location) -> ReferableValue {
 
         match location {
-            Location::Compound { .. } => unimplemented!(),
+            Location::Compound { 
+                ref root,
+                ref root_index,
+                ref path,
+            } => {
+                let root_ref: ReferableValue = env.get_ref(root).unwrap();
+
+                let root_ref: ReferableValue = match root_index {
+                    Some(index_name) => {
+                        let index_value: Value = env.get(index_name).unwrap();
+                        let index = match index_value {
+                            Value::Int(i) => {
+                                i as usize
+                            }
+
+                            _ => unimplemented!(),
+                        };
+
+                        let inner_ref = root_ref.inner_ref();
+                        match *inner_ref {
+                            Value::Array(ref v) => {
+                                v
+                                    .get(index)
+                                    .unwrap()
+                                    .ref_clone()
+                            }
+
+                            _ => unimplemented!(),
+                        }
+                    },
+
+                    None => root_ref,
+                };
+
+                let mut next_ref: ReferableValue = root_ref;
+                for field_access in path {
+                    match field_access {
+                        FieldAccess::Field(ref field_name) => {
+                            let new_ref = {
+                                let inner_ref = next_ref.inner_ref();
+                                match *inner_ref {
+                                    Value::Struct(ref internal) => {
+                                        let field: ReferableValue = internal
+                                            .ref_field(field_name)
+                                            .unwrap()
+                                            .ref_clone();
+
+                                        field
+                                    },
+
+                                    _ => unimplemented!(),
+                                }
+                            };
+
+                            next_ref = new_ref;
+                        }
+
+                        FieldAccess::FieldIndex {
+                            ref field, 
+                            ref index_tmp,
+                        } => {
+
+                            let field_ref = {
+                                let inner_ref = next_ref.inner_ref();
+                                match *inner_ref {
+                                    Value::Struct(ref internal) => {
+                                        let field: ReferableValue = internal
+                                            .ref_field(field)
+                                            .unwrap()
+                                            .ref_clone();
+
+                                        field
+                                    },
+
+                                    _ => unimplemented!(),
+                                }
+                            };
+
+
+                            let new_ref = {
+                                let index_value: Value = env.get(index_tmp).unwrap();
+                                let index = match index_value {
+                                    Value::Int(i) => {
+                                        i as usize
+                                    }
+
+                                    _ => unimplemented!(),
+                                };
+
+                                let inner_ref = next_ref.inner_ref();
+                                match *inner_ref {
+                                    Value::Array(ref v) => {
+                                        v
+                                            .get(index)
+                                            .unwrap()
+                                            .ref_clone()
+                                    }
+
+                                    _ => unimplemented!(),
+                                }
+                            };
+
+                            next_ref = new_ref;
+                        }
+                    }
+                }
+
+                next_ref
+            }
 
             Location::Namespace(ref name) => {
                 env.ref_value(name).unwrap()
