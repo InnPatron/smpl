@@ -373,7 +373,12 @@ impl Executor {
 
     fn store(env: &mut Env, location: &Location, value: Value) {
         match location {
-            Location::Compound { .. } => unimplemented!(),
+            Location::Compound { .. } => {
+                // Guarenteed to get a reference, assuming program is correct
+                let reference: ReferableValue = Executor::fetch(env, location);
+
+                *reference.inner_ref_mut() = value;
+            }
 
             Location::Namespace(ref name) => {
                 env.map_value(name.clone(), value);
