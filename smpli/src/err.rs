@@ -70,6 +70,9 @@ pub enum RuntimeInstructionError {
 
     #[fail(display = "Expected bool in: {:?}", _0)]
     ExpectedBool(Instruction), 
+
+    #[fail(display = "Expected function in: {:?}", _0)]
+    ExpectedFunction(Instruction),
 }
 
 #[derive(Fail, Debug, Clone)]
