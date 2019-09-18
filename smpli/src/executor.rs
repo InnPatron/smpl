@@ -229,6 +229,25 @@ impl Executor {
     fn execute_instruction(instruction: &Instruction, ip: InstructionPointerType,
                            env: &mut Env) -> Result<ExecuteAction, InternalError> {
 
+        macro_rules! integer_from_arg {
+            ($arg: expr, $instr: expr) => {{
+                let from_arg = match $arg {
+                    Arg::Location(ref arg_loc) => Executor::fetch(env, arg_loc).clone_value(),
+                    Arg::Int(ref i) => Value::Int(*i),
+
+                    _ => return Err(InternalError::InvalidInstruction(
+                        IIReason::ExpectedInt($instr.clone()))),
+                };
+
+                match from_arg {
+                    Value::Int(i) => i,
+
+                    _ => return Err(InternalError::RuntimeInstructionError(
+                        RuntimeInstructionError::ExpectedInt($instr.clone()))),
+                }
+            }}
+        }
+
         match instruction {
             Instruction::Store(ref store_loc, ref arg) => {
                 let to_store = match arg {
@@ -248,11 +267,55 @@ impl Executor {
             Instruction::StoreArray1(ref store_loc, ref value) => unimplemented!(),
             Instruction::StoreArray2(ref store_loc, ref value, size) => unimplemented!(),
 
-            Instruction::AddI(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::SubI(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::MulI(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::DivI(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::ModI(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::AddI(ref store_loc, ref arg1, ref arg2) => {
+                let lhs = integer_from_arg!(arg1, instruction);
+                let rhs = integer_from_arg!(arg2, instruction);
+
+                let to_store = Value::Int(lhs + rhs);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
+
+            Instruction::SubI(ref store_loc, ref arg1, ref arg2) => {
+                let lhs = integer_from_arg!(arg1, instruction);
+                let rhs = integer_from_arg!(arg2, instruction);
+
+                let to_store = Value::Int(lhs - rhs);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
+
+            Instruction::MulI(ref store_loc, ref arg1, ref arg2) => {
+                let lhs = integer_from_arg!(arg1, instruction);
+                let rhs = integer_from_arg!(arg2, instruction);
+
+                let to_store = Value::Int(lhs * rhs);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
+
+            Instruction::DivI(ref store_loc, ref arg1, ref arg2) => {
+                let lhs = integer_from_arg!(arg1, instruction);
+                let rhs = integer_from_arg!(arg2, instruction);
+
+                let to_store = Value::Int(lhs / rhs);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
+
+            Instruction::ModI(ref store_loc, ref arg1, ref arg2) => {
+                let lhs = integer_from_arg!(arg1, instruction);
+                let rhs = integer_from_arg!(arg2, instruction);
+
+                let to_store = Value::Int(lhs % rhs);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
 
             Instruction::AddF(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
             Instruction::SubF(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
