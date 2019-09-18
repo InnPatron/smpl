@@ -248,11 +248,17 @@ impl Executor {
             Instruction::StoreArray1(ref loc, ref value) => unimplemented!(),
             Instruction::StoreArray2(ref loc, ref value, size) => unimplemented!(),
 
-            Instruction::Add(ref loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::Sub(ref loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::Mul(ref loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::Div(ref loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::Mod(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::AddI(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::SubI(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::MulI(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::DivI(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::ModI(ref loc, ref arg1, ref arg2) => unimplemented!(),
+
+            Instruction::AddF(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::SubF(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::MulF(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::DivF(ref loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::ModF(ref loc, ref arg1, ref arg2) => unimplemented!(),
 
             Instruction::And(ref loc, ref arg1, ref arg2) => unimplemented!(),
             Instruction::Or(ref loc, ref arg1, ref arg2) => unimplemented!(),
