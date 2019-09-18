@@ -9,11 +9,17 @@ pub enum Instruction {
     StoreArray1(Location, Vec<Arg>),
     StoreArray2(Location, Arg, u64),
 
-    Add(Location, Arg, Arg),
-    Sub(Location, Arg, Arg),
-    Mul(Location, Arg, Arg),
-    Div(Location, Arg, Arg),
-    Mod(Location, Arg, Arg),
+    AddI(Location, Arg, Arg),
+    SubI(Location, Arg, Arg),
+    MulI(Location, Arg, Arg),
+    DivI(Location, Arg, Arg),
+    ModI(Location, Arg, Arg),
+
+    AddF(Location, Arg, Arg),
+    SubF(Location, Arg, Arg),
+    MulF(Location, Arg, Arg),
+    DivF(Location, Arg, Arg),
+    ModF(Location, Arg, Arg),
 
     And(Location, Arg, Arg),
     Or(Location, Arg, Arg),
