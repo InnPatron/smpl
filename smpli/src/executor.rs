@@ -135,7 +135,7 @@ impl Executor {
                 )?;
 
                 match execute_action {
-                    ExecuteAction::PushStack(_) | ExecuteAction::IncrementIP => {
+                    ExecuteAction::PushStack(..) | ExecuteAction::IncrementIP => {
                         *instruction_pointer += 1; 
                     }
 
@@ -152,7 +152,15 @@ impl Executor {
         };
 
         match exec_action {
-            ExecuteAction::PushStack(mut stack_frame) => {
+            ExecuteAction::PushStack(fn_id, args) => {
+
+                let mut stack_frame = Executor::create_stack_info(
+                    &*self.metadata,
+                    fn_id,
+                    self.compiled.clone(),
+                    self.builtins.clone(),
+                    args
+                )?;
                 
                 // Push the new stack frame by swapping it with self.top
                 //  The old top is pushed onto the stack
@@ -467,7 +475,7 @@ enum FetchResult {
 enum ExecuteAction {
     IncrementIP,
     UpdateIP(InstructionPointerType),
-    PushStack(StackInfo),
+    PushStack(FnId, Option<Vec<Value>>),
     PopStack(Value),
 }
 
