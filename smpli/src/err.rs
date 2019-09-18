@@ -67,6 +67,9 @@ pub enum RuntimeInstructionError {
 
     #[fail(display = "Expected float in: {:?}", _0)]
     ExpectedFloat(Instruction), 
+
+    #[fail(display = "Expected bool in: {:?}", _0)]
+    ExpectedBool(Instruction), 
 }
 
 #[derive(Fail, Debug, Clone)]
@@ -77,6 +80,9 @@ pub enum IIReason {
 
     #[fail(display = "Expected float in: {:?}", _0)]
     ExpectedFloat(Instruction), 
+
+    #[fail(display = "Expected bool in: {:?}", _0)]
+    ExpectedBool(Instruction),
 }
 
 #[derive(Fail, Debug, Clone)]
