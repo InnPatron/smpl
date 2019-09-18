@@ -489,8 +489,25 @@ impl Executor {
             Instruction::LEF(ref store_loc, ref arg1, ref arg2) => 
                 comp_float_op!(env, instruction, store_loc, arg1, arg2, <),
 
-            Instruction::Eq(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::InEq(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::Eq(ref store_loc, ref arg1, ref arg2) => {
+                let v1 = Executor::arg_to_value(env, arg1);
+                let v2 = Executor::arg_to_value(env, arg2);
+
+                let to_store = Value::Bool(v1 == v2);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
+
+            Instruction::InEq(ref store_loc, ref arg1, ref arg2) => {
+                let v1 = Executor::arg_to_value(env, arg1);
+                let v2 = Executor::arg_to_value(env, arg2);
+
+                let to_store = Value::Bool(v1 != v2);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
 
             Instruction::Negate(ref store_loc, ref arg1) => {
                 let to_store = match Executor::arg_to_value(env, arg1) {
