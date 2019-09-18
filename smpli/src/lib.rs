@@ -6,8 +6,9 @@ extern crate derive_builder;
 #[macro_use]
 extern crate irmatch;
 
-
-// mod vm_tests;
+#[cfg(test)]
+#[cfg_attr(rustfmt, rustfmt_skip)]
+mod vm_tests;
 
 #[macro_use]
 pub mod err;
