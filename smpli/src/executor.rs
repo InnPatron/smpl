@@ -412,8 +412,35 @@ impl Executor {
             },
 
             Instruction::StoreStructure(ref store_loc, ref string_value_map) => unimplemented!(),
-            Instruction::StoreArray1(ref store_loc, ref value) => unimplemented!(),
-            Instruction::StoreArray2(ref store_loc, ref value, size) => unimplemented!(),
+
+            Instruction::StoreArray1(ref store_loc, ref value) => {
+                let internal_array: Vec<ReferableValue> = value
+                    .iter()
+                    .map(|arg| {
+                        let raw_value = Executor::arg_to_value(env, arg);
+                        ReferableValue::new(raw_value)
+                    })
+                    .collect();
+
+                let to_store = Value::Array(internal_array);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            },
+
+            Instruction::StoreArray2(ref store_loc, ref value, size) => {
+                let cached_value = Executor::arg_to_value(env, value);
+                let internal_array: Vec<ReferableValue> = (0..*size)
+                    .map(|_index| {
+                        ReferableValue::new(cached_value.clone())
+                    })
+                    .collect();
+
+                let to_store = Value::Array(internal_array);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
 
             Instruction::AddI(ref store_loc, ref arg1, ref arg2) => 
                 int_op!(env, instruction, store_loc, arg1, arg2, +),
