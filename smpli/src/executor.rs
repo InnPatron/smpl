@@ -433,7 +433,15 @@ impl Executor {
             Instruction::InEq(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
 
             Instruction::Negate(ref store_loc, ref arg1) => unimplemented!(),
-            Instruction::Invert(ref store_loc, ref arg1) => unimplemented!(),
+
+            Instruction::Invert(ref store_loc, ref arg1) => {
+                let b = bool_from_arg!(arg1, instruction);
+
+                let to_store = Value::Bool(!b);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
 
             Instruction::FnCall(ref fn_loc, ref args) => unimplemented!(),
             Instruction::Return(ref return_value) => unimplemented!(),
