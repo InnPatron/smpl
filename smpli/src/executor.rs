@@ -234,6 +234,16 @@ impl Executor {
 
     }
 
+    fn arg_to_value(env: &Env, arg: &Arg) -> Value {
+        match arg {
+            Arg::Location(ref arg_loc) => Executor::fetch(env, arg_loc).clone_value(),
+            Arg::Int(ref i) => Value::Int(*i),
+            Arg::Float(ref f) => Value::Float(*f),
+            Arg::Bool(ref b) => Value::Bool(*b),
+            Arg::String(ref s) => Value::String(s.clone()),
+        }
+    }
+
     fn execute_instruction(instruction: &Instruction, ip: InstructionPointerType,
                            env: &mut Env) -> Result<ExecuteAction, InternalError> {
 
@@ -296,13 +306,7 @@ impl Executor {
 
         match instruction {
             Instruction::Store(ref store_loc, ref arg) => {
-                let to_store = match arg {
-                    Arg::Location(ref arg_loc) => Executor::fetch(env, arg_loc).clone_value(),
-                    Arg::Int(ref i) => Value::Int(*i),
-                    Arg::Float(ref f) => Value::Float(*f),
-                    Arg::Bool(ref b) => Value::Bool(*b),
-                    Arg::String(ref s) => Value::String(s.clone()),
-                };
+                let to_store = Executor::arg_to_value(env, arg);
 
                 Executor::store(env, store_loc, to_store);
 
@@ -451,7 +455,30 @@ impl Executor {
                 Ok(ExecuteAction::IncrementIP)
             }
 
-            Instruction::FnCall(ref fn_loc, ref args) => unimplemented!(),
+            Instruction::FnCall(ref fn_loc, ref args) => {
+                let func = Executor::fetch(env, fn_loc);
+
+                let inner = func.inner_ref();
+                match *inner {
+                    Value::Function(ref handle) => {
+                        let args = if args.len() == 0 {
+                            None
+                        } else {
+                            let args = args
+                                .iter()
+                                .map(|a| Executor::arg_to_value(env, a))
+                                .collect();
+                            Some(args)
+                        };
+
+                        Ok(ExecuteAction::PushStack(handle.id(), args))
+                    }
+                    
+                    _ => Err(InternalError::RuntimeInstructionError(
+                            RuntimeInstructionError::ExpectedFunction(instruction.clone()))),
+                }
+            },
+
             Instruction::Return(ref return_value) => unimplemented!(),
             Instruction::TakeReturn(ref store_loc) => unimplemented!(),
 
