@@ -248,6 +248,25 @@ impl Executor {
             }}
         }
 
+        macro_rules! float_from_arg {
+            ($arg: expr, $instr: expr) => {{
+                let from_arg = match $arg {
+                    Arg::Location(ref arg_loc) => Executor::fetch(env, arg_loc).clone_value(),
+                    Arg::Float(ref f) => Value::Float(*f),
+
+                    _ => return Err(InternalError::InvalidInstruction(
+                        IIReason::ExpectedFloat($instr.clone()))),
+                };
+
+                match from_arg {
+                    Value::Float(f) => f,
+
+                    _ => return Err(InternalError::RuntimeInstructionError(
+                        RuntimeInstructionError::ExpectedFloat($instr.clone()))),
+                }
+            }}
+        }
+
         match instruction {
             Instruction::Store(ref store_loc, ref arg) => {
                 let to_store = match arg {
@@ -317,11 +336,55 @@ impl Executor {
                 Ok(ExecuteAction::IncrementIP)
             }
 
-            Instruction::AddF(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::SubF(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::MulF(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::DivF(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
-            Instruction::ModF(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
+            Instruction::AddF(ref store_loc, ref arg1, ref arg2) => {
+                let lhs = float_from_arg!(arg1, instruction);
+                let rhs = float_from_arg!(arg2, instruction);
+
+                let to_store = Value::Float(lhs + rhs);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
+
+            Instruction::SubF(ref store_loc, ref arg1, ref arg2) => {
+                let lhs = float_from_arg!(arg1, instruction);
+                let rhs = float_from_arg!(arg2, instruction);
+
+                let to_store = Value::Float(lhs - rhs);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
+
+            Instruction::MulF(ref store_loc, ref arg1, ref arg2) => {
+                let lhs = float_from_arg!(arg1, instruction);
+                let rhs = float_from_arg!(arg2, instruction);
+
+                let to_store = Value::Float(lhs * rhs);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
+
+            Instruction::DivF(ref store_loc, ref arg1, ref arg2) => {
+                let lhs = float_from_arg!(arg1, instruction);
+                let rhs = float_from_arg!(arg2, instruction);
+
+                let to_store = Value::Float(lhs / rhs);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
+
+            Instruction::ModF(ref store_loc, ref arg1, ref arg2) => {
+                let lhs = float_from_arg!(arg1, instruction);
+                let rhs = float_from_arg!(arg2, instruction);
+
+                let to_store = Value::Float(lhs % rhs);
+                Executor::store(env, store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }
 
             Instruction::And(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
             Instruction::Or(ref store_loc, ref arg1, ref arg2) => unimplemented!(),
