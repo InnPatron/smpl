@@ -85,15 +85,30 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
 
         Value::BinExpr(ref op, ref lhs, ref rhs) => {
             use crate::ast::BinOp;
+            use crate::analysis::type_cons::Type;
 
+            macro_rules! specific_math_op {
+                ($ty: expr, $store: expr, $lhs: expr, $rhs: expr, $integer: path, $float: path) => {
+                    match $ty {
+                        Type::Int => $integer($store, $lhs, $rhs),
+                        Type::Float => $float($store, $lhs, $rhs),
+
+                        _ => unreachable!(),
+                    }
+                }
+            }
+
+            let ty = value
+                .get_type()
+                .expect("All values should be typed before code gen");
             let lhs = Arg::Location(Location::Tmp(tmp_id(*lhs.data())));
             let rhs = Arg::Location(Location::Tmp(tmp_id(*rhs.data())));
             match op {
-                BinOp::Add => Add(Location::Tmp(store), lhs, rhs),
-                BinOp::Sub => Sub(Location::Tmp(store), lhs, rhs),
-                BinOp::Mul => Mul(Location::Tmp(store), lhs, rhs),
-                BinOp::Div => Div(Location::Tmp(store), lhs, rhs),
-                BinOp::Mod => Mod(Location::Tmp(store), lhs, rhs),
+                BinOp::Add => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, AddI, AddF), 
+                BinOp::Sub => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, SubI, SubF), 
+                BinOp::Mul => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, MulI, MulF), 
+                BinOp::Div => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, DivI, DivF), 
+                BinOp::Mod => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, ModI, ModF), 
 
                 BinOp::LogicalAnd => And(Location::Tmp(store), lhs, rhs),
                 BinOp::LogicalOr => Or(Location::Tmp(store), lhs, rhs),
