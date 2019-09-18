@@ -348,6 +348,32 @@ impl Executor {
                 }
             }}
         }
+        
+        macro_rules! int_op {
+            ($env: expr, $instruction: expr, $store_loc: expr, $arg1: expr, $arg2: expr, $op: tt) => {{
+
+                let lhs = integer_from_arg!($arg1, $instruction);
+                let rhs = integer_from_arg!($arg2, $instruction);
+
+                let to_store = Value::Int(lhs $op rhs);
+                Executor::store($env, $store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }}
+        }
+
+        macro_rules! float_op {
+            ($env: expr, $instruction: expr, $store_loc: expr, $arg1: expr, $arg2: expr, $op: tt) => {{
+
+                let lhs = float_from_arg!($arg1, $instruction);
+                let rhs = float_from_arg!($arg2, $instruction);
+
+                let to_store = Value::Float(lhs $op rhs);
+                Executor::store($env, $store_loc, to_store);
+
+                Ok(ExecuteAction::IncrementIP)
+            }}
+        }
 
         match instruction {
             Instruction::Store(ref store_loc, ref arg) => {
@@ -362,105 +388,35 @@ impl Executor {
             Instruction::StoreArray1(ref store_loc, ref value) => unimplemented!(),
             Instruction::StoreArray2(ref store_loc, ref value, size) => unimplemented!(),
 
-            Instruction::AddI(ref store_loc, ref arg1, ref arg2) => {
-                let lhs = integer_from_arg!(arg1, instruction);
-                let rhs = integer_from_arg!(arg2, instruction);
+            Instruction::AddI(ref store_loc, ref arg1, ref arg2) => 
+                int_op!(env, instruction, store_loc, arg1, arg2, +),
 
-                let to_store = Value::Int(lhs + rhs);
-                Executor::store(env, store_loc, to_store);
+            Instruction::SubI(ref store_loc, ref arg1, ref arg2) => 
+                int_op!(env, instruction, store_loc, arg1, arg2, -),
 
-                Ok(ExecuteAction::IncrementIP)
-            }
+            Instruction::MulI(ref store_loc, ref arg1, ref arg2) => 
+                int_op!(env, instruction, store_loc, arg1, arg2, *),
 
-            Instruction::SubI(ref store_loc, ref arg1, ref arg2) => {
-                let lhs = integer_from_arg!(arg1, instruction);
-                let rhs = integer_from_arg!(arg2, instruction);
+            Instruction::DivI(ref store_loc, ref arg1, ref arg2) => 
+                int_op!(env, instruction, store_loc, arg1, arg2, /),
 
-                let to_store = Value::Int(lhs - rhs);
-                Executor::store(env, store_loc, to_store);
+            Instruction::ModI(ref store_loc, ref arg1, ref arg2) => 
+                int_op!(env, instruction, store_loc, arg1, arg2, %),
 
-                Ok(ExecuteAction::IncrementIP)
-            }
+            Instruction::AddF(ref store_loc, ref arg1, ref arg2) => 
+                float_op!(env, instruction, store_loc, arg1, arg2, +),
 
-            Instruction::MulI(ref store_loc, ref arg1, ref arg2) => {
-                let lhs = integer_from_arg!(arg1, instruction);
-                let rhs = integer_from_arg!(arg2, instruction);
+            Instruction::SubF(ref store_loc, ref arg1, ref arg2) => 
+                float_op!(env, instruction, store_loc, arg1, arg2, -),
 
-                let to_store = Value::Int(lhs * rhs);
-                Executor::store(env, store_loc, to_store);
+            Instruction::MulF(ref store_loc, ref arg1, ref arg2) => 
+                float_op!(env, instruction, store_loc, arg1, arg2, *),
 
-                Ok(ExecuteAction::IncrementIP)
-            }
+            Instruction::DivF(ref store_loc, ref arg1, ref arg2) => 
+                float_op!(env, instruction, store_loc, arg1, arg2, /),
 
-            Instruction::DivI(ref store_loc, ref arg1, ref arg2) => {
-                let lhs = integer_from_arg!(arg1, instruction);
-                let rhs = integer_from_arg!(arg2, instruction);
-
-                let to_store = Value::Int(lhs / rhs);
-                Executor::store(env, store_loc, to_store);
-
-                Ok(ExecuteAction::IncrementIP)
-            }
-
-            Instruction::ModI(ref store_loc, ref arg1, ref arg2) => {
-                let lhs = integer_from_arg!(arg1, instruction);
-                let rhs = integer_from_arg!(arg2, instruction);
-
-                let to_store = Value::Int(lhs % rhs);
-                Executor::store(env, store_loc, to_store);
-
-                Ok(ExecuteAction::IncrementIP)
-            }
-
-            Instruction::AddF(ref store_loc, ref arg1, ref arg2) => {
-                let lhs = float_from_arg!(arg1, instruction);
-                let rhs = float_from_arg!(arg2, instruction);
-
-                let to_store = Value::Float(lhs + rhs);
-                Executor::store(env, store_loc, to_store);
-
-                Ok(ExecuteAction::IncrementIP)
-            }
-
-            Instruction::SubF(ref store_loc, ref arg1, ref arg2) => {
-                let lhs = float_from_arg!(arg1, instruction);
-                let rhs = float_from_arg!(arg2, instruction);
-
-                let to_store = Value::Float(lhs - rhs);
-                Executor::store(env, store_loc, to_store);
-
-                Ok(ExecuteAction::IncrementIP)
-            }
-
-            Instruction::MulF(ref store_loc, ref arg1, ref arg2) => {
-                let lhs = float_from_arg!(arg1, instruction);
-                let rhs = float_from_arg!(arg2, instruction);
-
-                let to_store = Value::Float(lhs * rhs);
-                Executor::store(env, store_loc, to_store);
-
-                Ok(ExecuteAction::IncrementIP)
-            }
-
-            Instruction::DivF(ref store_loc, ref arg1, ref arg2) => {
-                let lhs = float_from_arg!(arg1, instruction);
-                let rhs = float_from_arg!(arg2, instruction);
-
-                let to_store = Value::Float(lhs / rhs);
-                Executor::store(env, store_loc, to_store);
-
-                Ok(ExecuteAction::IncrementIP)
-            }
-
-            Instruction::ModF(ref store_loc, ref arg1, ref arg2) => {
-                let lhs = float_from_arg!(arg1, instruction);
-                let rhs = float_from_arg!(arg2, instruction);
-
-                let to_store = Value::Float(lhs % rhs);
-                Executor::store(env, store_loc, to_store);
-
-                Ok(ExecuteAction::IncrementIP)
-            }
+            Instruction::ModF(ref store_loc, ref arg1, ref arg2) => 
+                float_op!(env, instruction, store_loc, arg1, arg2, %),
 
             Instruction::And(ref store_loc, ref arg1, ref arg2) => {
                 let lhs = bool_from_arg!(arg1, instruction);
