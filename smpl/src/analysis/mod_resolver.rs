@@ -182,11 +182,21 @@ pub fn check_modules(
 
         let module_scope = raw_program.scopes.remove(&mod_id).unwrap();
 
+        // Insert module scope metadata
+        let module_scope_meta = super::metadata::ModuleScope {
+            funcs: module_scope.all_fns().map(|(_, fn_id)| fn_id.clone()).collect(),
+        };
+        program
+            .metadata_mut()
+            .mod_metadata_mut()
+            .insert_module_scope(mod_id,module_scope_meta);
+
         let dependencies = raw_program.dependencies.remove(&mod_id).unwrap();
 
         let module = Module::new(module_scope, owned_structs, owned_fns, dependencies, mod_id);
 
         program.universe_mut().map_module(mod_id, name, module);
+
     }
 
     Ok(())
