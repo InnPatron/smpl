@@ -28,6 +28,7 @@ pub struct Executor {
     compiled: CompiledProgram,
     builtins: MappedBuiltins,
     return_register: Option<Value>,
+    module_env: Env,
     finished: bool,
 }
 
@@ -38,11 +39,29 @@ impl Executor {
                       builtins: MappedBuiltins,
                       args: Option<Vec<Value>>) -> Result<Executor, InternalError> {
 
+        let mut module_env = Env::new();
+
+        // Make all functions available to the execution environment
+        for (fn_id, _) in compiled.iter() {
+            let scoped_handle = Value::Function(
+                FnHandle::new(fn_handle.mod_id(), *fn_id)
+            );
+            module_env.map_value(byte_gen::to_fn_id(*fn_id), scoped_handle);
+        }
+
+        for (fn_id, _) in builtins.iter() {
+            let scoped_handle = Value::Function(
+                FnHandle::new(fn_handle.mod_id(), *fn_id)
+            );
+            module_env.map_value(byte_gen::to_fn_id(*fn_id), scoped_handle);
+        }
+
         let current = 
             Executor::create_stack_info(&*metadata, 
                                         fn_handle, 
                                         compiled.clone(), 
                                         builtins.clone(), 
+                                        &module_env,
                                         args)?;
 
         let executor = Executor {
@@ -52,6 +71,7 @@ impl Executor {
             compiled: compiled,
             builtins: builtins,
             return_register: None,
+            module_env: module_env,
             finished: false,
         };
         
@@ -70,6 +90,7 @@ impl Executor {
                       fn_handle: FnHandle, 
                       compiled: CompiledProgram,
                       builtins: MappedBuiltins,
+                      module_env: &Env,
                       args: Option<Vec<Value>>) -> Result<StackInfo, InternalError> {
 
         let fn_id = fn_handle.fn_id();
@@ -90,7 +111,8 @@ impl Executor {
                     ExpectedArgCount::Exact(param_info.len())));
             }
 
-            let mut stack_info = ByteCodeStack::new(fn_handle, compiled.clone(), builtins.clone());
+            let mut stack_info = ByteCodeStack::new(
+                fn_handle, compiled.clone(), builtins.clone(), module_env);
             
             if let Some(args) = args {
                 for (arg, param_info) in args
@@ -212,6 +234,7 @@ impl Executor {
                     fn_handle,
                     self.compiled.clone(),
                     self.builtins.clone(),
+                    &self.module_env,
                     args
                 )?;
                 
@@ -259,6 +282,7 @@ impl Executor {
 
     fn fetch(env: &Env, location: &Location) -> ReferableValue {
 
+        dbg!(location);
         match location {
             Location::Compound { 
                 ref root,
@@ -850,7 +874,9 @@ struct ByteCodeStack {
 }
 
 impl ByteCodeStack {
-    fn new(handle: FnHandle, compiled: CompiledProgram, builtins: MappedBuiltins) -> ByteCodeStack {
+    fn new(handle: FnHandle, compiled: CompiledProgram, 
+           builtins: MappedBuiltins, module_env: &Env) -> ByteCodeStack {
+
         let current_fn: Arc<byte_gen::ByteCodeFunction> = compiled.get(&handle.fn_id()).unwrap().clone();
         let env = Env::new();
 
@@ -859,7 +885,7 @@ impl ByteCodeStack {
             current_fn: current_fn,
             compiled: compiled,
             builtins: builtins,
-            env: env,
+            env: module_env.fork(),
             instruction_pointer: 0,
         }
     }
