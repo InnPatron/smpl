@@ -503,7 +503,7 @@ impl CFG {
                             self.graph.add_edge(loop_foot, loop_head, Edge::BackEdge);
 
                             // Append the loop head to the graph
-                            append_node_index!(self, previous, head, loop_head);
+                            append_node_index!(self, head, previous, loop_head);
                             let instructions = block.0;
                             let loop_body = self.generate_scoped_block(
                                 universe,
