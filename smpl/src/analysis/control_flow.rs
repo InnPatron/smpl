@@ -739,7 +739,7 @@ impl CFG {
         }
 
         if current_block.is_empty() == false {
-            append_node!(self, previous, head, Node::Block(current_block));
+            append_node!(self, head, previous, Node::Block(current_block));
         }
         
         Ok(BranchData {
