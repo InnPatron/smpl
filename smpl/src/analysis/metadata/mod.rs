@@ -1,3 +1,11 @@
+macro_rules! map_unique_set {
+    ($map: expr, $key: expr, $val: expr, $msg: expr) => {{
+        if $map.insert($key, $val).is_some() {
+            panic!($msg);
+        }
+    }}
+}
+
 mod attribute_keys;
 mod fn_data;
 mod layout;
@@ -83,9 +91,11 @@ impl Metadata {
     }
 
     pub(super) fn insert_field_ordering(&mut self, id: TypeId, data: FieldOrdering) {
-        if self.field_ordering.insert(id, data).is_some() {
-            panic!("Overwriting field ordering for struct {}", id);
-        }
+        map_unique_set!(self.field_ordering,
+            id,
+            data,
+            format!("Overwriting field ordering for struct {}", id)
+        );
     }
 
     pub fn field_ordering(&self, id: TypeId) -> &FieldOrdering {
@@ -93,9 +103,11 @@ impl Metadata {
     }
 
     pub(super) fn insert_fn_layout(&mut self, id: FnId, data: FnLayout) {
-        if self.fn_layout.insert(id, data).is_some() {
-            panic!("Overwriting for fn {}", id);
-        }
+        map_unique_set!(self.fn_layout,
+            id,
+            data,
+            format!("Overwriting for fn {}", id)
+        );
     }
 
     pub fn fn_layout(&self, id: FnId) -> &FnLayout {
@@ -116,9 +128,11 @@ impl Metadata {
     }
 
     pub(super) fn insert_function_param_ids(&mut self, fn_id: FnId, params: Vec<FunctionParameter>) {
-        if self.fn_param_ids.insert(fn_id, params).is_some() {
-            panic!();
-        }
+        map_unique_set!(self.fn_param_ids,
+            fn_id,
+            params,
+            format!("Overriding function param ids for {:?}", fn_id)
+        );
     }
 
     pub fn function_param_ids(&self, fn_id: FnId) -> &[FunctionParameter] {

@@ -20,9 +20,11 @@ impl ModuleMetadata {
     }
 
     pub(crate) fn insert_mod_source(&mut self, id: ModuleId, source: ModuleSource) {
-        if self.module_sources.insert(id, source).is_some() {
-            panic!("Module should only have one source");
-        }
+        map_unique_set!(self.module_sources, 
+            id, 
+            source, 
+            format!("Modules should only have one source")
+        );
     }
 
     pub fn mod_source(&self, id: ModuleId) -> &ModuleSource {
@@ -32,13 +34,17 @@ impl ModuleMetadata {
     }
 
     pub(crate) fn map_module(&mut self, name: Ident, mod_id: ModuleId) {
-        if self.module_map.insert(name.clone(), mod_id).is_some() {
-            panic!("Overriding {:?}", mod_id);
-        }
+        map_unique_set!(self.module_map, 
+            name.clone(), 
+            mod_id, 
+            format!("Overriding {:?}", mod_id)
+        );
 
-        if self.module_reverse_map.insert(mod_id, name.to_string()).is_some() {
-            panic!("Overriding {:?}", mod_id);
-        }
+        map_unique_set!(self.module_reverse_map, 
+            mod_id, 
+            name.to_string(), 
+            format!("Overriding {:?}", mod_id)
+        );
     }
 
     pub fn get_module<T: Into<Ident>>(&self, name: T) -> Option<ModuleId> {
@@ -50,5 +56,5 @@ impl ModuleMetadata {
             .get(&id)
             .clone()
             .map(|name| name.to_string())
-    }
+    } 
 }
