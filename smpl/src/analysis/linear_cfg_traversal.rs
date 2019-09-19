@@ -78,7 +78,6 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
                 let (true_path, false_path) = self.graph.after_conditional(current);
 
-                dbg!("TRAVERSE START TRUE PATH");
                 self.passenger.branch_start_true_path(true_path)?;
 
                 let mut merge = None;
@@ -107,38 +106,30 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     panic!("Traversed entire graph and did not find Condition::BranchMerge");
                 }
 
-                dbg!(format!("TRAVERSE START FALSE PATH {:?}", 
-                             self.graph.node_weight(merge.unwrap())));
                 self.passenger.branch_start_false_path(false_path)?;
 
                 // False path
                 let mut current_node = false_path;
                 let mut merge = None;
                 for _ in 0..self.node_count {
-                    dbg!("LOOP");
                     match *self.graph.node_weight(current_node) {
                         Node::BranchMerge(ref branch_data) => {
-                            dbg!("TRAVERSE END FALSE PATH");
-                            dbg!(self.graph.node_weight(current_node));
                             self.passenger
                                 .branch_end_false_path(current_node, branch_data)?;
                             self.passenger.branch_merge(current_node, branch_data)?;
                             merge = Some(current_node);
-                            dbg!("TRAVERSAL AFTER END FALSE PATH");
                             break;
                         }
 
                         _ => (),
                     }
 
-                    dbg!(format!("FALSE PATH VISITING {:?}", current_node));
                     match self.visit_node(current_node)? {
                         Some(next) => current_node = next,
                         None => panic!(),
                     }
                 }
 
-                dbg!("BROKEN");
 
                 if merge.is_none() {
                     panic!("Traversed entire graph and did not find Condition::BranchMerge");
@@ -149,9 +140,6 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
             Node::BranchMerge(ref branch_data) => {
                 unreachable!();
-                dbg!("TRAVERSE BRANCH MERGE FOO", branch_data);
-                self.passenger.branch_merge(current, branch_data)?;
-                Ok(Some(self.graph.next(current)))
             }
 
             Node::LoopHead(ref branch_data, ref expr_data) => {
