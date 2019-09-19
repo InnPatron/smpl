@@ -152,7 +152,7 @@ fn test() {
             Ok(_) => panic!("Passed analysis. Expected AnalysisError::UnknownBinding"),
             Err(e) => {
                 match e {
-                    AnalysisError::UnknownBinding(ident) => {
+                    AnalysisError::UnknownBinding(ident, ..) => {
                         assert_eq!(ident, ident!("a"));
                     }
 
