@@ -1,7 +1,9 @@
 mod attribute_keys;
 mod fn_data;
 mod layout;
+mod modules;
 
+pub use self::modules::*;
 pub use self::fn_data::*;
 pub use self::layout::*;
 
@@ -10,18 +12,16 @@ use std::collections::{HashMap, HashSet};
 use super::error::AnalysisError;
 use crate::analysis::semantic_data::{FnId, ModuleId, Program, TypeId};
 use crate::ast::{Annotation, Ident};
-use crate::module::ModuleSource;
 
 #[derive(Clone, Debug)]
 pub struct Metadata {
+    module_meta: ModuleMetadata,
     fn_param_ids: HashMap<FnId, Vec<FunctionParameter>>,
     fn_layout: HashMap<FnId, FnLayout>,
     field_ordering: HashMap<TypeId, FieldOrdering>,
     array_types: HashMap<ModuleId, Vec<TypeId>>,
     main: Option<(FnId, ModuleId)>,
 
-    module_map: HashMap<Ident, ModuleId>,
-    module_reverse_map: HashMap<ModuleId, String>,
     fn_map: HashMap<(ModuleId, Ident), FnId>,
     builtin: HashSet<FnId>,
 
@@ -30,26 +30,31 @@ pub struct Metadata {
     struct_annotations: HashMap<TypeId, HashMap<String, Option<String>>>,
     fn_annotations: HashMap<FnId, HashMap<String, Option<String>>>,
 
-    module_sources: HashMap<ModuleId, ModuleSource>,
 }
 
 impl Metadata {
     pub(super) fn new() -> Metadata {
         Metadata {
+            module_meta: ModuleMetadata::new(),
             fn_param_ids: HashMap::new(),
             fn_layout: HashMap::new(),
             field_ordering: HashMap::new(),
             array_types: HashMap::new(),
             main: None,
-            module_map: HashMap::new(),
-            module_reverse_map: HashMap::new(),
             fn_map: HashMap::new(),
             builtin: HashSet::new(),
             unchecked_builtins_params: HashSet::new(),
             struct_annotations: HashMap::new(),
             fn_annotations: HashMap::new(),
-            module_sources: HashMap::new(),
         }
+    }
+
+    pub(super) fn mod_metadata_mut(&mut self) -> &mut ModuleMetadata {
+        &mut self.module_meta
+    }
+
+    pub fn mod_metadata(&self) -> &ModuleMetadata {
+        &self.module_meta
     }
 
     pub(super) fn insert_builtin(&mut self, id: FnId) {
@@ -67,28 +72,7 @@ impl Metadata {
 
     pub fn is_builtin_params_unchecked(&self, id: FnId) -> bool {
         self.unchecked_builtins_params.contains(&id)
-    }
-
-    pub(super) fn map_module(&mut self, name: Ident, mod_id: ModuleId) {
-        if self.module_map.insert(name.clone(), mod_id).is_some() {
-            panic!("Overriding {:?}", mod_id);
-        }
-
-        if self.module_reverse_map.insert(mod_id, name.to_string()).is_some() {
-            panic!("Overriding {:?}", mod_id);
-        }
-    }
-
-    pub fn get_module<T: Into<Ident>>(&self, name: T) -> Option<ModuleId> {
-       self.module_map.get(&name.into()).map(|id| id.clone())
-    }
-
-    pub fn get_module_by_id(&self, id: ModuleId) -> Option<String> {
-        self.module_reverse_map
-            .get(&id)
-            .clone()
-            .map(|name| name.to_string())
-    }
+    } 
 
     pub(super) fn insert_module_fn(&mut self, mod_id: ModuleId, name: Ident, fn_id: FnId) {
         self.fn_map.insert((mod_id, name), fn_id);
@@ -213,17 +197,5 @@ impl Metadata {
     pub fn is_opaque(&self, type_id: TypeId) -> bool {
         self.get_struct_annotations(type_id)
             .map_or(false, |map| map.contains_key(attribute_keys::OPAQUE))
-    }
-
-    pub(super) fn insert_mod_source(&mut self, id: ModuleId, source: ModuleSource) {
-        if self.module_sources.insert(id, source).is_some() {
-            panic!("Module should only have one source");
-        }
-    }
-
-    pub fn mod_source(&self, id: ModuleId) -> &ModuleSource {
-        self.module_sources
-            .get(&id)
-            .expect("module should have a source")
-    }
+    } 
 }
