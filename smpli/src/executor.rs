@@ -282,7 +282,6 @@ impl Executor {
 
     fn fetch(env: &Env, location: &Location) -> ReferableValue {
 
-        dbg!(location);
         match location {
             Location::Compound { 
                 ref root,
@@ -373,7 +372,7 @@ impl Executor {
                                     _ => unimplemented!(),
                                 };
 
-                                let inner_ref = next_ref.inner_ref();
+                                let inner_ref = field_ref.inner_ref();
                                 match *inner_ref {
                                     Value::Array(ref v) => {
                                         v
