@@ -113,7 +113,7 @@ impl AVM {
             Some(mod_id) => Ok(self
                 .metadata
                 .module_fn(mod_id, name.to_string())
-                .map(|fn_id| fn_id.into())),
+                .map(|fn_id| FnHandle::new(mod_id, fn_id))),
 
             None => Err(format!("Module '{}' does not exist", module)),
         }
@@ -127,7 +127,7 @@ impl AVM {
             unimplemented!();
         } else {
             Executor::new(self.metadata.clone(), 
-                          fn_handle.id(), 
+                          fn_handle, 
                           self.compiled.clone(), 
                           self.builtins.clone(),
                           args)

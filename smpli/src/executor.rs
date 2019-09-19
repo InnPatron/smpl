@@ -11,7 +11,7 @@ use smpl::byte_gen::{ to_fn_param, InstructionPointerType, Instruction, Location
 use crate::err::*;
 use crate::env::Env;
 use crate::value::{ Value, ReferableValue, Struct };
-use crate::vm_i::BuiltinFn;
+use crate::vm_i::{ FnHandle, BuiltinFn };
 use crate::vm::{ MappedBuiltins, CompiledProgram };
 
 pub enum ExecResult<T, E> {
@@ -33,14 +33,14 @@ pub struct Executor {
 
 impl Executor {
     pub(super) fn new(metadata: Arc<Metadata>,
-                      fn_id: FnId, 
+                      fn_handle: FnHandle, 
                       compiled: CompiledProgram,
                       builtins: MappedBuiltins,
                       args: Option<Vec<Value>>) -> Result<Executor, InternalError> {
 
         let current = 
             Executor::create_stack_info(&*metadata, 
-                                        fn_id, 
+                                        fn_handle, 
                                         compiled.clone(), 
                                         builtins.clone(), 
                                         args)?;
@@ -67,13 +67,14 @@ impl Executor {
     }
 
     fn create_stack_info(metadata: &Metadata,
-                      fn_id: FnId, 
+                      fn_handle: FnHandle, 
                       compiled: CompiledProgram,
                       builtins: MappedBuiltins,
                       args: Option<Vec<Value>>) -> Result<StackInfo, InternalError> {
 
+        let fn_id = fn_handle.fn_id();
         if metadata.is_builtin(fn_id) {
-            Ok(StackInfo::BuiltinStack(BuiltinStack::new(fn_id, 
+            Ok(StackInfo::BuiltinStack(BuiltinStack::new(fn_handle, 
                                                       compiled.clone(), 
                                                       builtins.clone(), 
                                                       args)))
@@ -89,7 +90,7 @@ impl Executor {
                     ExpectedArgCount::Exact(param_info.len())));
             }
 
-            let mut stack_info = ByteCodeStack::new(fn_id, compiled.clone(), builtins.clone());
+            let mut stack_info = ByteCodeStack::new(fn_handle, compiled.clone(), builtins.clone());
             
             if let Some(args) = args {
                 for (arg, param_info) in args
@@ -120,12 +121,12 @@ impl Executor {
             }
 
             StackInfo::ByteCodeStack(ByteCodeStack {
-                ref id,
                 ref current_fn,
                 ref compiled,
                 ref builtins,
                 ref mut env,
                 ref mut instruction_pointer,
+                ..
             }) => {
                 let instructions = current_fn.instructions();
 
@@ -204,11 +205,11 @@ impl Executor {
         };
 
         match exec_action {
-            ExecuteAction::PushStack(fn_id, args) => {
+            ExecuteAction::PushStack(fn_handle, args) => {
 
                 let mut stack_frame = Executor::create_stack_info(
                     &*self.metadata,
-                    fn_id,
+                    fn_handle,
                     self.compiled.clone(),
                     self.builtins.clone(),
                     args
@@ -710,7 +711,7 @@ impl Executor {
                             Some(args)
                         };
 
-                        Ok(ExecuteAction::PushStack(handle.id(), args))
+                        Ok(ExecuteAction::PushStack(handle.clone(), args))
                     }
                     
                     _ => Err(InternalError::RuntimeInstructionError(
@@ -802,7 +803,7 @@ enum ExecuteAction {
     IncrementIP,
     SetIP(InstructionPointerType),
     AddIP(i64),
-    PushStack(FnId, Option<Vec<Value>>),
+    PushStack(FnHandle, Option<Vec<Value>>),
     PopStack(Value),
 }
 
@@ -815,7 +816,7 @@ enum StackInfo {
 
 #[derive(Debug)]
 struct BuiltinStack {
-    id: FnId,
+    handle: FnHandle,
     current_fn: Arc<BuiltinFn>,
     compiled: CompiledProgram,
     builtins: MappedBuiltins,
@@ -823,13 +824,13 @@ struct BuiltinStack {
 }
 
 impl BuiltinStack {
-    fn new(id: FnId, compiled: CompiledProgram, 
+    fn new(handle: FnHandle, compiled: CompiledProgram, 
            builtins: MappedBuiltins, args: Option<Vec<Value>>) -> BuiltinStack {
 
-        let current_fn = builtins.get(&id).unwrap().clone();
+        let current_fn = builtins.get(&handle.fn_id()).unwrap().clone();
 
         BuiltinStack {
-            id: id,
+            handle: handle,
             current_fn: current_fn,
             compiled: compiled,
             builtins: builtins,
@@ -840,7 +841,7 @@ impl BuiltinStack {
 
 #[derive(Debug)]
 struct ByteCodeStack {
-    id: FnId,
+    handle: FnHandle,
     current_fn: Arc<byte_gen::ByteCodeFunction>,
     compiled: CompiledProgram,
     builtins: MappedBuiltins,
@@ -849,12 +850,12 @@ struct ByteCodeStack {
 }
 
 impl ByteCodeStack {
-    fn new(fn_id: FnId, compiled: CompiledProgram, builtins: MappedBuiltins) -> ByteCodeStack {
-        let current_fn: Arc<byte_gen::ByteCodeFunction> = compiled.get(&fn_id).unwrap().clone();
+    fn new(handle: FnHandle, compiled: CompiledProgram, builtins: MappedBuiltins) -> ByteCodeStack {
+        let current_fn: Arc<byte_gen::ByteCodeFunction> = compiled.get(&handle.fn_id()).unwrap().clone();
         let env = Env::new();
 
         ByteCodeStack {
-            id: fn_id,
+            handle: handle,
             current_fn: current_fn,
             compiled: compiled,
             builtins: builtins,
