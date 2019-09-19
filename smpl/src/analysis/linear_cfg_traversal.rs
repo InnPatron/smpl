@@ -78,6 +78,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
                 let (true_path, false_path) = self.graph.after_conditional(current);
 
+                dbg!("TRAVERSE START TRUE PATH");
                 self.passenger.branch_start_true_path(true_path)?;
 
                 let mut merge = None;
@@ -106,6 +107,8 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     panic!("Traversed entire graph and did not find Condition::BranchMerge");
                 }
 
+                dbg!(format!("TRAVERSE START FALSE PATH {:?}", 
+                             self.graph.node_weight(merge.unwrap())));
                 self.passenger.branch_start_false_path(false_path)?;
 
                 // False path
@@ -114,6 +117,8 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 for _ in 0..self.node_count {
                     match *self.graph.node_weight(current_node) {
                         Node::BranchMerge(ref branch_data) => {
+                            dbg!("TRAVERSE END FALSE PATH");
+                            dbg!(self.graph.node_weight(current_node));
                             self.passenger
                                 .branch_end_false_path(current_node, branch_data)?;
                             merge = Some(current_node);
@@ -129,14 +134,17 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     }
                 }
 
+                dbg!("BROKEN");
+
                 if merge.is_none() {
                     panic!("Traversed entire graph and did not find Condition::BranchMerge");
                 }
 
-                Ok(Some(self.graph.next(merge.unwrap())))
+                Ok(Some(merge.unwrap()))
             }
 
             Node::BranchMerge(ref branch_data) => {
+                dbg!("TRAVERSE BRANCH MERGE FOO", branch_data);
                 self.passenger.branch_merge(current, branch_data)?;
                 Ok(Some(self.graph.next(current)))
             }
