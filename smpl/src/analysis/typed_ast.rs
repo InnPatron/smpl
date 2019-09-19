@@ -6,6 +6,7 @@ use std::slice::Iter;
 use crate::span::Span;
 
 use crate::ast;
+use crate::ast::AstNode;
 pub use crate::ast::BinOp;
 pub use crate::ast::Literal;
 pub use crate::ast::UniOp;
@@ -616,8 +617,8 @@ impl Binding {
         }
     }
 
-    pub fn ident(&self) -> &ast::Ident {
-        self.ident.data()
+    pub fn ident(&self) -> &AstNode<ast::Ident> {
+        &self.ident
     }
 
     pub fn set_id<T>(&self, id: T)
@@ -706,8 +707,8 @@ impl self::Path {
         }
     }
 
-    pub fn root_name(&self) -> &ast::Ident {
-        self.root_name.data()
+    pub fn root_name(&self) -> &AstNode<ast::Ident> {
+        &self.root_name
     }
 
     pub fn root_indexing_expr(&self) -> Option<TmpId> {
