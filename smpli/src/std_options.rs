@@ -1,5 +1,5 @@
-use crate::code_gen::interpreter::builtins;
-use crate::code_gen::interpreter::VmModule;
+use crate::builtins;
+use crate::module::VmModule;
 
 macro_rules! include {
     ($v: expr, $self: expr, $field: ident, $builtin: expr) => {

@@ -1,11 +1,8 @@
 use failure::Error;
 use std::io::Write;
+use smpl::{UnparsedModule, parse_module};
 
-use crate::min_args;
-use crate::module::*;
-use crate::parser::parse_module;
-
-use crate::code_gen::interpreter::*;
+use crate::*;
 
 pub const MOD_LOG: &'static str = "log";
 pub const LOG_PRINT: &'static str = "print";

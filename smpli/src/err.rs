@@ -1,30 +1,31 @@
 use failure::Fail;
 
-use crate::analysis::error::AnalysisError;
-use crate::analysis::ModuleId;
-use crate::err::Error as StaticError;
+use smpl::ModuleId;
+use smpl::Error as StaticError;
+use smpl::byte_gen::{ Instruction, InstructionPointerType };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum VmError {
     StaticError(StaticError),
-    BuiltinCollision(ModuleId, String),
-    NotABuiltin(ModuleId, String),
-    NotAFn(ModuleId, String),
+    BuiltinCollision(ModuleFnPair),
+    NotABuiltin(ModuleFnPair),
+    NotAFn(ModuleFnPair),
+    NotAModule(String),
 }
 
-impl From<StaticError> for VmError {
-    fn from(e: StaticError) -> VmError {
-        VmError::StaticError(e)
-    }
-}
-
-impl From<AnalysisError> for VmError {
-    fn from(e: AnalysisError) -> VmError {
+impl<T> From<T> for VmError where T: Into<StaticError> {
+    fn from(e: T) -> VmError {
         VmError::StaticError(e.into())
     }
 }
 
-#[derive(Fail, Debug)]
+#[derive(Debug, Clone)]
+pub struct ModuleFnPair {
+    pub module: String,
+    pub function: String,
+}
+
+#[derive(Fail, Debug, Clone)]
 pub enum InternalError {
     #[fail(display = "Invalid number of arguments. Found {}. {}", _0, _1)]
     InvalidArgCount(usize, ExpectedArgCount),
@@ -37,9 +38,72 @@ pub enum InternalError {
         found: String,
         expected: String,
     },
+
+    #[fail(display = "Invalid instruction pointer {}. Max: {}", ip, max)]
+    InstructionPointerOutOfBounds {
+        ip: InstructionPointerType,
+        max: usize
+    },
+
+    #[fail(display = "Integer {} out of the range [{}, {}", v, min_inclusive, max_inclusive)]
+    IntegerOutOfRange {
+        v: i64,
+        min_inclusive: i64,
+        max_inclusive: i64,
+    },
+
+    #[fail(display = "InvalidInstruction: {}", _0)]
+    InvalidInstruction(IIReason),
+
+    #[fail(display = "Runtime instruction error: {}", _0)]
+    RuntimeInstructionError(RuntimeInstructionError),
 }
 
-#[derive(Fail, Debug)]
+#[derive(Fail, Debug, Clone)]
+pub enum RuntimeInstructionError {
+    // TODO: canonical string representation of instructions
+    #[fail(display = "Expected int in: {:?}", _0)]
+    ExpectedInt(Instruction), 
+
+    #[fail(display = "Expected float in: {:?}", _0)]
+    ExpectedFloat(Instruction), 
+
+    #[fail(display = "Expected bool in: {:?}", _0)]
+    ExpectedBool(Instruction), 
+
+    #[fail(display = "Expected function in: {:?}", _0)]
+    ExpectedFunction(Instruction),
+
+    #[fail(display = "No return found for instruction at {}", _0)]
+    NoReturnValue(InstructionPointerType),
+
+    #[fail(display = "Attempting to add {} to current IP({}) results in underflow", addition, current)]
+    IPUnderflow {
+        current: InstructionPointerType,
+        addition: i64,
+    },
+
+    #[fail(display = "Attempting to add {} to current IP({}) results in overflow", addition, current)]
+    IPOverflow {
+        current: InstructionPointerType,
+        addition: i64,
+    },
+}
+
+#[derive(Fail, Debug, Clone)]
+pub enum IIReason {
+    // TODO: canonical string representation of instructions
+    #[fail(display = "Expected int in: {:?}", _0)]
+    ExpectedInt(Instruction), 
+
+    #[fail(display = "Expected float in: {:?}", _0)]
+    ExpectedFloat(Instruction), 
+
+    #[fail(display = "Expected bool in: {:?}", _0)]
+    ExpectedBool(Instruction),
+}
+
+#[derive(Fail, Debug, Clone)]
 pub enum ExpectedArgCount {
     #[fail(display = "Expected {}..={}", _0, _1)]
     Range(usize, usize),
@@ -55,7 +119,7 @@ pub enum ExpectedArgCount {
 #[macro_export]
 macro_rules! no_args {
     ($args: expr) => {{
-        use crate::code_gen::interpreter::err::*;
+        use crate::err::*;
         match $args {
             Some(args) => Err(InternalError::InvalidArgCount(
                 args.len(),
@@ -70,7 +134,7 @@ macro_rules! no_args {
 #[macro_export]
 macro_rules! exact_args {
     ($exact: expr, $args: expr) => {{
-        use crate::code_gen::interpreter::err::*;
+        use crate::err::*;
         match $args {
             Some(args) => {
                 if args.len() != $exact {
@@ -100,7 +164,7 @@ macro_rules! exact_args {
 #[macro_export]
 macro_rules! min_args {
     ($min: expr, $args: expr) => {{
-        use crate::code_gen::interpreter::err::*;
+        use crate::err::*;
         match $args {
             Some(args) => {
                 if args.len() < $min {
@@ -129,7 +193,7 @@ macro_rules! min_args {
 #[macro_export]
 macro_rules! max_args {
     ($max: expr, $args: expr) => {{
-        use crate::code_gen::interpreter::err::*;
+        use crate::err::*;
         match $args {
             Some(args) => {
                 if args.len() > $max {
@@ -152,7 +216,7 @@ macro_rules! max_args {
 macro_rules! arg_range_inclusive {
     // Assume min_inclusive is greater than 1
     ($min_inclusive: expr, $max_inclusive: expr, $args: expr) => {{
-        use crate::code_gen::interpreter::err::*;
+        use crate::err::*;
         match $args {
             Some(args) => {
                 if $min_inclusive <= args.len() && $max_inclusive >= args.len() {

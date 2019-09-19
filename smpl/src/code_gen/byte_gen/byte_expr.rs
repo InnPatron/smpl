@@ -8,13 +8,13 @@ pub fn translate_expr(expr: &Expr) -> Vec<Instruction> {
 
     let mut translated = Vec::new();
     for tmp in execution_order {
-        translated.push(translate_tmp(expr.get_tmp(*tmp)));
+        translated.extend(translate_tmp(expr.get_tmp(*tmp)));
     }
 
     translated
 }
 
-fn translate_tmp(tmp: &Tmp) -> Instruction {
+fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
     use super::byte_code::Instruction::*;
     use super::byte_code::Arg;
 
@@ -23,7 +23,7 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
 
     let store = tmp_id(id);
 
-    match *value.data() {
+    let single = match *value.data() {
         Value::Literal(ref lit) => match *lit {
             Literal::String(ref string) => Store(Location::Tmp(store), Arg::String(string.to_string())),
 
@@ -85,22 +85,38 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
 
         Value::BinExpr(ref op, ref lhs, ref rhs) => {
             use crate::ast::BinOp;
+            use crate::analysis::type_cons::Type;
 
+            macro_rules! specific_math_op {
+                ($ty: expr, $store: expr, $lhs: expr, $rhs: expr, $integer: path, $float: path) => {
+                    match $ty {
+                        Type::Int => $integer($store, $lhs, $rhs),
+                        Type::Float => $float($store, $lhs, $rhs),
+
+                        _ => unreachable!(),
+                    }
+                }
+            }
+
+            let ty = value
+                .get_type()
+                .expect("All values should be typed before code gen");
             let lhs = Arg::Location(Location::Tmp(tmp_id(*lhs.data())));
             let rhs = Arg::Location(Location::Tmp(tmp_id(*rhs.data())));
             match op {
-                BinOp::Add => Add(Location::Tmp(store), lhs, rhs),
-                BinOp::Sub => Sub(Location::Tmp(store), lhs, rhs),
-                BinOp::Mul => Mul(Location::Tmp(store), lhs, rhs),
-                BinOp::Div => Div(Location::Tmp(store), lhs, rhs),
-                BinOp::Mod => Mod(Location::Tmp(store), lhs, rhs),
+                BinOp::Add => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, AddI, AddF), 
+                BinOp::Sub => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, SubI, SubF), 
+                BinOp::Mul => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, MulI, MulF), 
+                BinOp::Div => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, DivI, DivF), 
+                BinOp::Mod => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, ModI, ModF), 
 
                 BinOp::LogicalAnd => And(Location::Tmp(store), lhs, rhs),
                 BinOp::LogicalOr => Or(Location::Tmp(store), lhs, rhs),
-                BinOp::GreaterEq => GEq(Location::Tmp(store), lhs, rhs),
-                BinOp::LesserEq => LEq(Location::Tmp(store), lhs, rhs),
-                BinOp::Greater => GE(Location::Tmp(store), lhs, rhs),
-                BinOp::Lesser => LE(Location::Tmp(store), lhs, rhs),
+
+                BinOp::GreaterEq => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, GEqI, GEqF),
+                BinOp::LesserEq => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, LEqI, LEqF),
+                BinOp::Greater => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, GEI, GEF),
+                BinOp::Lesser => specific_math_op!(ty, Location::Tmp(store), lhs, rhs, LEI, LEF),
 
                 BinOp::Eq => Eq(Location::Tmp(store), lhs, rhs),
                 BinOp::InEq => InEq(Location::Tmp(store), lhs, rhs),
@@ -130,16 +146,19 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
 
             let to_call = Location::Tmp(tmp_id(fn_call.fn_value()));
 
-            FnCall(Location::Tmp(store), to_call, args)
+            let fn_call = FnCall(to_call, args);
+            let result_store = TakeReturn(Location::Tmp(store));
+
+            return vec![fn_call, result_store];
         }
 
         Value::StructInit(ref struct_init) => {
-            let field_init = struct_init.field_init().unwrap();
+            let field_init = struct_init.raw_field_init().unwrap();
 
             let mut map = HashMap::new();
             for (field, typed_tmp_id) in field_init.into_iter() {
                 let tmp = typed_tmp_id.data().clone();
-                map.insert(field_id(field), Arg::Location(Location::Tmp(tmp_id(tmp))));
+                map.insert(field.to_string(), Arg::Location(Location::Tmp(tmp_id(tmp))));
             }
 
             StoreStructure(Location::Tmp(store), map)
@@ -197,12 +216,11 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
         }
 
         Value::AnonStructInit(ref struct_init) => {
-            let field_init = struct_init.field_init().unwrap();
+            let field_init = struct_init.raw_field_init().unwrap();
 
             let mut map = HashMap::new();
-            for (field, typed_tmp_id) in field_init.into_iter() {
-                let tmp = typed_tmp_id.data().clone();
-                map.insert(field_id(field), Arg::Location(Location::Tmp(tmp_id(tmp))));
+            for (field, tmp) in field_init.into_iter() {
+                map.insert(field.to_string(), Arg::Location(Location::Tmp(tmp_id(*tmp))));
             }
 
             StoreStructure(Location::Tmp(store), map)
@@ -215,11 +233,9 @@ fn translate_tmp(tmp: &Tmp) -> Instruction {
 
             Store(Location::Tmp(store), Arg::Location(location))
         }
-    }
-}
+    };
 
-pub fn field_id(id: FieldId) -> String {
-    format!("_field{}", id.raw())
+    vec![single]
 }
 
 pub fn tmp_id(id: TmpId) -> String {

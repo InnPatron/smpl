@@ -1,10 +1,8 @@
 use failure::Error;
+use smpl::{UnparsedModule, parse_module};
 
-use crate::exact_args;
-use crate::module::*;
-use crate::parser::parse_module;
-
-use crate::code_gen::interpreter::*;
+use crate::*;
+use crate::err::*;
 
 pub const MOD_MATH: &'static str = "math";
 
@@ -169,7 +167,18 @@ fn fpowi(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let p = args.get(1).unwrap().clone();
 
     match (b, p) {
-        (Value::Float(b), Value::Int(p)) => Ok(Value::Float(b.powi(p))),
+        (Value::Float(b), Value::Int(p)) => {
+
+            if p <= std::i32::MAX as i64 {
+                Ok(Value::Float(b.powi(p as i32)))
+            } else {
+                Err(InternalError::IntegerOutOfRange {
+                    v: p,
+                    min_inclusive: std::i32::MIN as i64,
+                    max_inclusive: std::i32::MAX as i64,
+                })?
+            }
+        }
         _ => panic!(),
     }
 }
@@ -180,7 +189,19 @@ fn ipow(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let p = args.get(1).unwrap().clone();
 
     match (b, p) {
-        (Value::Int(b), Value::Int(p)) => Ok(Value::Int(b.pow(p as u32))),
+        (Value::Int(b), Value::Int(p)) => {
+
+            if (p >= 0) && (p < std::u32::MAX as i64) {
+                Ok(Value::Int(b.pow(p as u32)))
+            } else {
+                Err(InternalError::IntegerOutOfRange {
+                    v: p,
+                    min_inclusive: 0,
+                    max_inclusive: std::u32::MAX as i64,
+                })?
+            }
+
+        },
         _ => panic!(),
     }
 }

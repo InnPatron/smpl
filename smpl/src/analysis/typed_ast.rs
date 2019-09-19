@@ -402,6 +402,10 @@ impl StructInit {
         }
     }
 
+    pub fn raw_field_init(&self) -> Option<&[(ast::Ident, Typed<TmpId>)]> {
+        self.field_init.as_ref().map(|v| v.as_slice())
+    }
+
     pub fn field_init(&self) -> Option<Vec<(FieldId, Typed<TmpId>)>> {
         self.mapped_field_init.borrow().clone()
     }
@@ -486,6 +490,10 @@ impl AnonStructInit {
         } else {
             *borrow = Some(app);
         }
+    }
+
+    pub fn raw_field_init(&self) -> Option<&[(ast::Ident, TmpId)]> {
+        self.field_init.as_ref().map(|v| v.as_slice())
     }
 
     pub fn field_init(&self) -> Option<Vec<(FieldId, Typed<TmpId>)>> {

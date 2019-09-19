@@ -4,6 +4,8 @@ mod first_pass;
 mod second_pass;
 mod third_pass;
 
+use crate::analysis::Function;
+
 pub use byte_code::{
     Instruction,
     JumpTarget,
@@ -11,18 +13,60 @@ pub use byte_code::{
     Location,
     FieldAccess,
     Arg,
-    Struct,
-    StructField,
+    InstructionPointerType,
+};
+
+pub use byte_expr::{
+    var_id as to_fn_param,
+    fn_id as to_fn_id,
 };
 
 use crate::analysis::{Traverser, CFG};
 
+#[derive(Debug, Clone)] 
+pub struct ByteCodeFunction {
+    instructions: Vec<Instruction>,
+    validated_flag: bool,
+}
+
+impl ByteCodeFunction {
+
+    pub fn new_not_validated(instructions: Vec<Instruction>) -> ByteCodeFunction {
+        ByteCodeFunction {
+            instructions: instructions,
+            validated_flag: false,
+        }
+    }
+
+    pub fn new_pre_validated(instructions: Vec<Instruction>) -> ByteCodeFunction {
+        ByteCodeFunction {
+            instructions: instructions,
+            validated_flag: true,
+        }
+    }
+
+    pub fn validate(mut self) -> ByteCodeFunction {
+        self.validated_flag = true;
+        self
+    }
+
+    pub fn is_validated(&self) -> bool {
+        self.validated_flag
+    }
+
+    pub fn instructions(&self) -> &[Instruction] {
+        &self.instructions
+    }
+}
+
 /// Takes a CFG and transforms it into valid and executable bytecode
-pub fn compile_to_byte_code(cfg: &CFG) -> Vec<Instruction> {
+pub fn compile_to_byte_code(function: &Function) -> ByteCodeFunction {
+
+    let cfg = function.cfg();
 
     // Goes through the CFG and collects the main function body, loops, and branches
     //   into organized groups of instructions with metadata
-    let mut first_pass = first_pass::FirstPass::new(cfg);
+    let mut first_pass = first_pass::FirstPass::new(&*cfg);
     {
         let traverser = Traverser::new(&*cfg, &mut first_pass);
 
@@ -40,5 +84,5 @@ pub fn compile_to_byte_code(cfg: &CFG) -> Vec<Instruction> {
         second_pass.pass()
     );
 
-    third_pass.pass()
+    ByteCodeFunction::new_pre_validated(third_pass.pass())
 }

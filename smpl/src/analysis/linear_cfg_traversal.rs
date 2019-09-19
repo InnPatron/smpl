@@ -98,7 +98,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
                     match self.visit_node(current_node)? {
                         Some(next) => current_node = next,
-                        None => return Ok(None),
+                        None => break,
                     }
                 }
 
@@ -116,6 +116,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                         Node::BranchMerge(ref branch_data) => {
                             self.passenger
                                 .branch_end_false_path(current_node, branch_data)?;
+                            self.passenger.branch_merge(current_node, branch_data)?;
                             merge = Some(current_node);
                             break;
                         }
@@ -125,9 +126,10 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
                     match self.visit_node(current_node)? {
                         Some(next) => current_node = next,
-                        None => return Ok(None),
+                        None => panic!(),
                     }
                 }
+
 
                 if merge.is_none() {
                     panic!("Traversed entire graph and did not find Condition::BranchMerge");
@@ -137,8 +139,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
             }
 
             Node::BranchMerge(ref branch_data) => {
-                self.passenger.branch_merge(current, branch_data)?;
-                Ok(Some(self.graph.next(current)))
+                unreachable!();
             }
 
             Node::LoopHead(ref branch_data, ref expr_data) => {

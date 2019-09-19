@@ -47,6 +47,7 @@ pub fn check_modules(
     for (mod_id, source) in sources.into_iter() {
         program
             .metadata_mut()
+            .mod_metadata_mut()
             .insert_mod_source(mod_id.clone(), source);
     }
 
@@ -181,11 +182,21 @@ pub fn check_modules(
 
         let module_scope = raw_program.scopes.remove(&mod_id).unwrap();
 
+        // Insert module scope metadata
+        let module_scope_meta = super::metadata::ModuleScope {
+            funcs: module_scope.all_fns().map(|(_, fn_id)| fn_id.clone()).collect(),
+        };
+        program
+            .metadata_mut()
+            .mod_metadata_mut()
+            .insert_module_scope(mod_id,module_scope_meta);
+
         let dependencies = raw_program.dependencies.remove(&mod_id).unwrap();
 
         let module = Module::new(module_scope, owned_structs, owned_fns, dependencies, mod_id);
 
         program.universe_mut().map_module(mod_id, name, module);
+
     }
 
     Ok(())
@@ -274,11 +285,11 @@ fn raw_mod_data(
     program: &mut Program,
     modules: Vec<ParsedModule>,
 ) -> Result<(HashMap<ModuleId, RawModData>, Vec<(ModuleId, ModuleSource)>), AnalysisError> {
-    let (universe, _metadata, _) = program.analysis_context();
     let mut mod_map = HashMap::new();
     let mut source_map = Vec::new();
 
-    for module in modules {
+    for module in modules { 
+
         let mut struct_reserve = HashMap::new();
         let mut fn_reserve = HashMap::new();
         let mut builtin_fn_reserve = HashMap::new();
@@ -290,21 +301,21 @@ fn raw_mod_data(
                 DeclStmt::Struct(d) => {
                     struct_reserve.insert(
                         d.data().name.data().clone().clone(),
-                        ReservedType(universe.new_type_id(), d),
+                        ReservedType(program.universe_mut().new_type_id(), d),
                     );
                 }
 
                 DeclStmt::Function(d) => {
                     fn_reserve.insert(
                         d.data().name.data().clone(),
-                        ReservedFn(universe.new_fn_id(), d),
+                        ReservedFn(program.universe_mut().new_fn_id(), d),
                     );
                 }
 
                 DeclStmt::BuiltinFunction(d) => {
                     builtin_fn_reserve.insert(
                         d.data().name.data().clone(),
-                        ReservedBuiltinFn(universe.new_fn_id(), d),
+                        ReservedBuiltinFn(program.universe_mut().new_fn_id(), d),
                     );
                 }
 
@@ -322,6 +333,12 @@ fn raw_mod_data(
             reserved_builtins: builtin_fn_reserve,
             uses: uses,
         };
+
+        // Map module name to id
+        program
+            .metadata_mut()
+            .mod_metadata_mut()
+            .map_module(raw.name.data().clone(), module.id);
 
         let id = raw.id;
         mod_map.insert(id, raw);

@@ -1,7 +1,17 @@
+macro_rules! map_unique_set {
+    ($map: expr, $key: expr, $val: expr, $msg: expr) => {{
+        if $map.insert($key, $val).is_some() {
+            panic!($msg);
+        }
+    }}
+}
+
 mod attribute_keys;
 mod fn_data;
 mod layout;
+mod modules;
 
+pub use self::modules::*;
 pub use self::fn_data::*;
 pub use self::layout::*;
 
@@ -10,10 +20,10 @@ use std::collections::{HashMap, HashSet};
 use super::error::AnalysisError;
 use crate::analysis::semantic_data::{FnId, ModuleId, Program, TypeId};
 use crate::ast::{Annotation, Ident};
-use crate::module::ModuleSource;
 
 #[derive(Clone, Debug)]
 pub struct Metadata {
+    module_meta: ModuleMetadata,
     fn_param_ids: HashMap<FnId, Vec<FunctionParameter>>,
     fn_layout: HashMap<FnId, FnLayout>,
     field_ordering: HashMap<TypeId, FieldOrdering>,
@@ -28,12 +38,12 @@ pub struct Metadata {
     struct_annotations: HashMap<TypeId, HashMap<String, Option<String>>>,
     fn_annotations: HashMap<FnId, HashMap<String, Option<String>>>,
 
-    module_sources: HashMap<ModuleId, ModuleSource>,
 }
 
 impl Metadata {
-    pub fn new() -> Metadata {
+    pub(super) fn new() -> Metadata {
         Metadata {
+            module_meta: ModuleMetadata::new(),
             fn_param_ids: HashMap::new(),
             fn_layout: HashMap::new(),
             field_ordering: HashMap::new(),
@@ -44,11 +54,18 @@ impl Metadata {
             unchecked_builtins_params: HashSet::new(),
             struct_annotations: HashMap::new(),
             fn_annotations: HashMap::new(),
-            module_sources: HashMap::new(),
         }
     }
 
-    pub fn insert_builtin(&mut self, id: FnId) {
+    pub(super) fn mod_metadata_mut(&mut self) -> &mut ModuleMetadata {
+        &mut self.module_meta
+    }
+
+    pub fn mod_metadata(&self) -> &ModuleMetadata {
+        &self.module_meta
+    }
+
+    pub(super) fn insert_builtin(&mut self, id: FnId) {
         self.builtin.insert(id);
     }
 
@@ -56,44 +73,48 @@ impl Metadata {
         self.builtin.contains(&id)
     }
 
-    pub fn insert_unchecked_builtin_params(&mut self, id: FnId) {
+    pub(super) fn insert_unchecked_builtin_params(&mut self, id: FnId) {
         self.insert_builtin(id);
         self.unchecked_builtins_params.insert(id);
     }
 
     pub fn is_builtin_params_unchecked(&self, id: FnId) -> bool {
         self.unchecked_builtins_params.contains(&id)
-    }
+    } 
 
-    pub fn insert_module_fn(&mut self, mod_id: ModuleId, name: Ident, fn_id: FnId) {
+    pub(super) fn insert_module_fn(&mut self, mod_id: ModuleId, name: Ident, fn_id: FnId) {
         self.fn_map.insert((mod_id, name), fn_id);
     }
 
-    pub fn module_fn(&self, mod_id: ModuleId, name: Ident) -> Option<FnId> {
-        self.fn_map.get(&(mod_id, name)).map(|id| id.clone())
+    pub fn module_fn<T: Into<Ident>>(&self, mod_id: ModuleId, name: T) -> Option<FnId> {
+        self.fn_map.get(&(mod_id, name.into())).map(|id| id.clone())
     }
 
-    pub fn insert_field_ordering(&mut self, id: TypeId, data: FieldOrdering) {
-        if self.field_ordering.insert(id, data).is_some() {
-            panic!("Overwriting field ordering for struct {}", id);
-        }
+    pub(super) fn insert_field_ordering(&mut self, id: TypeId, data: FieldOrdering) {
+        map_unique_set!(self.field_ordering,
+            id,
+            data,
+            format!("Overwriting field ordering for struct {}", id)
+        );
     }
 
     pub fn field_ordering(&self, id: TypeId) -> &FieldOrdering {
         self.field_ordering.get(&id).unwrap()
     }
 
-    pub fn insert_fn_layout(&mut self, id: FnId, data: FnLayout) {
-        if self.fn_layout.insert(id, data).is_some() {
-            panic!("Overwriting for fn {}", id);
-        }
+    pub(super) fn insert_fn_layout(&mut self, id: FnId, data: FnLayout) {
+        map_unique_set!(self.fn_layout,
+            id,
+            data,
+            format!("Overwriting for fn {}", id)
+        );
     }
 
     pub fn fn_layout(&self, id: FnId) -> &FnLayout {
         self.fn_layout.get(&id).unwrap()
     }
 
-    pub fn insert_array_type(&mut self, mod_id: ModuleId, type_id: TypeId) {
+    pub(super) fn insert_array_type(&mut self, mod_id: ModuleId, type_id: TypeId) {
         if self.array_types.contains_key(&mod_id) {
             let v = self.array_types.get_mut(&mod_id).unwrap();
             v.push(type_id);
@@ -106,17 +127,19 @@ impl Metadata {
         self.array_types.get(&id).map(|v| v.as_slice())
     }
 
-    pub fn insert_function_param_ids(&mut self, fn_id: FnId, params: Vec<FunctionParameter>) {
-        if self.fn_param_ids.insert(fn_id, params).is_some() {
-            panic!();
-        }
+    pub(super) fn insert_function_param_ids(&mut self, fn_id: FnId, params: Vec<FunctionParameter>) {
+        map_unique_set!(self.fn_param_ids,
+            fn_id,
+            params,
+            format!("Overriding function param ids for {:?}", fn_id)
+        );
     }
 
     pub fn function_param_ids(&self, fn_id: FnId) -> &[FunctionParameter] {
         self.fn_param_ids.get(&fn_id).unwrap().as_slice()
     }
 
-    pub fn find_main(program: &mut Program) -> Result<(), AnalysisError> {
+    pub(super) fn find_main(program: &mut Program) -> Result<(), AnalysisError> {
         use crate::ast::{AstNode, ModulePath};
         use crate::span::Span;
 
@@ -144,7 +167,7 @@ impl Metadata {
         self.main
     }
 
-    pub fn set_struct_annotations(&mut self, type_id: TypeId, annotations: &[Annotation]) {
+    pub(super) fn set_struct_annotations(&mut self, type_id: TypeId, annotations: &[Annotation]) {
         self.struct_annotations.insert(
             type_id,
             annotations
@@ -166,7 +189,7 @@ impl Metadata {
         self.struct_annotations.get(&type_id)
     }
 
-    pub fn set_fn_annotations(&mut self, fn_id: FnId, annotations: &[Annotation]) {
+    pub(super) fn set_fn_annotations(&mut self, fn_id: FnId, annotations: &[Annotation]) {
         self.fn_annotations.insert(
             fn_id,
             annotations
@@ -188,17 +211,5 @@ impl Metadata {
     pub fn is_opaque(&self, type_id: TypeId) -> bool {
         self.get_struct_annotations(type_id)
             .map_or(false, |map| map.contains_key(attribute_keys::OPAQUE))
-    }
-
-    pub fn insert_mod_source(&mut self, id: ModuleId, source: ModuleSource) {
-        if self.module_sources.insert(id, source).is_some() {
-            panic!("Module should only have one source");
-        }
-    }
-
-    pub fn mod_source(&self, id: ModuleId) -> &ModuleSource {
-        self.module_sources
-            .get(&id)
-            .expect("module should have a source")
-    }
+    } 
 }

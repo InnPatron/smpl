@@ -28,7 +28,7 @@ pub struct Program {
 }
 
 impl Program {
-    pub fn new(universe: Universe, metadata: Metadata, features: PresentFeatures) -> Program {
+    pub(super) fn new(universe: Universe, metadata: Metadata, features: PresentFeatures) -> Program {
         Program {
             universe: universe,
             metadata: metadata,
@@ -36,14 +36,18 @@ impl Program {
         }
     }
 
-    pub fn analysis_context<'a>(
+    pub(super) fn analysis_context<'a>(
         &'a mut self,
     ) -> (&'a mut Universe, &'a mut Metadata, &'a mut PresentFeatures) {
         (&mut self.universe, &mut self.metadata, &mut self.features)
     }
 
-    pub fn universe(&self) -> &Universe {
+    pub(super) fn universe(&self) -> &Universe {
         &self.universe
+    }
+
+    pub fn all_fns(&self) -> impl Iterator<Item=(FnId, &Function)> {
+        self.universe.all_fns()
     }
 
     pub fn metadata(&self) -> &Metadata {
@@ -54,15 +58,15 @@ impl Program {
         &self.features
     }
 
-    pub fn universe_mut(&mut self) -> &mut Universe {
+    pub(super) fn universe_mut(&mut self) -> &mut Universe {
         &mut self.universe
     }
 
-    pub fn metadata_mut(&mut self) -> &mut Metadata {
+    pub(super) fn metadata_mut(&mut self) -> &mut Metadata {
         &mut self.metadata
     }
 
-    pub fn features_mut(&mut self) -> &mut PresentFeatures {
+    pub(super) fn features_mut(&mut self) -> &mut PresentFeatures {
         &mut self.features
     }
 }
@@ -71,7 +75,7 @@ impl Program {
 pub struct Universe {
     generated_type_cons_map: RefCell<HashMap<TypeId, TypeCons>>,
     type_cons_map: HashMap<TypeId, TypeCons>,
-    fn_map: HashMap<FnId, Rc<Function>>,
+    fn_map: HashMap<FnId, Function>,
     builtin_fn_map: HashMap<FnId, BuiltinFunction>,
     module_map: HashMap<ModuleId, Module>,
     module_name: HashMap<Ident, ModuleId>,
@@ -192,7 +196,7 @@ impl Universe {
             fn_scope: fn_scope,
         };
 
-        if self.fn_map.insert(fn_id, Rc::new(function)).is_some() {
+        if self.fn_map.insert(fn_id, function).is_some() {
             panic!(
                 "Attempting to override Function with FnId {} in the Universe",
                 fn_id.0
@@ -241,8 +245,8 @@ impl Universe {
         })
     }
 
-    pub fn get_fn(&self, id: FnId) -> Rc<Function> {
-        self.fn_map.get(&id).unwrap().clone()
+    pub fn get_fn(&self, id: FnId) -> &Function {
+        self.fn_map.get(&id).unwrap()
     }
 
     pub fn get_builtin_fn(&self, id: FnId) -> &BuiltinFunction {
@@ -296,11 +300,10 @@ impl Universe {
             .collect()
     }
 
-    pub fn all_fns(&self) -> Vec<(FnId, Rc<Function>)> {
+    pub fn all_fns(&self) -> impl Iterator<Item=(FnId, &Function)> {
         self.fn_map
             .iter()
-            .map(|(id, f)| (id.clone(), f.clone()))
-            .collect()
+            .map(|(id, f)| (id.clone(), f))
     }
 
     pub fn all_modules(&self) -> Vec<(&Ident, &ModuleId)> {
@@ -449,12 +452,16 @@ impl ScopedData {
             .map(|(id, constraint)| (id.clone(), constraint.as_ref()))
     }
 
-    pub fn all_types(&self) -> Vec<(&ModulePath, &TypeId)> {
-        self.type_cons_map.iter().collect()
+    pub fn all_types(&self) -> impl Iterator<Item=(&ModulePath, TypeId)> {
+        self.type_cons_map
+            .iter()
+            .map(|(path, id)| (path, id.clone()))
     }
 
-    pub fn all_fns(&self) -> Vec<(&ModulePath, &FnId)> {
-        self.fn_map.iter().collect()
+    pub fn all_fns(&self) -> impl Iterator<Item=(&ModulePath, FnId)> {
+        self.fn_map
+            .iter()
+            .map(|(path, id)| (path, id.clone()))
     }
 }
 
@@ -490,7 +497,7 @@ impl Function {
         self.cfg.clone()
     }
 
-    pub fn fn_scope(&self) -> &ScopedData {
+    pub(super) fn fn_scope(&self) -> &ScopedData {
         &self.fn_scope
     }
 }

@@ -1,8 +1,9 @@
 use failure::Error;
 
-use crate::module::*;
-use crate::parser::parse_module;
-use crate::code_gen::interpreter::*;
+use smpl::*;
+use smpl::parse_module;
+
+use crate::*;
 
 macro_rules! setup_and_run {
     ($mod1: expr, $mod_name: expr, $fn_name: expr, $args: expr) => {{
@@ -12,12 +13,16 @@ macro_rules! setup_and_run {
         let module = VmModule::new(parsed);
 
         let modules = vec![module];
-        let mut avm = AVM::new(Std::std(), modules).unwrap();
+        let avm = AVM::new(Std::std(), modules).unwrap();
         
         let a_fn_handle = avm.query_module($mod_name, $fn_name).unwrap().unwrap();
 
-        let a_result = avm.eval_fn_args_sync(a_fn_handle, $args)
-            .expect("AVM eval error");
+        let a_result = avm.spawn_executor(a_fn_handle, $args, SpawnOptions {
+            type_check: false   
+        })
+            .expect("Executor spawn error error")
+            .execute_sync()
+            .expect("Executor run error");
 
         a_result
     }};
@@ -30,12 +35,16 @@ macro_rules! setup_and_run {
             .add_builtin("add", add);
 
         let modules = vec![module];
-        let mut avm = AVM::new(Std::std(), modules).unwrap();
+        let avm = AVM::new(Std::std(), modules).unwrap();
         
         let a_fn_handle = avm.query_module($mod_name, $fn_name).unwrap().unwrap();
 
-        let a_result = avm.eval_fn_args_sync(a_fn_handle, $args)
-            .expect("AVM eval error");
+        let a_result = avm.spawn_executor(a_fn_handle, $args, SpawnOptions {
+            type_check: false
+        })
+            .expect("Executor spawn error error")
+            .execute_sync()
+            .expect("Executor run error");
 
         a_result
     }};
@@ -48,12 +57,16 @@ macro_rules! setup_and_run {
             .add_builtin("sum", var_arg_sum);
 
         let modules = vec![module];
-        let mut avm = AVM::new(Std::std(), modules).unwrap();
+        let avm = AVM::new(Std::std(), modules).unwrap();
         
         let a_fn_handle = avm.query_module($mod_name, $fn_name).unwrap().unwrap();
 
-        let a_result = avm.eval_fn_args_sync(a_fn_handle, $args)
-            .expect("AVM eval error");
+        let a_result = avm.spawn_executor(a_fn_handle, $args, SpawnOptions {
+            type_check: false    
+        })
+            .expect("Executor spawn error error")
+            .execute_sync()
+            .expect("Executor run error");
 
         a_result
     }};
@@ -67,12 +80,16 @@ macro_rules! setup_and_run {
             .add_builtin("sum", var_arg_sum);
 
         let modules = vec![module];
-        let mut avm = AVM::new(Std::std(), modules).unwrap();
+        let avm = AVM::new(Std::std(), modules).unwrap();
         
         let a_fn_handle = avm.query_module($mod_name, $fn_name).unwrap().unwrap();
 
-        let a_result = avm.eval_fn_args_sync(a_fn_handle, $args)
-            .expect("AVM eval error");
+        let a_result = avm.spawn_executor(a_fn_handle, $args, SpawnOptions {
+            type_check: false    
+        })
+            .expect("Executor spawn error error")
+            .execute_sync()
+            .expect("Executor run error");
 
         a_result
     }};
@@ -213,7 +230,13 @@ return mod1::add(1, 2);
     
     let a_fn_handle = avm.query_module("mod2", "test2").unwrap().unwrap();
 
-    let a_result = avm.eval_fn_sync(a_fn_handle).unwrap();
+    let a_result = avm.spawn_executor(a_fn_handle, None, SpawnOptions {
+        type_check: false,    
+    })
+        .unwrap()
+        .execute_sync()
+        .unwrap();
+        
 
     assert_eq!(Value::Int(3), a_result);
 }

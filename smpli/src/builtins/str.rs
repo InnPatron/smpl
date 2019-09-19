@@ -1,10 +1,7 @@
 use failure::Error;
+use smpl::{UnparsedModule, parse_module};
 
-use crate::module::*;
-use crate::parser::parse_module;
-use crate::{exact_args, min_args};
-
-use crate::code_gen::interpreter::*;
+use crate::*;
 
 const MOD_STRING: &'static str = "str";
 
@@ -36,7 +33,7 @@ fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let string = args.pop().unwrap();
     let string = irmatch!(string; Value::String(s) => s);
 
-    Ok(Value::Int(string.len() as i32))
+    Ok(Value::Int(string.len() as i64))
 }
 
 fn to_string(args: Option<Vec<Value>>) -> Result<Value, Error> {
@@ -86,7 +83,7 @@ fn to_upper(args: Option<Vec<Value>>) -> Result<Value, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::module::*;
+    use smpl::*;
 
     macro_rules! wrap_input {
         ($input: expr) => {{
@@ -101,20 +98,33 @@ mod tests {
         let fn_handle = vm.query_module(MOD_STRING, STRING_LEN).unwrap().unwrap();
 
         let result = vm
-            .eval_fn_args_sync(fn_handle, Some(vec![Value::String("".to_string())]))
+            .spawn_executor(fn_handle, Some(vec![Value::String("".to_string())]), SpawnOptions {
+                type_check: false
+            })
+            .unwrap()
+            .execute_sync()
             .unwrap();
         assert_eq!(Value::Int(0), result);
 
         let result = vm
-            .eval_fn_args_sync(fn_handle, Some(vec![Value::String("1".to_string())]))
+            .spawn_executor(fn_handle, Some(vec![Value::String("1".to_string())]), SpawnOptions {
+                type_check: false    
+            })
+            .unwrap()
+            .execute_sync()
             .unwrap();
         assert_eq!(Value::Int(1), result);
 
         let result = vm
-            .eval_fn_args_sync(
+            .spawn_executor(
                 fn_handle,
                 Some(vec![Value::String("123456789".to_string())]),
+                SpawnOptions {
+                    type_check: false
+                }
             )
+            .unwrap()
+            .execute_sync()
             .unwrap();
         assert_eq!(Value::Int(9), result);
     }
@@ -129,14 +139,19 @@ mod tests {
             .unwrap();
 
         let result = vm
-            .eval_fn_args_sync(
+            .spawn_executor(
                 fn_handle,
                 Some(vec![
                     Value::String("I am ".to_string()),
                     Value::Int(1337),
                     Value::String("!".to_string()),
                 ]),
+                SpawnOptions {
+                    type_check: false
+                }
             )
+            .unwrap()
+            .execute_sync()
             .unwrap();
         assert_eq!(Value::String("I am 1337!".to_string()), result);
     }
@@ -148,13 +163,18 @@ mod tests {
         let fn_handle = vm.query_module(MOD_STRING, STRING_APPEND).unwrap().unwrap();
 
         let result = vm
-            .eval_fn_args_sync(
+            .spawn_executor(
                 fn_handle,
                 Some(vec![
                     Value::String("I'll ".to_string()),
                     Value::String("be back.".to_string()),
                 ]),
+                SpawnOptions {
+                    type_check: false
+                }
             )
+            .unwrap()
+            .execute_sync()
             .unwrap();
         assert_eq!(Value::String("I'll be back.".to_string()), result);
     }
@@ -169,10 +189,15 @@ mod tests {
             .unwrap();
 
         let result = vm
-            .eval_fn_args_sync(
+            .spawn_executor(
                 fn_handle,
                 Some(vec![Value::String("LOUD NOISES".to_string())]),
+                SpawnOptions {
+                    type_check: false,
+                }
             )
+            .unwrap()
+            .execute_sync()
             .unwrap();
         assert_eq!(Value::String("loud noises".to_string()), result);
     }
@@ -187,10 +212,15 @@ mod tests {
             .unwrap();
 
         let result = vm
-            .eval_fn_args_sync(
+            .spawn_executor(
                 fn_handle,
                 Some(vec![Value::String("loud noises".to_string())]),
+                SpawnOptions {
+                    type_check: false,
+                }
             )
+            .unwrap()
+            .execute_sync()
             .unwrap();
         assert_eq!(Value::String("LOUD NOISES".to_string()), result);
     }
@@ -214,7 +244,12 @@ return str::to_string(\"Cannot\", \" touch\", \" this!?\");
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
-    let result = vm.eval_fn_sync(fn_handle).unwrap();
+    let result = vm.spawn_executor(fn_handle, None, SpawnOptions {
+        type_check: false    
+    })
+        .unwrap()
+        .execute_sync()
+        .unwrap();
     assert_eq!(Value::String("Cannot touch this!?".to_string()), result);
 }
 }
