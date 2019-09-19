@@ -1,6 +1,6 @@
 use failure::Error;
 
-use smpl::{FnId, TypeId};
+use smpl::{FnId, TypeId, ModuleId};
 
 use super::value::Value;
 
@@ -12,18 +12,20 @@ pub enum ModQuery {
     TypeHandle(TypeHandle),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct FnHandle(FnId);
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct FnHandle(ModuleId, FnId);
 
 impl FnHandle {
-    pub(crate) fn id(&self) -> FnId {
-        self.0.clone()
+    pub(crate) fn new(mod_id: ModuleId, fn_id: FnId) -> FnHandle {
+        FnHandle(mod_id, fn_id)
     }
-}
 
-impl From<FnId> for FnHandle {
-    fn from(f: FnId) -> FnHandle {
-        FnHandle(f)
+    pub(crate) fn fn_id(&self) -> FnId {
+        self.1.clone()
+    }
+
+    pub(crate) fn mod_id(&self) -> ModuleId {
+        self.0.clone()
     }
 }
 
