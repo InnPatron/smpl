@@ -76,6 +76,7 @@ impl AVM {
         builtin: BuiltinFn,
     ) -> Result<(), VmError> {
         let module_name = self.metadata
+            .mod_metadata()
             .get_module_by_id(mod_id).unwrap();
 
         let module_fn_pair = ModuleFnPair {
@@ -107,7 +108,9 @@ impl AVM {
     }
 
     pub fn query_module(&self, module: &str, name: &str) -> Result<Option<FnHandle>, String> {
-        let mod_id = self.metadata.get_module(module.to_string());
+        let mod_id = self.metadata
+            .mod_metadata()
+            .get_module(module.to_string());
 
         match mod_id {
             Some(mod_id) => Ok(self

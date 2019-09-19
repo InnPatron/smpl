@@ -47,6 +47,7 @@ pub fn check_modules(
     for (mod_id, source) in sources.into_iter() {
         program
             .metadata_mut()
+            .mod_metadata_mut()
             .insert_mod_source(mod_id.clone(), source);
     }
 
@@ -326,6 +327,7 @@ fn raw_mod_data(
         // Map module name to id
         program
             .metadata_mut()
+            .mod_metadata_mut()
             .map_module(raw.name.data().clone(), module.id);
 
         let id = raw.id;
