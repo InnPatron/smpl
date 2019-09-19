@@ -98,7 +98,7 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
                 }
             }
 
-            let ty = value
+            let ty = lhs 
                 .get_type()
                 .expect("All values should be typed before code gen");
             let lhs = Arg::Location(Location::Tmp(tmp_id(*lhs.data())));
