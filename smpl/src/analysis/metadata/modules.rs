@@ -8,6 +8,7 @@ pub struct ModuleMetadata {
     module_map: HashMap<Ident, ModuleId>,
     module_reverse_map: HashMap<ModuleId, String>,
     module_sources: HashMap<ModuleId, ModuleSource>,
+    module_scopes: HashMap<ModuleId, ModuleScope>,
 }
 
 impl ModuleMetadata {
@@ -16,6 +17,7 @@ impl ModuleMetadata {
             module_map: HashMap::new(),
             module_reverse_map: HashMap::new(),
             module_sources: HashMap::new(),
+            module_scopes: HashMap::new(),
         }
     }
 
@@ -57,4 +59,23 @@ impl ModuleMetadata {
             .clone()
             .map(|name| name.to_string())
     } 
+
+    pub(crate) fn insert_module_scope(&mut self, id: ModuleId, scope: ModuleScope) {
+        map_unique_set!(self.module_scopes, 
+            mod_id, 
+            scope, 
+            format!("Overriding module scope for {:?}", mod_id)
+        );
+    }
+
+    pub fn module_scope(&self, id: ModuleId) -> &ModuleScope {
+        self.module_scopes
+            .get(&id)
+            .expect(&format!("No module scope for {:?}", id))
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ModuleScope {
+    pub funcs: HashMap<String, FnId>,
 }
