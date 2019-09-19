@@ -35,3 +35,5 @@ pub use std_options::*;
 
 pub use vm::{ SpawnOptions, AVM };
 pub use executor::Executor;
+
+pub use smpl::{ ParsedModule, UnparsedModule, parse_module };
