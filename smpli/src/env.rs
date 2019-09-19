@@ -16,6 +16,25 @@ impl Env {
         }
     }
 
+    pub fn fork(&self) -> Env {
+        let env = self.env
+            .iter()
+            .map(|(key, referable)| {
+                (key.clone(), referable.hard_clone())
+            }).collect();
+
+        let tmp_store = self.tmp_store
+            .iter()
+            .map(|(key, referable)| {
+                (key.clone(), referable.hard_clone())
+            }).collect();
+
+        Env {
+            env: env,
+            tmp_store: tmp_store,
+        }
+    }
+
     pub fn map_value(&mut self, name: String, value: Value) -> Option<Value> {
         self.env
             .insert(name, ReferableValue::new(value))
