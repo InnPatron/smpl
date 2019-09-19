@@ -99,7 +99,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
                     match self.visit_node(current_node)? {
                         Some(next) => current_node = next,
-                        None => return Ok(None),
+                        None => break,
                     }
                 }
 
@@ -115,22 +115,26 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 let mut current_node = false_path;
                 let mut merge = None;
                 for _ in 0..self.node_count {
+                    dbg!("LOOP");
                     match *self.graph.node_weight(current_node) {
                         Node::BranchMerge(ref branch_data) => {
                             dbg!("TRAVERSE END FALSE PATH");
                             dbg!(self.graph.node_weight(current_node));
                             self.passenger
                                 .branch_end_false_path(current_node, branch_data)?;
+                            self.passenger.branch_merge(current_node, branch_data)?;
                             merge = Some(current_node);
+                            dbg!("TRAVERSAL AFTER END FALSE PATH");
                             break;
                         }
 
                         _ => (),
                     }
 
+                    dbg!(format!("FALSE PATH VISITING {:?}", current_node));
                     match self.visit_node(current_node)? {
                         Some(next) => current_node = next,
-                        None => return Ok(None),
+                        None => panic!(),
                     }
                 }
 
@@ -140,10 +144,11 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     panic!("Traversed entire graph and did not find Condition::BranchMerge");
                 }
 
-                Ok(Some(merge.unwrap()))
+                Ok(Some(self.graph.next(merge.unwrap())))
             }
 
             Node::BranchMerge(ref branch_data) => {
+                unreachable!();
                 dbg!("TRAVERSE BRANCH MERGE FOO", branch_data);
                 self.passenger.branch_merge(current, branch_data)?;
                 Ok(Some(self.graph.next(current)))
