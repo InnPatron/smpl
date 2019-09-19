@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::analysis::semantic_data::ModuleId;
+use crate::analysis::semantic_data::{ FnId, ModuleId };
 use crate::ast::Ident;
 use crate::module::ModuleSource;
 
@@ -62,9 +62,9 @@ impl ModuleMetadata {
 
     pub(crate) fn insert_module_scope(&mut self, id: ModuleId, scope: ModuleScope) {
         map_unique_set!(self.module_scopes, 
-            mod_id, 
+            id, 
             scope, 
-            format!("Overriding module scope for {:?}", mod_id)
+            format!("Overriding module scope for {:?}", id)
         );
     }
 
@@ -77,5 +77,5 @@ impl ModuleMetadata {
 
 #[derive(Clone, Debug)]
 pub struct ModuleScope {
-    pub funcs: HashMap<String, FnId>,
+    pub funcs: Vec<FnId>,
 }
