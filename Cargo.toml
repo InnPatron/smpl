@@ -9,3 +9,6 @@ exclude = [
 	"smpl-tests/target/sample_program",
 	"smpl-tests/target/basic_tests",
 ]
+
+[patch.crates-io]
+smpl = { path = "./smpl" }
