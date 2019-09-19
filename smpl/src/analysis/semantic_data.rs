@@ -452,12 +452,16 @@ impl ScopedData {
             .map(|(id, constraint)| (id.clone(), constraint.as_ref()))
     }
 
-    pub fn all_types(&self) -> Vec<(&ModulePath, &TypeId)> {
-        self.type_cons_map.iter().collect()
+    pub fn all_types(&self) -> impl Iterator<Item=(&ModulePath, TypeId)> {
+        self.type_cons_map
+            .iter()
+            .map(|(path, id)| (path, id.clone()))
     }
 
-    pub fn all_fns(&self) -> Vec<(&ModulePath, &FnId)> {
-        self.fn_map.iter().collect()
+    pub fn all_fns(&self) -> impl Iterator<Item=(&ModulePath, FnId)> {
+        self.fn_map
+            .iter()
+            .map(|(path, id)| (path, id.clone()))
     }
 }
 
