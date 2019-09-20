@@ -163,9 +163,9 @@ impl Array {
         }
     }
 
-    pub fn new_init(vec: Vec<ReferableValue>) -> Array {
+    pub fn new_init<T: IntoIterator<Item=Value>>(iter: T) -> Array {
         Array {
-            vec: vec
+            vec: iter.into_iter().map(|v| ReferableValue::new(v)).collect(),
         }
     }
 
