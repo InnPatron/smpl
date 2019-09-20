@@ -4,6 +4,8 @@ mod first_pass;
 mod second_pass;
 mod third_pass;
 
+use std::fmt;
+
 use crate::analysis::Function;
 
 pub use byte_code::{
@@ -56,6 +58,16 @@ impl ByteCodeFunction {
 
     pub fn instructions(&self) -> &[Instruction] {
         &self.instructions
+    }
+}
+
+impl fmt::Display for ByteCodeFunction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for instr in self.instructions.iter() {
+            writeln!(f, "{}", instr)?;
+        }
+
+        Ok(())
     }
 }
 
