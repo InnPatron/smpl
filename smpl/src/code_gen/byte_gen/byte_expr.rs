@@ -39,7 +39,7 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
                 .expect("If the program passed semantic analysis, all IDs should be filled in.")
             {
                 BindingId::Fn(id) => fn_id(id),
-                BindingId::Var(id) => var_id(id),
+                BindingId::Var(_) => var.ident().data().as_str().to_owned(),
             };
 
             Store(Location::Tmp(store), Arg::Location(Location::Namespace(value)))
@@ -48,7 +48,7 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
         Value::FieldAccess(ref access) => {
             let internal_path = access.path();
             let root_var = 
-                var_id(internal_path.root_var_id());
+                internal_path.root_name().data().as_str().to_owned();
             let root_indexing_expr = internal_path.root_indexing_expr()
                 .map(|tmp| tmp_id(tmp));
             let path: Vec<_> = internal_path
