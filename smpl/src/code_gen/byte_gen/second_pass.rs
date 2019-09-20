@@ -40,12 +40,12 @@ impl SecondPass {
     }
 
     pub(super) fn pass(self) -> Vec<PartialInstruction> {
-        self.flatten(&self.main_body)
+        self.flatten(&self.main_body).0
     }
 
     /// Goes over a slice of first pass partial instructions and inlines branches and loops
-    fn flatten(&self, partial_instrs: &[PartialInstructionFP]) -> Vec<PartialInstruction> {
-        let mut instructions: Vec<PartialInstruction> = Vec::new();
+    fn flatten(&self, partial_instrs: &[PartialInstructionFP]) -> Flattened {
+        let mut instructions: Flattened = Flattened::new();
 
         for instr in partial_instrs {
             match instr  {
@@ -161,5 +161,39 @@ impl SecondPass {
         }
 
         instructions
+    }
+}
+
+struct Flattened(Vec<PartialInstruction>);
+
+impl Flattened {
+
+    fn new() -> Flattened {
+        Flattened(Vec::new())
+    }
+
+    /// Custom len() implementation needed in order to not count LoopBegin and LoopEnd as
+    /// instructions to jump over
+    fn len(&self) -> usize {
+        let mut size = 0;
+
+        for i in self.0.iter() {
+            match *i {
+                PartialInstruction::LoopBegin(..) | PartialInstruction::LoopEnd(..) => (),
+
+                _ => size += 1,
+
+            }
+        }
+
+        size
+    }
+
+    pub fn push(&mut self, i: PartialInstruction) {
+        self.0.push(i);
+    }
+
+    pub fn append(&mut self, other: &mut Flattened) {
+        self.0.append(&mut other.0);
     }
 }
