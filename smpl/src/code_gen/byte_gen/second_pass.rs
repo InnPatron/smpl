@@ -75,7 +75,7 @@ impl SecondPass {
                     // Append the loop skip instruction
                     // Skips the body if the condition results in FALSE
                     // TODO(alex): Add check to ensure body length within u64 size?
-                    let skip_loop_rel_target: i64 = (body.len() as i64) + 2;
+                    let skip_loop_rel_target: i64 = (body.len() as i64) + 1;
                     // body-size + 2 to skip over the looper jump
                     let skip_loop_instr = Instruction::RelJumpNegateCondition(
                         RelJumpTarget::new(skip_loop_rel_target),
@@ -94,7 +94,7 @@ impl SecondPass {
                     // Unconditionally jumps to start of condition instructions
                     // Loop skip instruction should jump to directly AFTER this instruction
                     let looper_rel_target: i64 = 
-                        -((body.len() as i64) + (condition.len() as i64)) - 2;
+                        -((body.len() as i64) + (condition.len() as i64)) - 1;
                     let loop_instr = Instruction::RelJump(
                         RelJumpTarget::new(looper_rel_target)
                     );
