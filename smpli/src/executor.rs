@@ -10,7 +10,7 @@ use smpl::byte_gen::{ InstructionPointerType, Instruction, Location, Arg, FieldA
 
 use crate::err::*;
 use crate::env::Env;
-use crate::value::{ Value, ReferableValue, Struct };
+use crate::value::{ Value, ReferableValue, Struct, Array };
 use crate::vm_i::{ FnHandle, BuiltinFn };
 use crate::vm::{ MappedBuiltins, CompiledProgram };
 
@@ -572,7 +572,7 @@ impl Executor {
             }
 
             Instruction::StoreArray1(ref store_loc, ref value) => {
-                let internal_array: Vec<ReferableValue> = value
+                let internal_array: Array = value
                     .iter()
                     .map(|arg| {
                         let raw_value = Executor::arg_to_value(env, arg);
@@ -588,7 +588,7 @@ impl Executor {
 
             Instruction::StoreArray2(ref store_loc, ref value, size) => {
                 let cached_value = Executor::arg_to_value(env, value);
-                let internal_array: Vec<ReferableValue> = (0..*size)
+                let internal_array: Array = (0..*size)
                     .map(|_index| {
                         ReferableValue::new(cached_value.clone())
                     })
