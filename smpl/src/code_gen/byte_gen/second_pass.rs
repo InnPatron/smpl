@@ -60,7 +60,11 @@ impl SecondPass {
 
                     let result_arg = loop_frame.get_result_location();
 
-                    let condition = self.flatten(loop_frame.get_condition());
+                    let mut condition = self.flatten(loop_frame.get_condition());
+                    let condition_len = condition.len();
+
+                    let mut body = self.flatten(loop_frame.get_body());
+                    let body_len = body.len();
 
                     instructions.push(Instruction::Meta(
                             format!("Begin loop: {}", loop_id)).into());
@@ -70,18 +74,15 @@ impl SecondPass {
 
                     instructions.push(Instruction::Meta(
                             format!("Begin loop condition for {}", loop_id)).into());
+
                     // Append the condition instructions
-                    let mut condition = condition;
                     instructions.append(&mut condition);
 
                     // Append the loop skip instruction
                     // Skips the body if the condition results in FALSE
                     // TODO(alex): Add check to ensure body length within u64 size?
-                    let body = loop_frame.get_body();
-                    let body = self.flatten(body);
-                    let body_len = body.len();
-                    let skip_loop_rel_target: i64 = (body_len as i64) + 1;
-                    // body-size + 1 to skip over the looper jump
+                    let skip_loop_rel_target: i64 = (body_len as i64) + 2;
+                    // body-size + 2 to skip over the looper jump
                     let skip_loop_instr = Instruction::RelJumpNegateCondition(
                         RelJumpTarget::new(skip_loop_rel_target),
                         result_arg.clone()
@@ -100,7 +101,7 @@ impl SecondPass {
                     // Unconditionally jumps to start of condition instructions
                     // Loop skip instruction should jump to directly AFTER this instruction
                     let looper_rel_target: i64 = 
-                        -((body_len as i64) + (condition.len() as i64)) - 1;
+                        -((body_len as i64) + (condition_len as i64)) - 2;
                     let loop_instr = Instruction::RelJump(
                         RelJumpTarget::new(looper_rel_target)
                     );
@@ -126,8 +127,11 @@ impl SecondPass {
 
                     // Marked as 'mut' for append purposes
                     let mut condition = self.flatten(condition);
+                    let condition_len = condition.len();
                     let mut true_branch = self.flatten(true_branch);
+                    let true_branch_len = true_branch.len();
                     let mut false_branch = self.flatten(false_branch);
+                    let false_branch_len = false_branch.len();
 
                     instructions.push(Instruction::Meta(
                             format!("Begin branch: {}", branch_id)).into());
@@ -142,7 +146,7 @@ impl SecondPass {
                     //   while minimizing the number of jump instructions
                     // +2 to go after false branch and true branch skip
                     let true_rel_jump_target: i64 =
-                        (false_branch.len() as i64) + 2;
+                        (false_branch_len as i64) + 2;
                     let true_rel_jump_instr = Instruction::RelJumpCondition(
                         RelJumpTarget::new(true_rel_jump_target),
                         result_arg.clone()
@@ -158,7 +162,7 @@ impl SecondPass {
                     // Append instruction to jump over the succeed branch
                     // +1 to go to instruction just after the true branch
                     let true_skip_rel_jump_target: i64 =
-                        (true_branch.len() as i64) + 2;
+                        (true_branch_len as i64) + 2;
                     let true_skip_rel_jump_instr = Instruction::RelJump(
                         RelJumpTarget::new(true_skip_rel_jump_target)
                     );
