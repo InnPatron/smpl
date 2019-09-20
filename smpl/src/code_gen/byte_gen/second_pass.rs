@@ -78,10 +78,14 @@ impl SecondPass {
                     // Append the condition instructions
                     instructions.append(&mut condition);
 
+                    let inner_meta = 2;
+                    let after_looper = 2;
+                    let skip_amount = (body_len as i64) + inner_meta + after_looper;
+
                     // Append the loop skip instruction
                     // Skips the body if the condition results in FALSE
                     // TODO(alex): Add check to ensure body length within u64 size?
-                    let skip_loop_rel_target: i64 = (body_len as i64) + 2;
+                    let skip_loop_rel_target: i64 = skip_amount;
                     // body-size + 2 to skip over the looper jump
                     let skip_loop_instr = Instruction::RelJumpNegateCondition(
                         RelJumpTarget::new(skip_loop_rel_target),
@@ -141,12 +145,16 @@ impl SecondPass {
                     // Append condition instructions
                     instructions.append(&mut condition);
 
+                    let meta = 1;
+                    let after_false_branch = 2;
+                    let true_rel_jump_amount =
+                        (false_branch_len as i64) + meta + after_false_branch;
+
                     // Append instruction to jump to the succeed branch
                     // Emit false branch first in order to chain any conditions 
                     //   while minimizing the number of jump instructions
                     // +2 to go after false branch and true branch skip
-                    let true_rel_jump_target: i64 =
-                        (false_branch_len as i64) + 2;
+                    let true_rel_jump_target: i64 = true_rel_jump_amount;
                     let true_rel_jump_instr = Instruction::RelJumpCondition(
                         RelJumpTarget::new(true_rel_jump_target),
                         result_arg.clone()
@@ -159,6 +167,10 @@ impl SecondPass {
                     // Append the false branch
                     instructions.append(&mut false_branch);
 
+                    let meta = 1;
+                    let after_true_branch = 2;
+                    let true_skip_amout =
+                        (true_branch_len as i64) + meta + after_true_branch;
                     // Append instruction to jump over the succeed branch
                     // +1 to go to instruction just after the true branch
                     let true_skip_rel_jump_target: i64 =
