@@ -100,6 +100,10 @@ impl SecondPass {
                     );
                     instructions.push(loop_instr.into());
 
+                    instructions.push(Instruction::Meta(
+                            format!("End loop: {}", loop_id)).into());
+
+
                     // Append marker instruction for end of loop
                     instructions.push(PartialInstruction::LoopEnd(loop_id.clone()));
                 }
@@ -119,6 +123,11 @@ impl SecondPass {
                     let mut true_branch = self.flatten(true_branch);
                     let mut false_branch = self.flatten(false_branch);
 
+                    instructions.push(Instruction::Meta(
+                            format!("Begin branch: {}", branch_id)).into());
+
+                    instructions.push(Instruction::Meta(
+                            format!("Begin branch {} condition", branch_id)).into());
                     // Append condition instructions
                     instructions.append(&mut condition);
 
@@ -134,6 +143,9 @@ impl SecondPass {
                     );
                     instructions.push(true_rel_jump_instr.into());
 
+                    instructions.push(Instruction::Meta(
+                            format!("Begin branch {} false path", branch_id)).into());
+
                     // Append the false branch
                     instructions.append(&mut false_branch);
 
@@ -145,9 +157,14 @@ impl SecondPass {
                         RelJumpTarget::new(true_skip_rel_jump_target)
                     );
                     instructions.push(true_skip_rel_jump_instr.into());
+                    instructions.push(Instruction::Meta(
+                            format!("Begin branch {} true path", branch_id)).into());
 
                     // Append the true branch
                     instructions.append(&mut true_branch);
+
+                    instructions.push(Instruction::Meta(
+                            format!("End branch {}", branch_id)).into());
                 }
 
                 PartialInstructionFP::Continue(loop_id) => {
