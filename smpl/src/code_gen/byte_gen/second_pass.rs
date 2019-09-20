@@ -61,9 +61,14 @@ impl SecondPass {
                     let body = loop_frame.get_body();
                     let result_arg = loop_frame.get_result_location();
 
+                    instructions.push(Instruction::Meta(
+                            format!("Begin loop: {}", loop_id)).into());
+
                     // Append marker instruction for start of loop
                     instructions.push(PartialInstruction::LoopBegin(loop_id.clone()));
 
+                    instructions.push(Instruction::Meta(
+                            format!("Begin loop condition for {}", loop_id)).into());
                     // Append the condition instructions
                     instructions.append(&mut self.flatten(condition));
 
@@ -78,8 +83,12 @@ impl SecondPass {
                     );
                     instructions.push(skip_loop_instr.into());
 
+                    instructions.push(Instruction::Meta(
+                            format!("Begin loop body for {}", loop_id)).into());
                     // Append the body instructions
                     instructions.append(&mut self.flatten(body));
+                    instructions.push(Instruction::Meta(
+                            format!("End loop body for {}", loop_id)).into());
                     
                     // Append the looper instruction
                     // Unconditionally jumps to start of condition instructions
