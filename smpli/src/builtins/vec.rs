@@ -100,7 +100,7 @@ fn insert(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
         let mut borrow = data.inner_ref_mut();
         let data = irmatch!(*borrow; Value::Array(ref mut a) => a);
-        data.insert(index as usize, ReferableValue::new(to_insert));
+        data.insert(index as usize, to_insert);
     }
 
     {
@@ -126,7 +126,7 @@ fn push(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
         let mut borrow = data.inner_ref_mut();
         let data = irmatch!(*borrow; Value::Array(ref mut a) => a);
-        data.push(ReferableValue::new(to_insert));
+        data.push(to_insert);
     }
 
     {
