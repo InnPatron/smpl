@@ -19,8 +19,11 @@ fn main() {
         }
     };
 
-    let fn_handle = vm.query_module("rt", "run").unwrap().unwrap();
+    execute(vm);
+}
 
+fn execute(vm: AVM) {
+    let fn_handle = vm.query_module("rt", "run").unwrap().unwrap(); 
     let executor = match vm
         .spawn_executor(fn_handle, None, SpawnOptions {
             type_check: false
@@ -44,4 +47,5 @@ fn main() {
             process::exit(1);
         }
     };
+
 }
