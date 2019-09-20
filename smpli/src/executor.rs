@@ -120,7 +120,7 @@ impl Executor {
                         .zip(param_info) {
 
                    stack_info.env 
-                        .map_value(to_fn_param(param_info.var_id()), arg);
+                        .map_value(param_info.name().to_string(), arg);
                 }
             }
 
