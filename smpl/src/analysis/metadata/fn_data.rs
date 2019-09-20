@@ -16,7 +16,11 @@ impl FunctionParameter {
         self.id
     }
 
-    pub fn name(&self) -> &Ident {
+    pub fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    pub(crate) fn ident(&self) -> &Ident {
         &self.name
     }
 }
