@@ -569,3 +569,28 @@ fn foo() -> int {
 
     assert_eq!(Value::Int(0), result);
 }
+
+#[test]
+fn interpreter_while_loop() {
+    let result = setup_and_run!(
+"mod mod1;
+
+fn foo() -> int {
+
+    let accu = 0;
+
+    while accu < 100 {
+        accu = accu + 1;
+    }
+
+    let bar = 37;
+
+    return accu + bar;
+}",
+
+    "mod1",
+    "foo",
+    None);
+
+    assert_eq!(Value::Int(137), result);
+}
