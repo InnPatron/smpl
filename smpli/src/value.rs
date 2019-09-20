@@ -45,7 +45,7 @@ pub enum Value {
     Float(f64),
     Bool(bool),
     String(String),
-    Array(Vec<ReferableValue>),
+    Array(Array),
     Function(FnHandle),
     Struct(Struct),
     Unit,
@@ -148,5 +148,137 @@ impl Clone for Struct {
                 })
                 .collect(),
         )
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Array {
+    vec: Vec<ReferableValue>
+}
+
+impl Array {
+    pub fn new() -> Array {
+        Array {
+            vec: Vec::new(),
+        }
+    }
+
+    pub fn new_init(vec: Vec<ReferableValue>) -> Array {
+        Array {
+            vec: vec
+        }
+    }
+
+    pub fn with_capacity(capacity: usize) -> Array {
+        Array {
+            vec: Vec::with_capacity(capacity)
+        }
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.vec.capacity()
+    }
+
+    pub fn reserve(&mut self, additional: usize) {
+        self.vec.reserve(additional);
+    }
+
+    pub fn reserve_exact(&mut self, additional: usize) {
+        self.vec.reserve_exact(additional)
+    }
+
+    pub fn shrink_to_fit(&mut self) {
+        self.vec.shrink_to_fit();
+    }
+
+    pub fn into_boxed_slice(self) -> Box<[ReferableValue]> {
+        self.vec.into_boxed_slice()
+    }
+
+    pub fn truncate(&mut self, len: usize) {
+        self.vec.truncate(len)
+    }
+
+    pub fn as_slice(&self) -> &[ReferableValue] {
+        self.vec.as_slice()
+    }
+
+    pub fn as_mut_slice(&mut self) -> &mut [ReferableValue] {
+        self.vec.as_mut_slice()
+    }
+
+    pub fn insert(&mut self, index: usize, value: ReferableValue) {
+        self.vec.insert(index, value);
+    }
+
+    pub fn remove(&mut self, index: usize) -> ReferableValue {
+        self.vec.remove(index)
+    }
+
+    pub fn push(&mut self, value: ReferableValue) {
+        self.vec.push(value);
+    }
+
+    pub fn pop(&mut self) -> Option<ReferableValue> {
+        self.vec.pop()
+    }
+
+    pub fn append(&mut self, other: &mut Array) {
+        self.vec.append(&mut other.vec);
+    }
+
+    pub fn clear(&mut self) {
+        self.vec.clear();
+    }
+
+    pub fn len(&self) -> usize {
+        self.vec.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.vec.is_empty()
+    } 
+}
+
+impl std::ops::Deref for Array {
+    type Target = [ReferableValue];
+
+    fn deref(&self) -> &Self::Target {
+        &self.vec
+    }
+}
+
+impl std::iter::FromIterator<ReferableValue> for Array {
+    fn from_iter<I: IntoIterator<Item=ReferableValue>>(iter: I) -> Self {
+        let mut vec = Vec::new();
+
+        Array::new_init(vec)
+    }
+}
+
+impl std::iter::IntoIterator for Array {
+    type Item = ReferableValue;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.vec.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a Array {
+    type Item = &'a ReferableValue;
+    type IntoIter = std::slice::Iter<'a, ReferableValue>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.vec.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut Array {
+    type Item = &'a mut ReferableValue;
+    type IntoIter = std::slice::IterMut<'a, ReferableValue>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.vec.iter_mut()
     }
 }
