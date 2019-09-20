@@ -19,7 +19,6 @@ pub use byte_code::{
 };
 
 pub use byte_expr::{
-    var_id as to_fn_param,
     fn_id as to_fn_id,
 };
 

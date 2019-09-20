@@ -6,7 +6,7 @@ use failure::Error;
 
 use smpl::{ FnId, byte_gen };
 use smpl::metadata::Metadata;
-use smpl::byte_gen::{ to_fn_param, InstructionPointerType, Instruction, Location, Arg, FieldAccess };
+use smpl::byte_gen::{ InstructionPointerType, Instruction, Location, Arg, FieldAccess };
 
 use crate::err::*;
 use crate::env::Env;

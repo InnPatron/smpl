@@ -242,10 +242,6 @@ pub fn tmp_id(id: TmpId) -> String {
     format!("_tmp{}", id.raw())
 }
 
-pub fn var_id(id: VarId) -> String {
-    format!("_var{}", id.raw())
-}
-
 pub fn fn_id(id: FnId) -> String {
     format!("_fn{}", id.raw())
 }
