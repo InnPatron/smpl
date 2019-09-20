@@ -94,7 +94,7 @@ impl SecondPass {
                     // Unconditionally jumps to start of condition instructions
                     // Loop skip instruction should jump to directly AFTER this instruction
                     let looper_rel_target: i64 = 
-                        -((body_len as i64) + (condition_len as i64)) - 2;
+                        -((body_len as i64) + (condition_len as i64)) - 1;
                     let loop_instr = Instruction::RelJump(
                         RelJumpTarget::new(looper_rel_target)
                     );
@@ -143,13 +143,11 @@ impl SecondPass {
                     // Append the false branch
                     instructions.append(&mut false_branch);
 
-                    let after_true_branch = 2;
-                    let true_skip_amout =
-                        (true_branch_len as i64) + after_true_branch;
                     // Append instruction to jump over the succeed branch
                     // +1 to go to instruction just after the true branch
+                    let after_true_branch = 1;
                     let true_skip_rel_jump_target: i64 =
-                        (true_branch_len as i64) + 2;
+                        (true_branch_len as i64)  + after_true_branch;
                     let true_skip_rel_jump_instr = Instruction::RelJump(
                         RelJumpTarget::new(true_skip_rel_jump_target)
                     );
