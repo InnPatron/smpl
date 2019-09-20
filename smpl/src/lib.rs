@@ -7,6 +7,8 @@ extern crate petgraph;
 extern crate failure_derive;
 #[macro_use]
 extern crate derive_builder;
+#[macro_use]
+extern crate display_derive;
 
 mod err;
 mod feature;
