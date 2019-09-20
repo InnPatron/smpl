@@ -207,16 +207,16 @@ impl Array {
         self.vec.as_mut_slice()
     }
 
-    pub fn insert(&mut self, index: usize, value: ReferableValue) {
-        self.vec.insert(index, value);
+    pub fn insert(&mut self, index: usize, value: Value) {
+        self.vec.insert(index, ReferableValue::new(value));
     }
 
     pub fn remove(&mut self, index: usize) -> ReferableValue {
         self.vec.remove(index)
     }
 
-    pub fn push(&mut self, value: ReferableValue) {
-        self.vec.push(value);
+    pub fn push(&mut self, value: Value) {
+        self.vec.push(ReferableValue::new(value));
     }
 
     pub fn pop(&mut self) -> Option<ReferableValue> {
@@ -252,7 +252,27 @@ impl std::iter::FromIterator<ReferableValue> for Array {
     fn from_iter<I: IntoIterator<Item=ReferableValue>>(iter: I) -> Self {
         let mut vec = Vec::new();
 
-        Array::new_init(vec)
+        for v in iter {
+            vec.push(v);
+        }
+
+        Array {
+            vec: vec,
+        }
+    }
+}
+
+impl std::iter::FromIterator<Value> for Array {
+    fn from_iter<I: IntoIterator<Item=Value>>(iter: I) -> Self {
+        let mut vec = Vec::new();
+
+        for v in iter {
+            vec.push(ReferableValue::new(v));
+        }
+
+        Array { 
+            vec: vec 
+        }
     }
 }
 
