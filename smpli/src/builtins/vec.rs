@@ -46,7 +46,7 @@ fn new(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let _args: Option<Vec<Value>> = no_args!(args)?;
 
     let mut vec = Struct::new();
-    vec.set_field(VEC_DATA_KEY.to_string(), Value::Array(Vec::new()));
+    vec.set_field(VEC_DATA_KEY.to_string(), Value::Array(Array::new()));
     vec.set_field(VEC_LEN_KEY.to_string(), Value::Int(0));
 
     Ok(Value::Struct(vec))
