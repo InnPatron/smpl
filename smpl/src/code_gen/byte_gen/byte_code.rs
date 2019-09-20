@@ -5,8 +5,6 @@ pub type InstructionPointerType = u64;
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
-    Meta(String),                       // NOOP; only visible in output
-
     Store(Location, Arg),
     StoreStructure(Location, HashMap<String, Arg>),
     StoreArray1(Location, Vec<Arg>),
@@ -61,8 +59,6 @@ impl fmt::Display for Instruction {
         use super::Instruction::*;
 
         match *self {
-            Meta(ref s) => write!(f, "# {}", s),
-
             Store(ref location, ref arg) => write!(f, "store {}, {}", location, arg),
 
             StoreStructure(ref location, ref map) => {

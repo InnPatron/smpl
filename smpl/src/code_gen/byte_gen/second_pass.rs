@@ -66,21 +66,14 @@ impl SecondPass {
                     let mut body = self.flatten(loop_frame.get_body());
                     let body_len = body.len();
 
-                    instructions.push(Instruction::Meta(
-                            format!("Begin loop: {}", loop_id)).into());
-
                     // Append marker instruction for start of loop
                     instructions.push(PartialInstruction::LoopBegin(loop_id.clone()));
-
-                    instructions.push(Instruction::Meta(
-                            format!("Begin loop condition for {}", loop_id)).into());
 
                     // Append the condition instructions
                     instructions.append(&mut condition);
 
-                    let inner_meta = 2;
                     let after_looper = 2;
-                    let skip_amount = (body_len as i64) + inner_meta + after_looper;
+                    let skip_amount = (body_len as i64) + after_looper;
 
                     // Append the loop skip instruction
                     // Skips the body if the condition results in FALSE
@@ -93,13 +86,9 @@ impl SecondPass {
                     );
                     instructions.push(skip_loop_instr.into());
 
-                    instructions.push(Instruction::Meta(
-                            format!("Begin loop body for {}", loop_id)).into());
                     // Append the body instructions
                     let mut body = body;
                     instructions.append(&mut body);
-                    instructions.push(Instruction::Meta(
-                            format!("End loop body for {}", loop_id)).into());
                     
                     // Append the looper instruction
                     // Unconditionally jumps to start of condition instructions
@@ -110,10 +99,6 @@ impl SecondPass {
                         RelJumpTarget::new(looper_rel_target)
                     );
                     instructions.push(loop_instr.into());
-
-                    instructions.push(Instruction::Meta(
-                            format!("End loop: {}", loop_id)).into());
-
 
                     // Append marker instruction for end of loop
                     instructions.push(PartialInstruction::LoopEnd(loop_id.clone()));
@@ -137,18 +122,12 @@ impl SecondPass {
                     let mut false_branch = self.flatten(false_branch);
                     let false_branch_len = false_branch.len();
 
-                    instructions.push(Instruction::Meta(
-                            format!("Begin branch: {}", branch_id)).into());
-
-                    instructions.push(Instruction::Meta(
-                            format!("Begin branch {} condition", branch_id)).into());
                     // Append condition instructions
                     instructions.append(&mut condition);
 
-                    let meta = 1;
                     let after_false_branch = 2;
                     let true_rel_jump_amount =
-                        (false_branch_len as i64) + meta + after_false_branch;
+                        (false_branch_len as i64) + after_false_branch;
 
                     // Append instruction to jump to the succeed branch
                     // Emit false branch first in order to chain any conditions 
@@ -161,16 +140,12 @@ impl SecondPass {
                     );
                     instructions.push(true_rel_jump_instr.into());
 
-                    instructions.push(Instruction::Meta(
-                            format!("Begin branch {} false path", branch_id)).into());
-
                     // Append the false branch
                     instructions.append(&mut false_branch);
 
-                    let meta = 1;
                     let after_true_branch = 2;
                     let true_skip_amout =
-                        (true_branch_len as i64) + meta + after_true_branch;
+                        (true_branch_len as i64) + after_true_branch;
                     // Append instruction to jump over the succeed branch
                     // +1 to go to instruction just after the true branch
                     let true_skip_rel_jump_target: i64 =
@@ -179,14 +154,9 @@ impl SecondPass {
                         RelJumpTarget::new(true_skip_rel_jump_target)
                     );
                     instructions.push(true_skip_rel_jump_instr.into());
-                    instructions.push(Instruction::Meta(
-                            format!("Begin branch {} true path", branch_id)).into());
 
                     // Append the true branch
                     instructions.append(&mut true_branch);
-
-                    instructions.push(Instruction::Meta(
-                            format!("End branch {}", branch_id)).into());
                 }
 
                 PartialInstructionFP::Continue(loop_id) => {

@@ -548,8 +548,6 @@ impl Executor {
 
 
         match instruction {
-            Instruction::Meta(..) => Ok(ExecuteAction::IncrementIP),
-
             Instruction::Store(ref store_loc, ref arg) => {
                 let to_store = Executor::arg_to_value(env, arg);
 
