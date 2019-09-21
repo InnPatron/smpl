@@ -30,12 +30,12 @@ pub trait Passenger<E> {
 
 pub struct Traverser<'a, 'b, E: 'b> {
     graph: &'a CFG,
-    passenger: &'b mut Passenger<E>,
+    passenger: &'b mut dyn Passenger<E>,
     node_count: usize,
 }
 
 impl<'a, 'b, E> Traverser<'a, 'b, E> {
-    pub fn new(graph: &'a CFG, passenger: &'b mut Passenger<E>) -> Traverser<'a, 'b, E> {
+    pub fn new(graph: &'a CFG, passenger: &'b mut dyn Passenger<E>) -> Traverser<'a, 'b, E> {
         Traverser {
             graph: graph,
             passenger: passenger,
@@ -153,7 +153,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     match *self.graph.node_weight(current_node) {
                         Node::LoopFoot(ref loop_data) => {
                             self.passenger.loop_end_true_path(current_node)?;
-                            self.passenger.loop_foot(current_node, loop_data);
+                            self.passenger.loop_foot(current_node, loop_data)?;
                             found_foot = true;
                             break;
                         }
@@ -181,7 +181,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 Ok(Some(self.graph.after_loop_foot(false_path)))
             }
 
-            Node::LoopFoot(ref data) => {
+            Node::LoopFoot(ref _data) => {
                 unreachable!();
             }
 

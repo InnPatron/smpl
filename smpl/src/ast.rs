@@ -510,7 +510,7 @@ impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
 pub struct ModulePath(pub Vec<AstNode<Ident>>);
 
 impl ModulePath {
-    pub fn iter<'a>(&'a self) -> Box<Iterator<Item = &Ident> + 'a> {
+    pub fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = &Ident> + 'a> {
         Box::new(self.0.iter().map(|node| &node.data))
     }
 }

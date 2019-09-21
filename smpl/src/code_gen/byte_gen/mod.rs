@@ -22,7 +22,7 @@ pub use byte_expr::{
     fn_id as to_fn_id,
 };
 
-use crate::analysis::{Traverser, CFG};
+use crate::analysis::Traverser;
 
 #[derive(Debug, Clone)] 
 pub struct ByteCodeFunction {
@@ -77,7 +77,7 @@ pub fn compile_to_byte_code(function: &Function) -> ByteCodeFunction {
 
     // Goes through the CFG and collects the main function body, loops, and branches
     //   into organized groups of instructions with metadata
-    let mut first_pass = first_pass::FirstPass::new(&*cfg);
+    let mut first_pass = first_pass::FirstPass::new();
     {
         let traverser = Traverser::new(&*cfg, &mut first_pass);
 

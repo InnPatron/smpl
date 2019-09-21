@@ -430,7 +430,7 @@ impl CFG {
                         // Append break node to current basic block
                         ExprStmt::Break(span) => {
                             match loop_data {
-                                Some((_, foot, loop_id)) => {
+                                Some((_, _foot, loop_id)) => {
                                     if current_block.is_empty() == false {
                                         append_node!(self, head, previous, Node::Block(current_block));
                                         current_block = BasicBlock::new();
@@ -448,7 +448,7 @@ impl CFG {
                         // Append continue node to current basic block
                         ExprStmt::Continue(span) => {
                             match loop_data {
-                                Some((loop_head, _, loop_id)) => {
+                                Some((_loop_head, _, loop_id)) => {
                                     if current_block.is_empty() == false {
                                         append_node!(self, head, previous, Node::Block(current_block));
                                         current_block = BasicBlock::new();
@@ -893,7 +893,6 @@ if (test) {
             let mut merge = None;
 
             let branch_split = enter_neighbors.next().expect("Looking for BranchSplit");
-            let mut branch_split_neighbors = neighbors!(cfg, branch_split);
 
             match *node_w!(cfg, branch_split) {
                 Node::BranchSplit(..) => (),
@@ -1111,8 +1110,6 @@ if (test) {
 
             // condition b FALSE branch (branch_split_c)
             let branch_split_c = branch_split_c.expect("Missing false edge connecting to branch split C");
-            let mut branch_split_c_neighbors = neighbors!(cfg, branch_split_c);
-
             
             let branch_split_c_edges = edges!(cfg, branch_split_c);
             let mut truth_target = None;

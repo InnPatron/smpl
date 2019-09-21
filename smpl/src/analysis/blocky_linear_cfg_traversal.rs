@@ -33,12 +33,12 @@ pub trait BlockyPassenger<E> {
 
 pub struct BlockyTraverser<'a, 'b, E: 'b> {
     graph: &'a CFG,
-    passenger: &'b mut BlockyPassenger<E>,
+    passenger: &'b mut dyn BlockyPassenger<E>,
     node_count: usize,
 }
 
 impl<'a, 'b, E> BlockyTraverser<'a, 'b, E> {
-    pub fn new(graph: &'a CFG, passenger: &'b mut BlockyPassenger<E>) -> BlockyTraverser<'a, 'b, E> {
+    pub fn new(graph: &'a CFG, passenger: &'b mut dyn BlockyPassenger<E>) -> BlockyTraverser<'a, 'b, E> {
         BlockyTraverser {
             graph: graph,
             passenger: passenger,
@@ -208,7 +208,7 @@ impl<'a, 'b, E> BlockyTraverser<'a, 'b, E> {
                 Ok(Some(self.graph.next(current)))
             }
 
-            Node::Block(ref basic_block) => {
+            Node::Block(ref _basic_block) => {
                 self.passenger.block(current)?;
                 Ok(Some(self.graph.next(current)))
             }

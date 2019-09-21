@@ -1508,7 +1508,7 @@ fn qux() {
 }";
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let result = check_program(vec![mod1]).unwrap();
+        let _result = check_program(vec![mod1]).unwrap();
 
     }
 
@@ -1555,7 +1555,7 @@ fn foo() {
 }";
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let result = check_program(vec![mod1]).unwrap();
+        let _result = check_program(vec![mod1]).unwrap();
 
     }
 
@@ -1584,7 +1584,7 @@ fn foo() {
 }";
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let result = check_program(vec![mod1]).unwrap();
+        let _result = check_program(vec![mod1]).unwrap();
 
     }
 
@@ -1602,7 +1602,7 @@ fn foo() {
 }
 ";
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let result = check_program(vec![mod1]).unwrap();
+        let _result = check_program(vec![mod1]).unwrap();
     }
 
     #[test]
@@ -1644,7 +1644,7 @@ fn test() {
 }";
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let program = check_program(vec![mod1]).unwrap();
+        let _program = check_program(vec![mod1]).unwrap();
     }
 
     #[test]

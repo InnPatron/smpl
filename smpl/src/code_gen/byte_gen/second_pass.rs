@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::analysis::*;
-use crate::analysis::metadata::*;
 use super::first_pass::*;
 use super::first_pass::PartialInstruction as PartialInstructionFP;
 use super::byte_code::*;
@@ -87,7 +86,6 @@ impl SecondPass {
                     instructions.push(skip_loop_instr.into());
 
                     // Append the body instructions
-                    let mut body = body;
                     instructions.append(&mut body);
                     
                     // Append the looper instruction
@@ -116,7 +114,6 @@ impl SecondPass {
 
                     // Marked as 'mut' for append purposes
                     let mut condition = self.flatten(condition);
-                    let condition_len = condition.len();
                     let mut true_branch = self.flatten(true_branch);
                     let true_branch_len = true_branch.len();
                     let mut false_branch = self.flatten(false_branch);
