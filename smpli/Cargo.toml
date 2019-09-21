@@ -4,6 +4,11 @@ version = "0.1.0"
 authors = ["Alexander Vo <randomcivvy0121@gmail.com>"]
 edition = "2018"
 
+description = "Interpreter for the SMPL language"
+
+license="MIT"
+repository="https://github.com/InnPatron/smpl"
+
 [dependencies]
 smpl = "0.15.0"
 irmatch = "0.2.0"
