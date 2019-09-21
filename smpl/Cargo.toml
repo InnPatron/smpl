@@ -11,7 +11,7 @@ license="MIT"
 repository="https://github.com/InnPatron/smpl-mirror"
 
 [dependencies]
-itertools = "0.6.3"
+itertools = "0.8.0"
 regex = "0.2.1"
 petgraph = "0.4.9"
 irmatch = "0.2.0"
@@ -19,3 +19,4 @@ failure = "0.1.2"
 failure_derive = "0.1.2"
 uuid = { version = "0.7", features = ["v4"] }
 derive_builder = "0.7.0"
+display_derive = "0.0.0"

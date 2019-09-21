@@ -346,7 +346,8 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         let init_instructions = byte_expr::translate_expr(decl.decl.init_expr());
         self.extend_current_frame(init_instructions.into_iter());
 
-        let store_location = Location::Namespace(byte_expr::var_id(decl.decl.var_id()));
+        let key = decl.decl.var_name().as_str().to_owned();
+        let store_location = Location::Namespace(key);
         let value = Arg::Location(Location::Tmp(byte_expr::tmp_id(decl.decl.init_expr().last())));
         self.push_to_current_frame(Instruction::Store(store_location, value));
 
@@ -367,7 +368,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         // Create location to store rhs value
         let internal_path = assignee.path();
         let assign_root_var = 
-            byte_expr::var_id(internal_path.root_var_id());
+            internal_path.root_name().data().as_str().to_owned();
         let assign_root_indexing_expr = internal_path.root_indexing_expr()
             .map(|tmp_id| byte_expr::tmp_id(tmp_id));
         let path: Vec<_> = internal_path

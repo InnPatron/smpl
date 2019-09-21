@@ -76,7 +76,7 @@ pub fn analyze_fn(
         .zip(analyzer.program.metadata().function_param_ids(fn_id).iter())
     {
         let v_id = meta.var_id();
-        let p_name = meta.name();
+        let p_name = meta.ident();
         analyzer
             .current_scope
             .insert_var(p_name.clone(), v_id, param_type.clone());

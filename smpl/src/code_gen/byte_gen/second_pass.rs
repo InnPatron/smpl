@@ -40,12 +40,12 @@ impl SecondPass {
     }
 
     pub(super) fn pass(self) -> Vec<PartialInstruction> {
-        self.flatten(&self.main_body)
+        self.flatten(&self.main_body).0
     }
 
     /// Goes over a slice of first pass partial instructions and inlines branches and loops
-    fn flatten(&self, partial_instrs: &[PartialInstructionFP]) -> Vec<PartialInstruction> {
-        let mut instructions: Vec<PartialInstruction> = Vec::new();
+    fn flatten(&self, partial_instrs: &[PartialInstructionFP]) -> Flattened {
+        let mut instructions: Flattened = Flattened::new();
 
         for instr in partial_instrs {
             match instr  {
@@ -57,21 +57,29 @@ impl SecondPass {
                     let loop_frame = self.loops
                         .get(loop_id)
                         .expect(&format!("Could not find: {:?}", loop_id));
-                    let condition = loop_frame.get_condition();
-                    let body = loop_frame.get_body();
+
                     let result_arg = loop_frame.get_result_location();
+
+                    let mut condition = self.flatten(loop_frame.get_condition());
+                    let condition_len = condition.len();
+
+                    let mut body = self.flatten(loop_frame.get_body());
+                    let body_len = body.len();
 
                     // Append marker instruction for start of loop
                     instructions.push(PartialInstruction::LoopBegin(loop_id.clone()));
 
                     // Append the condition instructions
-                    instructions.append(&mut self.flatten(condition));
+                    instructions.append(&mut condition);
+
+                    let after_looper = 2;
+                    let skip_amount = (body_len as i64) + after_looper;
 
                     // Append the loop skip instruction
                     // Skips the body if the condition results in FALSE
                     // TODO(alex): Add check to ensure body length within u64 size?
-                    let skip_loop_rel_target: i64 = (body.len() as i64) + 1;
-                    // body-size + 1 to skip over the looper jump
+                    let skip_loop_rel_target: i64 = skip_amount;
+                    // body-size + 2 to skip over the looper jump
                     let skip_loop_instr = Instruction::RelJumpNegateCondition(
                         RelJumpTarget::new(skip_loop_rel_target),
                         result_arg.clone()
@@ -79,13 +87,14 @@ impl SecondPass {
                     instructions.push(skip_loop_instr.into());
 
                     // Append the body instructions
-                    instructions.append(&mut self.flatten(body));
+                    let mut body = body;
+                    instructions.append(&mut body);
                     
                     // Append the looper instruction
                     // Unconditionally jumps to start of condition instructions
                     // Loop skip instruction should jump to directly AFTER this instruction
                     let looper_rel_target: i64 = 
-                        -((body.len() as i64) + (condition.len() as i64)) - 1;
+                        -((body_len as i64) + (condition_len as i64)) - 1;
                     let loop_instr = Instruction::RelJump(
                         RelJumpTarget::new(looper_rel_target)
                     );
@@ -107,18 +116,24 @@ impl SecondPass {
 
                     // Marked as 'mut' for append purposes
                     let mut condition = self.flatten(condition);
+                    let condition_len = condition.len();
                     let mut true_branch = self.flatten(true_branch);
+                    let true_branch_len = true_branch.len();
                     let mut false_branch = self.flatten(false_branch);
+                    let false_branch_len = false_branch.len();
 
                     // Append condition instructions
                     instructions.append(&mut condition);
+
+                    let after_false_branch = 2;
+                    let true_rel_jump_amount =
+                        (false_branch_len as i64) + after_false_branch;
 
                     // Append instruction to jump to the succeed branch
                     // Emit false branch first in order to chain any conditions 
                     //   while minimizing the number of jump instructions
                     // +2 to go after false branch and true branch skip
-                    let true_rel_jump_target: i64 =
-                        (false_branch.len() as i64) + 2;
+                    let true_rel_jump_target: i64 = true_rel_jump_amount;
                     let true_rel_jump_instr = Instruction::RelJumpCondition(
                         RelJumpTarget::new(true_rel_jump_target),
                         result_arg.clone()
@@ -130,8 +145,9 @@ impl SecondPass {
 
                     // Append instruction to jump over the succeed branch
                     // +1 to go to instruction just after the true branch
+                    let after_true_branch = 1;
                     let true_skip_rel_jump_target: i64 =
-                        (true_branch.len() as i64) + 2;
+                        (true_branch_len as i64)  + after_true_branch;
                     let true_skip_rel_jump_instr = Instruction::RelJump(
                         RelJumpTarget::new(true_skip_rel_jump_target)
                     );
@@ -152,5 +168,39 @@ impl SecondPass {
         }
 
         instructions
+    }
+}
+
+struct Flattened(Vec<PartialInstruction>);
+
+impl Flattened {
+
+    fn new() -> Flattened {
+        Flattened(Vec::new())
+    }
+
+    /// Custom len() implementation needed in order to not count LoopBegin and LoopEnd as
+    /// instructions to jump over
+    fn len(&self) -> usize {
+        let mut size = 0;
+
+        for i in self.0.iter() {
+            match *i {
+                PartialInstruction::LoopBegin(..) | PartialInstruction::LoopEnd(..) => (),
+
+                _ => size += 1,
+
+            }
+        }
+
+        size
+    }
+
+    pub fn push(&mut self, i: PartialInstruction) {
+        self.0.push(i);
+    }
+
+    pub fn append(&mut self, other: &mut Flattened) {
+        self.0.append(&mut other.0);
     }
 }

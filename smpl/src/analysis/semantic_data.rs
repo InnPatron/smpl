@@ -389,27 +389,27 @@ impl ScopedData {
         self.type_cons_map.insert(path, id)
     }
 
-    pub fn binding_info(&self, name: &Ident) -> Result<BindingInfo, AnalysisError> {
-        match self.var_map.get(name) {
+    pub fn binding_info(&self, name: &AstNode<Ident>) -> Result<BindingInfo, AnalysisError> {
+        match self.var_map.get(name.data()) {
             Some(v_id) => Ok(BindingInfo::Var(
                 v_id.clone(),
                 self.var_type_map.get(v_id).unwrap().clone(),
             )),
             None => {
-                let p = ModulePath(vec![name.clone()]);
+                let p = ModulePath(vec![name.data().clone()]);
                 self.fn_map
                     .get(&p)
                     .map(|f| BindingInfo::Fn(f.clone()))
-                    .ok_or(AnalysisError::UnknownBinding(name.clone()))
+                    .ok_or(AnalysisError::UnknownBinding(name.data().clone(), name.span()))
             }
         }
     }
 
-    pub fn var_info(&self, name: &Ident) -> Result<(VarId, Type), AnalysisError> {
+    pub fn var_info(&self, name: &AstNode<Ident>) -> Result<(VarId, Type), AnalysisError> {
         let var_id = self
             .var_map
-            .get(name)
-            .ok_or(AnalysisError::UnknownBinding(name.clone()))?
+            .get(name.data())
+            .ok_or(AnalysisError::UnknownBinding(name.data().clone(), name.span()))?
             .clone();
         let type_id = self.var_type_map.get(&var_id).unwrap().clone();
 

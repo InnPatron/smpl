@@ -6,7 +6,7 @@ use failure::Error;
 
 use smpl::{ FnId, byte_gen };
 use smpl::metadata::Metadata;
-use smpl::byte_gen::{ to_fn_param, InstructionPointerType, Instruction, Location, Arg, FieldAccess };
+use smpl::byte_gen::{ InstructionPointerType, Instruction, Location, Arg, FieldAccess };
 
 use crate::err::*;
 use crate::env::Env;
@@ -120,7 +120,7 @@ impl Executor {
                         .zip(param_info) {
 
                    stack_info.env 
-                        .map_value(to_fn_param(param_info.var_id()), arg);
+                        .map_value(param_info.name().to_string(), arg);
                 }
             }
 
@@ -282,7 +282,6 @@ impl Executor {
 
     fn fetch(env: &Env, location: &Location) -> ReferableValue {
 
-        dbg!(location);
         match location {
             Location::Compound { 
                 ref root,
@@ -373,7 +372,7 @@ impl Executor {
                                     _ => unimplemented!(),
                                 };
 
-                                let inner_ref = next_ref.inner_ref();
+                                let inner_ref = field_ref.inner_ref();
                                 match *inner_ref {
                                     Value::Array(ref v) => {
                                         v

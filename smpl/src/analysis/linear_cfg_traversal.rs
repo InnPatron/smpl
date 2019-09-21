@@ -151,8 +151,9 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 let mut found_foot = false;
                 for _ in 0..self.node_count {
                     match *self.graph.node_weight(current_node) {
-                        Node::LoopFoot(_) => {
+                        Node::LoopFoot(ref loop_data) => {
                             self.passenger.loop_end_true_path(current_node)?;
+                            self.passenger.loop_foot(current_node, loop_data);
                             found_foot = true;
                             break;
                         }
@@ -181,8 +182,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
             }
 
             Node::LoopFoot(ref data) => {
-                self.passenger.loop_foot(current, data)?;
-                Ok(Some(self.graph.after_loop_foot(current)))
+                unreachable!();
             }
 
             Node::Continue(ref data) => {
