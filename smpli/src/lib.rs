@@ -25,7 +25,8 @@ mod executor;
 pub use value:: {
     ReferableValue,
     Value,
-    Struct
+    Struct,
+    Array,
 };
 
 pub use module::VmModule;

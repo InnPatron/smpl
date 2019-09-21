@@ -46,7 +46,7 @@ fn new(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let _args: Option<Vec<Value>> = no_args!(args)?;
 
     let mut vec = Struct::new();
-    vec.set_field(VEC_DATA_KEY.to_string(), Value::Array(Vec::new()));
+    vec.set_field(VEC_DATA_KEY.to_string(), Value::Array(Array::new()));
     vec.set_field(VEC_LEN_KEY.to_string(), Value::Int(0));
 
     Ok(Value::Struct(vec))
@@ -100,7 +100,7 @@ fn insert(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
         let mut borrow = data.inner_ref_mut();
         let data = irmatch!(*borrow; Value::Array(ref mut a) => a);
-        data.insert(index as usize, ReferableValue::new(to_insert));
+        data.insert(index as usize, to_insert);
     }
 
     {
@@ -126,7 +126,7 @@ fn push(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
         let mut borrow = data.inner_ref_mut();
         let data = irmatch!(*borrow; Value::Array(ref mut a) => a);
-        data.push(ReferableValue::new(to_insert));
+        data.push(to_insert);
     }
 
     {
