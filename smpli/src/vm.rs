@@ -24,6 +24,7 @@ pub struct SpawnOptions {
     pub type_check: bool
 }
 
+#[derive(Clone)]
 pub struct AVM {
     metadata: Arc<Metadata>,
     compiled: CompiledProgram,
