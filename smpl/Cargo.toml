@@ -8,7 +8,7 @@ edition = "2018"
 description = "Core library to compile the SMPL language"
 
 license="MIT"
-repository="https://github.com/InnPatron/smpl-mirror"
+repository="https://github.com/InnPatron/smpl"
 
 [dependencies]
 itertools = "0.8.0"
