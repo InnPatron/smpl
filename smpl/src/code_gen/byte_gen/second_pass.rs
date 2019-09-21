@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::analysis::*;
-use crate::analysis::metadata::*;
 use super::first_pass::*;
 use super::first_pass::PartialInstruction as PartialInstructionFP;
 use super::byte_code::*;

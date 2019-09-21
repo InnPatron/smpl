@@ -138,7 +138,6 @@ fn return_trace(cfg: &CFG) -> Result<(), AnalysisError> {
 }
 
 fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, AnalysisError> {
-    use super::control_data::Node;
 
     match *cfg.node_weight(id) {
         Node::Return(..) => Ok(None),
@@ -417,7 +416,6 @@ impl<'a> FnAnalyzer<'a> {
             let tmp_type;
             match *tmp.value().data() {
                 Value::Literal(ref literal) => {
-                    use crate::ast::Literal;
 
                     let lit_type = match *literal {
                         Literal::Int(_) => Type::Int,

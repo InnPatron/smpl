@@ -1,7 +1,3 @@
-use petgraph::graph;
-use petgraph::visit::EdgeRef;
-use petgraph::Direction;
-
 use crate::span::Span;
 
 use super::semantic_data::{BranchingId, LoopId};

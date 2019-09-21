@@ -16,7 +16,6 @@ pub fn translate_expr(expr: &Expr) -> Vec<Instruction> {
 
 fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
     use super::byte_code::Instruction::*;
-    use super::byte_code::Arg;
 
     let id = tmp.id();
     let value = tmp.value();
@@ -84,7 +83,6 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
         }
 
         Value::BinExpr(ref op, ref lhs, ref rhs) => {
-            use crate::ast::BinOp;
             use crate::analysis::type_cons::Type;
 
             macro_rules! specific_math_op {
@@ -124,7 +122,6 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
         }
 
         Value::UniExpr(ref op, ref tmp) => {
-            use crate::ast::UniOp;
 
             let tmp = Arg::Location(Location::Tmp(tmp_id(*tmp.data())));
             match op {
