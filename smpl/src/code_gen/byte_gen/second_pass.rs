@@ -86,7 +86,6 @@ impl SecondPass {
                     instructions.push(skip_loop_instr.into());
 
                     // Append the body instructions
-                    let mut body = body;
                     instructions.append(&mut body);
                     
                     // Append the looper instruction
