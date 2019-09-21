@@ -149,8 +149,7 @@ impl BranchFrame {
     }
 }
 
-pub(super) struct FirstPass<'a> {
-    cfg: &'a CFG,
+pub(super) struct FirstPass {
     instructions: Option<Vec<PartialInstruction>>,
     loops: HashMap<LoopId, LoopFrame>,
     branches: HashMap<BranchingId, BranchFrame>,
@@ -158,7 +157,7 @@ pub(super) struct FirstPass<'a> {
     states: Vec<State>,
 }
 
-impl<'a> From<FirstPass<'a>> for super::second_pass::SecondPass {
+impl From<FirstPass> for super::second_pass::SecondPass {
     fn from(fp: FirstPass) -> super::second_pass::SecondPass {
         super::second_pass::SecondPass::new(
             fp.instructions.expect("FirstPass.instructions should be set to some"),
@@ -168,11 +167,10 @@ impl<'a> From<FirstPass<'a>> for super::second_pass::SecondPass {
     }
 }
 
-impl<'a> FirstPass<'a> {
+impl FirstPass {
 
-    pub(super) fn new(cfg: &CFG) -> FirstPass {
+    pub(super) fn new() -> FirstPass {
         FirstPass {
-            cfg: cfg,
             instructions: None,
             loops: HashMap::new(),
             branches: HashMap::new(),
@@ -250,7 +248,7 @@ impl<'a> FirstPass<'a> {
     }
 }
 
-impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
+impl Passenger<FirstPassError> for FirstPass {
     fn start(&mut self, _id: NodeIndex) -> Result<(), FirstPassError> {
         self.push_state(State::Start);
 
@@ -517,7 +515,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         let branch_id = match state {
             State::Branching(id) => id,
 
-            state => panic!("branch_end_true_path() encountered invalid state: {:?}", self.states),
+            _state => panic!("branch_end_true_path() encountered invalid state: {:?}", self.states),
         };
 
         // Set the false path in the frame
