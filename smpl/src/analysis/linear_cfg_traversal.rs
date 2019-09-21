@@ -30,12 +30,12 @@ pub trait Passenger<E> {
 
 pub struct Traverser<'a, 'b, E: 'b> {
     graph: &'a CFG,
-    passenger: &'b mut Passenger<E>,
+    passenger: &'b mut dyn Passenger<E>,
     node_count: usize,
 }
 
 impl<'a, 'b, E> Traverser<'a, 'b, E> {
-    pub fn new(graph: &'a CFG, passenger: &'b mut Passenger<E>) -> Traverser<'a, 'b, E> {
+    pub fn new(graph: &'a CFG, passenger: &'b mut dyn Passenger<E>) -> Traverser<'a, 'b, E> {
         Traverser {
             graph: graph,
             passenger: passenger,
