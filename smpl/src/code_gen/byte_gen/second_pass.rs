@@ -115,7 +115,6 @@ impl SecondPass {
 
                     // Marked as 'mut' for append purposes
                     let mut condition = self.flatten(condition);
-                    let condition_len = condition.len();
                     let mut true_branch = self.flatten(true_branch);
                     let true_branch_len = true_branch.len();
                     let mut false_branch = self.flatten(false_branch);
