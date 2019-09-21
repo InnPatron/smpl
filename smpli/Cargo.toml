@@ -5,7 +5,7 @@ authors = ["Alexander Vo <randomcivvy0121@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-smpl = "0.14.0"
+smpl = "0.15.0"
 irmatch = "0.2.0"
 failure = "0.1.2"
 failure_derive = "0.1.2"
