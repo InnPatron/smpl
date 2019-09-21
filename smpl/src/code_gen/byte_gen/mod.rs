@@ -22,7 +22,7 @@ pub use byte_expr::{
     fn_id as to_fn_id,
 };
 
-use crate::analysis::{Traverser, CFG};
+use crate::analysis::Traverser;
 
 #[derive(Debug, Clone)] 
 pub struct ByteCodeFunction {
