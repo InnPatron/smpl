@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/InnPatron/smpl.svg?branch=master)](https://travis-ci.org/InnPatron/smpl)
+
 # SMPL
 S(ome) M(ore) P(rogramming) L(anguage), pronounced 'simple.' 
 ## What is it?
