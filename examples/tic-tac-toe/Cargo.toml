@@ -5,5 +5,5 @@ authors = ["Alexander Vo <randomcivvy0121@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-smpl = { path = "../../smpl/" }
+smpli = { path = "../../smpli/" }
 failure = "0.1.2"

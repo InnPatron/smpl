@@ -2,7 +2,7 @@ use std::process;
 
 mod rt;
 
-use smpl::interpreter::*;
+use smpli::*;
 
 fn main() {
     let scripts = vec![
@@ -10,7 +10,7 @@ fn main() {
     ];
 
     let std = StdBuilder::default().log(true).build().unwrap();
-    let mut vm = match AVM::new(std, scripts) {
+    let vm = match AVM::new(std, scripts) {
         Ok(vm) => vm,
 
         Err(e) => {
@@ -19,6 +19,33 @@ fn main() {
         }
     };
 
-    let fn_handle = vm.query_module("rt", "run").unwrap().unwrap();
-    vm.eval_fn_sync(fn_handle).unwrap();
+    execute(vm);
+}
+
+fn execute(vm: AVM) {
+    let fn_handle = vm.query_module("rt", "run").unwrap().unwrap(); 
+    let executor = match vm
+        .spawn_executor(fn_handle, None, SpawnOptions {
+            type_check: false
+        }) {
+
+        Ok(executor) => executor,
+
+        Err(e) => {
+            println!("{:?}", e);
+            process::exit(1);
+        }
+
+    };
+
+    let _result = match executor.execute_sync() {
+
+        Ok(val) => val,
+
+        Err(e) => {
+            println!("{:?}", e);
+            process::exit(1);
+        }
+    };
+
 }

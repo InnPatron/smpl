@@ -2,9 +2,7 @@ use std::io;
 
 use failure::Error;
 
-use smpl::{ParsedModule, UnparsedModule};
-use smpl::parse_module;
-use smpl::interpreter::*;
+use smpli::*;
 
 const RT: &'static str = include_str!("rt.smpl");
 
