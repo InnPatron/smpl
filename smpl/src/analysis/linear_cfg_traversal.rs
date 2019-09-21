@@ -153,7 +153,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     match *self.graph.node_weight(current_node) {
                         Node::LoopFoot(ref loop_data) => {
                             self.passenger.loop_end_true_path(current_node)?;
-                            self.passenger.loop_foot(current_node, loop_data);
+                            self.passenger.loop_foot(current_node, loop_data)?;
                             found_foot = true;
                             break;
                         }
