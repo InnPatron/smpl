@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use petgraph::graph::NodeIndex;
 
 use crate::analysis::*;
-use crate::analysis::metadata::*;
 
 use super::byte_code::*;
 use super::byte_expr;
