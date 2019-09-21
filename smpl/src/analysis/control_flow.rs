@@ -893,7 +893,6 @@ if (test) {
             let mut merge = None;
 
             let branch_split = enter_neighbors.next().expect("Looking for BranchSplit");
-            let mut branch_split_neighbors = neighbors!(cfg, branch_split);
 
             match *node_w!(cfg, branch_split) {
                 Node::BranchSplit(..) => (),
@@ -1111,8 +1110,6 @@ if (test) {
 
             // condition b FALSE branch (branch_split_c)
             let branch_split_c = branch_split_c.expect("Missing false edge connecting to branch split C");
-            let mut branch_split_c_neighbors = neighbors!(cfg, branch_split_c);
-
             
             let branch_split_c_edges = edges!(cfg, branch_split_c);
             let mut truth_target = None;
