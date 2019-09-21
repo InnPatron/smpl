@@ -208,7 +208,7 @@ impl<'a, 'b, E> BlockyTraverser<'a, 'b, E> {
                 Ok(Some(self.graph.next(current)))
             }
 
-            Node::Block(ref basic_block) => {
+            Node::Block(ref _basic_block) => {
                 self.passenger.block(current)?;
                 Ok(Some(self.graph.next(current)))
             }

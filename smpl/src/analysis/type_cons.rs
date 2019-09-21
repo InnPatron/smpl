@@ -458,7 +458,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                 let type_param = scope.type_param(ident);
 
                 // Found a type parameter
-                if let Some((tp_id, constraint)) = type_param {
+                if let Some((tp_id, _constraint)) = type_param {
                     // Do not allow type arguments on a type parameter
                     if typed_path.annotations().is_some() {
                         return Err(TypeError::ParameterizedParameter {

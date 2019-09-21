@@ -430,7 +430,7 @@ impl CFG {
                         // Append break node to current basic block
                         ExprStmt::Break(span) => {
                             match loop_data {
-                                Some((_, foot, loop_id)) => {
+                                Some((_, _foot, loop_id)) => {
                                     if current_block.is_empty() == false {
                                         append_node!(self, head, previous, Node::Block(current_block));
                                         current_block = BasicBlock::new();
@@ -448,7 +448,7 @@ impl CFG {
                         // Append continue node to current basic block
                         ExprStmt::Continue(span) => {
                             match loop_data {
-                                Some((loop_head, _, loop_id)) => {
+                                Some((_loop_head, _, loop_id)) => {
                                     if current_block.is_empty() == false {
                                         append_node!(self, head, previous, Node::Block(current_block));
                                         current_block = BasicBlock::new();

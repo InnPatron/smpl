@@ -251,7 +251,7 @@ impl<'a> FirstPass<'a> {
 }
 
 impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
-    fn start(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
+    fn start(&mut self, _id: NodeIndex) -> Result<(), FirstPassError> {
         self.push_state(State::Start);
 
         // This frame represents the entire function
@@ -260,7 +260,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn end(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
+    fn end(&mut self, _id: NodeIndex) -> Result<(), FirstPassError> {
         
         // Sanity check. Should always end on the "Start" state
         let old_state = self.pop_state();
@@ -279,7 +279,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn loop_head(&mut self, id: NodeIndex, ld: &LoopData, condition: &ExprData) -> Result<(), FirstPassError> {
+    fn loop_head(&mut self, _id: NodeIndex, ld: &LoopData, condition: &ExprData) -> Result<(), FirstPassError> {
         // Mark in the current frame that there should be a loop with LoopId(#) inserted here
         self.push_to_current_frame(PartialInstruction::Loop(ld.loop_id));
 
@@ -305,7 +305,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn loop_foot(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), FirstPassError> {
+    fn loop_foot(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), FirstPassError> {
         // Exiting the loop
 
         // Change the state to old state
@@ -322,25 +322,25 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn cont(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), FirstPassError> {
+    fn cont(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), FirstPassError> {
         self.push_to_current_frame(PartialInstruction::Continue(ld.loop_id));
         Ok(())
     }
 
-    fn br(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), FirstPassError> {
+    fn br(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), FirstPassError> {
         self.push_to_current_frame(PartialInstruction::Break(ld.loop_id));
         Ok(())
     }
 
-    fn enter_scope(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
+    fn enter_scope(&mut self, _id: NodeIndex) -> Result<(), FirstPassError> {
         Ok(())
     }
 
-    fn exit_scope(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
+    fn exit_scope(&mut self, _id: NodeIndex) -> Result<(), FirstPassError> {
         Ok(())
     }
 
-    fn local_var_decl(&mut self, id: NodeIndex, decl: &LocalVarDeclData) -> Result<(), FirstPassError> {
+    fn local_var_decl(&mut self, _id: NodeIndex, decl: &LocalVarDeclData) -> Result<(), FirstPassError> {
 
         let init_instructions = byte_expr::translate_expr(decl.decl.init_expr());
         self.extend_current_frame(init_instructions.into_iter());
@@ -353,7 +353,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn assignment(&mut self, id: NodeIndex, assign: &AssignmentData) -> Result<(), FirstPassError> {
+    fn assignment(&mut self, _id: NodeIndex, assign: &AssignmentData) -> Result<(), FirstPassError> {
         let assignment = &assign.assignment;
         let assignee = assignment.assignee();
 
@@ -407,13 +407,13 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn expr(&mut self, id: NodeIndex, expr: &ExprData) -> Result<(), FirstPassError> {
+    fn expr(&mut self, _id: NodeIndex, expr: &ExprData) -> Result<(), FirstPassError> {
         let expr_instructions = byte_expr::translate_expr(&expr.expr);
         self.extend_current_frame(expr_instructions.into_iter());
         Ok(())
     }
 
-    fn ret(&mut self, id: NodeIndex, rdata: &ReturnData) -> Result<(), FirstPassError> {
+    fn ret(&mut self, _id: NodeIndex, rdata: &ReturnData) -> Result<(), FirstPassError> {
         if let Some(ref return_expr) = rdata.expr {
             // Return expression
 
@@ -433,15 +433,15 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
+    fn loop_start_true_path(&mut self, _id: NodeIndex) -> Result<(), FirstPassError> {
         Ok(())
     }
 
-    fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
+    fn loop_end_true_path(&mut self, _id: NodeIndex) -> Result<(), FirstPassError> {
         Ok(())
     }
 
-    fn branch_split(&mut self, id: NodeIndex, b: &BranchingData, condition: &ExprData) 
+    fn branch_split(&mut self, _id: NodeIndex, b: &BranchingData, condition: &ExprData) 
         -> Result<(), FirstPassError> {
         // Mark in the current frame that there should be a branch with Branch(#) inserted here
         self.push_to_current_frame(PartialInstruction::Branch(b.branch_id));
@@ -465,7 +465,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn branch_merge(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), FirstPassError> {
+    fn branch_merge(&mut self, _id: NodeIndex, b: &BranchingData) -> Result<(), FirstPassError> {
         // Exiting a branch
 
         // Change the state to old state
@@ -478,21 +478,21 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
+    fn branch_start_true_path(&mut self, _id: NodeIndex) -> Result<(), FirstPassError> {
         // Make a new frame for the true body
         self.new_frame();
 
         Ok(())
     }
 
-    fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), FirstPassError> {
+    fn branch_start_false_path(&mut self, _id: NodeIndex) -> Result<(), FirstPassError> {
         // Make a new frame for the false body
         self.new_frame();
         
         Ok(())
     }
 
-    fn branch_end_true_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), FirstPassError> {
+    fn branch_end_true_path(&mut self, _id: NodeIndex, b: &BranchingData) -> Result<(), FirstPassError> {
         // Pop the current frame as the body of the true path
         let true_instructions = self.pop_current_frame();
 
@@ -509,7 +509,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn branch_end_false_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), FirstPassError> {
+    fn branch_end_false_path(&mut self, _id: NodeIndex, b: &BranchingData) -> Result<(), FirstPassError> {
         // Pop the current frame as the body of the false path
         let false_instructions = self.pop_current_frame();
 

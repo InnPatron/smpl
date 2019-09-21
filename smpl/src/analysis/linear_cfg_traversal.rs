@@ -181,7 +181,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 Ok(Some(self.graph.after_loop_foot(false_path)))
             }
 
-            Node::LoopFoot(ref data) => {
+            Node::LoopFoot(ref _data) => {
                 unreachable!();
             }
 
