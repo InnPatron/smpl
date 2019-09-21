@@ -1,13 +1,13 @@
 [workspace]
 members = [
 	"smpl",
-	"smplc",
 	"smpli",
 	"examples/tic-tac-toe",
 ]
 exclude = [
 	"smpl-tests/target/sample_program",
 	"smpl-tests/target/basic_tests",
+	"smplc",
 ]
 
 [patch.crates-io]
