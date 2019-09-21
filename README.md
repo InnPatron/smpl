@@ -34,6 +34,8 @@ Popstcl has dynamic types and dynamic scoping, all of which I found painful to u
 
 ## Example
 
+See `examples/tic-tac-toe` for embedding examples.
+
 ```
 mod test;
 
@@ -85,16 +87,22 @@ The Rust backend is temporarily unsupported.
 
 **SMPL is meant to be embedded in other Rust programs. The interpreter is the only method of SMPL code execution guaranteed to support ALL language features.**
 
-**SMPL now has an asynchronous interpreter (the AVM). The AVM also exposes a synchrnous interface.**
+## Using the Code
 
-## Build instructions
-
-Install [Rust and Cargo](https://www.rust-lang.org/en-US/). Requires version 1.26+
-
-```
-cargo build
-cargo run
-```
+The project is split it up into 2 parts:
+* smpl
+  * Core library that defines a language
+  * Includes:
+    * SMPL module parser
+    * Static analyzer
+    * Byte Code data structures 
+    * Byte code generator
+    * Metadata collector
+* smpli
+  * Interpreter for smpl's byte code
+    * Create an AVM from modules
+    * The AVM can spawn executors that will run the byte code
+  * Runtime data structures
 
 ## License
 Released under the [MIT License](https://opensource.org/licenses/MIT) (See LICENSE-MIT).
