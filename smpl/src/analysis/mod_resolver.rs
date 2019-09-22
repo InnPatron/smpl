@@ -5,7 +5,6 @@ use crate::ast::{DeclStmt, Function as AstFunction, Struct};
 use crate::module::{ModuleSource, ParsedModule};
 
 use super::control_flow::CFG;
-use super::cyclic_type_ck::cyclic_type_check;
 use super::error::AnalysisError;
 use super::fn_analyzer::analyze_fn;
 use super::metadata::*;
@@ -155,8 +154,6 @@ pub fn check_modules(
                 .set_fn_annotations(fn_id, &reserved_builtin.1.data().annotations);
         }
     }
-
-    cyclic_type_check(program)?;
 
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
