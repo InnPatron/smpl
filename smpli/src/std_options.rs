@@ -21,6 +21,8 @@ pub struct Std {
     math: bool,
     #[builder(default = "false")]
     str: bool,
+    #[builder(default = "false")]
+    option: bool,
 }
 
 impl Std {
@@ -31,6 +33,7 @@ impl Std {
             log: true,
             math: true,
             str: true,
+            option: true,
         }
     }
 
@@ -41,6 +44,7 @@ impl Std {
             log: false,
             math: false,
             str: false,
+            option: false,
         }
     }
 
@@ -50,5 +54,6 @@ impl Std {
         include!(v, self, log, builtins::log::vm_module());
         include!(v, self, math, builtins::math::vm_module());
         include!(v, self, str, builtins::str::vm_module());
+        include!(v, self, option, builtins::option::vm_module());
     }
 }
