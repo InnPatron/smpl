@@ -195,3 +195,135 @@ fn builtin_is_none(args: Option<Vec<Value>>) -> Result<Value, Error> {
 
     Ok(Value::Bool(is_none(data)))
 }
+
+#[cfg(test)]
+#[cfg_attr(rustfmt, rustfmt_skip)]
+mod tests {
+
+    use smpl::*;
+    use super::*;
+
+    macro_rules! option_test {
+        ($mod: expr, $mod_name: expr, $fn_name: expr, $args: expr) => {{
+
+            let mut modules = vec![vm_module(), 
+                VmModule::new(parse_module(UnparsedModule::anonymous($mod)).unwrap())];
+
+            let mut vm = AVM::new(Std::no_std(), modules).unwrap();
+
+            let fn_handle = vm.query_module($mod_name, $fn_name).unwrap().unwrap();
+            let result = vm.spawn_executor(fn_handle, $args, SpawnOptions {
+                type_check: false    
+            })
+                .unwrap()
+                .execute_sync()
+                .unwrap();
+            result
+        }}
+    }
+
+    #[test]
+    fn interpreter_option_some() {
+        let mod1 =
+"mod mod1;
+
+use option;
+
+fn test() -> option::Option(type String) {
+    let o1: option::Option(type String) = option::some(type String)(\"Hello world\");
+    return o1;
+}
+";
+        let result = option_test!(mod1, "mod1", "test", None);
+
+        let result = irmatch!(result; Value::Struct(inner) => inner);
+
+        let tag: Value = result.get_field(OPTION_TAG_KEY).expect("No tag");
+        let value: Value = result.get_field(OPTION_DATA_KEY).expect("No data");
+
+        assert_eq!(tag, some_tag());
+        assert_eq!(value, Value::String("Hello world".to_string()));
+    }
+
+    #[test]
+    fn interpreter_option_none() {
+        let mod1 =
+"mod mod1;
+
+use option;
+
+fn test() -> option::Option(type String) {
+    let o1: option::Option(type String) = option::none(type String)();
+    return o1;
+}
+";
+        let result = option_test!(mod1, "mod1", "test", None);
+
+        let result = irmatch!(result; Value::Struct(inner) => inner);
+
+        let tag: Value = result.get_field(OPTION_TAG_KEY).expect("No tag");
+
+        assert_eq!(tag, none_tag());
+    }
+
+    #[test]
+    fn interpreter_option_is_variant() {
+        let mod1 =
+"mod mod1;
+
+use option;
+
+fn is_none_true() -> bool {
+    let o1: option::Option(type String) = option::none(type String)();
+    return option::is_none(type String)(o1);
+}
+
+fn is_some_true() -> bool {
+    let o1: option::Option(type String) = option::some(type String)(\"Hello world\");
+    return option::is_some(type String)(o1);
+}
+
+fn is_none_false() -> bool {
+    let o1: option::Option(type String) = option::some(type String)(\"Hello world\");
+    return option::is_none(type String)(o1);
+}
+
+fn is_some_false() -> bool {
+    let o1: option::Option(type String) = option::none(type String)();
+    return option::is_some(type String)(o1);
+}";
+        let is_none_true = option_test!(mod1, "mod1", "is_none_true", None);
+        let is_some_true = option_test!(mod1, "mod1", "is_some_true", None);
+        let is_none_false = option_test!(mod1, "mod1", "is_none_false", None);
+        let is_some_false = option_test!(mod1, "mod1", "is_some_false", None);
+
+        assert_eq!(is_none_true, Value::Bool(true));
+        assert_eq!(is_some_true, Value::Bool(true));
+        assert_eq!(is_none_false, Value::Bool(false));
+        assert_eq!(is_some_false, Value::Bool(false));
+    }
+
+    #[test]
+    fn interpreter_option_unwrap_expect() {
+        let mod1 =
+"mod mod1;
+
+use option;
+
+fn unwrap() -> String {
+    let o1 = option::some(type String)(\"Hello world\");
+    return option::unwrap(type String)(o1); 
+}
+
+fn expect() -> String {
+    let o1 = option::some(type String)(\"Hello world\");
+    return option::expect(type String)(o1, \"ERROR\"); 
+}";
+
+        let unwrap = option_test!(mod1, "mod1", "unwrap", None);
+        let expect = option_test!(mod1, "mod1", "expect", None);
+
+        assert_eq!(unwrap, Value::String("Hello world".to_string()));
+        assert_eq!(expect, Value::String("Hello world".to_string()));
+    }
+}
