@@ -29,6 +29,12 @@ pub use value:: {
     Array,
 };
 
+pub use vm_i::{
+    BuiltinFn,
+    FnHandle,
+    TypeHandle,
+};
+
 pub use module::VmModule;
 
 pub use std_options::*;
