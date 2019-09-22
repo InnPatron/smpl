@@ -416,4 +416,27 @@ return vec::contains(type int)(v, 20);
 
     assert_eq!(Value::Bool(false), result);
 }
+
+#[test]
+fn interpreter_vec_clear() {
+    let mod1 =
+"
+mod mod1;
+use vec;
+
+fn test() -> int {
+let v = vec::new(type int)();
+v = vec::push(type int)(v, 123);
+v = vec::push(type int)(v, 456);
+
+let cleared = vec::clear(type int)(v);
+
+return vec::len(type int)(cleared);
+}
+";
+
+    let result = vec_test!(mod1, "mod1", "test", None);
+
+    assert_eq!(Value::Int(0), result);
+}
 }
