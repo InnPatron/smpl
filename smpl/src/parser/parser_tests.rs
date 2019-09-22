@@ -743,4 +743,26 @@ fn test() {
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let mod2 = parse_module(wrap_input!(mod2)).unwrap();
     }
+
+    #[test]
+    fn parse_bind_fn_type_app_mod_access_stmt() {
+        let mod1 =
+"mod mod1;
+
+fn ident(type T)(t: T) -> T {
+    return t;
+}";
+
+        let mod2 =
+"mod mod2;
+
+use mod1;
+
+fn test() {
+    mod1::ident(type int);
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let mod2 = parse_module(wrap_input!(mod2)).unwrap();
+    }
 }
