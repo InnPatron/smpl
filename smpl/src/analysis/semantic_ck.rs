@@ -1688,4 +1688,68 @@ fn test() {
         assert!(check_program(vec![mod1]).is_err());
     }
 
+    #[test]
+    fn bind_fn_type_app() {
+        let mod1 =
+"mod mod1;
+
+fn ident(type T)(t: T) -> T {
+    return t;
+}
+
+fn test() {
+    let my_ident: fn(int) -> int = ident(type int);
+    let result: int = my_ident(5);
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn bind_fn_type_app_mod_access() {
+        let mod1 =
+"mod mod1;
+
+fn ident(type T)(t: T) -> T {
+    return t;
+}";
+
+        let mod2 =
+"mod mod2;
+
+use mod1;
+
+fn test() {
+    let my_ident: fn(int) -> int = mod1::ident(type int);
+    let result: int = my_ident(5);
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let mod2 = parse_module(wrap_input!(mod2)).unwrap();
+        check_program(vec![mod1, mod2]).unwrap();
+    }
+
+    #[test]
+    fn bind_fn_type_app_mod_access_stmt() {
+        let mod1 =
+"mod mod1;
+
+fn ident(type T)(t: T) -> T {
+    return t;
+}";
+
+        let mod2 =
+"mod mod2;
+
+use mod1;
+
+fn test() {
+    mod1::ident(type int);
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let mod2 = parse_module(wrap_input!(mod2)).unwrap();
+        check_program(vec![mod1, mod2]).unwrap();
+    }
 }
