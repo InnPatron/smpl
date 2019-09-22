@@ -594,3 +594,48 @@ fn foo() -> int {
 
     assert_eq!(Value::Int(137), result);
 }
+
+#[test]
+fn bind_fn_type_app_mod_access() {
+    let mod1 =
+"mod mod1;
+
+fn ident(type T)(t: T) -> T {
+    return t;
+}";
+
+    let mod2 =
+"mod mod2;
+
+use mod1;
+
+fn test() -> int {
+    let my_ident: fn(int) -> int = mod1::ident(type int);
+    let result: int = my_ident(1337);
+
+    return result;
+}";
+
+
+    let mod1 = UnparsedModule::anonymous(mod1);
+    let mod1 = parse_module(mod1).expect("Failed to parse module");
+    let mod1 = VmModule::new(mod1);
+
+    let mod2 = UnparsedModule::anonymous(mod2);
+    let mod2 = parse_module(mod2).expect("Failed to parse module");
+    let mod2 = VmModule::new(mod2);
+
+    let modules = vec![mod1, mod2];
+    let avm = AVM::new(Std::std(), modules).unwrap();
+    
+    let fn_handle = avm.query_module("mod2", "test").unwrap().unwrap();
+
+    let result = avm.spawn_executor(fn_handle, None, SpawnOptions {
+        type_check: false   
+    })
+        .expect("Executor spawn error error")
+        .execute_sync()
+        .expect("Executor run error");
+
+    assert_eq!(result, Value::Int(1337));
+}
