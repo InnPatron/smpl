@@ -23,6 +23,8 @@ pub struct Std {
     str: bool,
     #[builder(default = "false")]
     option: bool,
+    #[builder(default = "false")]
+    vec: bool,
 }
 
 impl Std {
@@ -34,6 +36,7 @@ impl Std {
             math: true,
             str: true,
             option: true,
+            vec: true,
         }
     }
 
@@ -45,6 +48,7 @@ impl Std {
             math: false,
             str: false,
             option: false,
+            vec: false,
         }
     }
 
@@ -55,5 +59,9 @@ impl Std {
         include!(v, self, math, builtins::math::vm_module());
         include!(v, self, str, builtins::str::vm_module());
         include!(v, self, option, builtins::option::vm_module());
+        include!(v, self, vec, builtins::option::vm_module());
+
+        // vec requires option
+        include!(v, self, vec, builtins::option::vm_module());
     }
 }
