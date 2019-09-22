@@ -596,7 +596,7 @@ fn foo() -> int {
 }
 
 #[test]
-fn bind_fn_type_app_mod_access() {
+fn interpreter_bind_fn_type_app_mod_access() {
     let mod1 =
 "mod mod1;
 
