@@ -703,4 +703,21 @@ struct Bar(type T)
 
         let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
     }
+
+    #[test]
+    fn parse_bind_fn_type_app() {
+        let mod1 =
+"mod mod1;
+
+fn ident(type T)(t: T) -> T {
+    return t;
+}
+
+fn test() {
+    let my_ident: fn(int) -> int = ident(type int);
+    let result: int = my_ident(5);
+}";
+
+        let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
+    }
 }
