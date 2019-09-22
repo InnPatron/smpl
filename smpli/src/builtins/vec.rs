@@ -14,6 +14,7 @@ pub const VEC_PUSH: &'static str = "push";
 pub const VEC_INSERT: &'static str = "insert";
 pub const VEC_GET: &'static str = "get";
 pub const VEC_REMOVE: &'static str = "remove";
+pub const VEC_CLEAR: &'static str = "clear";
 
 pub const VEC_DATA_KEY: &'static str = "__DATA";
 pub const VEC_LEN_KEY: &'static str = "__LEN";
@@ -31,7 +32,8 @@ pub fn vm_module() -> VmModule {
         .add_builtin(VEC_PUSH, push)
         .add_builtin(VEC_INSERT, insert)
         .add_builtin(VEC_GET, get)
-        .add_builtin(VEC_REMOVE, remove);
+        .add_builtin(VEC_REMOVE, remove)
+        .add_builtin(VEC_CLEAR, clear);
 
     module
 }
@@ -199,6 +201,31 @@ fn remove(args: Option<Vec<Value>>) -> Result<Value, Error> {
         let mut borrow = len.inner_ref_mut();
         let len = irmatch!(*borrow; Value::Int(ref mut i) => i);
         *len -= 1;
+    }
+
+    Ok(Value::Struct(vec_struct))
+}
+
+fn clear(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    let mut args = exact_args!(1, args)?;
+    let vec_struct = args.pop().unwrap();
+    let vec_struct = irmatch!(vec_struct; Value::Struct(s) => s);
+
+    // Clear the internal buffer
+    {
+        let data = vec_struct.ref_field(VEC_DATA_KEY).unwrap();
+
+        let mut borrow = data.inner_ref_mut();
+        let data = irmatch!(*borrow; Value::Array(ref mut a) => a);
+        data.clear();
+    }
+
+    // Set the length to 0
+    {
+        let len = vec_struct.ref_field(VEC_LEN_KEY).unwrap();
+        let mut borrow = len.inner_ref_mut();
+        let len = irmatch!(*borrow; Value::Int(ref mut i) => i);
+        *len = 0 ;
     }
 
     Ok(Value::Struct(vec_struct))
