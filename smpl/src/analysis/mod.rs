@@ -5,7 +5,6 @@ mod typed_ast;
 #[macro_use]
 mod control_flow;
 mod control_data;
-mod cyclic_type_ck;
 pub mod error;
 mod expr_flow;
 mod fn_analyzer;

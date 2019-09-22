@@ -39,7 +39,6 @@ impl From<ControlFlowError> for AnalysisError {
 
 #[derive(Clone, Debug)]
 pub enum TypeError {
-    CyclicType(AbstractType),
     LhsRhsInEq(Type, Type, Span),
     InEqFnReturn {
         expr: Type,
