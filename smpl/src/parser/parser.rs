@@ -1268,6 +1268,9 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             // Expecting: expr ';'
             // Function calls are not lvalues
 
+            let path = ModulePath(vec![AstNode::new(base_ident, base_span.clone())]);
+            let path_span = base_span.clone();
+
             let (lspan, _lparen) = consume_token!(
                 tokens,
                 Token::LParen,
@@ -1287,9 +1290,39 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
                     parser_state!("stmt-expr-fn-call", "type-args")
                 );
 
-                // TODO: May be type-application on a binding, not a function call
-                // Also fix in the expression position too
-                // i.e. let function = foo(type int);
+                enum LocalDec {
+                    TypeApp,
+                    FnCall,
+                    Err,
+                }
+
+                // Checks if a function call or a typed path
+                match peek_token!(
+                    tokens,
+                    |tok| match tok {
+                        Token::LParen => LocalDec::FnCall,
+                        Token::Semi => LocalDec::TypeApp,
+
+                        _ => LocalDec::Err,
+                    },
+                    parser_state!("stmt-expr-fn-call-or-type-app?", "fn-call-lparen")) {
+
+                    LocalDec::TypeApp => {
+                        // TODO: type arg spans
+                        // A type-app, NOT a function call
+                        let _semi = consume_token!(tokens, 
+                            Token::Semi, parser_state!("stmt-expr-type-app", "semicolon"));
+                        let typed_path = TypedPath::Parameterized(path, type_args);
+                        let typed_path = Expr::Path(AstNode::new(typed_path, path_span));
+                        return Ok(Stmt::Expr(AstNode::new(typed_path, path_span)));
+                    }
+
+                    LocalDec::FnCall => (),
+
+                    LocalDec::Err => 
+                        unimplemented!("Unexpected token: {:?}", tokens.next().unwrap()),
+                }
+
                 let (args, args_span) = production!(
                     fn_args(tokens),
                     parser_state!("expr-module-path", "fn-call")
@@ -1309,10 +1342,9 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
 
             let args = args.map(|v| v.into_iter().map(|a| a.to_data().0).collect());
 
-            let fn_path = ModulePath(vec![AstNode::new(base_ident, base_span.clone())]);
             let fn_path = match type_args {
-                Some(args) => TypedPath::Parameterized(fn_path, args),
-                None => TypedPath::NillArity(fn_path),
+                Some(args) => TypedPath::Parameterized(path, args),
+                None => TypedPath::NillArity(path),
             };
 
             let fn_call = FnCall {
