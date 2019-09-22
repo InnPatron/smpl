@@ -4,3 +4,4 @@ pub mod log;
 pub mod math;
 pub mod str;
 pub mod vec;
+pub mod option;

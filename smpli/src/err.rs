@@ -126,7 +126,7 @@ macro_rules! no_args {
                 ExpectedArgCount::Exact(0),
             )),
 
-            None => Ok(None),
+            None => Ok(()),
         }
     }};
 }
