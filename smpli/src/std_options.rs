@@ -62,6 +62,8 @@ impl Std {
         include!(v, self, vec, builtins::option::vm_module());
 
         // vec requires option
-        include!(v, self, vec, builtins::option::vm_module());
+        if !self.option {
+            include!(v, self, vec, builtins::option::vm_module());
+        }
     }
 }
