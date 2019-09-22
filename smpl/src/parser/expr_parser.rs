@@ -733,9 +733,23 @@ pub fn expr_module_path(
                 parser_state!("expr-module-path", "type-args")
             );
 
-            // TODO: May be type-application on a binding, not a function call
-            // Also fix in the expression statement position too
-            // i.e. let function = foo(type int);
+            let typed_path = TypedPath::Parameterized(ModulePath(path), type_args);
+
+            // Checks if function call or just a typed path
+            if peek_token!(
+                tokens,
+                |tok| match tok {
+                    Token::LParen => false,
+
+                    _ => true
+                },
+                parser_state!("expr-fn-call-or-type-app?", "fn-call-lparen")) {
+                // A type-app, NOT a function call
+                let path_span = Span::combine(base_span, end);
+                let path_expr = Expr::Path(AstNode::new(typed_path, path_span));
+                return Ok(AstNode::new(path_expr, path_span));
+            }
+
             let (args, args_span) = production!(
                 fn_args(tokens),
                 parser_state!("expr-module-path", "fn-call")
@@ -743,7 +757,7 @@ pub fn expr_module_path(
             .to_data();
 
             (
-                TypedPath::Parameterized(ModulePath(path), type_args),
+                typed_path,
                 args,
                 args_span,
             )
