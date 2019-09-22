@@ -12,6 +12,7 @@ pub const VEC_LEN: &'static str = "len";
 pub const VEC_CONTAINS: &'static str = "contains";
 pub const VEC_PUSH: &'static str = "push";
 pub const VEC_INSERT: &'static str = "insert";
+pub const VEC_GET_VALUE: &'static str = "get_value";
 pub const VEC_GET: &'static str = "get";
 pub const VEC_REMOVE: &'static str = "remove";
 pub const VEC_CLEAR: &'static str = "clear";
@@ -31,6 +32,7 @@ pub fn vm_module() -> VmModule {
         .add_builtin(VEC_CONTAINS, contains)
         .add_builtin(VEC_PUSH, push)
         .add_builtin(VEC_INSERT, insert)
+        .add_builtin(VEC_GET_VALUE, get_value)
         .add_builtin(VEC_GET, get)
         .add_builtin(VEC_REMOVE, remove)
         .add_builtin(VEC_CLEAR, clear);
@@ -141,7 +143,7 @@ fn push(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Struct(vec_struct))
 }
 
-fn get(args: Option<Vec<Value>>) -> Result<Value, Error> {
+fn get_value(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = exact_args!(2, args)?;
 
     let index = args.pop().unwrap();
@@ -167,6 +169,36 @@ fn get(args: Option<Vec<Value>>) -> Result<Value, Error> {
         .ok_or(VecError::IndexOutOfRange(smpl_index, data.len()))?;
 
     Ok(item)
+}
+
+fn get(args: Option<Vec<Value>>) -> Result<Value, Error> {
+    use super::option;
+
+    let mut args = exact_args!(2, args)?;
+
+    let index = args.pop().unwrap();
+    let smpl_index = irmatch!(index; Value::Int(i) => i) as i64;
+
+    let vec_struct = args.pop().unwrap();
+    let vec_struct = irmatch!(vec_struct; Value::Struct(s) => s);
+
+    let data = vec_struct.ref_field(VEC_DATA_KEY).unwrap();
+
+    let borrow = data.inner_ref();
+    let data = irmatch!(*borrow; Value::Array(ref a) => a);
+
+    let index: usize = if smpl_index < 0 {
+        return Ok(option::make_none());
+    } else {
+        smpl_index as usize
+    };
+
+    let item = data
+        .get(index)
+        .map(|rc| rc.clone_value())
+        .ok_or(VecError::IndexOutOfRange(smpl_index, data.len()))?;
+
+    Ok(option::make_some(item))
 }
 
 fn remove(args: Option<Vec<Value>>) -> Result<Value, Error> {
@@ -247,7 +279,7 @@ macro_rules! wrap_input {
 macro_rules! vec_test {
     ($mod: expr, $mod_name: expr, $fn_name: expr, $args: expr) => {{
 
-        let mut modules = vec![vm_module(), 
+        let mut modules = vec![vm_module(), super::super::option::vm_module(),
             VmModule::new(parse_module(wrap_input!($mod)).unwrap())];
 
         let mut vm = AVM::new(Std::no_std(), modules).unwrap();
@@ -312,8 +344,8 @@ let v = vec::new(type int)();
 v = vec::push(type int)(v, 123);
 v = vec::push(type int)(v, 456);
 
-let a = vec::get(type int)(v, 0);
-let b = vec::get(type int)(v, 1);
+let a = vec::get_value(type int)(v, 0);
+let b = vec::get_value(type int)(v, 1);
 
 return a * b;
 }
@@ -340,7 +372,7 @@ v = vec::push(type int)(v, 789);
 
 v = vec::remove(type int)(v, 1);
 
-return vec::get(type int)(v, 1);
+return vec::get_value(type int)(v, 1);
 }
 ";
     
@@ -363,7 +395,7 @@ v = vec::push(type int)(v, 456);
 
 v = vec::insert(type int)(v, 0, 1337);
 
-let a = vec::get(type int)(v, 0);
+let a = vec::get_value(type int)(v, 0);
 
 return a;
 }
