@@ -623,7 +623,7 @@ impl<'a> FnAnalyzer<'a> {
 
                         let fn_type = AbstractType::App {
                             type_cons: fn_type_id,
-                            args: None,
+                            args: Vec::new(),
                         }
                         .apply(self.program.universe(), &self.current_scope)?;
 
@@ -877,7 +877,7 @@ impl<'a> FnAnalyzer<'a> {
 
                     tmp_type = AbstractType::App {
                         type_cons: fn_type_id,
-                        args: None,
+                        args: Vec::new(),
                     }
                     .apply(self.program.universe(), &self.current_scope)?;
 
@@ -913,7 +913,7 @@ impl<'a> FnAnalyzer<'a> {
                     // TODO: Construct type directly
                     tmp_type = AbstractType::App {
                         type_cons: fn_type_id,
-                        args: None,
+                        args: Vec::new(),
                     }
                     .apply(self.program.universe(), &self.current_scope)?;
 

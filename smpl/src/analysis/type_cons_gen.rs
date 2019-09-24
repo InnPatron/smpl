@@ -97,7 +97,7 @@ pub fn generate_fn_type(
         }
         None => AbstractType::App {
             type_cons: universe.unit(),
-            args: None,
+            args: Vec::new(),
         },
     };
 
@@ -167,7 +167,7 @@ pub fn generate_builtin_fn_type(
         }
         None => AbstractType::App {
             type_cons: universe.unit(),
-            args: None,
+            args: Vec::new(),
         },
     };
 
@@ -249,7 +249,7 @@ pub fn generate_anonymous_fn_type(
         }
         None => AbstractType::App {
             type_cons: universe.unit(),
-            args: None,
+            args: Vec::new(),
         },
     };
 

@@ -351,7 +351,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             let type_args = match type_args {
                 Some(dat) => Some(dat?),
 
-                None => None,
+                None => Vec::new(),
             };
 
             Ok(AbstractType::App {
@@ -371,7 +371,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
             Ok(AbstractType::App {
                 type_cons: type_id,
-                args: None,
+                args: Vec::new(),
             })
         }
 
@@ -408,7 +408,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                 parameters: arg_type_cons.unwrap_or(Vec::new()),
                 return_type: return_type_cons.unwrap_or(AbstractType::App {
                     type_cons: universe.unit(),
-                    args: None,
+                    args: Vec::new(),
                 }),
             };
 
@@ -416,7 +416,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
             Ok(AbstractType::App {
                 type_cons: type_id,
-                args: None,
+                args: Vec::new(),
             })
         }
 
