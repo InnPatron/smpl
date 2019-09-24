@@ -201,7 +201,7 @@ impl AbstractType {
             })
             .collect::<HashMap<_, _>>();
 
-        self.apply_internal(universe, &param_map)
+        self.apply_internal(&param_map)
 
     }
 
