@@ -255,6 +255,34 @@ impl AbstractType {
                 size: *size,
             }),
 
+            AbstractType::Function {
+                ref parameters,
+                ref return_type,
+            } => {
+
+                let (ok_parameters, err) = parameters.iter()
+                    .map(|p| p.apply_internal(map))
+                    .fold((Vec::new(), Vec::new()), |(mut ok, mut err), result| {
+                        match result {
+                            Ok(app) => ok.push(app),
+                            Err(mut e) => err.append(&mut e),
+                        }
+
+                        (ok, err)
+                });
+
+                if err.len() != 0 {
+                    unimplemented!()
+                }
+
+                let new_return = return_type.apply_internal(map)?;
+
+                Ok(AbstractType::Function {
+                    parameters: ok_parameters,
+                    return_type: Box::new(new_return),
+                })
+            }
+
             AbstractType::WidthConstraint(ref width_constraint) => {
                 
                 let (ok_field_types, err) = width_constraint.fields
