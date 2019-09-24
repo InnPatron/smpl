@@ -152,7 +152,7 @@ pub struct AbstractWidthConstraint {
 pub enum AbstractType {
     App {
         type_cons: TypeId,
-        args: Option<Vec<AbstractType>>,
+        args: Vec<AbstractType>,
     },
 
     Array {
