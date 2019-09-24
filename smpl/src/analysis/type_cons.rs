@@ -308,6 +308,7 @@ impl AbstractType {
                 Ok(map
                     .get(type_param_id)
                     .expect("Type parameter missing from scope")
+                    .clone()
                 )
             }
 
