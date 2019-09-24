@@ -355,16 +355,10 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
         TypeAnnotationRef::Array(element_type, size) => {
             let element_type_app = type_app_from_annotation(universe, scope, element_type.data())?;
-            let cons = TypeCons::Array {
-                element_type: element_type_app,
-                size: *size,
-            };
 
-            let type_id = universe.insert_generated_type_cons(cons);
-
-            Ok(AbstractType::App {
-                type_cons: type_id,
-                args: Vec::new(),
+            Ok(AbstractType::Array {
+                element_kind: Box::new(element_type_app),
+                size: size,
             })
         }
 
