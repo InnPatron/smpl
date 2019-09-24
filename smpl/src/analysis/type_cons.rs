@@ -159,6 +159,11 @@ pub enum AbstractType {
         size: u64,
     },
 
+    Function {
+        parameters: Vec<AbstractType>,
+        return_type: Box<AbstractType>,
+    },
+
     WidthConstraint(AbstractWidthConstraint),
 
     Param(TypeParamId),
@@ -362,7 +367,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             })
         }
 
-        TypeAnnotationRef::FnType(tp, args, ret_type) => {
+        TypeAnnotationRef::FnType(tp, params, return_type) => {
             let (local_type_params, new_scope) = match tp {
                 Some(local_type_params) => {
                     return Err(ATypeError::FnAnnLocalTypeParameter.into());     
@@ -373,37 +378,22 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
             let scope = new_scope.as_ref().unwrap_or(scope);
 
-            let arg_type_cons = match args.map(|slice| {
+            let param_types = params.map(|slice| {
                 slice
                     .iter()
-                    .map(|arg| type_app_from_annotation(universe, scope, arg.data()))
+                    .map(|p| type_app_from_annotation(universe, scope, p.data()))
                     .collect::<Result<Vec<_>, _>>()
-            }) {
-                Some(args) => Some(args?),
-                None => None,
-            };
+            })?
+                .unwrap_or(Vec::new());
 
-            let return_type_cons = match ret_type
-                .map(|ret_type| type_app_from_annotation(universe, scope, ret_type.data()))
-            {
-                Some(ret) => Some(ret?),
-                None => None,
-            };
+            let return_type = return_type
+                .map(|return_type| type_app_from_annotation(universe, scope, return_type.data()))
+                .unwrap_or(Ok(AbstractType::Unit))?;
 
-            let cons = TypeCons::Function {
-                type_params: local_type_params,
-                parameters: arg_type_cons.unwrap_or(Vec::new()),
-                return_type: return_type_cons.unwrap_or(AbstractType::App {
-                    type_cons: universe.unit(),
-                    args: Vec::new(),
-                }),
-            };
 
-            let type_id = universe.insert_generated_type_cons(cons);
-
-            Ok(AbstractType::App {
-                type_cons: type_id,
-                args: Vec::new(),
+            Ok(AbstractType::Function {
+                parameters: param_types,
+                return_type: Box::new(return_type),
             })
         }
 
