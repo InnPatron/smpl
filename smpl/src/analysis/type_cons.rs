@@ -198,7 +198,7 @@ impl AbstractType {
 
     }
 
-    fn apply_internal(&self, universe: &Universe, map: &HashMap<TypeParamId, AbstractType>) 
+    fn apply_internal(&self, map: &HashMap<TypeParamId, AbstractType>) 
         -> Result<AbstractType, Vec<ATypeError>> {
 
         match *self {
@@ -207,32 +207,18 @@ impl AbstractType {
                 ref type_cons,
                 ref args,
             } => {
-                let type_cons = universe.get_type_cons(*type_cons).unwrap();
-                let (ok_args, err) = match type_cons.type_params() {
-                    Some(ref type_params) => {
-                        let mut map: HashMap<_, _> = map.clone();
-
-                        for (tp, abstract_width_constraint) in type_params.iter() {
-                            map.insert(tp.clone(), 
-                                AbstractType::WidthConstraint(abstract_width_constraint.clone()));
-                        }
-
-                        args
-                            .iter()
-                            .map(|at| at.apply_internal(&map))
-                            .fold((Vec::new(), Vec::new()), | (mut ok, mut err), apply_result| {
-                                match apply_result {
-                                    Ok(app) => ok.push(app),
-                                    Err(mut e) => err.append(&mut e),
-                                }
-
-                                (ok, err)
-                            })
-
-                    }
-
-                    None => {
-                        args
+                
+                //
+                // Type parameters of app's target type constructor are NOT in scope. Any type
+                //   parameters within the type constructor are guaranteed to come from solely
+                //   that type constructor.
+                //
+                // NOTE: If polymorphic modules are introduced, the above assumption is broken.
+                // 
+                // Still need to internally apply to type arguments in order to catch any nested
+                //   type parameters
+                //
+                let (ok_args, err) = args
                             .iter()
                             .map(|at| at.apply_internal(map))
                             .fold((Vec::new(), Vec::new()), | (mut ok, mut err), apply_result| {
@@ -242,9 +228,7 @@ impl AbstractType {
                                 }
 
                                 (ok, err)
-                            })
-                    }
-                };
+                            });
 
                 if err.len() != 0 {
                     unimplemented!()
