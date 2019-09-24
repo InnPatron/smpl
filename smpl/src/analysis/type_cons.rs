@@ -162,6 +162,7 @@ pub enum AbstractType {
     WidthConstraint(AbstractWidthConstraint),
 
     Param(TypeParamId),
+    ConstrainedParam(TypeParamId, Box<AbstractType>),       // Needed to carry nominal type information later
 
     Int,
     Float,
@@ -188,7 +189,8 @@ impl AbstractType {
             .type_params()
             .map(|(id, constraint)| {
                 match constraint {
-                    Some(constraint) => (id, constraint.clone()),
+                    Some(constraint) => 
+                        (id, AbstractType::ConstrainedParam(id, constraint.clone())),
                     None => (id, AbstractType::Param(id))
                 }
             })
@@ -269,12 +271,17 @@ impl AbstractType {
                 Ok(new_width)
             },
 
-            AbstractType::Param(ref typ_param_id) => {
-                let param_type = map
-                    .get(typ_param_id)
-                    .expect("Type parameter missing from scope");
+            AbstractType::Param(ref type_param_id) => {
+                Ok(map
+                    .get(type_param_id)
+                    .expect("Type parameter missing from scope")
+                )
+            }
 
-                Ok(param_type)
+            AbstractType::ConstrainedParam(ref type_param_id, ref constraint) => {
+                Ok(AbstractType::ConstrainedParam(type_param_id.clone(),
+                    Box::new(constraint.apply_internal(map)?))
+                )
             }
 
             AbstractType::Int => Ok(AbstractType::Int),
