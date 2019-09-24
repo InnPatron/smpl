@@ -20,14 +20,14 @@ use super::type_resolver::resolve_types;
 
 struct FnAnalyzer<'a> {
     program: &'a mut Program,
-    fn_return_type: Type,
+    fn_return_type: AbstractType,
     current_scope: ScopedData,
     scope_stack: Vec<ScopedData>,
 
     module_id: ModuleId,
 
     // metadata
-    locals: Vec<(VarId, Type)>,
+    locals: Vec<(VarId, AbstractType)>,
 }
 
 pub fn analyze_fn(
@@ -153,22 +153,22 @@ fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, A
 fn resolve_bin_op(
     _universe: &Universe,
     op: &ast::BinOp,
-    lhs: Type,
-    rhs: Type,
+    lhs: AbstractType,
+    rhs: AbstractType,
     span: Span,
-) -> Result<Type, AnalysisError> {
+) -> Result<AbstractType, AnalysisError> {
     use crate::ast::BinOp::*;
 
-    let expected_int = Type::Int;
+    let expected_int = AbstractType::Int;
 
-    let expected_float = Type::Float;
+    let expected_float = AbstractType::Float;
 
-    let expected_bool = Type::Bool;
+    let expected_bool = AbstractType::Bool;
 
     let resolve_type = match *op {
         Add | Sub | Mul | Div | Mod => match (&lhs, &rhs) {
-            (&Type::Int, &Type::Int) => Type::Int,
-            (&Type::Float, &Type::Float) => Type::Float,
+            (&AbstractType::Int, &AbstractType::Int) => AbstractType::Int,
+            (&AbstractType::Float, &AbstractType::Float) => AbstractType::Float,
 
             _ => {
                 return Err(TypeError::BinOp {
@@ -183,7 +183,7 @@ fn resolve_bin_op(
         },
 
         LogicalAnd | LogicalOr => match (&lhs, &rhs) {
-            (&Type::Bool, &Type::Bool) => Type::Bool,
+            (&AbstractType::Bool, &AbstractType::Bool) => AbstractType::Bool,
             _ => {
                 return Err(TypeError::BinOp {
                     op: op.clone(),
@@ -197,8 +197,8 @@ fn resolve_bin_op(
         },
 
         GreaterEq | LesserEq | Greater | Lesser => match (&lhs, &rhs) {
-            (&Type::Int, &Type::Int) => Type::Bool,
-            (&Type::Float, &Type::Float) => Type::Bool,
+            (&AbstractType::Int, &AbstractType::Int) => AbstractType::Bool,
+            (&AbstractType::Float, &AbstractType::Float) => AbstractType::Bool,
 
             _ => {
                 return Err(TypeError::BinOp {
@@ -214,7 +214,7 @@ fn resolve_bin_op(
 
         Eq | InEq => {
             if resolve_types(&rhs, &lhs) {
-                Type::Bool
+                AbstractType::Bool
             } else {
                 return Err(TypeError::LhsRhsInEq(lhs.clone(), rhs.clone(), span).into());
             }
@@ -227,20 +227,20 @@ fn resolve_bin_op(
 fn resolve_uni_op(
     _universe: &Universe,
     op: &ast::UniOp,
-    tmp_type: Type,
+    tmp_type: AbstractType,
     span: Span,
-) -> Result<Type, AnalysisError> {
+) -> Result<AbstractType, AnalysisError> {
     use crate::ast::UniOp::*;
 
-    let expected_int = Type::Int;
+    let expected_int = AbstractType::Int;
 
-    let expected_float = Type::Float;
+    let expected_float = AbstractType::Float;
 
-    let expected_bool = Type::Bool;
+    let expected_bool = AbstractType::Bool;
 
     match *op {
         Negate => match tmp_type {
-            Type::Int | Type::Float => Ok(tmp_type.clone()),
+            AbstractType::Int | AbstractType::Float => Ok(tmp_type.clone()),
             _ => Err(TypeError::UniOp {
                 op: op.clone(),
                 expected: vec![expected_int, expected_float],
@@ -251,7 +251,7 @@ fn resolve_uni_op(
         },
 
         LogicalInvert => match tmp_type {
-            Type::Bool => Ok(tmp_type.clone()),
+            AbstractType::Bool => Ok(tmp_type.clone()),
             _ => Err(TypeError::UniOp {
                 op: op.clone(),
                 expected: vec![expected_bool],
@@ -271,7 +271,7 @@ impl<'a> FnAnalyzer<'a> {
         expr: &Expr,
         field_access: &FieldAccess,
         span: Span,
-    ) -> Result<Type, AnalysisError> {
+    ) -> Result<AbstractType, AnalysisError> {
         let path = field_access.path();
         let path_iter = path.path().iter();
 
@@ -290,7 +290,7 @@ impl<'a> FnAnalyzer<'a> {
             let indexing_type = expr.get_tmp(e).value().get_type().unwrap();
 
             match indexing_type {
-                Type::Int => (),
+                AbstractType::Int => (),
                 _ => {
                     return Err(TypeError::InvalidIndex {
                         found: indexing_type.clone(),
@@ -301,7 +301,7 @@ impl<'a> FnAnalyzer<'a> {
             }
 
             match var_type {
-                Type::Array {
+                AbstractType::Array {
                     element_type,
                     ..
                 } => {
@@ -320,10 +320,10 @@ impl<'a> FnAnalyzer<'a> {
         for (index, field) in path_iter.enumerate() {
             let next_type;
             match current_type {
-                Type::WidthConstraint {
+                AbstractType::WidthConstraint {
                     ref fields,
                     ref field_map,
-                } | Type::Record {
+                } | AbstractType::Record {
                     ref fields,
                     ref field_map,
                     ..
@@ -357,7 +357,7 @@ impl<'a> FnAnalyzer<'a> {
                         let indexing_type = expr.get_tmp(*indexing).value().get_type().unwrap();
 
                         match indexing_type {
-                            Type::Int => (),
+                            AbstractType::Int => (),
 
                             _ => {
                                 return Err(TypeError::InvalidIndex {
@@ -369,7 +369,7 @@ impl<'a> FnAnalyzer<'a> {
                         };
 
                         match *field_type {
-                            Type::Array {
+                            AbstractType::Array {
                                 ref element_type,
                                 size: _,
                             } => {
@@ -408,7 +408,7 @@ impl<'a> FnAnalyzer<'a> {
         Ok(accessed_field_type)
     }
 
-    fn resolve_expr(&mut self, expr: &Expr) -> Result<Type, AnalysisError> {
+    fn resolve_expr(&mut self, expr: &Expr) -> Result<AbstractType, AnalysisError> {
         let mut expr_type = None;
 
         for tmp_id in expr.execution_order() {
@@ -418,10 +418,10 @@ impl<'a> FnAnalyzer<'a> {
                 Value::Literal(ref literal) => {
 
                     let lit_type = match *literal {
-                        Literal::Int(_) => Type::Int,
-                        Literal::Float(_) => Type::Float,
-                        Literal::String(_) => Type::String,
-                        Literal::Bool(_) => Type::Bool,
+                        Literal::Int(_) => AbstractType::Int,
+                        Literal::Float(_) => AbstractType::Float,
+                        Literal::String(_) => AbstractType::String,
+                        Literal::Bool(_) => AbstractType::Bool,
                     };
 
                     tmp_type = lit_type;
@@ -464,7 +464,7 @@ impl<'a> FnAnalyzer<'a> {
 
                     // Check if type is a struct.
                     let (struct_type_id, fields, field_map) = match struct_type {
-                        Type::Record {
+                        AbstractType::Record {
                             type_id: struct_type_id,
                             ref fields,
                             ref field_map,
@@ -673,7 +673,7 @@ impl<'a> FnAnalyzer<'a> {
 
                     // Check args and parameters align
                     match fn_value_tmp_type {
-                        Type::Function {
+                        AbstractType::Function {
                             parameters: ref params,
                             ref return_type,
                             ..
@@ -736,7 +736,7 @@ impl<'a> FnAnalyzer<'a> {
                             }
                         }
 
-                        Type::UncheckedFunction {
+                        AbstractType::UncheckedFunction {
                             return_type,
                             ..
                         } => {
@@ -781,7 +781,7 @@ impl<'a> FnAnalyzer<'a> {
                                 }
                             }
 
-                            let array_type = Type::Array {
+                            let array_type = AbstractType::Array {
                                 element_type: Box::new(expected_element_type.unwrap()),
                                 size: size,
                             };
@@ -798,7 +798,7 @@ impl<'a> FnAnalyzer<'a> {
 
                             let element_type = array_tmp_type;
 
-                            let array_type = Type::Array {
+                            let array_type = AbstractType::Array {
                                 element_type: Box::new(element_type),
                                 size: size,
                             };
@@ -824,7 +824,7 @@ impl<'a> FnAnalyzer<'a> {
                         indexing.array.set_type(tmp_type.clone());
 
                         match &tmp_type {
-                            Type::Array {
+                            AbstractType::Array {
                                 ref element_type,
                                 ..
                             } => element_type.clone(),
@@ -848,7 +848,7 @@ impl<'a> FnAnalyzer<'a> {
                         indexing.indexer.set_type(tmp_type.clone());
 
                         match &tmp_type {
-                            Type::Int => (),
+                            AbstractType::Int => (),
 
                             _ => {
                                 return Err(TypeError::InvalidIndex {
@@ -976,7 +976,7 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         let condition = &condition.expr;
         let expr_type = self.resolve_expr(condition)?;
 
-        let expected = Type::Bool;
+        let expected = AbstractType::Bool;
 
         if !resolve_types(&expr_type, &expected) {
             return Err(TypeError::UnexpectedType {
@@ -998,7 +998,7 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         let condition = &condition.expr;
         let expr_type = self.resolve_expr(condition)?;
 
-        let expected = Type::Bool;
+        let expected = AbstractType::Bool;
 
         if !resolve_types(&expr_type, &expected) {
             return Err(TypeError::UnexpectedType {
@@ -1110,7 +1110,7 @@ impl<'a> Passenger<AnalysisError> for FnAnalyzer<'a> {
         let expr_type = match expr {
             Some(ref expr) => self.resolve_expr(expr)?,
 
-            None => Type::Unit,
+            None => AbstractType::Unit,
         };
 
         if !resolve_types(&expr_type, &self.fn_return_type) {

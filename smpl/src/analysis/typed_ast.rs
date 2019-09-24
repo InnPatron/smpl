@@ -21,7 +21,7 @@ where
     T: ::std::fmt::Debug + Clone,
 {
     data: T,
-    data_type: RefCell<Option<Type>>,
+    data_type: RefCell<Option<AbstractType>>,
 }
 
 impl<T> Typed<T>
@@ -43,14 +43,14 @@ where
         }
     }
 
-    pub fn typed(data: T, t: Type) -> Typed<T> {
+    pub fn typed(data: T, t: AbstractType) -> Typed<T> {
         Typed {
             data: data,
             data_type: RefCell::new(Some(t)),
         }
     }
 
-    pub fn set_type(&self, t: Type) {
+    pub fn set_type(&self, t: AbstractType) {
         // TODO: Handle type override
         let mut borrow = self.data_type.borrow_mut();
         if borrow.is_some() {
@@ -60,7 +60,7 @@ where
         }
     }
 
-    pub fn get_type(&self) -> Option<Type> {
+    pub fn get_type(&self) -> Option<AbstractType> {
         self.data_type.borrow().clone()
     }
 }
@@ -108,7 +108,7 @@ pub struct LocalVarDecl {
     type_ann: Option<ast::AstNode<ast::TypeAnnotation>>,
     var_name: ast::AstNode<ast::Ident>,
     var_init: self::Expr,
-    var_type: RefCell<Option<Type>>,
+    var_type: RefCell<Option<AbstractType>>,
     var_id: VarId,
     span: Span,
 }
@@ -137,7 +137,7 @@ impl LocalVarDecl {
         self.var_name.data()
     }
 
-    pub fn set_type(&self, app: Type) {
+    pub fn set_type(&self, app: AbstractType) {
         let mut borrow = self.var_type.borrow_mut();
         if borrow.is_some() {
             panic!("Attempting to override type for local variable declarration");
@@ -146,7 +146,7 @@ impl LocalVarDecl {
         }
     }
 
-    pub fn var_type(&self) -> Option<Type> {
+    pub fn var_type(&self) -> Option<AbstractType> {
         self.var_type.borrow().clone()
     }
 
@@ -369,7 +369,7 @@ pub enum ArrayInit {
 pub struct StructInit {
     struct_type_name: ast::TypedPath,
     field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>,
-    struct_type: RefCell<Option<Type>>,
+    struct_type: RefCell<Option<AbstractType>>,
     mapped_field_init: RefCell<Option<Vec<(FieldId, Typed<TmpId>)>>>,
 }
 
@@ -394,7 +394,7 @@ impl StructInit {
         self.struct_type_name.annotations()
     }
 
-    pub fn set_struct_type(&self, app: Type) {
+    pub fn set_struct_type(&self, app: AbstractType) {
         let mut borrow = self.struct_type.borrow_mut();
         if borrow.is_some() {
             panic!("Attempting to overwrite struct type of struct init",);
@@ -424,7 +424,7 @@ impl StructInit {
         let struct_type = struct_type.as_ref().unwrap();
 
         let field_map = match struct_type {
-            Type::Record {
+            AbstractType::Record {
                 field_map,
                 ..
             } => field_map,
@@ -460,7 +460,7 @@ impl StructInit {
         }
     }
 
-    pub fn struct_type(&self) -> Option<Type> {
+    pub fn struct_type(&self) -> Option<AbstractType> {
         let borrow = self.struct_type.borrow();
         borrow.clone()
     }
@@ -469,7 +469,7 @@ impl StructInit {
 #[derive(Debug, Clone)]
 pub struct AnonStructInit {
     field_init: Option<Vec<(ast::Ident, TmpId)>>,
-    struct_type: RefCell<Option<Type>>,
+    struct_type: RefCell<Option<AbstractType>>,
     mapped_field_init: RefCell<Option<Vec<(FieldId, Typed<TmpId>)>>>,
 }
 
@@ -484,7 +484,7 @@ impl AnonStructInit {
         }
     }
 
-    fn set_struct_type(&self, app: Type) {
+    fn set_struct_type(&self, app: AbstractType) {
         let mut borrow = self.struct_type.borrow_mut();
         if borrow.is_some() {
             panic!("Attempting to overwrite struct type of struct init",);
@@ -540,7 +540,7 @@ impl AnonStructInit {
 
                 // Set type and field init
                 *self.mapped_field_init.borrow_mut() = Some(result);
-                self.set_struct_type(Type::WidthConstraint {
+                self.set_struct_type(AbstractType::WidthConstraint {
                     fields: field_type_map,
                     field_map: field_map,
                 });
@@ -548,7 +548,7 @@ impl AnonStructInit {
             }
 
             None => {
-                self.set_struct_type(Type::WidthConstraint {
+                self.set_struct_type(AbstractType::WidthConstraint {
                     fields: HashMap::with_capacity(0),
                     field_map: HashMap::with_capacity(0),
                 });
@@ -558,7 +558,7 @@ impl AnonStructInit {
         Ok(())
     }
 
-    pub fn struct_type(&self) -> Option<Type> {
+    pub fn struct_type(&self) -> Option<AbstractType> {
         let borrow = self.struct_type.borrow();
         borrow.clone()
     }
@@ -568,7 +568,7 @@ impl AnonStructInit {
 pub struct FieldAccess {
     raw_path: ast::Path,
     path: self::Path,
-    field_type: RefCell<Option<Type>>,
+    field_type: RefCell<Option<AbstractType>>,
 }
 
 impl FieldAccess {
@@ -588,7 +588,7 @@ impl FieldAccess {
         &self.path
     }
 
-    pub fn set_field_type(&self, app: Type) {
+    pub fn set_field_type(&self, app: AbstractType) {
         let mut borrow = self.field_type.borrow_mut();
 
         if borrow.is_some() {
@@ -598,7 +598,7 @@ impl FieldAccess {
         }
     }
 
-    pub fn field_type(&self) -> Option<Type> {
+    pub fn field_type(&self) -> Option<AbstractType> {
         self.field_type.borrow().clone()
     }
 }
@@ -724,7 +724,7 @@ impl self::Path {
         }
     }
 
-    pub fn root_var_type(&self) -> Type {
+    pub fn root_var_type(&self) -> AbstractType {
         let r = self.root_var.borrow();
 
         match *r {
@@ -743,7 +743,7 @@ impl self::Path {
         *r = Some(Typed::untyped(id));
     }
 
-    pub fn set_root_var_type(&self, ty: Type) {
+    pub fn set_root_var_type(&self, ty: AbstractType) {
         let r = self.root_var.borrow_mut();
 
         match *r {
@@ -790,7 +790,7 @@ impl Field {
         }
     }
 
-    pub fn field_type(&self) -> Type {
+    pub fn field_type(&self) -> AbstractType {
         let f = self.field_id.borrow();
 
         match *f {
@@ -809,7 +809,7 @@ impl Field {
         *f = Some(Typed::untyped(id));
     }
 
-    pub fn set_field_type(&self, app: Type) {
+    pub fn set_field_type(&self, app: AbstractType) {
         let f = self.field_id.borrow_mut();
 
         match *f {

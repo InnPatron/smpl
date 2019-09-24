@@ -83,13 +83,13 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
         }
 
         Value::BinExpr(ref op, ref lhs, ref rhs) => {
-            use crate::analysis::type_cons::Type;
+            use crate::analysis::type_cons::AbstractType;
 
             macro_rules! specific_math_op {
                 ($ty: expr, $store: expr, $lhs: expr, $rhs: expr, $integer: path, $float: path) => {
                     match $ty {
-                        Type::Int => $integer($store, $lhs, $rhs),
-                        Type::Float => $float($store, $lhs, $rhs),
+                        AbstractType::Int => $integer($store, $lhs, $rhs),
+                        AbstractType::Float => $float($store, $lhs, $rhs),
 
                         _ => unreachable!(),
                     }

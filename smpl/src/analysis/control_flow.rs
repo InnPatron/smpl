@@ -339,7 +339,7 @@ impl CFG {
         } = fn_type
         {
             let return_type = return_type.apply(universe, fn_scope)?;
-            if resolve_types(&return_type, &Type::Unit) {
+            if resolve_types(&return_type, &AbstractType::Unit) {
                 append_node!(
                     cfg,
                     head,
