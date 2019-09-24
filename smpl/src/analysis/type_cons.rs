@@ -181,7 +181,24 @@ impl AbstractType {
         }
     }
 
-    fn apply_internal(&self, map: &HashMap<TypeParamId, AbstractType>) 
+    pub fn apply(&self, universe: &Universe, scope: &ScopedData) 
+        -> Result<AbstractType, Vec<ATypeError>> {
+
+        let param_map = scope
+            .type_params()
+            .map(|(id, constraint)| {
+                match constraint {
+                    Some(constraint) => (id, constraint.clone()),
+                    None => (id, AbstractType::Param(id))
+                }
+            })
+            .collect::<HashMap<_, _>>();
+
+        self.apply_internal(universe, &param_map)
+
+    }
+
+    fn apply_internal(&self, universe: &Universe, map: &HashMap<TypeParamId, AbstractType>) 
         -> Result<AbstractType, Vec<ATypeError>> {
 
         match *self {
@@ -190,6 +207,7 @@ impl AbstractType {
                 ref type_cons,
                 ref args,
             } => {
+                let type_cons = universe.get_type_cons(*type_cons).unwrap();
                 let (ok_args, err) = match type_cons.type_params() {
                     Some(ref type_params) => {
                         let mut map: HashMap<_, _> = map.clone();
