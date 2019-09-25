@@ -144,7 +144,7 @@ impl TypeCons {
 
 #[derive(Debug, Clone)]
 pub struct AbstractWidthConstraint {
-    fields: HashMap<Ident, Vec<AbstractType>>,
+    fields: HashMap<Ident, AbstractType>,
 }
 
 #[derive(Debug, Clone)]
@@ -286,12 +286,15 @@ impl AbstractType {
             AbstractType::WidthConstraint(ref width_constraint) => {
                 
                 let (ok_field_types, err) = width_constraint.fields
-                    .map(|at| at.apply_internal(map))
-                    .fold((Vec::new(), Vec::new()), |(mut ok, mut err), apply_result| {
+                    .iter()
+                    .map(|(ident, at)| at.apply_internal(map).map(|r| (ident, r)))
+                    .fold((HashMap::new(), Vec::new()), |(mut ok, mut err), apply_result| {
                         match apply_result {
-                            Ok(app) => ok.push(app),
-                            Err(mut e) => err.appedn(&mut e),
-                        }
+                            Ok((ref_ident, at)) => { ok.insert(ref_ident.clone(), at); },
+                            Err(mut e) => err.append(&mut e),
+                        };
+
+                        (ok, err)
                 });
 
                 if err.len() != 0 {
