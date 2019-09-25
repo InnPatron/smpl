@@ -92,11 +92,6 @@ pub enum TypeCons {
         return_type: AbstractType,
     },
 
-    Array {
-        element_type: AbstractType,
-        size: u64,
-    },
-
     Record {
         type_id: TypeId,
         type_params: TypeParams,
@@ -143,12 +138,24 @@ impl TypeCons {
 }
 
 #[derive(Debug, Clone)]
+pub struct AbstractFieldMap {
+    fields: HashMap<FieldId, AbstractType>,
+    field_map: HashMap<Ident, FieldId>,
+}
+
+#[derive(Debug, Clone)]
 pub struct AbstractWidthConstraint {
     fields: HashMap<Ident, AbstractType>,
 }
 
 #[derive(Debug, Clone)]
 pub enum AbstractType {
+
+    Record {
+        type_id: TypeId,
+        abstract_field_map: AbstractFieldMap,
+    },
+
     App {
         type_cons: TypeId,
         args: Vec<AbstractType>,
@@ -157,6 +164,10 @@ pub enum AbstractType {
     Array {
         element_kind: Box<AbstractType>,
         size: u64,
+    },
+
+    UncheckedFunction {
+        return_type: Box<AbstractType>,
     },
 
     Function {
@@ -201,12 +212,26 @@ impl AbstractType {
             })
             .collect::<HashMap<_, _>>();
 
-        self.apply_internal(&param_map)
+        self.apply_internal(universe, &param_map)
 
     }
 
-    fn apply_internal(&self, map: &HashMap<TypeParamId, AbstractType>) 
+    /// Given an environment of type variables to abstract types, recursively substitute
+    ///   any type variables in the map with their abstract type.
+    ///
+    /// No AbstractType returned by apply_internal() should have AbstractType::App() in its tree
+    fn apply_internal(&self, universe: &Universe, map: &HashMap<TypeParamId, AbstractType>) 
         -> Result<AbstractType, Vec<ATypeError>> {
+
+        macro_rules! primitive_apply {
+            ($args: expr, $result: expr) => {{
+                if $args.len() != 0 {
+                    unimplemented!("Primitive type app");
+                }
+
+                Ok($result)
+            }}
+        }
 
         match *self {
 
@@ -227,7 +252,7 @@ impl AbstractType {
                 //
                 let (ok_args, err) = args
                             .iter()
-                            .map(|at| at.apply_internal(map))
+                            .map(|at| at.apply_internal(universe, map))
                             .fold((Vec::new(), Vec::new()), | (mut ok, mut err), apply_result| {
                                 match apply_result {
                                     Ok(app) => ok.push(app),
@@ -241,17 +266,139 @@ impl AbstractType {
                     unimplemented!()
                 }
 
-                Ok(AbstractType::App {
-                    type_cons: *type_cons,
-                    args: ok_args,
-                })
+                let type_cons_id = *type_cons;
+                let type_cons = universe.get_type_cons(type_cons_id).unwrap();
+                match type_cons {
+                    TypeCons::Record {
+                        ref type_params,
+                        ref fields,
+                        ref field_map,
+                        ..
+                    } => {
+                        if type_params.len() != ok_args.len() {
+                            // TODO: Type app error
+                            unimplemented!();
+                        }
+
+                        // Make sure type arguments are all applied and mapped into the typing
+                        //  environment for field applications
+                        let old_map = map;
+                        let mut new_map = map.clone();
+                        let mut errors = Vec::new();
+                        for ((type_param, constraint), arg) in 
+                            type_params.iter().zip(ok_args.into_iter()) {
+
+                            // TODO: Constraint checking
+                            new_map.insert(type_param, arg);
+                        }
+
+                        let mut afm = AbstractFieldMap {
+                            fields: HashMap::new(),
+                            field_map: field_map.clone(),
+                        };
+                        for (field_id, field_abstract_type) in fields.iter() {
+                            let field_app_result = 
+                                field_abstract_type.apply_internal(universe, &new_map);
+                            match field_app_result {
+
+                                Ok(at) => {
+                                    afm.fields.insert(field_id.clone(), at);
+                                }
+
+                                Err(mut es) => errors.append(&mut es),
+                            }
+                        }
+                        Ok(AbstractType::Record {
+                            type_id: type_cons_id,
+                            abstract_field_map: afm,
+                        })
+                    }
+
+                    TypeCons::Function {
+                        ref type_params,
+                        ref parameters,
+                        ref return_type,
+                    } => {
+
+                        if type_params.len() != args.len() {
+                            unimplemented!();
+                        }
+
+                        // Make sure type arguments are all applied and mapped into the typing
+                        //  environment for field applications
+                        let old_map = map;
+                        let mut new_map = map.clone();
+                        for ((type_param, constraint), arg) in 
+                            type_params.iter().zip(ok_args.into_iter()) {
+
+                            // TODO: Constraint checking
+                            new_map.insert(type_param, arg);
+                        }
+
+                        let mut errors = Vec::new();
+                        let mut new_params = Vec::new();
+                        for param in parameters.iter() {
+                            let param_app_result = param.apply_internal(universe, &new_map);
+
+                            match param_app_result {
+                                Ok(p) => new_params.push(p),
+
+                                Err(mut es) => errors.append(&mut es),
+                            }
+                        }
+
+                        if errors.len() != 0 {
+                            unimplemented!();
+                        }
+
+                        let return_type = return_type.apply_internal(universe, &new_map)?;
+
+                        Ok(AbstractType::Function {
+                            parameters: new_params,
+                            return_type: Box::new(return_type),
+                        })
+                    }
+
+                    TypeCons::UncheckedFunction {
+                        ref type_params,
+                        ref return_type,
+                    } => {
+
+                        if type_params.len() != args.len() {
+                            unimplemented!();
+                        }
+
+                        // Make sure type arguments are all applied and mapped into the typing
+                        //  environment for field applications
+                        let old_map = map;
+                        let mut new_map = map.clone();
+                        for ((type_param, constraint), arg) in 
+                            type_params.iter().zip(ok_args.into_iter()) {
+
+                            // TODO: Constraint checking
+                            new_map.insert(type_param, arg.clone());
+                        }
+
+                        let return_type = return_type.apply_internal(universe, &new_map)?;
+
+                        Ok(AbstractType::UncheckedFunction {
+                            return_type: Box::new(return_type),
+                        })
+                    }
+
+                    TypeCons::Int => primitive_apply!(args, AbstractType::Int),
+                    TypeCons::Float => primitive_apply!(args, AbstractType::Float),
+                    TypeCons::String => primitive_apply!(args, AbstractType::String),
+                    TypeCons::Bool => primitive_apply!(args, AbstractType::Bool),
+                    TypeCons::Unit => primitive_apply!(args, AbstractType::Unit),
+                }
             },
 
             AbstractType::Array {
                 ref element_kind,
                 ref size
             } => Ok(AbstractType::Array {
-                element_kind: Box::new(element_kind.apply_internal(map)?),
+                element_kind: Box::new(element_kind.apply_internal(universe, map)?),
                 size: *size,
             }),
 
@@ -261,7 +408,7 @@ impl AbstractType {
             } => {
 
                 let (ok_parameters, err) = parameters.iter()
-                    .map(|p| p.apply_internal(map))
+                    .map(|p| p.apply_internal(universe, map))
                     .fold((Vec::new(), Vec::new()), |(mut ok, mut err), result| {
                         match result {
                             Ok(app) => ok.push(app),
@@ -275,7 +422,7 @@ impl AbstractType {
                     unimplemented!()
                 }
 
-                let new_return = return_type.apply_internal(map)?;
+                let new_return = return_type.apply_internal(universe, map)?;
 
                 Ok(AbstractType::Function {
                     parameters: ok_parameters,
@@ -287,7 +434,7 @@ impl AbstractType {
                 
                 let (ok_field_types, err) = width_constraint.fields
                     .iter()
-                    .map(|(ident, at)| at.apply_internal(map).map(|r| (ident, r)))
+                    .map(|(ident, at)| at.apply_internal(universe, map).map(|r| (ident, r)))
                     .fold((HashMap::new(), Vec::new()), |(mut ok, mut err), apply_result| {
                         match apply_result {
                             Ok((ref_ident, at)) => { ok.insert(ref_ident.clone(), at); },
@@ -317,7 +464,7 @@ impl AbstractType {
 
             AbstractType::ConstrainedParam(ref type_param_id, ref constraint) => {
                 Ok(AbstractType::ConstrainedParam(type_param_id.clone(),
-                    Box::new(constraint.apply_internal(map)?))
+                    Box::new(constraint.apply_internal(universe, map)?))
                 )
             }
 
