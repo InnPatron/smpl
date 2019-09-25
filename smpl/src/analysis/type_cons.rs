@@ -195,7 +195,7 @@ impl AbstractType {
             .map(|(id, constraint)| {
                 match constraint {
                     Some(constraint) => 
-                        (id, AbstractType::ConstrainedParam(id, constraint.clone())),
+                        (id, AbstractType::ConstrainedParam(id, Box::new(constraint.clone()))),
                     None => (id, AbstractType::Param(id))
                 }
             })
@@ -301,7 +301,7 @@ impl AbstractType {
                     fields: ok_field_types,
                 };
 
-                Ok(new_width)
+                Ok(AbstractType::WidthConstraint(new_width))
             },
 
             AbstractType::Param(ref type_param_id) => {
@@ -376,7 +376,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             });
 
             let type_args = match type_args {
-                Some(dat) => Some(dat?),
+                Some(dat) => dat?,
 
                 None => Vec::new(),
             };
@@ -392,7 +392,7 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
             Ok(AbstractType::Array {
                 element_kind: Box::new(element_type_app),
-                size: size,
+                size: *size,
             })
         }
 
@@ -408,12 +408,12 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             let scope = new_scope.as_ref().unwrap_or(scope);
 
             let param_types = params.map(|slice| {
-                slice
-                    .iter()
-                    .map(|p| type_app_from_annotation(universe, scope, p.data()))
-                    .collect::<Result<Vec<_>, _>>()
-            })?
-                .unwrap_or(Vec::new());
+                    slice
+                        .iter()
+                        .map(|p| type_app_from_annotation(universe, scope, p.data()))
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .unwrap_or(Ok(Vec::new()))?;
 
             let return_type = return_type
                 .map(|return_type| type_app_from_annotation(universe, scope, return_type.data()))
