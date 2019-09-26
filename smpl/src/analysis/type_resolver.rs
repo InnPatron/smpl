@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
+use crate::ast;
+use crate::span::Span;
+
 use super::type_cons::*;
-use super::error::TypeError;
+use super::error::*;
 use super::semantic_data::{TypeParamId, ScopedData, Universe };
 
 #[derive(Clone)]
@@ -37,4 +40,135 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData, typing_conte
     }
 
     unimplemented!();
+}
+
+pub fn resolve_bin_op(
+    universe: &Universe,
+    scoped_data: &ScopedData,
+    op: &ast::BinOp,
+    lhs: AbstractType,
+    rhs: AbstractType,
+    span: Span,
+) -> Result<AbstractType, AnalysisError> {
+    use crate::ast::BinOp::*;
+
+    let expected_int = AbstractType::Int;
+
+    let expected_float = AbstractType::Float;
+
+    let expected_bool = AbstractType::Bool;
+
+    // TODO: error handling
+    let lhs = lhs.apply(universe, scoped_data)
+        .expect("LHS BINOP TYPE ERROR");
+    let rhs = rhs.apply(universe, scoped_data)
+        .expect("LHS BINOP TYPE ERROR");
+
+    let resolve_type = match *op {
+        Add | Sub | Mul | Div | Mod => match (&lhs, &rhs) {
+            (&AbstractType::Int, &AbstractType::Int) => AbstractType::Int,
+            (&AbstractType::Float, &AbstractType::Float) => AbstractType::Float,
+
+            _ => {
+                return Err(TypeError::BinOp {
+                    op: op.clone(),
+                    expected: vec![expected_int, expected_float],
+                    lhs: lhs.clone(),
+                    rhs: rhs.clone(),
+                    span: span,
+                }
+                .into());
+            }
+        },
+
+        LogicalAnd | LogicalOr => match (&lhs, &rhs) {
+            (&AbstractType::Bool, &AbstractType::Bool) => AbstractType::Bool,
+            _ => {
+                return Err(TypeError::BinOp {
+                    op: op.clone(),
+                    expected: vec![expected_bool],
+                    lhs: lhs.clone(),
+                    rhs: rhs.clone(),
+                    span: span,
+                }
+                .into());
+            }
+        },
+
+        GreaterEq | LesserEq | Greater | Lesser => match (&lhs, &rhs) {
+            (&AbstractType::Int, &AbstractType::Int) => AbstractType::Bool,
+            (&AbstractType::Float, &AbstractType::Float) => AbstractType::Bool,
+
+            _ => {
+                return Err(TypeError::BinOp {
+                    op: op.clone(),
+                    expected: vec![expected_int, expected_float],
+                    lhs: lhs.clone(),
+                    rhs: rhs.clone(),
+                    span: span,
+                }
+                .into());
+            }
+        },
+
+        Eq | InEq => {
+            // TODO: Better equality check
+            /*
+            if lhs != rhs {
+                AbstractType::Bool
+            } else {
+                return Err(TypeError::LhsRhsInEq(lhs.clone(), rhs.clone(), span).into());
+            }
+            */
+            unimplemented!()
+        }
+    };
+
+    Ok(resolve_type)
+}
+
+pub fn resolve_uni_op(
+    universe: &Universe,
+    scoped_data: &ScopedData,
+    op: &ast::UniOp,
+    tmp_type: AbstractType,
+    span: Span,
+) -> Result<AbstractType, AnalysisError> {
+    use crate::ast::UniOp::*;
+
+    let expected_int = AbstractType::Int;
+
+    let expected_float = AbstractType::Float;
+
+    let expected_bool = AbstractType::Bool;
+
+    // TODO: error handling
+    let tmp_type = tmp_type.apply(universe, scoped_data)
+        .expect("UNI OP TYPE ERROR");
+
+    match *op {
+        Negate => match tmp_type {
+            AbstractType::Int | AbstractType::Float => Ok(tmp_type.clone()),
+            _ => Err(TypeError::UniOp {
+                op: op.clone(),
+                expected: vec![expected_int, expected_float],
+                expr: tmp_type.clone(),
+                span: span,
+            }
+            .into()),
+        },
+
+        LogicalInvert => match tmp_type {
+            AbstractType::Bool => Ok(tmp_type.clone()),
+            _ => Err(TypeError::UniOp {
+                op: op.clone(),
+                expected: vec![expected_bool],
+                expr: tmp_type.clone(),
+                span: span,
+            }
+            .into()),
+        },
+
+        _ => unimplemented!(),
+    }
 }

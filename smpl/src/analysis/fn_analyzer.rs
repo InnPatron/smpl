@@ -16,7 +16,7 @@ use super::semantic_data::{
 use super::type_cons::*;
 use super::type_cons_gen::generate_anonymous_fn_type;
 use super::typed_ast::*;
-use super::type_resolver::resolve_types;
+use super::type_resolver::{ resolve_uni_op, resolve_bin_op, resolve_types };
 
 struct FnAnalyzer<'a> {
     program: &'a mut Program,
@@ -147,121 +147,6 @@ fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, A
         Node::ExitScope => Ok(Some(vec![cfg.previous(id)])),
 
         _ => return Err(ControlFlowError::MissingReturn.into()),
-    }
-}
-
-fn resolve_bin_op(
-    _universe: &Universe,
-    op: &ast::BinOp,
-    lhs: AbstractType,
-    rhs: AbstractType,
-    span: Span,
-) -> Result<AbstractType, AnalysisError> {
-    use crate::ast::BinOp::*;
-
-    let expected_int = AbstractType::Int;
-
-    let expected_float = AbstractType::Float;
-
-    let expected_bool = AbstractType::Bool;
-
-    let resolve_type = match *op {
-        Add | Sub | Mul | Div | Mod => match (&lhs, &rhs) {
-            (&AbstractType::Int, &AbstractType::Int) => AbstractType::Int,
-            (&AbstractType::Float, &AbstractType::Float) => AbstractType::Float,
-
-            _ => {
-                return Err(TypeError::BinOp {
-                    op: op.clone(),
-                    expected: vec![expected_int, expected_float],
-                    lhs: lhs.clone(),
-                    rhs: rhs.clone(),
-                    span: span,
-                }
-                .into());
-            }
-        },
-
-        LogicalAnd | LogicalOr => match (&lhs, &rhs) {
-            (&AbstractType::Bool, &AbstractType::Bool) => AbstractType::Bool,
-            _ => {
-                return Err(TypeError::BinOp {
-                    op: op.clone(),
-                    expected: vec![expected_bool],
-                    lhs: lhs.clone(),
-                    rhs: rhs.clone(),
-                    span: span,
-                }
-                .into());
-            }
-        },
-
-        GreaterEq | LesserEq | Greater | Lesser => match (&lhs, &rhs) {
-            (&AbstractType::Int, &AbstractType::Int) => AbstractType::Bool,
-            (&AbstractType::Float, &AbstractType::Float) => AbstractType::Bool,
-
-            _ => {
-                return Err(TypeError::BinOp {
-                    op: op.clone(),
-                    expected: vec![expected_int, expected_float],
-                    lhs: lhs.clone(),
-                    rhs: rhs.clone(),
-                    span: span,
-                }
-                .into());
-            }
-        },
-
-        Eq | InEq => {
-            if resolve_types(&rhs, &lhs) {
-                AbstractType::Bool
-            } else {
-                return Err(TypeError::LhsRhsInEq(lhs.clone(), rhs.clone(), span).into());
-            }
-        }
-    };
-
-    Ok(resolve_type)
-}
-
-fn resolve_uni_op(
-    _universe: &Universe,
-    op: &ast::UniOp,
-    tmp_type: AbstractType,
-    span: Span,
-) -> Result<AbstractType, AnalysisError> {
-    use crate::ast::UniOp::*;
-
-    let expected_int = AbstractType::Int;
-
-    let expected_float = AbstractType::Float;
-
-    let expected_bool = AbstractType::Bool;
-
-    match *op {
-        Negate => match tmp_type {
-            AbstractType::Int | AbstractType::Float => Ok(tmp_type.clone()),
-            _ => Err(TypeError::UniOp {
-                op: op.clone(),
-                expected: vec![expected_int, expected_float],
-                expr: tmp_type.clone(),
-                span: span,
-            }
-            .into()),
-        },
-
-        LogicalInvert => match tmp_type {
-            AbstractType::Bool => Ok(tmp_type.clone()),
-            _ => Err(TypeError::UniOp {
-                op: op.clone(),
-                expected: vec![expected_bool],
-                expr: tmp_type.clone(),
-                span: span,
-            }
-            .into()),
-        },
-
-        _ => unimplemented!(),
     }
 }
 
