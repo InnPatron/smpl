@@ -7,7 +7,6 @@ mod control_flow;
 mod control_data;
 pub mod error;
 mod expr_flow;
-mod fn_analyzer;
 mod linear_cfg_traversal;
 mod blocky_linear_cfg_traversal;
 pub mod metadata;

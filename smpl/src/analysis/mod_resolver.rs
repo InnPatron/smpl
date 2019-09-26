@@ -6,7 +6,6 @@ use crate::module::{ModuleSource, ParsedModule};
 
 use super::control_flow::CFG;
 use super::error::AnalysisError;
-use super::fn_analyzer::analyze_fn;
 use super::metadata::*;
 use super::semantic_data::Module;
 use super::semantic_data::*;
@@ -158,7 +157,8 @@ pub fn check_modules(
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;
-            analyze_fn(program, fn_id, mod_id.clone())?;
+            // TODO: Analyze functions
+            unimplemented!("Analyze function");
         }
     }
 
