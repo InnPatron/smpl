@@ -139,13 +139,13 @@ impl TypeCons {
 
 #[derive(Debug, Clone)]
 pub struct AbstractFieldMap {
-    fields: HashMap<FieldId, AbstractType>,
-    field_map: HashMap<Ident, FieldId>,
+    pub fields: HashMap<FieldId, AbstractType>,
+    pub field_map: HashMap<Ident, FieldId>,
 }
 
 #[derive(Debug, Clone)]
 pub struct AbstractWidthConstraint {
-    fields: HashMap<Ident, AbstractType>,
+    pub fields: HashMap<Ident, AbstractType>,
 }
 
 #[derive(Debug, Clone)]
