@@ -45,11 +45,12 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData, typing_conte
 pub fn resolve_bin_op(
     universe: &Universe,
     scoped_data: &ScopedData,
+    typing_context: TypingContext,
     op: &ast::BinOp,
     lhs: AbstractType,
     rhs: AbstractType,
     span: Span,
-) -> Result<AbstractType, AnalysisError> {
+) -> Result<(AbstractType, TypingContext), AnalysisError> {
     use crate::ast::BinOp::*;
 
     let expected_int = AbstractType::Int;
@@ -124,16 +125,17 @@ pub fn resolve_bin_op(
         }
     };
 
-    Ok(resolve_type)
+    Ok((resolve_type, typing_context))
 }
 
 pub fn resolve_uni_op(
     universe: &Universe,
     scoped_data: &ScopedData,
+    mut typing_context: TypingContext,
     op: &ast::UniOp,
     tmp_type: AbstractType,
     span: Span,
-) -> Result<AbstractType, AnalysisError> {
+) -> Result<(AbstractType, TypingContext), AnalysisError> {
     use crate::ast::UniOp::*;
 
     let expected_int = AbstractType::Int;
@@ -148,7 +150,7 @@ pub fn resolve_uni_op(
 
     match *op {
         Negate => match tmp_type {
-            AbstractType::Int | AbstractType::Float => Ok(tmp_type.clone()),
+            AbstractType::Int | AbstractType::Float => Ok((tmp_type.clone(), typing_context)),
             _ => Err(TypeError::UniOp {
                 op: op.clone(),
                 expected: vec![expected_int, expected_float],
@@ -159,7 +161,7 @@ pub fn resolve_uni_op(
         },
 
         LogicalInvert => match tmp_type {
-            AbstractType::Bool => Ok(tmp_type.clone()),
+            AbstractType::Bool => Ok((tmp_type.clone(), typing_context)),
             _ => Err(TypeError::UniOp {
                 op: op.clone(),
                 expected: vec![expected_bool],
