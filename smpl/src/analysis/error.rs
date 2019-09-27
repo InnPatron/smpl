@@ -16,6 +16,20 @@ pub enum AnalysisError {
     UnresolvedStructs(Vec<AstNode<Struct>>),
     UnresolvedFns(Vec<AstNode<Function>>),
     MissingModName,
+    Errors(Vec<AnalysisError>),
+}
+
+impl<T, I> From<T> for AnalysisError 
+    where T: std::iter::IntoIterator<Item=I>,
+          I: Into<AnalysisError> {
+    
+    fn from(t: T) -> AnalysisError {
+        AnalysisError::Errors(t
+            .into_iter()
+            .map(|i| i.into())
+            .collect()
+        )
+    }
 }
 
 impl From<AnalysisError> for Error {
