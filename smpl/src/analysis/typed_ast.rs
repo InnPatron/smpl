@@ -425,9 +425,9 @@ impl StructInit {
 
         let field_map = match struct_type {
             AbstractType::Record {
-                field_map,
+                abstract_field_map,
                 ..
-            } => field_map,
+            } => abstract_field_map,
 
             _ => unimplemented!(),
         };
@@ -437,7 +437,7 @@ impl StructInit {
                 let mut result = Vec::new();
                 let mut unknown_fields = Vec::new();
                 for &(ref ident, ref tmp) in map.iter() {
-                    match field_map.get(ident) {
+                    match field_map.field_map.get(ident) {
                         Some(field_id) => {
                             result.push((field_id.clone(), tmp.clone()));
                         }
@@ -530,7 +530,7 @@ impl AnonStructInit {
                         // Field initialized multiple times
                         conflicting_fields.push(ident.clone());
                     }
-                    field_type_map.insert(field_id, tmp_type);
+                    field_type_map.insert(ident.clone(), tmp_type);
                     result.push((field_id, typed_tmp));
                 }
 
@@ -540,18 +540,16 @@ impl AnonStructInit {
 
                 // Set type and field init
                 *self.mapped_field_init.borrow_mut() = Some(result);
-                self.set_struct_type(AbstractType::WidthConstraint {
+                self.set_struct_type(AbstractType::WidthConstraint(AbstractWidthConstraint{
                     fields: field_type_map,
-                    field_map: field_map,
-                });
+                }));
 
             }
 
             None => {
-                self.set_struct_type(AbstractType::WidthConstraint {
+                self.set_struct_type(AbstractType::WidthConstraint(AbstractWidthConstraint {
                     fields: HashMap::with_capacity(0),
-                    field_map: HashMap::with_capacity(0),
-                });
+                }));
             },
         };
 
