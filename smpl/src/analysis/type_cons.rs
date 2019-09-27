@@ -394,6 +394,36 @@ impl AbstractType {
                 }
             },
 
+            AbstractType::Record {
+                ref type_id,
+                ref abstract_field_map,
+            } => {
+                let (ok_fields, err) = abstract_field_map.fields.iter()
+                    .map(|(f_id, ty)| (f_id.clone(), ty.apply_internal(universe, map)))
+                    .fold((HashMap::new(), Vec::new()), |(mut ok, mut err), (f_id, result)| {
+                        match result {
+                            Ok(app) => {
+                                ok.insert(f_id, app);
+                            }
+                            Err(mut e) => err.append(&mut e),
+                        }
+
+                        (ok, err)
+                });
+
+                if err.len() != 0 {
+                    unimplemented!()
+                }
+
+                Ok(AbstractType::Record {
+                    type_id: *type_id,
+                    abstract_field_map: AbstractFieldMap {
+                        fields: ok_fields,
+                        field_map: abstract_field_map.field_map.clone()
+                    }
+                })
+            }
+
             AbstractType::Array {
                 ref element_kind,
                 ref size
