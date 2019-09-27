@@ -430,6 +430,17 @@ impl AbstractType {
                 })
             }
 
+            AbstractType::UncheckedFunction {
+                ref return_type,
+            } => {
+
+                let new_return = return_type.apply_internal(universe, map)?;
+
+                Ok(AbstractType::UncheckedFunction {
+                    return_type: Box::new(new_return),
+                })
+            }
+
             AbstractType::WidthConstraint(ref width_constraint) => {
                 
                 let (ok_field_types, err) = width_constraint.fields
