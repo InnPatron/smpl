@@ -74,7 +74,6 @@ impl Program {
 
 #[derive(Clone, Debug)]
 pub struct Universe {
-    generated_type_cons_map: RefCell<HashMap<TypeId, TypeCons>>,
     type_cons_map: HashMap<TypeId, TypeCons>,
     fn_map: HashMap<FnId, Function>,
     builtin_fn_map: HashMap<FnId, BuiltinFunction>,
@@ -114,7 +113,6 @@ impl Universe {
         ];
 
         Universe {
-            generated_type_cons_map: RefCell::new(HashMap::new()),
             type_cons_map: type_map
                 .clone()
                 .into_iter()
@@ -222,22 +220,10 @@ impl Universe {
         type_id
     }
 
-    pub fn insert_generated_type_cons(&self, cons: TypeCons) -> TypeId {
-        let type_id = self.new_type_id();
-        let mut borrow = self.generated_type_cons_map.borrow_mut();
-
-        if borrow.insert(type_id, cons).is_some() {
-            panic!("Duplicate type constructor for type id");
-        }
-
-        type_id
-    }
-
-    pub fn get_type_cons(&self, id: TypeId) -> Option<TypeCons> {
-        self.type_cons_map.get(&id).map(|cons| cons.clone()).or({
-            let borrow = self.generated_type_cons_map.borrow();
-            borrow.get(&id).map(|cons| cons.clone())
-        })
+    pub fn get_type_cons(&self, id: TypeId) -> &TypeCons {
+        self.type_cons_map
+            .get(&id)
+            .expect("Expected TypeID to always resolve to a TypeCons")
     }
 
     pub fn get_fn(&self, id: FnId) -> &Function {

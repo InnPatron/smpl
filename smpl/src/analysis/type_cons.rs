@@ -272,7 +272,7 @@ impl AbstractType {
                 }
 
                 let type_cons_id = *type_cons;
-                let type_cons = universe.get_type_cons(type_cons_id).unwrap();
+                let type_cons = universe.get_type_cons(type_cons_id);
                 match type_cons {
                     TypeCons::Record {
                         ref type_params,
