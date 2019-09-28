@@ -187,7 +187,7 @@ impl Universe {
     pub fn insert_fn(&mut self, fn_id: FnId, type_id: TypeId, fn_scope: ScopedData, cfg: CFG) {
         let function = Function {
             fn_type: type_id,
-            cfg: Rc::new(cfg),
+            cfg: cfg,
             fn_scope: fn_scope,
         };
 
@@ -242,6 +242,10 @@ impl Universe {
 
     pub fn get_fn(&self, id: FnId) -> &Function {
         self.fn_map.get(&id).unwrap()
+    }
+
+    pub fn get_fn_mut(&mut self, id: FnId) -> &mut Function {
+        self.fn_map.get_mut(&id).unwrap()
     }
 
     pub fn get_builtin_fn(&self, id: FnId) -> &BuiltinFunction {
@@ -372,7 +376,7 @@ impl BuiltinFunction {
 #[derive(Clone, Debug)]
 pub struct Function {
     fn_type: TypeId,
-    cfg: Rc<CFG>,
+    cfg: CFG,
     fn_scope: ScopedData,
 }
 
@@ -381,8 +385,12 @@ impl Function {
         self.fn_type
     }
 
-    pub fn cfg(&self) -> Rc<CFG> {
-        self.cfg.clone()
+    pub fn cfg(&self) -> &CFG {
+        &self.cfg
+    }
+
+    pub fn cfg_mut(&mut self) -> &mut CFG {
+        &mut self.cfg
     }
 
     pub(super) fn fn_scope(&self) -> &ScopedData {
