@@ -812,14 +812,14 @@ impl Field {
 #[derive(Clone, Debug)]
 pub struct AnonymousFn {
     a_fn: ast::AnonymousFn,
-    fn_id: Option<FnId>,
+    fn_id: FnId,
 }
 
 impl AnonymousFn {
-    pub fn new(a_fn: ast::AnonymousFn) -> AnonymousFn {
+    pub fn new(universe: &Universe, a_fn: ast::AnonymousFn) -> AnonymousFn {
         AnonymousFn {
             a_fn: a_fn,
-            fn_id: None,
+            fn_id: universe.new_fn_id(),
         }
     }
 
@@ -828,14 +828,6 @@ impl AnonymousFn {
     }
 
     pub fn fn_id(&self) -> FnId {
-        self.fn_id.unwrap()
-    }
-
-    pub fn set_fn_id(&mut self, fn_id: FnId) {
-        if self.fn_id.is_some() {
-            panic!("Attempting to overwrite an anonymous function's FnId");
-        }
-
-        self.fn_id = Some(fn_id);
+        self.fn_id
     }
 }

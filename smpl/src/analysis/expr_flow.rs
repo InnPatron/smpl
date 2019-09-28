@@ -182,7 +182,8 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
         AstExpr::AnonymousFn(a_fn) => {
             let (a_fn, span) = a_fn.to_data();
             (
-                scope.map_tmp(universe, Value::AnonymousFn(AnonymousFn::new(a_fn)), span),
+                scope.map_tmp(universe, 
+                    Value::AnonymousFn(AnonymousFn::new(universe, a_fn)), span),
                 span,
             )
         }

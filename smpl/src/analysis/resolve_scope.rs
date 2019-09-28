@@ -317,6 +317,7 @@ fn resolve_expr_scope(expr: &mut Expr, current_scope: &ScopedData) -> Result<(),
             }
 
             // TODO: Generate anonymous functions in a separate phase
+            // FnId is generated in expr_flow
             Value::AnonymousFn(..) => (),
 
             Value::TypeInst(ref mut type_inst) => {
