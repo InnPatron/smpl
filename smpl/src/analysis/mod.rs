@@ -9,6 +9,7 @@ pub mod error;
 mod expr_flow;
 mod linear_cfg_traversal;
 mod blocky_linear_cfg_traversal;
+mod unique_linear_cfg_traversal;
 pub mod metadata;
 mod mod_resolver;
 pub mod type_cons;

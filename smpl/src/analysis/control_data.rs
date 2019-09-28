@@ -32,6 +32,10 @@ impl BasicBlock {
         &self.graph
     }
 
+    pub fn graph_mut(&mut self) -> &mut[BlockNode] {
+        &mut self.graph
+    }
+
     pub fn len(&self) -> usize {
         self.graph.len()
     }

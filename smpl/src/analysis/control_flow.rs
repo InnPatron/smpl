@@ -286,6 +286,10 @@ impl CFG {
         self.graph.node_weight(node).unwrap()
     }
 
+    pub fn node_weight_mut(&mut self, node: graph::NodeIndex) -> &mut Node {
+        self.graph.node_weight_mut(node).unwrap()
+    }
+
     pub fn neighbors_out(&self, node: graph::NodeIndex) -> graph::Neighbors<Edge> {
         self.graph.neighbors_directed(node, Direction::Outgoing)
     }
