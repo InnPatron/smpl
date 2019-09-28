@@ -16,69 +16,6 @@ macro_rules! nill_check {
     }};
 }
 
-#[derive(Debug, Clone)]
-pub struct TypeParams {
-    params: Option<HashMap<TypeParamId, Option<AbstractWidthConstraint>>>,
-}
-
-impl TypeParams {
-
-    pub fn new() -> TypeParams {
-        TypeParams {
-            params: Some(HashMap::new())
-        }
-    }
-
-    pub fn empty() -> TypeParams {
-        TypeParams {
-            params: None
-        }
-    }
-
-    pub fn add_param(&mut self, param: TypeParamId, constraint: Option<AbstractWidthConstraint>) {
-        match self.params {
-            Some(ref mut p) => {
-                p.insert(param, constraint);
-            }
-
-            None => {
-                let mut hm = HashMap::new();
-                hm.insert(param, constraint);
-                self.params = Some(hm);
-            }
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.params.as_ref().map_or(0, |tp| tp.len())
-    }
-
-    pub fn iter(&self) -> TypeParamsIter {
-        TypeParamsIter {
-            params: self.params.as_ref().map(|tp| tp.iter())
-        }
-    }
-}
-
-pub struct TypeParamsIter<'a> {
-    params: Option<std::collections::hash_map::Iter<'a, 
-        TypeParamId, 
-        Option<AbstractWidthConstraint>
-        >
-    >
-}
-
-impl<'a> std::iter::Iterator for TypeParamsIter<'a> {
-    type Item = (TypeParamId, Option<&'a AbstractWidthConstraint>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.params {
-            Some(ref mut iter) => iter.next().map(|(id, wc)| (*id, wc.as_ref())),
-            None => None,
-        }
-    }
-}
-
 /// Use TypeCons and AbstractType for type constructor mapping and graphing
 #[derive(Debug, Clone)]
 pub enum TypeCons {
@@ -136,17 +73,6 @@ impl TypeCons {
             _ => None,
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct AbstractFieldMap {
-    pub fields: HashMap<FieldId, AbstractType>,
-    pub field_map: HashMap<Ident, FieldId>,
-}
-
-#[derive(Debug, Clone)]
-pub struct AbstractWidthConstraint {
-    pub fields: HashMap<Ident, AbstractType>,
 }
 
 #[derive(Debug, Clone)]
@@ -524,6 +450,17 @@ impl AbstractType {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct AbstractFieldMap {
+    pub fields: HashMap<FieldId, AbstractType>,
+    pub field_map: HashMap<Ident, FieldId>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AbstractWidthConstraint {
+    pub fields: HashMap<Ident, AbstractType>,
+}
+
 pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
     universe: &'a mut Universe,
     scope: &'b ScopedData,
@@ -629,6 +566,69 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
         TypeAnnotationRef::WidthConstraint(constraints) => {
             // TODO: Fuse constraints
             unimplemented!();
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TypeParams {
+    params: Option<HashMap<TypeParamId, Option<AbstractWidthConstraint>>>,
+}
+
+impl TypeParams {
+
+    pub fn new() -> TypeParams {
+        TypeParams {
+            params: Some(HashMap::new())
+        }
+    }
+
+    pub fn empty() -> TypeParams {
+        TypeParams {
+            params: None
+        }
+    }
+
+    pub fn add_param(&mut self, param: TypeParamId, constraint: Option<AbstractWidthConstraint>) {
+        match self.params {
+            Some(ref mut p) => {
+                p.insert(param, constraint);
+            }
+
+            None => {
+                let mut hm = HashMap::new();
+                hm.insert(param, constraint);
+                self.params = Some(hm);
+            }
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.params.as_ref().map_or(0, |tp| tp.len())
+    }
+
+    pub fn iter(&self) -> TypeParamsIter {
+        TypeParamsIter {
+            params: self.params.as_ref().map(|tp| tp.iter())
+        }
+    }
+}
+
+pub struct TypeParamsIter<'a> {
+    params: Option<std::collections::hash_map::Iter<'a, 
+        TypeParamId, 
+        Option<AbstractWidthConstraint>
+        >
+    >
+}
+
+impl<'a> std::iter::Iterator for TypeParamsIter<'a> {
+    type Item = (TypeParamId, Option<&'a AbstractWidthConstraint>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.params {
+            Some(ref mut iter) => iter.next().map(|(id, wc)| (*id, wc.as_ref())),
+            None => None,
         }
     }
 }
