@@ -6,15 +6,13 @@ use crate::ast::*;
 use super::semantic_data::{FnId, VarId, TypeParamId, TypeId, Universe, ModulePath};
 use super::error::AnalysisError;
 use super::metadata::Metadata;
-use super::type_cons::*;
 
 #[derive(Clone, Debug)]
 pub struct ScopedData {
     type_cons_map: HashMap<ModulePath, TypeId>,
     var_map: HashMap<Ident, VarId>,
-    var_type_map: HashMap<VarId, AbstractType>,
     fn_map: HashMap<ModulePath, FnId>,
-    type_param_map: HashMap<Ident, (TypeParamId, Option<AbstractType>)>,
+    type_param_map: HashMap<Ident, TypeParamId>,
 }
 
 impl ScopedData {
@@ -23,7 +21,6 @@ impl ScopedData {
         ScopedData {
             type_cons_map: type_cons_map,
             var_map: HashMap::new(),
-            var_type_map: HashMap::new(),
             fn_map: HashMap::new(),
             type_param_map: HashMap::new(),
         }
@@ -54,8 +51,8 @@ impl ScopedData {
         match self.var_map.get(name.data()) {
             Some(v_id) => Ok(BindingInfo::Var(
                 v_id.clone(),
-                self.var_type_map.get(v_id).unwrap().clone(),
             )),
+
             None => {
                 let p = ModulePath(vec![name.data().clone()]);
                 self.fn_map
@@ -66,23 +63,18 @@ impl ScopedData {
         }
     }
 
-    pub fn var_info(&self, name: &AstNode<Ident>) -> Result<(VarId, AbstractType), AnalysisError> {
+    pub fn var_id(&self, name: &AstNode<Ident>) -> Result<VarId, AnalysisError> {
         let var_id = self
             .var_map
             .get(name.data())
             .ok_or(AnalysisError::UnknownBinding(name.data().clone(), name.span()))?
             .clone();
-        let type_id = self.var_type_map.get(&var_id).unwrap().clone();
 
-        Ok((var_id, type_id))
+        Ok(var_id)
     }
 
-    pub fn insert_var(&mut self, name: Ident, id: VarId, var_type: AbstractType) {
-        self.var_map.insert(name, id);
-
-        if self.var_type_map.insert(id, var_type).is_some() {
-            panic!("Attempting to override variable {} with a different type. Shadowing should produce a new variable id.", id);
-        }
+    pub fn insert_var(&mut self, name: Ident, id: VarId) -> Option<VarId> {
+        self.var_map.insert(name, id) 
     }
 
     pub fn get_fn(&self, path: &AstModulePath) -> Result<FnId, AnalysisError> {
@@ -94,23 +86,21 @@ impl ScopedData {
 
     pub fn insert_type_param(&mut self, 
                              ident: Ident, 
-                             id: TypeParamId, 
-                             constraint: Option<AbstractType>) -> bool {
-        self.type_param_map.insert(ident, (id, constraint)).is_some()
+                             id: TypeParamId) -> bool {
+        self.type_param_map.insert(ident, id).is_some()
     }
 
-    pub fn type_param<'a, 'b>(&'a self, ident: &'b Ident) 
-        -> Option<(TypeParamId, Option<&'a AbstractType>)> {
+    pub fn type_param<'a, 'b>(&'a self, ident: &'b Ident) -> Option<TypeParamId> {
         self.type_param_map
             .get(ident)
-            .map(|(id, constraint)| (id.clone(), constraint.as_ref()))
+            .map(|id| id.clone())
     }
 
     pub fn type_params<'a>(&'a self) 
-        -> impl Iterator<Item = (TypeParamId, Option<&'a AbstractType>)> + 'a {
+        -> impl Iterator<Item = TypeParamId> + 'a {
         self.type_param_map
             .values()
-            .map(|(id, constraint)| (id.clone(), constraint.as_ref()))
+            .map(|id| id.clone())
     }
 
     pub fn all_types(&self) -> impl Iterator<Item=(&ModulePath, TypeId)> {
@@ -127,6 +117,6 @@ impl ScopedData {
 }
 
 pub enum BindingInfo {
-    Var(VarId, AbstractType),
+    Var(VarId),
     Fn(FnId),
 }
