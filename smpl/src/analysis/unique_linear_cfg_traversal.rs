@@ -29,200 +29,196 @@ pub trait UniquePassenger<E> {
     fn branch_end_false_path(&mut self, id: NodeIndex, b: &mut BranchingData) -> Result<(), E>;
 }
 
-pub struct UniqueTraverser;
 
-impl UniqueTraverser {
+pub fn traverse<E>(graph: &mut CFG, passenger: &mut dyn UniquePassenger<E>) -> Result<(), E> {
+    let mut current = Some(graph.start());
+    let node_count = graph.graph().node_count();
 
-    pub fn traverse<E>(graph: &mut CFG, passenger: &mut dyn UniquePassenger<E>) -> Result<(), E> {
-        let mut current = Some(graph.start());
-        let node_count = graph.graph().node_count();
-
-        // Traverser::visit_node should be called AT MAX the number of nodes in the graph
-        for _ in 0..node_count {
-            match current {
-                Some(to_visit) => current = UniqueTraverser::visit_node(graph, to_visit, passenger)?,
-                None => break,
-            }
+    // Traverser::visit_node should be called AT MAX the number of nodes in the graph
+    for _ in 0..node_count {
+        match current {
+            Some(to_visit) => current = visit_node(graph, to_visit, passenger)?,
+            None => break,
         }
-
-        if current.is_some() {
-            panic!("Graph traversal error. Node::End should have returned None. If Node::End was reached, this panic should not be triggered.")
-        }
-
-        Ok(())
     }
 
-    fn visit_node<E>(graph: &mut CFG, current: NodeIndex, passenger: &mut dyn UniquePassenger<E>) 
-        -> Result<Option<NodeIndex>, E> {
+    if current.is_some() {
+        panic!("Graph traversal error. Node::End should have returned None. If Node::End was reached, this panic should not be triggered.")
+    }
 
-        let node_count = graph.graph().node_count();
-        match graph.node_weight_mut(current) {
-            Node::End => {
-                passenger.end(current)?;
-                Ok(None)
-            }
+    Ok(())
+}
 
-            Node::Start => {
-                passenger.start(current)?;
-                Ok(Some(graph.next(current)))
-            }
+fn visit_node<E>(graph: &mut CFG, current: NodeIndex, passenger: &mut dyn UniquePassenger<E>) 
+    -> Result<Option<NodeIndex>, E> {
 
-            Node::BranchSplit(ref mut branch_data, ref mut expr_data) => {
-                passenger.branch_split(current, branch_data, expr_data)?;
+    let node_count = graph.graph().node_count();
+    match graph.node_weight_mut(current) {
+        Node::End => {
+            passenger.end(current)?;
+            Ok(None)
+        }
 
-                let (true_path, false_path) = graph.after_conditional(current);
+        Node::Start => {
+            passenger.start(current)?;
+            Ok(Some(graph.next(current)))
+        }
 
-                passenger.branch_start_true_path(true_path)?;
+        Node::BranchSplit(ref mut branch_data, ref mut expr_data) => {
+            passenger.branch_split(current, branch_data, expr_data)?;
 
-                let mut merge = None;
+            let (true_path, false_path) = graph.after_conditional(current);
 
-                // True path
-                let mut current_node = true_path;
-                for _ in 0..node_count {
-                    match graph.node_weight_mut(current_node) {
-                        Node::BranchMerge(ref mut branch_data) => {
-                            passenger
-                                .branch_end_true_path(current_node, branch_data)?;
-                            merge = Some(current_node);
-                            break;
-                        }
+            passenger.branch_start_true_path(true_path)?;
 
-                        _ => (),
+            let mut merge = None;
+
+            // True path
+            let mut current_node = true_path;
+            for _ in 0..node_count {
+                match graph.node_weight_mut(current_node) {
+                    Node::BranchMerge(ref mut branch_data) => {
+                        passenger
+                            .branch_end_true_path(current_node, branch_data)?;
+                        merge = Some(current_node);
+                        break;
                     }
 
-                    match UniqueTraverser::visit_node(graph, current_node, passenger)? {
-                        Some(next) => current_node = next,
-                        None => break,
-                    }
+                    _ => (),
                 }
 
-                if merge.is_none() {
-                    panic!("Traversed entire graph and did not find Condition::BranchMerge");
+                match visit_node(graph, current_node, passenger)? {
+                    Some(next) => current_node = next,
+                    None => break,
                 }
-
-                passenger.branch_start_false_path(false_path)?;
-
-                // False path
-                let mut current_node = false_path;
-                let mut merge = None;
-                for _ in 0..node_count {
-                    match graph.node_weight_mut(current_node) {
-                        Node::BranchMerge(ref mut branch_data) => {
-                            passenger
-                                .branch_end_false_path(current_node, branch_data)?;
-                            passenger.branch_merge(current_node, branch_data)?;
-                            merge = Some(current_node);
-                            break;
-                        }
-
-                        _ => (),
-                    }
-
-                    match UniqueTraverser::visit_node(graph, current_node, passenger)? {
-                        Some(next) => current_node = next,
-                        None => panic!(),
-                    }
-                }
-
-
-                if merge.is_none() {
-                    panic!("Traversed entire graph and did not find Condition::BranchMerge");
-                }
-
-                Ok(Some(graph.next(merge.unwrap())))
             }
 
-            Node::BranchMerge(ref mut branch_data) => {
-                unreachable!();
+            if merge.is_none() {
+                panic!("Traversed entire graph and did not find Condition::BranchMerge");
             }
 
-            Node::LoopHead(ref mut branch_data, ref mut expr_data) => {
-                passenger.loop_head(current, branch_data, expr_data)?;
-                let (true_path, false_path) = graph.after_conditional(current);
-                passenger.loop_start_true_path(true_path)?;
+            passenger.branch_start_false_path(false_path)?;
 
-                let mut current_node = true_path;
-                let mut found_foot = false;
-                for _ in 0..node_count {
-                    match graph.node_weight_mut(current_node) {
-                        Node::LoopFoot(ref mut loop_data) => {
-                            passenger.loop_end_true_path(current_node)?;
-                            passenger.loop_foot(current_node, loop_data)?;
-                            found_foot = true;
-                            break;
-                        }
-
-                        _ => (),
+            // False path
+            let mut current_node = false_path;
+            let mut merge = None;
+            for _ in 0..node_count {
+                match graph.node_weight_mut(current_node) {
+                    Node::BranchMerge(ref mut branch_data) => {
+                        passenger
+                            .branch_end_false_path(current_node, branch_data)?;
+                        passenger.branch_merge(current_node, branch_data)?;
+                        merge = Some(current_node);
+                        break;
                     }
 
-                    match UniqueTraverser::visit_node(graph, current_node, passenger)? {
-                        Some(next) => current_node = next,
-                        None => return Ok(None),
+                    _ => (),
+                }
+
+                match visit_node(graph, current_node, passenger)? {
+                    Some(next) => current_node = next,
+                    None => panic!(),
+                }
+            }
+
+
+            if merge.is_none() {
+                panic!("Traversed entire graph and did not find Condition::BranchMerge");
+            }
+
+            Ok(Some(graph.next(merge.unwrap())))
+        }
+
+        Node::BranchMerge(ref mut branch_data) => {
+            unreachable!();
+        }
+
+        Node::LoopHead(ref mut branch_data, ref mut expr_data) => {
+            passenger.loop_head(current, branch_data, expr_data)?;
+            let (true_path, false_path) = graph.after_conditional(current);
+            passenger.loop_start_true_path(true_path)?;
+
+            let mut current_node = true_path;
+            let mut found_foot = false;
+            for _ in 0..node_count {
+                match graph.node_weight_mut(current_node) {
+                    Node::LoopFoot(ref mut loop_data) => {
+                        passenger.loop_end_true_path(current_node)?;
+                        passenger.loop_foot(current_node, loop_data)?;
+                        found_foot = true;
+                        break;
+                    }
+
+                    _ => (),
+                }
+
+                match visit_node(graph, current_node, passenger)? {
+                    Some(next) => current_node = next,
+                    None => return Ok(None),
+                }
+            }
+
+            if found_foot == false {
+                panic!(
+                    "Traversed the rest of the graph but did not find a Node::LoopFoot."
+                );
+            }
+
+            match graph.node_weight_mut(false_path) {
+                Node::LoopFoot(_) => (),
+                ref mut n @ _ => println!("Loop condition should be connected to Node::LoopFoot along the false path. Found {:?}.", n),
+            }
+
+            Ok(Some(graph.after_loop_foot(false_path)))
+        }
+
+        Node::LoopFoot(ref mut _data) => {
+            unreachable!();
+        }
+
+        Node::Continue(ref mut data) => {
+            passenger.cont(current, data)?;
+            Ok(Some(graph.after_continue(current)))
+        }
+
+        Node::Break(ref mut data) => {
+            passenger.br(current, data)?;
+            Ok(Some(graph.after_break(current)))
+        }
+
+        Node::EnterScope => {
+            passenger.enter_scope(current)?;
+            Ok(Some(graph.next(current)))
+        }
+
+        Node::ExitScope => {
+            passenger.exit_scope(current)?;
+            Ok(Some(graph.next(current)))
+        }
+
+        Node::Block(ref mut basic_block) => {
+            for n in basic_block.graph_mut() {
+                match *n {
+                    BlockNode::LocalVarDecl(ref mut decl) => {
+                        passenger.local_var_decl(current, decl)?;
+                    },
+
+                    BlockNode::Assignment(ref mut assign) => {
+                        passenger.assignment(current, assign)?;
+                    },
+
+                    BlockNode::Expr(ref mut expr) => {
+                        passenger.expr(current, expr)?;
                     }
                 }
-
-                if found_foot == false {
-                    panic!(
-                        "Traversed the rest of the graph but did not find a Node::LoopFoot."
-                    );
-                }
-
-                match graph.node_weight_mut(false_path) {
-                    Node::LoopFoot(_) => (),
-                    ref mut n @ _ => println!("Loop condition should be connected to Node::LoopFoot along the false path. Found {:?}.", n),
-                }
-
-                Ok(Some(graph.after_loop_foot(false_path)))
             }
 
-            Node::LoopFoot(ref mut _data) => {
-                unreachable!();
-            }
+            Ok(Some(graph.next(current)))
+        }
 
-            Node::Continue(ref mut data) => {
-                passenger.cont(current, data)?;
-                Ok(Some(graph.after_continue(current)))
-            }
-
-            Node::Break(ref mut data) => {
-                passenger.br(current, data)?;
-                Ok(Some(graph.after_break(current)))
-            }
-
-            Node::EnterScope => {
-                passenger.enter_scope(current)?;
-                Ok(Some(graph.next(current)))
-            }
-
-            Node::ExitScope => {
-                passenger.exit_scope(current)?;
-                Ok(Some(graph.next(current)))
-            }
-
-            Node::Block(ref mut basic_block) => {
-                for n in basic_block.graph_mut() {
-                    match *n {
-                        BlockNode::LocalVarDecl(ref mut decl) => {
-                            passenger.local_var_decl(current, decl)?;
-                        },
-
-                        BlockNode::Assignment(ref mut assign) => {
-                            passenger.assignment(current, assign)?;
-                        },
-
-                        BlockNode::Expr(ref mut expr) => {
-                            passenger.expr(current, expr)?;
-                        }
-                    }
-                }
-
-                Ok(Some(graph.next(current)))
-            }
-
-            Node::Return(ref mut rdata) => {
-                passenger.ret(current, rdata)?;
-                Ok(Some(graph.after_return(current)))
-            }
+        Node::Return(ref mut rdata) => {
+            passenger.ret(current, rdata)?;
+            Ok(Some(graph.after_return(current)))
         }
     }
 }
