@@ -294,7 +294,12 @@ fn resolve_expr_scope(expr: &mut Expr, current_scope: &ScopedData) -> Result<(),
             },
 
             // TODO: FieldID resolution depends on types
-            Value::FieldAccess(ref mut field_access) => (),
+            Value::FieldAccess(ref mut field_access) => {
+                let path = field_access.path_mut();
+
+                let var_id = current_scope.var_id(path.root_name())?;
+                path.set_root_var(var_id);
+            },
 
             Value::BinExpr(..) => (),
 

@@ -592,6 +592,10 @@ impl FieldAccess {
         &self.path
     }
 
+    pub fn path_mut(&mut self) -> &mut self::Path {
+        &mut self.path
+    }
+
     pub fn set_field_type(&mut self, app: AbstractType) {
         if self.field_type.is_some() {
             panic!("Attempting to override type of a field access",);
