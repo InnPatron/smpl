@@ -8,7 +8,7 @@ pub fn translate_expr(expr: &Expr) -> Vec<Instruction> {
 
     let mut translated = Vec::new();
     for tmp in execution_order {
-        translated.extend(translate_tmp(expr.get_tmp(*tmp)));
+        translated.extend(translate_tmp(expr.get_tmp(tmp)));
     }
 
     translated
