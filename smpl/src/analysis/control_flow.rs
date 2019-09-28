@@ -304,7 +304,7 @@ impl CFG {
     /// Only performs continue/break statement checking (necessary for CFG generation).
     ///
     pub fn generate(
-        universe: &Universe,
+        universe: &mut Universe,
         body: ast::AstNode<ast::Block>,
         fn_type: &TypeCons,
         fn_scope: &ScopedData,
@@ -372,7 +372,7 @@ impl CFG {
     /// block is appended to the graph.
     ///
     fn generate_scoped_block<'a, 'b, T>(&'a mut self, 
-                                        universe: &'b Universe, 
+                                        universe: &'b mut Universe, 
                                         mut instructions: T,
                                         loop_data: InternalLoopData) 
         -> Result<BranchData, ControlFlowError> 
@@ -559,7 +559,7 @@ impl CFG {
                             //   and BranchMerge at the heads.
                             // If it is the default branch (i.e. no condition), do not generate a
                             //   BranchSplit or BranchMerge (keep ScopeEnter, ScopeExit)
-                            fn generate_branch(cfg: &mut CFG, universe: &Universe, body: AstNode<Block>, 
+                            fn generate_branch(cfg: &mut CFG, universe: &mut Universe, body: AstNode<Block>, 
                                               condition: Option<AstNode<Expr>>,
                                               loop_data: InternalLoopData)
                                 -> Result<BranchData, ControlFlowError> {
