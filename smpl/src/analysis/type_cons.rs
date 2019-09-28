@@ -202,6 +202,8 @@ impl AbstractType {
     pub fn apply(&self, universe: &Universe, scope: &ScopedData) 
         -> Result<AbstractType, Vec<ATypeError>> {
 
+        // TODO: Use typing context instead of ScopedData
+        /*
         let param_map = scope
             .type_params()
             .map(|(id, constraint)| {
@@ -214,6 +216,8 @@ impl AbstractType {
             .collect::<HashMap<_, _>>();
 
         self.apply_internal(universe, &param_map)
+        */
+        unimplemented!();
 
     }
 
@@ -534,6 +538,8 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                 let type_param = scope.type_param(ident);
 
                 // Found a type parameter
+                // TODO: Use typing context instead of ScopedData
+                /*
                 if let Some((tp_id, _constraint)) = type_param {
                     // Do not allow type arguments on a type parameter
                     if typed_path.annotations().is_some() {
@@ -545,6 +551,8 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
                     return Ok(AbstractType::Param(tp_id));
                 }
+                */
+                unimplemented!();
             }
 
             // Not a type parameter

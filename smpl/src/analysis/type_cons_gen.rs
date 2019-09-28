@@ -344,7 +344,9 @@ fn type_param_map(
                                                               &new_scope, 
                                                               ast_constraint.data())?;
 
-                    new_scope.insert_type_param(ident.clone(), tp.clone(), Some(abstract_type.clone()));
+                    // TODO: Also insert into the typing env
+                    new_scope.insert_type_param(ident.clone(), tp.clone());
+
                     if let AbstractType::WidthConstraint(constraint) = abstract_type {
                         // Insert type parameter into scope
                         constraint_map.insert(ident.clone(), (tp.clone(), Some(constraint)));
@@ -367,7 +369,8 @@ fn type_param_map(
 
     // Any type param still left in type_parameter_map has no constraint
     for (ident, id) in type_parameter_map.into_iter() {
-        new_scope.insert_type_param(ident.clone(), id, None);
+        // TODO: Also insert into the typing env
+        new_scope.insert_type_param(ident.clone(), id);
         constraint_map.insert(ident, (id.clone(), None));
     }
 
