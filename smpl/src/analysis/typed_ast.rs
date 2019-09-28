@@ -96,8 +96,16 @@ impl Assignment {
         &self.value
     }
 
+    pub fn value_mut(&mut self) -> &mut self::Expr {
+        &mut self.value
+    }
+
     pub fn access(&self) -> &self::Expr {
         &self.access
+    }
+
+    pub fn access_mut(&mut self) -> &mut self::Expr {
+        &mut self.access
     }
 }
 
@@ -154,6 +162,10 @@ impl LocalVarDecl {
     pub fn init_expr(&self) -> &self::Expr {
         &self.var_init
     }
+
+    pub fn init_expr_mut(&mut self) -> &mut self::Expr {
+        &mut self.var_init
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -188,8 +200,10 @@ impl Expr {
         self.execution_order.last().unwrap().clone()
     }
 
-    pub fn execution_order(&self) -> Iter<TmpId> {
-        self.execution_order.iter()
+    pub fn execution_order(&self) -> impl Iterator<Item=TmpId> {
+        self.execution_order
+            .clone()
+            .into_iter()
     }
 
     pub fn order_length(&self) -> usize {
