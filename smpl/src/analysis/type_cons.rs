@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use crate::ast::{Ident, TypeAnnotationRef, WidthConstraint, AstNode};
 
 use super::error::{AnalysisError, ApplicationError, TypeError as ATypeError};
-use super::semantic_data::{FieldId, ScopedData, TypeId, TypeParamId, Universe};
+use super::semantic_data::{FieldId, TypeId, TypeParamId, Universe};
+use super::resolve_scope::ScopedData;
 use super::type_resolver::resolve_types;
 
 macro_rules! nill_check {

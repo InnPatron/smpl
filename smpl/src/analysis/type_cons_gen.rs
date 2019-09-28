@@ -7,7 +7,8 @@ use crate::feature::*;
 
 use super::error::{AnalysisError, TypeError};
 use super::metadata::*;
-use super::semantic_data::{FieldId, FnId, Program, ScopedData, TypeId, TypeParamId, Universe};
+use super::semantic_data::{FieldId, FnId, Program, TypeId, TypeParamId, Universe};
+use super::resolve_scope::ScopedData;
 use super::type_cons::*;
 
 type TypeParamMap = HashMap<Ident, (TypeParamId, Option<AbstractWidthConstraint>)>;

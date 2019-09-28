@@ -9,6 +9,7 @@ use super::error::AnalysisError;
 use super::metadata::*;
 use super::semantic_data::Module;
 use super::semantic_data::*;
+use super::resolve_scope::ScopedData;
 use super::type_cons_gen::*;
 
 use crate::feature::*;

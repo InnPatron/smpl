@@ -5,7 +5,8 @@ use crate::span::Span;
 
 use super::type_cons::*;
 use super::error::*;
-use super::semantic_data::{TypeParamId, ScopedData, Universe };
+use super::semantic_data::{TypeParamId, Universe };
+use super::resolve_scope::ScopedData;
 
 #[derive(Clone)]
 pub struct TypingContext {

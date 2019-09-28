@@ -8,7 +8,8 @@ use crate::span::Span;
 
 use super::error::{AnalysisError, ControlFlowError};
 use super::expr_flow;
-use super::semantic_data::{LoopId, ScopedData, Universe};
+use super::resolve_scope::ScopedData;
+use super::semantic_data::{LoopId, Universe};
 use super::type_cons::*;
 use super::type_resolver::resolve_types;
 use super::typed_ast;
