@@ -96,10 +96,7 @@ pub fn generate_fn_type(
             // TODO: Function signature scanner?
             type_app
         }
-        None => AbstractType::App {
-            type_cons: universe.unit(),
-            args: Vec::new(),
-        },
+        None => AbstractType::Unit,
     };
 
     let params = match fn_def.params {
@@ -166,10 +163,7 @@ pub fn generate_builtin_fn_type(
             // TODO: Function signature scanner?
             type_app
         }
-        None => AbstractType::App {
-            type_cons: universe.unit(),
-            args: Vec::new(),
-        },
+        None => AbstractType::Unit,
     };
 
     let params = match fn_def.params {
@@ -247,10 +241,7 @@ pub fn generate_anonymous_fn_type(
             // TODO: Function signature scanner?
             type_app
         }
-        None => AbstractType::App {
-            type_cons: universe.unit(),
-            args: Vec::new(),
-        },
+        None => AbstractType::Unit,
     };
 
     let params = match fn_def.params {
