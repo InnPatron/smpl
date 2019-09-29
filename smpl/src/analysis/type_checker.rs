@@ -220,6 +220,15 @@ fn resolve_tmp(scope: &ScopedData, context: &mut TypingContext, tmp: &Tmp)
                 tmp_span)?
         }
 
+        Value::UniExpr(ref op, ref uni_tmp) => {
+            let uni_tmp_type = context
+                .tmp_type_map
+                .get(uni_tmp.data())
+                .expect("Missing tmp");
+
+            resolve_uni_op(scope, context, op, uni_tmp_type, tmp.span())?
+        }
+
         _ => unimplemented!(),
 
     }; 
@@ -303,4 +312,46 @@ fn resolve_bin_op(
     };
 
     Ok(resolve_type)
+}
+
+fn resolve_uni_op(
+    scope: &ScopedData,
+    context: &TypingContext,
+    op: &ast::UniOp,
+    tmp_type: &AbstractType,
+    span: Span,
+) -> Result<AbstractType, AnalysisError> {
+    use crate::ast::UniOp::*;
+
+    let expected_int = AbstractType::Int;
+
+    let expected_float = AbstractType::Float;
+
+    let expected_bool = AbstractType::Bool;
+
+    match *op {
+        Negate => match tmp_type {
+            AbstractType::Int | AbstractType::Float => Ok(tmp_type.clone()),
+            _ => Err(TypeError::UniOp {
+                op: op.clone(),
+                expected: vec![expected_int, expected_float],
+                expr: tmp_type.clone(),
+                span: span,
+            }
+            .into()),
+        },
+
+        LogicalInvert => match tmp_type {
+            AbstractType::Bool => Ok(tmp_type.clone()),
+            _ => Err(TypeError::UniOp {
+                op: op.clone(),
+                expected: vec![expected_bool],
+                expr: tmp_type.clone(),
+                span: span,
+            }
+            .into()),
+        },
+
+        _ => unimplemented!(),
+    }
 }
