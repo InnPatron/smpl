@@ -72,6 +72,30 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
             Ok(())
         }
 
+        // Synth nominal record must be wider than constraint width
+        (Record {
+            abstract_field_map: ref synth_afm,
+            ..
+        }, WidthConstraint(ref constraint_awc)) => {
+
+            for (constraint_ident, constraint_type) in constraint_awc.fields.iter() {
+                match synth_afm.get(constraint_ident) {
+                    Some(synth_type) => {
+                        resolve_types(universe, scoped_data, typing_context,
+                            synth_type, constraint_type, span)?;
+                    }
+
+                    None => {
+                        // TODO: Missing field
+                        // Synth nominal record is not wider than constraint width
+                        unimplemented!()
+                    }
+                }
+            }
+
+            Ok(())
+        }
+
         (UncheckedFunction {
             return_type: ref synth_return,
         }, UncheckedFunction {
