@@ -263,6 +263,10 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData, context: &mut TypingCont
             resolve_type_inst(universe, scope, context, type_inst, tmp.span())?
         }
 
+        Value::AnonymousFn(ref a_fn) => {
+            resolve_anonymous_fn(universe, scope, context, a_fn, tmp.span())?
+        }
+
         _ => unimplemented!(),
 
     }; 
@@ -875,4 +879,63 @@ fn resolve_type_inst(universe: &Universe, scope: &ScopedData, context: &TypingCo
     .apply(universe, scope)?;
 
     Ok(inst_type)
+}
+
+fn resolve_anonymous_fn(universe: &Universe, scope: &ScopedData, context: &TypingContext,
+    a_fn: &AnonymousFn, span: Span)
+    -> Result<AbstractType, AnalysisError> {
+
+    let fn_id = a_fn.fn_id();
+    let func = a_fn.a_fn();
+
+    // TODO: For inserting later into the Universe, need to store the current scope
+    //      and the type
+    // TODO: Make sure scope ONLY has type parameter info
+    let (func_scope, fn_type_cons) =
+        super::type_cons_gen::generate_anonymous_fn_type(universe, scope, fn_id, func)?;
+
+    let anon_fn_type = match fn_type_cons {
+        TypeCons::Function {
+            type_params,
+            parameters,
+            return_type,
+        } => {
+
+            if type_params.len() != 0 {
+                // TODO: lift restrictions?
+                unimplemented!("Anonymous functions are not allowed to have their own type params");
+            }
+
+            AbstractType::Function {
+                parameters: parameters,
+                return_type: Box::new(return_type),
+            }
+        },
+
+        _ => unreachable!(),
+    };
+
+
+    // TODO: Generate and check anonymous functions in a later phase
+    /*
+    let cfg = CFG::generate(
+        self.program.universe_mut(),
+        func.body.clone(),
+        &fn_type,
+        &func_scope,
+    )?;
+
+    let fn_type_id = self.program.universe_mut().insert_type_cons(fn_type);
+
+
+    self.program
+        .universe_mut()
+        .insert_fn(fn_id, fn_type_id, func_scope, cfg);
+
+    // Since anonymous functions are ALWAYS inside another function
+    // Assume the global scope is at the bottom of the scope stack
+    analyze_fn(self.program, fn_id, self.module_id)?;
+    */
+
+    Ok(anon_fn_type)
 }
