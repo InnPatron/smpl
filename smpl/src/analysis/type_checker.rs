@@ -2,11 +2,14 @@ use std::collections::HashMap;
 
 use petgraph::graph::NodeIndex;
 
+use crate::ast;
+use crate::span::Span;
+
 use super::unique_linear_cfg_traversal::*;
 use super::control_data::*;
 use super::control_flow::CFG;
-use super::semantic_data::{FnId, VarId, TypeParamId, TypeId, Universe, ModulePath};
-use super::error::AnalysisError;
+use super::semantic_data::{TmpId, FnId, VarId, TypeParamId, TypeId, Universe, ModulePath};
+use super::error::*;
 use super::typed_ast::*;
 use super::type_cons::*;
 use super::resolve_scope::ScopedData;
@@ -161,4 +164,143 @@ struct TypingContext {
     type_params: HashMap<TypeParamId, AbstractType>,
     var_type_map: HashMap<VarId, AbstractType>,
     fn_type_map: HashMap<FnId, AbstractType>,
+    tmp_type_map: HashMap<TmpId, AbstractType>,
+}
+
+fn resolve_expr(scope: &ScopedData, context: &mut TypingContext, expr: &Expr) 
+    -> Result<AbstractType, AnalysisError> {
+
+    let mut expr_type = None;
+    for tmp_id in expr.execution_order() {
+        let tmp = expr.get_tmp(tmp_id);
+
+        let tmp_type = resolve_tmp(scope, context, tmp)?;
+        let expr_type = Some(tmp_type.clone());
+
+        if context.tmp_type_map
+            .insert(tmp_id, tmp_type)
+            .is_some() {
+            panic!("Duplicate tmp ID"); 
+        }
+    }
+
+    Ok(expr_type.unwrap())
+}
+
+fn resolve_tmp(scope: &ScopedData, context: &mut TypingContext, tmp: &Tmp) 
+    -> Result<AbstractType, AnalysisError> {
+
+    let tmp_span = tmp.span();
+    let tmp_value = tmp.value();
+    let tmp_type = match tmp_value.data() {
+        Value::Literal(ref literal) => {
+            match *literal {
+                Literal::Int(_) => AbstractType::Int,
+                Literal::Float(_) => AbstractType::Float,
+                Literal::String(_) => AbstractType::String,
+                Literal::Bool(_) => AbstractType::Bool,
+            }
+        }
+
+        Value::BinExpr(ref op, ref lhs, ref rhs) => {
+            let lhs_type = context
+                .tmp_type_map
+                .get(lhs.data())
+                .expect("Missing tmp");
+            let rhs_type = context
+                .tmp_type_map
+                .get(rhs.data())
+                .expect("Missing tmp");
+
+            resolve_bin_op(scope, 
+                context, 
+                op, 
+                lhs_type, 
+                rhs_type,
+                tmp_span)?
+        }
+
+        _ => unimplemented!(),
+
+    }; 
+
+    Ok(tmp_type)
+}
+
+fn resolve_bin_op(
+    scope: &ScopedData,
+    context: &TypingContext,
+    op: &ast::BinOp,
+    lhs: &AbstractType,
+    rhs: &AbstractType,
+    span: Span,
+) -> Result<AbstractType, AnalysisError> {
+    use crate::ast::BinOp::*;
+
+    let expected_int = AbstractType::Int;
+    let expected_float = AbstractType::Float;
+    let expected_bool = AbstractType::Bool;
+
+    let resolve_type = match *op {
+        Add | Sub | Mul | Div | Mod => match (&lhs, &rhs) {
+            (&AbstractType::Int, &AbstractType::Int) => AbstractType::Int,
+            (&AbstractType::Float, &AbstractType::Float) => AbstractType::Float,
+
+            _ => {
+                return Err(TypeError::BinOp {
+                    op: op.clone(),
+                    expected: vec![expected_int, expected_float],
+                    lhs: lhs.clone(),
+                    rhs: rhs.clone(),
+                    span: span,
+                }
+                .into());
+            }
+        },
+
+        LogicalAnd | LogicalOr => match (&lhs, &rhs) {
+            (&AbstractType::Bool, &AbstractType::Bool) => AbstractType::Bool,
+            _ => {
+                return Err(TypeError::BinOp {
+                    op: op.clone(),
+                    expected: vec![expected_bool],
+                    lhs: lhs.clone(),
+                    rhs: rhs.clone(),
+                    span: span,
+                }
+                .into());
+            }
+        },
+
+        GreaterEq | LesserEq | Greater | Lesser => match (&lhs, &rhs) {
+            (&AbstractType::Int, &AbstractType::Int) => AbstractType::Bool,
+            (&AbstractType::Float, &AbstractType::Float) => AbstractType::Bool,
+
+            _ => {
+                return Err(TypeError::BinOp {
+                    op: op.clone(),
+                    expected: vec![expected_int, expected_float],
+                    lhs: lhs.clone(),
+                    rhs: rhs.clone(),
+                    span: span,
+                }
+                .into());
+            }
+        },
+
+        Eq | InEq => {
+
+            // TODO: Check if rhs, lhs are equal
+            unimplemented!()
+            /*
+            if resolve_types(&rhs, &lhs) {
+                AbstractType::Bool
+            } else {
+                return Err(TypeError::LhsRhsInEq(lhs.clone(), rhs.clone(), span).into());
+            }
+            */
+        }
+    };
+
+    Ok(resolve_type)
 }
