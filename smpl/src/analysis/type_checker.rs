@@ -243,6 +243,10 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData, context: &mut TypingCont
             resolve_binding(universe, scope, context, binding, tmp.span())?
         }
 
+        Value::ModAccess(ref access) => {
+            resolve_mod_access(universe, scope, context, access, tmp.span())?
+        }
+
         _ => unimplemented!(),
 
     }; 
@@ -581,4 +585,35 @@ fn resolve_binding(universe: &Universe, scope: &ScopedData,
             Ok(fn_type)
         }
     }
+}
+
+fn resolve_mod_access(universe: &Universe, scope: &ScopedData,
+    context: &TypingContext, mod_access: &ModAccess, span: Span)
+    -> Result<AbstractType, AnalysisError> {
+
+    let fn_id = mod_access.fn_id()
+        .expect("Should be set by name resolution");
+
+    // TODO: Builtin detection
+    /*
+    let fn_type_id = if self.program.metadata().is_builtin(fn_id) {
+        let f = self.program.universe().get_builtin_fn(fn_id);
+        f.fn_type().clone()
+    } else {
+        let f = self.program.universe().get_fn(fn_id);
+        f.fn_type().clone()
+    };
+    */
+
+    let fn_type_id = universe
+        .get_fn(fn_id)
+        .fn_type();
+
+    let fn_type = AbstractType::App {
+        type_cons: fn_type_id,
+        args: Vec::new(),
+    }
+    .apply(universe, scope)?;
+
+    Ok(fn_type)
 }
