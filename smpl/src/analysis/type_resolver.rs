@@ -64,6 +64,23 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
                 synth_return, constraint_return, span)
         }
 
+        (Array {
+            element_type: ref synth_element,
+            size: synth_size,
+        }, Array {
+            element_type: ref constraint_element,
+            size: constraint_size,
+        }) => {
+
+            // TODO: Allow synth to be larger?
+            if synth_size != constraint_size {
+                unimplemented!();
+            }
+
+            resolve_types(universe, scoped_data, typing_context,
+                synth_element, constraint_element, span)
+        }
+
         (App { .. }, _) | (_, App { .. }) => {
             unreachable!("No AbstractType::App after apply");
         }
