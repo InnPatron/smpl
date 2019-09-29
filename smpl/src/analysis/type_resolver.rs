@@ -14,7 +14,10 @@ pub struct TypingContext {
 }
 
 pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData, typing_context: TypingContext,
-    synthesis: &AbstractType, constraint: &AbstractType) -> Result<(AbstractType, TypingContext), TypeError> {
+    synthesis: &AbstractType, constraint: &AbstractType, span: Span) 
+    -> Result<(AbstractType, TypingContext), TypeError> {
+
+    use super::type_cons::AbstractType::*;
 
     let synthesis = synthesis.apply(universe, scoped_data).unwrap();
     let constraint = constraint.apply(universe, scoped_data).unwrap();
@@ -33,14 +36,21 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData, typing_conte
             unimplemented!()
         }
 
+        (UncheckedFunction {
+            return_type: ref synth_return,
+        }, UncheckedFunction {
+            return_type: ref constraint_return,
+        }) => {
+            resolve_types(universe, scoped_data, typing_context, 
+                synth_return, constraint_return, span)
+        }
+
         (AbstractType::App { .. }, _) | (_, AbstractType::App { .. }) => {
             unreachable!("No AbstractType::App after apply");
         }
 
         _ => unimplemented!(),
     }
-
-    unimplemented!();
 }
 
 pub fn resolve_bin_op(
