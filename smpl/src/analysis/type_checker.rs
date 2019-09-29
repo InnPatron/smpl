@@ -232,7 +232,7 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData, context: &mut TypingCont
         }
 
         Value::StructInit(ref init) => {
-            resolve_field_init(universe, scope, context, init, tmp.span())? 
+            resolve_struct_init(universe, scope, context, init, tmp.span())? 
         }
 
         _ => unimplemented!(),
@@ -362,7 +362,7 @@ fn resolve_uni_op(
     }
 }
 
-fn resolve_field_init(universe: &Universe, scope: &ScopedData, 
+fn resolve_struct_init(universe: &Universe, scope: &ScopedData, 
     context: &TypingContext, init: &StructInit, span: Span) 
     -> Result<AbstractType, AnalysisError> {
 
