@@ -154,6 +154,16 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
         (String, String) => Ok(()),
         (Unit, Unit) => Ok(()),
 
+        // Unconstrained type parameters
+        // Check if type parameters are equal
+        (Param(synth_id), Param(constraint_id)) => {
+            if synth_id == constraint_id {
+                Ok(())
+            } else {
+                unimplemented!("Not equal type parameters");
+            }
+        }
+
         _ => unimplemented!(),
     }
 }
