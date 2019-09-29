@@ -12,7 +12,7 @@ use super::type_checker::TypingContext;
 pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData, 
     typing_context: &mut TypingContext, synthesis: &AbstractType, 
     constraint: &AbstractType, span: Span) 
-    -> Result<(), AnalysisError> {
+    -> Result<(), TypeError> {
 
     use super::type_cons::AbstractType::*;
 
@@ -142,7 +142,11 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
 
             resolve_types(universe, scoped_data, typing_context,
                 synth_element, constraint_element, span)
-        } 
+        }
+
+        (App { .. }, _) | (_, App { .. }) => {
+            unreachable!("No AbstractType::App after apply");
+        }
 
         (Int, Int) => Ok(()),
         (Float, Float) => Ok(()),
@@ -178,16 +182,6 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
                 synth_type, constraint_type, span)
         }
 
-        (ref app_synth @ App { .. }, ref constraint @ _) => {
-            let synth = app_synth.apply(universe, scoped_data)?;
-            resolve_types(universe, scoped_data, typing_context, &synth, constraint, span)
-        }
-        
-        (ref synth @ _, ref app_constraint @ App { .. }) => {
-            let constraint = app_constraint.apply(universe, scoped_data)?;
-            resolve_types(universe, scoped_data, typing_context, synth, &constraint, span)
-        }
-
         _ => unimplemented!(),
     }
 }
@@ -195,7 +189,7 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
 fn resolve_param(universe: &Universe, scoped_data: &ScopedData, 
     typing_context: &mut TypingContext, synth: &AbstractType, 
     constraint: &AbstractType, span: Span) 
-    -> Result<(), AnalysisError> {
+    -> Result<(), TypeError> {
 
     use super::type_cons::AbstractType::*;
 
