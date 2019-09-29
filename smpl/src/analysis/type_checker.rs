@@ -16,6 +16,7 @@ use super::resolve_scope::ScopedData;
 
 struct TypeChecker {
     scopes: Vec<ScopedData>,
+    typing_context: TypingContext,
 }
 
 impl TypeChecker {
@@ -23,10 +24,17 @@ impl TypeChecker {
     // TODO: Store function (return) type somwhere
     // TODO: Add function parameters somewhere
     pub fn new(inherited_scope: ScopedData) -> TypeChecker {
-        TypeChecker {
-            scopes: vec![inherited_scope]
-        }
+        let mut typing_context = TypingContext {
+            type_params: HashMap::new(),
+            var_type_map: HashMap::new(),
+            fn_type_map: HashMap::new(),
+            tmp_type_map: HashMap::new(),
+        };
 
+        TypeChecker {
+            scopes: vec![inherited_scope],
+            typing_context: typing_context,
+        }
     }
 
     fn current(&self) -> &ScopedData {
