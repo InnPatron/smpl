@@ -7,14 +7,11 @@ use super::type_cons::*;
 use super::error::*;
 use super::semantic_data::{TypeParamId, Universe };
 use super::resolve_scope::ScopedData;
+use super::type_checker::TypingContext;
 
-#[derive(Clone)]
-pub struct TypingContext {
-    map: HashMap<TypeParamId, AbstractType>,
-}
-
-pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData, typing_context: TypingContext,
-    synthesis: &AbstractType, constraint: &AbstractType, span: Span) 
+pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData, 
+    typing_context: &mut TypingContext, synthesis: &AbstractType, 
+    constraint: &AbstractType, span: Span) 
     -> Result<(AbstractType, TypingContext), TypeError> {
 
     use super::type_cons::AbstractType::*;
