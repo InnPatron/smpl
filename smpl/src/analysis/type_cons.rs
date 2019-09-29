@@ -462,7 +462,7 @@ pub struct AbstractWidthConstraint {
 }
 
 pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
-    universe: &'a mut Universe,
+    universe: &'a Universe,
     scope: &'b ScopedData,
     anno: T,
 ) -> Result<AbstractType, AnalysisError> {
