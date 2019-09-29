@@ -255,6 +255,11 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData, context: &mut TypingCont
             resolve_array_init(universe, scope, context, init, tmp.span())?
         }
 
+
+        Value::Indexing(ref indexing) => {
+            resolve_indexing(universe, scope, context, indexing, tmp.span())?
+        }
+
         _ => unimplemented!(),
 
     }; 
@@ -781,4 +786,54 @@ fn resolve_array_init(universe: &Universe, scope: &ScopedData, context: &TypingC
             Ok(array_type)
         }
     }
+}
+
+fn resolve_indexing (universe: &Universe, scope: &ScopedData, context: &TypingContext,
+    indexing: &Indexing, span: Span) 
+    -> Result<AbstractType, AnalysisError> {
+
+    let expected_element_type: AbstractType = {
+        // Check type is array
+        let tmp_type = context.tmp_type_map
+            .get(indexing.array.data())
+            .expect("Missing TMP");
+
+        // TODO: Already applied?
+        match &tmp_type {
+            AbstractType::Array {
+                ref element_type,
+                ..
+            } => *(element_type.clone()),
+
+            _ => {
+                return Err(TypeError::NotAnArray {
+                    found: tmp_type.clone(),
+                    span: span,
+                }
+                .into());
+            }
+        }
+    };
+
+    {
+        // Check type of indexer
+        let tmp_type = context.tmp_type_map
+            .get(indexing.indexer.data())
+            .expect("Missing TMP");
+
+        // TODO: Already applied?
+        match &tmp_type {
+            AbstractType::Int => (),
+
+            _ => {
+                return Err(TypeError::InvalidIndex {
+                    found: tmp_type.clone(),
+                    span: span,
+                }
+                .into());
+            }
+        }
+    }
+
+    Ok(expected_element_type)
 }
