@@ -175,6 +175,13 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
             }
         },
 
+        (ConstrainedParam(synth_id, 
+                          ref synth_type), 
+         ref constraint_type @ WidthConstraint(..)) => {
+            resolve_types(universe, scoped_data, typing_context,
+                synth_type, constraint_type, span)
+        }
+
         _ => unimplemented!(),
     }
 }
