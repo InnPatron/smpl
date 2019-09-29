@@ -230,12 +230,11 @@ pub fn generate_builtin_fn_type(
 }
 
 pub fn generate_anonymous_fn_type(
-    program: &mut Program,
+    universe: &Universe,
     scope: &ScopedData,
     fn_id: FnId,
     fn_def: &AnonymousFn,
 ) -> Result<(ScopedData, TypeCons), AnalysisError> {
-    let (universe, metadata, _features) = program.analysis_context();
 
     // Check no parameter naming conflicts
     // TODO: Allow type parameters on anonymous functions?
@@ -273,13 +272,9 @@ pub fn generate_anonymous_fn_type(
 
                 // TODO: Function signature scanner?
             }
-
-            metadata.insert_function_param_ids(fn_id, param_metadata);
-
             typed_params
         }
         None => {
-            metadata.insert_function_param_ids(fn_id, Vec::with_capacity(0));
             Vec::with_capacity(0)
         }
     };
