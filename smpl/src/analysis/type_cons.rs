@@ -456,6 +456,14 @@ pub struct AbstractFieldMap {
     pub field_map: HashMap<Ident, FieldId>,
 }
 
+impl AbstractFieldMap {
+    pub fn get(&self, name: &Ident) -> Option<&AbstractType> {
+        self.field_map
+            .get(name)
+            .and_then(|id| self.fields.get(id))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct AbstractWidthConstraint {
     pub fields: HashMap<Ident, AbstractType>,
