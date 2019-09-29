@@ -235,6 +235,10 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData, context: &mut TypingCont
             resolve_struct_init(universe, scope, context, init, tmp.span())? 
         }
 
+        Value::AnonStructInit(ref init) => {
+            resolve_anon_struct_init(universe, scope, context, init, tmp.span())?
+        }
+
         _ => unimplemented!(),
 
     }; 
@@ -484,4 +488,39 @@ fn resolve_struct_init(universe: &Universe, scope: &ScopedData,
     //   Field init expressions are valid types for their corresponding fields
 
     Ok(struct_type)
+}
+
+/// Generates a WidthConstraint based on the types of its initializer expressions
+fn resolve_anon_struct_init(universe: &Universe, scope: &ScopedData, 
+    context: &TypingContext, init: &AnonStructInit, span: Span) 
+    -> Result<AbstractType, AnalysisError> {
+
+    let mut width_constraint = AbstractWidthConstraint {
+        fields: HashMap::new(),
+    };
+
+    // Map init'd field to its type
+    let mut duplicate_fields = Vec::new();
+    for (field_name, typed_tmp) in init.raw_field_init() {
+
+        let tmp_type = context.tmp_type_map
+            .get(typed_tmp)
+            .expect("Missing tmp");
+
+        if width_constraint.fields.contains_key(field_name) {
+            duplicate_fields.push(field_name.clone());
+        } else {
+            width_constraint.fields.insert(field_name.clone(), tmp_type.clone());
+        }
+    }
+
+    if duplicate_fields.len() != 0 {
+        return Err(TypeError::InvalidInitialization {
+            fields: duplicate_fields,
+            span: span,
+        }.into());
+    }
+
+    let width_type = AbstractType::WidthConstraint(width_constraint);
+    Ok(width_type)
 }
