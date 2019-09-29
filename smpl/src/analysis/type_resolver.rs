@@ -164,6 +164,17 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
             }
         }
 
+        (ConstrainedParam(synth_id, 
+                          synth_type), 
+         ConstrainedParam(constraint_id, constraint_type)) => {
+            if synth_id == constraint_id {
+                Ok(())
+            } else {
+                // TODO: Check if parameters are compatible?
+                unimplemented!("Not equal type parameters");
+            }
+        },
+
         _ => unimplemented!(),
     }
 }
