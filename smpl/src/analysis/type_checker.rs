@@ -251,6 +251,10 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData, context: &mut TypingCont
             resolve_fn_call(universe, scope, context, fn_call, tmp.span())?
         }
 
+        Value::ArrayInit(ref init) => {
+            resolve_array_init(universe, scope, context, init, tmp.span())?
+        }
+
         _ => unimplemented!(),
 
     }; 
@@ -709,5 +713,72 @@ fn resolve_fn_call(universe: &Universe, scope: &ScopedData, context: &TypingCont
         }
 
         t @ _ => panic!("Function call on a non-function type: {:?}", t),
+    }
+}
+
+fn resolve_array_init(universe: &Universe, scope: &ScopedData, context: &TypingContext,
+    init: &ArrayInit, span: Span)
+    -> Result<AbstractType, AnalysisError> {
+
+    match *init {
+        ArrayInit::List(ref vec) => {
+            let size = vec.len() as u64;
+            let element_types = vec.iter().map(|ref tmp_id| {
+                let tmp_type = context.tmp_type_map
+                    .get(tmp_id.data())
+                    .expect("Missing TMP");
+                (tmp_type, span)
+            });
+
+            let mut expected_element_type = None;
+
+            for (i, (current_element_type, span)) in element_types.enumerate() {
+                if expected_element_type.is_none() {
+                    expected_element_type = Some(current_element_type);
+                    continue;
+                }
+
+                let expected_element_type = expected_element_type.as_ref().unwrap();
+
+                // TODO: Implement element consistency check
+                /*
+                if !resolve_types(&current_element_type, expected_element_type) {
+                    return Err(TypeError::HeterogenousArray {
+                        expected: expected_element_type.clone(),
+                        found: current_element_type,
+                        index: i,
+                        span: span,
+                    }
+                    .into());
+                }
+                */
+            }
+
+            let array_type = AbstractType::Array {
+                element_type: Box::new(expected_element_type.unwrap().clone()),
+                size: size,
+            };
+
+            Ok(array_type)
+        }
+
+        ArrayInit::Value(ref val, size) => {
+            let element_type = context.tmp_type_map
+                .get(val.data())
+                .expect("Missing TMP");
+
+            let array_type = AbstractType::Array {
+                element_type: Box::new(element_type.clone()),
+                size: size,
+            };
+
+            // TODO: Insert array type into metadata?
+            /*
+            self.program
+                .metadata_mut()
+                .insert_array_type(self.module_id, array_type);
+            */
+            Ok(array_type)
+        }
     }
 }
