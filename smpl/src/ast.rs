@@ -178,13 +178,13 @@ impl PartialEq for ExprStmt {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct AnonStructInit {
-    pub field_init: Option<Vec<(AstNode<Ident>, Box<Expr>)>>,
+    pub field_init: Vec<(AstNode<Ident>, Box<Expr>)>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructInit {
     pub struct_name: TypedPath,
-    pub field_init: Option<Vec<(AstNode<Ident>, Box<Expr>)>>,
+    pub field_init: Vec<(AstNode<Ident>, Box<Expr>)>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

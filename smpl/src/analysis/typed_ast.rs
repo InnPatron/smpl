@@ -379,7 +379,7 @@ pub enum ArrayInit {
 #[derive(Debug, Clone)]
 pub struct StructInit {
     struct_type_name: ast::TypedPath,
-    field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>,
+    field_init: Vec<(ast::Ident, Typed<TmpId>)>,
     struct_type: Option<AbstractType>,
     mapped_field_init: Option<Vec<(FieldId, Typed<TmpId>)>>,
 }
@@ -387,7 +387,7 @@ pub struct StructInit {
 impl StructInit {
     pub fn new(
         struct_type_name: ast::TypedPath,
-        field_init: Option<Vec<(ast::Ident, Typed<TmpId>)>>,
+        field_init: Vec<(ast::Ident, Typed<TmpId>)>,
     ) -> StructInit {
         StructInit {
             struct_type_name: struct_type_name,
@@ -413,61 +413,19 @@ impl StructInit {
         }
     }
 
-    pub fn raw_field_init(&self) -> Option<&[(ast::Ident, Typed<TmpId>)]> {
-        self.field_init.as_ref().map(|v| v.as_slice())
+    pub fn raw_field_init(&self) -> &[(ast::Ident, Typed<TmpId>)] {
+        self.field_init.as_slice()
     }
 
     pub fn field_init(&self) -> Option<Vec<(FieldId, Typed<TmpId>)>> {
         self.mapped_field_init.clone()
     }
 
-    pub fn init_order<'a>(&'a self) -> Option<impl Iterator<Item = &'a ast::Ident>> {
-        match self.field_init {
-            Some(ref vec) => Some(vec.iter().map(|(ref ident, _)| ident)),
-
-            None => None,
-        }
-    }
-
-    pub fn set_field_init(&mut self, _universe: &Universe) -> Result<(), Vec<ast::Ident>> {
-        let struct_type = self.struct_type.as_ref().unwrap();
-
-        let field_map = match struct_type {
-            AbstractType::Record {
-                ref abstract_field_map,
-                ..
-            } => abstract_field_map,
-
-            _ => unimplemented!(),
-        };
-
-        match self.field_init {
-            Some(ref map) => {
-                let mut result = Vec::new();
-                let mut unknown_fields = Vec::new();
-                for &(ref ident, ref tmp) in map.iter() {
-                    match field_map.field_map.get(ident) {
-                        Some(field_id) => {
-                            result.push((field_id.clone(), tmp.clone()));
-                        }
-
-                        None => {
-                            unknown_fields.push(ident.clone());
-                        }
-                    }
-                }
-
-                if unknown_fields.len() > 0 {
-                    Err(unknown_fields)
-                } else {
-                    self.mapped_field_init = Some(result);
-                    Ok(())
-                }
-            }
-
-            None => Ok(()),
-        }
-    }
+    pub fn init_order<'a>(&'a self) -> impl Iterator<Item = &'a ast::Ident> {
+        self.field_init
+            .iter()
+            .map(|(ref ident, _)| ident)
+    } 
 
     pub fn struct_type(&self) -> Option<AbstractType> {
         self.struct_type.as_ref().map(|t| t.clone())
@@ -476,14 +434,14 @@ impl StructInit {
 
 #[derive(Debug, Clone)]
 pub struct AnonStructInit {
-    field_init: Option<Vec<(ast::Ident, TmpId)>>,
+    field_init: Vec<(ast::Ident, TmpId)>,
     struct_type: Option<AbstractType>,
     mapped_field_init: Option<Vec<(FieldId, Typed<TmpId>)>>,
 }
 
 impl AnonStructInit {
     pub fn new(
-        field_init: Option<Vec<(ast::Ident, TmpId)>>,
+        field_init: Vec<(ast::Ident, TmpId)>,
     ) -> AnonStructInit {
         AnonStructInit {
             struct_type: None,
@@ -500,67 +458,18 @@ impl AnonStructInit {
         }
     }
 
-    pub fn raw_field_init(&self) -> Option<&[(ast::Ident, TmpId)]> {
-        self.field_init.as_ref().map(|v| v.as_slice())
+    pub fn raw_field_init(&self) -> &[(ast::Ident, TmpId)] {
+        self.field_init.as_slice()
     }
 
     pub fn field_init(&self) -> Option<Vec<(FieldId, Typed<TmpId>)>> {
         self.mapped_field_init.clone()
     }
 
-    pub fn init_order<'a>(&'a self) -> Option<impl Iterator<Item = &'a ast::Ident>> {
-        match self.field_init {
-            Some(ref vec) => Some(vec.iter().map(|(ref ident, _)| ident)),
-
-            None => None,
-        }
-    }
-
-    pub fn set_init(&mut self, universe: &Universe, expr: &Expr) -> Result<(), Vec<ast::Ident>> {
-        match self.field_init {
-            Some(ref map) => {
-                let mut result = Vec::new();
-
-                // Collect field types, field IDs
-                let mut field_map = HashMap::new();
-                let mut field_type_map = HashMap::new();
-                let mut conflicting_fields = Vec::new();
-                for &(ref ident, ref tmp_id) in map.iter() {
-                    let tmp = expr.get_tmp(*tmp_id);
-                    let tmp_type = tmp.value().get_type().unwrap();
-
-                    let typed_tmp = Typed::typed(tmp_id.clone(), tmp_type.clone());
-
-                    let field_id = universe.new_field_id();
-
-                    if field_map.insert(ident.clone(), field_id).is_some() {
-                        // Field initialized multiple times
-                        conflicting_fields.push(ident.clone());
-                    }
-                    field_type_map.insert(ident.clone(), tmp_type);
-                    result.push((field_id, typed_tmp));
-                }
-
-                if conflicting_fields.len() > 0 {
-                    return Err(conflicting_fields);
-                }
-
-                // Set type and field init
-                self.mapped_field_init = Some(result);
-                self.set_struct_type(AbstractType::WidthConstraint(AbstractWidthConstraint{
-                    fields: field_type_map,
-                }));
-
-            }
-
-            None => {
-                self.set_struct_type(AbstractType::WidthConstraint(AbstractWidthConstraint {
-                    fields: HashMap::with_capacity(0),
-                }));
-            },
-        };
-
-        Ok(())
+    pub fn init_order<'a>(&'a self) -> impl Iterator<Item = &'a ast::Ident> {
+        self.field_init
+            .iter()
+            .map(|(ref ident, _)| ident)
     }
 
     pub fn struct_type(&self) -> Option<AbstractType> {

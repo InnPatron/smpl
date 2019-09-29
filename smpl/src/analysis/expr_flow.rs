@@ -48,15 +48,13 @@ pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (T
         AstExpr::StructInit(init) => {
             let (init, span) = init.to_data();
             let struct_name = init.struct_name;
-            let field_init = init.field_init.map(|field_init_list| {
-                field_init_list
-                    .into_iter()
-                    .map(|(name, expr)| {
+            let field_init = init.field_init
+                .into_iter()
+                .map(|(name, expr)| {
                         let expr = Typed::untyped(flatten_expr(universe, scope, *expr).0);
                         (name.data().clone(), expr)
-                    })
-                    .collect::<Vec<_>>()
-            });
+                })
+                .collect::<Vec<_>>();
             (
                 scope.map_tmp(
                     universe,
@@ -69,15 +67,13 @@ pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (T
 
         AstExpr::AnonStructInit(init) => {
             let (init, span) = init.to_data();
-            let field_init = init.field_init.map(|field_init_list| {
-                field_init_list
-                    .into_iter()
-                    .map(|(name, expr)| {
-                        let expr = flatten_expr(universe, scope, *expr).0;
-                        (name.data().clone(), expr)
-                    })
-                    .collect::<Vec<_>>()
-            });
+            let field_init = init.field_init
+                .into_iter()
+                .map(|(name, expr)| {
+                    let expr = flatten_expr(universe, scope, *expr).0;
+                    (name.data().clone(), expr)
+                })
+                .collect::<Vec<_>>();
             (
                 scope.map_tmp(
                     universe,

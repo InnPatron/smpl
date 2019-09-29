@@ -150,7 +150,7 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
         }
 
         Value::StructInit(ref struct_init) => {
-            let field_init = struct_init.raw_field_init().unwrap();
+            let field_init = struct_init.raw_field_init();
 
             let mut map = HashMap::new();
             for (field, typed_tmp_id) in field_init.into_iter() {
@@ -213,7 +213,7 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
         }
 
         Value::AnonStructInit(ref struct_init) => {
-            let field_init = struct_init.raw_field_init().unwrap();
+            let field_init = struct_init.raw_field_init();
 
             let mut map = HashMap::new();
             for (field, tmp) in field_init.into_iter() {
