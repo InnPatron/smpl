@@ -22,7 +22,10 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
     match (synthesis, constraint) {
         (Record {
             type_id: synth_type_id,
-            abstract_field_map: synth_afm,
+            abstract_field_map: AbstractFieldMap {
+                fields: synth_fields,
+                ..
+            }
         }, Record {
             type_id: constraint_type_id,
             abstract_field_map: AbstractFieldMap {
@@ -30,7 +33,22 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
                 ..
             }, 
         }) => {
-            unimplemented!()
+
+            // Nominal check
+            if synth_type_id != constraint_type_id {
+               unimplemented!() 
+            }
+
+            for (synth_field_id, synth_type) in synth_fields.iter() {
+                let constraint_type = constraint_fields
+                    .get(synth_field_id)
+                    .expect("Equal type id means identical field IDs");
+
+                resolve_types(universe, scoped_data, typing_context,
+                    synth_type, constraint_type, span)?;
+            }
+
+            Ok(())
         }
 
         (UncheckedFunction {
