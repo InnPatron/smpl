@@ -12,7 +12,7 @@ use super::type_checker::TypingContext;
 pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData, 
     typing_context: &mut TypingContext, synthesis: &AbstractType, 
     constraint: &AbstractType, span: Span) 
-    -> Result<(AbstractType, TypingContext), TypeError> {
+    -> Result<(), TypeError> {
 
     use super::type_cons::AbstractType::*;
 
