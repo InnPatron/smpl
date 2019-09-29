@@ -8,7 +8,7 @@ use crate::span::Span;
 use super::unique_linear_cfg_traversal::*;
 use super::control_data::*;
 use super::control_flow::CFG;
-use super::semantic_data::{TmpId, FnId, VarId, TypeParamId, TypeId, Universe, ModulePath};
+use super::semantic_data::{TmpId, FieldId, FnId, VarId, TypeParamId, TypeId, Universe, ModulePath};
 use super::error::*;
 use super::typed_ast::*;
 use super::type_cons::*;
@@ -169,14 +169,14 @@ struct TypingContext {
     tmp_type_map: HashMap<TmpId, AbstractType>,
 }
 
-fn resolve_expr(scope: &ScopedData, context: &mut TypingContext, expr: &Expr) 
+fn resolve_expr(universe: &Universe, scope: &ScopedData, context: &mut TypingContext, expr: &Expr) 
     -> Result<AbstractType, AnalysisError> {
 
     let mut expr_type = None;
     for tmp_id in expr.execution_order() {
         let tmp = expr.get_tmp(tmp_id);
 
-        let tmp_type = resolve_tmp(scope, context, tmp)?;
+        let tmp_type = resolve_tmp(universe, scope, context, tmp)?;
         let expr_type = Some(tmp_type.clone());
 
         if context.tmp_type_map
@@ -189,7 +189,7 @@ fn resolve_expr(scope: &ScopedData, context: &mut TypingContext, expr: &Expr)
     Ok(expr_type.unwrap())
 }
 
-fn resolve_tmp(scope: &ScopedData, context: &mut TypingContext, tmp: &Tmp) 
+fn resolve_tmp(universe: &Universe, scope: &ScopedData, context: &mut TypingContext, tmp: &Tmp) 
     -> Result<AbstractType, AnalysisError> {
 
     let tmp_span = tmp.span();
@@ -229,6 +229,10 @@ fn resolve_tmp(scope: &ScopedData, context: &mut TypingContext, tmp: &Tmp)
                 .expect("Missing tmp");
 
             resolve_uni_op(scope, context, op, uni_tmp_type, tmp.span())?
+        }
+
+        Value::StructInit(ref init) => {
+            resolve_field_init(universe, scope, context, init, tmp.span())? 
         }
 
         _ => unimplemented!(),
@@ -356,4 +360,128 @@ fn resolve_uni_op(
 
         _ => unimplemented!(),
     }
+}
+
+fn resolve_field_init(universe: &Universe, scope: &ScopedData, 
+    context: &TypingContext, init: &StructInit, span: Span) 
+    -> Result<AbstractType, AnalysisError> {
+
+    // Get type info
+    let type_name = init.type_name();
+    let tmp_type_name = type_name.clone().into();
+    let struct_type_id = scope
+        .type_cons(universe, &tmp_type_name)
+        .ok_or(AnalysisError::UnknownType(type_name.clone()))?;
+
+    let type_args = init.type_args()
+        .map(|vec| {
+            vec
+            .iter()
+            .map(|ann| {
+                type_app_from_annotation(
+                    universe,
+                    scope,
+                    ann,
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()
+        })
+        .unwrap_or(Ok(Vec::new()))?;
+
+    // TODO: Take into account type arguments
+    let struct_type = AbstractType::App {
+        type_cons: struct_type_id,
+        args: type_args,
+    }
+    .apply(universe, scope)?;
+
+    // Check if type is a struct.
+    let (struct_type_id, fields, field_map) = match struct_type {
+        AbstractType::Record {
+            type_id: struct_type_id,
+            ref abstract_field_map,
+            ..
+        } => (struct_type_id, &abstract_field_map.fields, &abstract_field_map.field_map),
+
+        _ => {
+            return Err(TypeError::NotAStruct {
+                type_name: type_name.clone(),
+                found: struct_type,
+                span: span,
+            }
+            .into());
+        }
+    };
+
+    // Check if the struct is an 'opaque' type (i.e. cannot be initialized by SMPL
+    // code)
+    // TODO: Opaque check
+    /*
+    if self.program.metadata().is_opaque(struct_type_id) {
+        return Err(TypeError::InitOpaqueType {
+            struct_type: struct_type,
+            span: tmp.span(),
+        }
+        .into());
+    }
+    */
+
+    // Map init'd field to its type
+    let mut init_expr_type_map: HashMap<FieldId, &'_ AbstractType> = HashMap::new();
+    for (field_name, typed_tmp) in init.raw_field_init() {
+
+        // Check if the struct type has the corresponding field
+        let field_id = field_map
+            .get(field_name)
+            .ok_or(TypeError::UnknownField {
+                name: field_name.clone(),
+                struct_type: struct_type.clone(),
+                span: span,
+            })?;
+
+        let tmp_type = context.tmp_type_map
+            .get(typed_tmp.data())
+            .expect("Missing tmp");
+
+        if init_expr_type_map.insert(field_id.clone(), tmp_type).is_some() {
+            panic!("Duplicate field init");
+        }
+    }
+
+    // Not a full struct init
+    if init_expr_type_map.len() != fields.len() {
+
+        let missing_fields = field_map
+            .iter()
+            .filter(|(_, field_id)| init_expr_type_map.contains_key(field_id))
+            .map(|(ident, _)| ident.clone())
+            .collect();
+
+        return Err(TypeError::StructNotFullyInitialized {
+            type_name: type_name.clone(),
+            struct_type: struct_type.clone(),
+            missing_fields: missing_fields,
+            span: span,
+        }.into());
+    }
+
+    // SATISFIED CONDITIONS: 
+    //   Field init expressions should be fully typed (tmps)
+    //   Field names are all present and all valid
+
+    // TODO: Check if field init expressions are of the correct type
+    // Check if field init expressions are of the correct type
+    for (field_id, field_type) in fields.iter() {
+        let init_expr_type = init_expr_type_map
+            .get(field_id)
+            .unwrap();
+        unimplemented!()
+    }
+
+    // SATISFIED CONDITIONS: 
+    //   Field init expressions should be fully typed (tmps)
+    //   Field names are all present and all valid
+    //   Field init expressions are valid types for their corresponding fields
+
+    Ok(struct_type)
 }
