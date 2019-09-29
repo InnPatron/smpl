@@ -177,6 +177,13 @@ pub struct TypingContext {
     tmp_type_map: HashMap<TmpId, AbstractType>,
 }
 
+impl TypingContext {
+    pub fn get_type_param(&self, id: TypeParamId) -> Option<&AbstractType> {
+        self.type_params
+            .get(&id)
+    }
+}
+
 fn resolve_expr(universe: &Universe, scope: &ScopedData, context: &mut TypingContext, expr: &Expr) 
     -> Result<AbstractType, AnalysisError> {
 
@@ -443,7 +450,7 @@ fn resolve_struct_init(universe: &Universe, scope: &ScopedData,
         type_cons: struct_type_id,
         args: type_args,
     }
-    .apply(universe, scope)?;
+    .apply(universe, scope, context)?;
 
     // Check if type is a struct.
     let (struct_type_id, fields, field_map) = match struct_type {
@@ -618,7 +625,7 @@ fn resolve_binding(universe: &Universe, scope: &ScopedData,
                 type_cons: fn_type_id,
                 args: Vec::new(),
             }
-            .apply(universe, scope)?;
+            .apply(universe, scope, context)?;
 
             Ok(fn_type)
         }
@@ -651,7 +658,7 @@ fn resolve_mod_access(universe: &Universe, scope: &ScopedData,
         type_cons: fn_type_id,
         args: Vec::new(),
     }
-    .apply(universe, scope)?;
+    .apply(universe, scope, context)?;
 
     Ok(fn_type)
 }
@@ -891,7 +898,7 @@ fn resolve_type_inst(universe: &Universe, scope: &ScopedData, context: &TypingCo
         type_cons: fn_type_id,
         args: type_args,
     }
-    .apply(universe, scope)?;
+    .apply(universe, scope, context)?;
 
     Ok(inst_type)
 }

@@ -5,7 +5,7 @@ use crate::ast::{Ident, TypeAnnotationRef, WidthConstraint, AstNode};
 use super::error::{AnalysisError, ApplicationError, TypeError as ATypeError};
 use super::semantic_data::{FieldId, TypeId, TypeParamId, Universe};
 use super::resolve_scope::ScopedData;
-use super::type_resolver::resolve_types;
+use super::type_checker::TypingContext;
 
 macro_rules! nill_check {
     ($type_args: expr) => {{
@@ -125,26 +125,19 @@ impl AbstractType {
         }
     }
 
-    pub fn apply(&self, universe: &Universe, scope: &ScopedData) 
+    pub fn apply(&self, universe: &Universe, scope: &ScopedData, typing_context: &TypingContext) 
         -> Result<AbstractType, Vec<ATypeError>> {
 
-        // TODO: Use typing context instead of ScopedData
-        /*
-        let param_map = scope
-            .type_params()
-            .map(|(id, constraint)| {
-                match constraint {
-                    Some(constraint) => 
-                        (id, AbstractType::ConstrainedParam(id, Box::new(constraint.clone()))),
-                    None => (id, AbstractType::Param(id))
-                }
-            })
-            .collect::<HashMap<_, _>>();
+        let mut param_map = HashMap::new();
+        for param_id in scope.type_params() {
+            let param_type = typing_context
+                .get_type_param(param_id)
+                .unwrap();
+
+            param_map.insert(param_id.clone(), param_type.clone());
+        }
 
         self.apply_internal(universe, &param_map)
-        */
-        unimplemented!();
-
     }
 
     /// Given an environment of type variables to abstract types, recursively substitute

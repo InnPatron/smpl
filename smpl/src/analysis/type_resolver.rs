@@ -16,8 +16,8 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
 
     use super::type_cons::AbstractType::*;
 
-    let synthesis = synthesis.apply(universe, scoped_data).unwrap();
-    let constraint = constraint.apply(universe, scoped_data).unwrap();
+    let synthesis = synthesis.apply(universe, scoped_data, typing_context).unwrap();
+    let constraint = constraint.apply(universe, scoped_data, typing_context).unwrap();
 
     match (synthesis, constraint) {
         (Record {
