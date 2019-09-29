@@ -255,7 +255,6 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData, context: &mut TypingCont
             resolve_array_init(universe, scope, context, init, tmp.span())?
         }
 
-
         Value::Indexing(ref indexing) => {
             resolve_indexing(universe, scope, context, indexing, tmp.span())?
         }
