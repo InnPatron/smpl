@@ -8,7 +8,7 @@ use crate::span::Span;
 use super::unique_linear_cfg_traversal::*;
 use super::control_data::*;
 use super::control_flow::CFG;
-use super::semantic_data::{TmpId, FieldId, FnId, VarId, TypeParamId, TypeId, Universe, ModulePath};
+use super::semantic_data::{TmpId, FieldId, FnId, VarId, TypeParamId, TypeId, Universe, ModulePath, BindingId};
 use super::error::*;
 use super::typed_ast::*;
 use super::type_cons::*;
@@ -237,6 +237,10 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData, context: &mut TypingCont
 
         Value::AnonStructInit(ref init) => {
             resolve_anon_struct_init(universe, scope, context, init, tmp.span())?
+        }
+
+        Value::Binding(ref binding) => {
+            resolve_binding(universe, scope, context, binding, tmp.span())?
         }
 
         _ => unimplemented!(),
@@ -523,4 +527,58 @@ fn resolve_anon_struct_init(universe: &Universe, scope: &ScopedData,
 
     let width_type = AbstractType::WidthConstraint(width_constraint);
     Ok(width_type)
+}
+
+fn resolve_binding(universe: &Universe, scope: &ScopedData,
+    context: &TypingContext, binding: &Binding, span: Span)
+    -> Result<AbstractType, AnalysisError> {
+
+    match binding.get_id().unwrap() {
+        BindingId::Var(var_id) => {
+            Ok(context
+                .var_type_map
+                .get(&var_id)
+                .expect("Missing VarId")
+                .clone())
+        }
+
+        BindingId::Fn(fn_id) => {
+            // self.program.features_mut().add_feature(FUNCTION_VALUE);
+
+            // Bindings to unchecked functions are OK because:
+            // 1) Attempting to use the binding will trigger type checking
+            // 2) Cannot write out unchecked function types currently
+            /*
+            if self.program
+                .metadata_mut()
+                .is_builtin_params_unchecked(fn_id)
+            {
+                return Err(AnalysisError::UncheckedFunctionBinding(var.ident().clone()));
+            }
+            */
+
+            // TODO: builtin check
+            let fn_type_id = universe
+                .get_fn(fn_id)
+                .fn_type()
+                .clone();
+            /*
+            let fn_type_id = if self.program.metadata().is_builtin(fn_id) {
+                let f = self.program.universe().get_builtin_fn(fn_id);
+                f.fn_type().clone()
+            } else {
+                let f = self.program.universe().get_fn(fn_id);
+                f.fn_type().clone()
+            };
+            */
+
+            let fn_type = AbstractType::App {
+                type_cons: fn_type_id,
+                args: Vec::new(),
+            }
+            .apply(universe, scope)?;
+
+            Ok(fn_type)
+        }
+    }
 }
