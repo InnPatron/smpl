@@ -378,7 +378,7 @@ fn resolve_field_init(universe: &Universe, scope: &ScopedData,
             vec
             .iter()
             .map(|ann| {
-                type_app_from_annotation(
+                type_from_ann(
                     universe,
                     scope,
                     ann,
