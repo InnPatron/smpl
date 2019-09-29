@@ -20,10 +20,10 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
     let constraint = constraint.apply(universe, scoped_data).unwrap();
 
     match (synthesis, constraint) {
-        (AbstractType::Record {
+        (Record {
             type_id: synth_type_id,
             abstract_field_map: synth_afm,
-        }, AbstractType::Record {
+        }, Record {
             type_id: constraint_type_id,
             abstract_field_map: AbstractFieldMap {
                 fields: constraint_fields,
@@ -42,7 +42,7 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
                 synth_return, constraint_return, span)
         }
 
-        (AbstractType::App { .. }, _) | (_, AbstractType::App { .. }) => {
+        (App { .. }, _) | (_, App { .. }) => {
             unreachable!("No AbstractType::App after apply");
         }
 
