@@ -42,10 +42,108 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
                 synth_return, constraint_return, span)
         }
 
+        (Function {
+            parameters: ref synth_params,
+            return_type: ref synth_return,
+        }, Function {
+            parameters: ref constraint_params,
+            return_type: ref constraint_return,
+        }) => {
+
+            if synth_params.len() != constraint_params.len() {
+                unimplemented!();
+            }
+
+            // Function parameters must be contravariant
+            for (sp, cp) in synth_params.iter().zip(constraint_params) {
+                resolve_param(universe, scoped_data, typing_context,
+                    sp, cp, span)?;
+            }
+
+            resolve_types(universe, scoped_data, typing_context,
+                synth_return, constraint_return, span)
+        }
+
         (App { .. }, _) | (_, App { .. }) => {
             unreachable!("No AbstractType::App after apply");
         }
 
         _ => unimplemented!(),
+    }
+}
+
+fn resolve_param(universe: &Universe, scoped_data: &ScopedData, 
+    typing_context: &mut TypingContext, synth: &AbstractType, 
+    constraint: &AbstractType, span: Span) 
+    -> Result<(), TypeError> {
+
+    use super::type_cons::AbstractType::*;
+
+    match (synth, constraint) {
+
+        // If the constraint is a width constraint, the provided parameter type cannot be a nominal
+        // type. Values of nominal types may carry additional metadata that is generally difficult to
+        // construct from anonymous types. On the otherhand, its simple to strip this metadata from
+        // values of nominal types.
+        //
+        // The constraint being a width constriant means that in general, an anonymous struct will
+        // be provided to the concrete function.
+        (Record { .. }, WidthConstraint { .. }) => {
+            // False
+            unimplemented!()
+        }
+
+        // NOTE(alex): Synth width must be narrower than the constraint width
+        (WidthConstraint(ref synth_awc), 
+         WidthConstraint(ref constraint_awc)) => {
+
+            for (synth_ident, synth_type) in synth_awc.fields.iter() {
+                match constraint_awc.fields.get(synth_ident) {
+                    Some(constraint_type) => {
+                        resolve_types(universe, scoped_data, typing_context,
+                            synth_type, constraint_type, span)?;
+                    }
+
+                    None => {
+                        // Synth width constraint is not narrower than constraint width
+                        unimplemented!()
+                    }
+                }
+            }
+
+            Ok(())
+        }
+    
+        // NOTE(alex): Synth width must be narrower than the nominal record constraint
+        // Calling with the nominal record value on the width constraint is allowed
+        (WidthConstraint(ref synth_awc),
+        Record {
+            abstract_field_map: ref afm,
+            ..
+        }) => {
+            for (synth_ident, synth_type) in synth_awc.fields.iter() {
+                match afm.get(synth_ident) {
+                    Some(constraint_type) => {
+                        resolve_types(universe, scoped_data, typing_context,
+                            synth_type, constraint_type, span)?
+                    }
+
+                    None => {
+                        // Synth width constraint is not narrower than nominal constraint
+                        unimplemented!()
+                    }
+                }
+            }
+
+            Ok(())
+        }
+
+        _ => resolve_types(
+                universe, 
+                scoped_data, 
+                typing_context, 
+                synth, 
+                constraint, 
+                span),
     }
 }
