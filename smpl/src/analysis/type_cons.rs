@@ -89,7 +89,7 @@ pub enum AbstractType {
     },
 
     Array {
-        element_kind: Box<AbstractType>,
+        element_type: Box<AbstractType>,
         size: u64,
     },
 
@@ -356,10 +356,10 @@ impl AbstractType {
             }
 
             AbstractType::Array {
-                ref element_kind,
+                ref element_type,
                 ref size
             } => Ok(AbstractType::Array {
-                element_kind: Box::new(element_kind.apply_internal(universe, map)?),
+                element_type: Box::new(element_type.apply_internal(universe, map)?),
                 size: *size,
             }),
 
@@ -528,7 +528,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             let element_type_app = type_from_ann(universe, scope, element_type.data())?;
 
             Ok(AbstractType::Array {
-                element_kind: Box::new(element_type_app),
+                element_type: Box::new(element_type_app),
                 size: *size,
             })
         }
