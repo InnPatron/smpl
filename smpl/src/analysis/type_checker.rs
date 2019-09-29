@@ -281,6 +281,7 @@ fn resolve_bin_op(
     let expected_float = AbstractType::Float;
     let expected_bool = AbstractType::Bool;
 
+    // TODO: lhs/rhs already applied?
     let resolve_type = match *op {
         Add | Sub | Mul | Div | Mod => match (&lhs, &rhs) {
             (&AbstractType::Int, &AbstractType::Int) => AbstractType::Int,
@@ -330,6 +331,7 @@ fn resolve_bin_op(
 
         Eq | InEq => {
 
+            // TODO: lhs/rhs already applied?
             // TODO: Check if rhs, lhs are equal
             unimplemented!()
             /*
@@ -360,6 +362,7 @@ fn resolve_uni_op(
 
     let expected_bool = AbstractType::Bool;
 
+    // TODO: lhs/rhs already applied?
     match *op {
         Negate => match tmp_type {
             AbstractType::Int | AbstractType::Float => Ok(tmp_type.clone()),
@@ -788,7 +791,7 @@ fn resolve_array_init(universe: &Universe, scope: &ScopedData, context: &TypingC
     }
 }
 
-fn resolve_indexing (universe: &Universe, scope: &ScopedData, context: &TypingContext,
+fn resolve_indexing(universe: &Universe, scope: &ScopedData, context: &TypingContext,
     indexing: &Indexing, span: Span) 
     -> Result<AbstractType, AnalysisError> {
 
