@@ -247,6 +247,10 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData, context: &mut TypingCont
             resolve_mod_access(universe, scope, context, access, tmp.span())?
         }
 
+        Value::FnCall(ref fn_call) => {
+            resolve_fn_call(universe, scope, context, fn_call, tmp.span())?
+        }
+
         _ => unimplemented!(),
 
     }; 
@@ -616,4 +620,94 @@ fn resolve_mod_access(universe: &Universe, scope: &ScopedData,
     .apply(universe, scope)?;
 
     Ok(fn_type)
+}
+
+fn resolve_fn_call(universe: &Universe, scope: &ScopedData, context: &TypingContext,
+    fn_call: &FnCall, span: Span)
+    -> Result<AbstractType, AnalysisError> {
+
+    let fn_value = fn_call.fn_value();
+    let fn_value_type = context.tmp_type_map
+        .get(&fn_value)
+        .expect("Missing TMP");
+
+    // Check args and parameters align
+    match fn_value_type {
+        AbstractType::Function {
+            parameters: ref params,
+            ref return_type,
+        } => {
+            let arg_types = fn_call.args().map(|ref vec| {
+                vec.iter()
+                    .map(|ref tmp_id| {
+                        context.tmp_type_map
+                            .get(tmp_id.data())
+                            .expect("Missing TMP")
+                            .clone()
+                    })
+                    .collect::<Vec<_>>()
+            });
+
+            match arg_types {
+                Some(arg_types) => {
+                    if params.len() != arg_types.len() {
+                        return Err(TypeError::Arity {
+                            fn_type: fn_value_type.clone(),
+                            found_args: arg_types.len(),
+                            expected_param: params.len(),
+                            span: span,
+                        }
+                        .into());
+                    }
+
+                    let fn_param_types = params.iter();
+
+                    for (index, (arg_type, param_type)) in
+                        arg_types.iter().zip(fn_param_types).enumerate()
+                    {
+                        let arg_type: &AbstractType = arg_type;
+                        let param_type: &AbstractType = param_type;
+                        // TODO: Check if types can resolve
+                        /*
+                        if !resolve_types(&arg_type, &param_type) {
+                            return Err(TypeError::ArgMismatch {
+                                fn_type: fn_value_type.clone(),
+                                index: index,
+                                arg: arg_type.clone(),
+                                param: param_type.clone(),
+                                span: span,
+                            }
+                            .into());
+                        }
+                        */
+                    }
+
+                    Ok(*(return_type.clone()))
+                }
+
+                None => {
+                    if params.len() != 0 {
+                        Err(TypeError::Arity {
+                            fn_type: fn_value_type.clone(),
+                            found_args: 0,
+                            expected_param: params.len(),
+                            span: span,
+                        }
+                        .into())
+                    } else {
+                        Ok(*(return_type.clone()))
+                    }
+                }
+            }
+        }
+
+        AbstractType::UncheckedFunction {
+            return_type,
+            ..
+        } => {
+            Ok(*(return_type.clone()))
+        }
+
+        t @ _ => panic!("Function call on a non-function type: {:?}", t),
+    }
 }
