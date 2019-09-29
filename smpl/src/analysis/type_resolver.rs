@@ -51,6 +51,27 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
             Ok(())
         }
 
+        // Synth width must be wider than constraint width
+        (WidthConstraint(ref synth_awc), 
+         WidthConstraint(ref constraint_awc)) => {
+
+            for (constraint_ident, constraint_type) in constraint_awc.fields.iter() {
+                match synth_awc.fields.get(constraint_ident) {
+                    Some(synth_type) => {
+                        resolve_types(universe, scoped_data, typing_context,
+                            synth_type, constraint_type, span)?;
+                    }
+
+                    None => {
+                        // Synth width constraint is not wider than constraint width
+                        unimplemented!()
+                    }
+                }
+            }
+
+            Ok(())
+        }
+
         (UncheckedFunction {
             return_type: ref synth_return,
         }, UncheckedFunction {
