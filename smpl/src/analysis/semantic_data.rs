@@ -1,5 +1,5 @@
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
+use std::collections::{HashSet, HashMap};
 use std::fmt;
 use std::rc::Rc;
 use std::slice::Iter;
@@ -76,7 +76,7 @@ impl Program {
 pub struct Universe {
     type_cons_map: HashMap<TypeId, TypeCons>,
     fn_map: HashMap<FnId, Function>,
-    builtin_fn_map: HashMap<FnId, BuiltinFunction>,
+    builtin_fn_set: HashSet<FnId>,
     module_map: HashMap<ModuleId, Module>,
     module_name: HashMap<Ident, ModuleId>,
     id_counter: Cell<u64>,
@@ -119,7 +119,7 @@ impl Universe {
                 .map(|(id, _, tc)| (id, tc))
                 .collect(),
             fn_map: HashMap::new(),
-            builtin_fn_map: HashMap::new(),
+            builtin_fn_set: HashSet::new(),
             module_map: HashMap::new(),
             module_name: HashMap::new(),
             id_counter: Cell::new(5),
@@ -183,13 +183,13 @@ impl Universe {
     }
 
     pub fn insert_fn(&mut self, fn_id: FnId, type_id: TypeId, fn_scope: ScopedData, cfg: CFG) {
-        let function = Function {
+        let function = SMPLFunction {
             fn_type: type_id,
             cfg: cfg,
             fn_scope: fn_scope,
         };
 
-        if self.fn_map.insert(fn_id, function).is_some() {
+        if self.fn_map.insert(fn_id, Function::SMPL(function)).is_some() {
             panic!(
                 "Attempting to override Function with FnId {} in the Universe",
                 fn_id.0
@@ -200,7 +200,9 @@ impl Universe {
     pub fn insert_builtin_fn(&mut self, fn_id: FnId, fn_type: TypeId) {
         let builtin = BuiltinFunction { fn_type: fn_type };
 
-        if self.builtin_fn_map.insert(fn_id, builtin).is_some() {
+        self.builtin_fn_set.insert(fn_id);
+
+        if self.fn_map.insert(fn_id, Function::Builtin(builtin)).is_some() {
             panic!(
                 "Attempting to override builtin function with FnId {} in the Universe",
                 fn_id.0
@@ -234,8 +236,8 @@ impl Universe {
         self.fn_map.get_mut(&id).unwrap()
     }
 
-    pub fn get_builtin_fn(&self, id: FnId) -> &BuiltinFunction {
-        self.builtin_fn_map.get(&id).unwrap()
+    pub fn is_builtin_fn(&self, id: FnId) -> bool {
+        self.builtin_fn_set.contains(&id)
     }
 
     fn inc_counter(&self) -> u64 {
@@ -349,6 +351,21 @@ pub enum BindingInfo {
 }
 
 #[derive(Clone, Debug)]
+pub enum Function {
+    Builtin(BuiltinFunction),
+    SMPL(SMPLFunction)
+}
+
+impl Function {
+    pub fn fn_type(&self) -> TypeId {
+        match self {
+            Function::Builtin(ref bf) => bf.fn_type(),
+            Function::SMPL(ref sf) => sf.fn_type(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct BuiltinFunction {
     fn_type: TypeId,
 }
@@ -360,13 +377,13 @@ impl BuiltinFunction {
 }
 
 #[derive(Clone, Debug)]
-pub struct Function {
+pub struct SMPLFunction {
     fn_type: TypeId,
     cfg: CFG,
     fn_scope: ScopedData,
 }
 
-impl Function {
+impl SMPLFunction {
     pub fn fn_type(&self) -> TypeId {
         self.fn_type
     }
