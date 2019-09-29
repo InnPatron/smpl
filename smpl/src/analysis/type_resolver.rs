@@ -68,6 +68,12 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
             unreachable!("No AbstractType::App after apply");
         }
 
+        (Int, Int) => Ok(()),
+        (Float, Float) => Ok(()),
+        (Bool, Bool) => Ok(()),
+        (String, String) => Ok(()),
+        (Unit, Unit) => Ok(()),
+
         _ => unimplemented!(),
     }
 }
