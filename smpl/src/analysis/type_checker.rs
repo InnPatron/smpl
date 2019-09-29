@@ -176,7 +176,7 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, context: &mut TypingCon
     for tmp_id in expr.execution_order() {
         let tmp = expr.get_tmp(tmp_id);
 
-        let tmp_type = resolve_tmp(universe, scope, context, tmp)?;
+        let tmp_type = resolve_tmp(universe, scope, context, expr, tmp)?;
         let expr_type = Some(tmp_type.clone());
 
         if context.tmp_type_map
@@ -189,7 +189,8 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, context: &mut TypingCon
     Ok(expr_type.unwrap())
 }
 
-fn resolve_tmp(universe: &Universe, scope: &ScopedData, context: &mut TypingContext, tmp: &Tmp) 
+fn resolve_tmp(universe: &Universe, scope: &ScopedData, 
+    context: &mut TypingContext, expr: &Expr, tmp: &Tmp) 
     -> Result<AbstractType, AnalysisError> {
 
     let tmp_span = tmp.span();
@@ -267,8 +268,14 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData, context: &mut TypingCont
             resolve_anonymous_fn(universe, scope, context, a_fn, tmp.span())?
         }
 
-        _ => unimplemented!(),
-
+        Value::FieldAccess(ref field_access) => {
+            resolve_field_access(universe, 
+                scope, 
+                context, 
+                expr,
+                field_access, 
+                tmp.span())?
+        }
     }; 
 
     Ok(tmp_type)
@@ -938,4 +945,175 @@ fn resolve_anonymous_fn(universe: &Universe, scope: &ScopedData, context: &Typin
     */
 
     Ok(anon_fn_type)
+}
+
+fn resolve_field_access(
+    universe: &Universe,
+    scope: &ScopedData,
+    context: &TypingContext,
+    expr: &Expr,
+    field_access: &FieldAccess,
+    span: Span,
+) -> Result<AbstractType, AnalysisError> {
+
+    let path = field_access.path();
+    let path_iter = path.path().iter();
+
+    let root_var_id = path.root_var_id();
+    let root_var_type = context.var_type_map
+        .get(&root_var_id)
+        .expect("Missing VAR");
+
+    let mut current_type: AbstractType = root_var_type.clone();
+
+    if let Some(e) = path.root_indexing_expr() {
+        let indexing_type = context.tmp_type_map
+            .get(&e)
+            .expect("Missing TMP");
+
+        match indexing_type {
+            AbstractType::Int => (),
+            _ => {
+                return Err(TypeError::InvalidIndex {
+                    found: indexing_type.clone(),
+                    span: expr.get_tmp(e).span(),
+                }
+                .into());
+            }
+        }
+
+        match root_var_type {
+            AbstractType::Array {
+                element_type,
+                ..
+            } => {
+                current_type = *(element_type.clone());
+            }
+            _ => {
+                return Err(TypeError::NotAnArray {
+                    found: root_var_type.clone(),
+                    span: expr.get_tmp(e).span(),
+                }
+                .into());
+            }
+        }
+    }
+
+    for (index, field) in path_iter.enumerate() {
+        let next_type: AbstractType;
+        let field_type_retriever: 
+            Box<dyn Fn(&crate::ast::Ident) -> Result<AbstractType, AnalysisError>> = 
+            match current_type {
+
+            AbstractType::WidthConstraint(awc) => {
+                Box::new(move |name| {
+                    awc
+                        .fields
+                        .get(name)
+                        .map(|t| t.clone())
+                        .ok_or(TypeError::UnknownField {
+                            name: name.clone(),
+                            struct_type: AbstractType::WidthConstraint(awc.clone()),
+                            span: span,
+                        }.into())
+                })
+            }
+
+            AbstractType::Record {
+                type_id,
+                abstract_field_map: afm,
+            } => {
+                let fields = afm.fields;
+                let field_map = afm.field_map;
+
+                Box::new(move |name| {
+                    let field_id = field_map
+                        .get(name)
+                        .map(|t| t.clone())
+                        .ok_or(TypeError::UnknownField {
+                            name: name.clone(),
+                            struct_type: AbstractType::Record {
+                                type_id: type_id,
+                                abstract_field_map: AbstractFieldMap {
+                                    fields: fields.clone(),
+                                    field_map: field_map.clone(),
+                                }
+                            },
+                            span: span,
+                        })?;
+
+                    let field_type = fields
+                        .get(&field_id)
+                        .map(|t| t.clone())
+                        .unwrap();
+
+                    Ok(field_type)
+                })
+            }
+
+            _ => {
+                return Err(TypeError::FieldAccessOnNonStruct {
+                    path: field_access.raw_path().clone(),
+                    index: index,
+                    invalid_type: current_type,
+                    root_type: root_var_type.clone(),
+                    span: span,
+                }
+                .into());
+            }
+        };
+
+        match *field {
+            PathSegment::Ident(ref field) => {
+                next_type = field_type_retriever(field.name())?
+                    .clone();
+            }
+
+            PathSegment::Indexing(ref field, ref indexing) => {
+
+                let field_type = field_type_retriever(field.name())?;
+
+                let indexing_type = context.tmp_type_map
+                    .get(indexing)
+                    .expect("Missing TMP");
+
+                // TODO: Application?
+                match indexing_type {
+                    AbstractType::Int => (),
+
+                    _ => {
+                        return Err(TypeError::InvalidIndex {
+                            found: indexing_type.clone(),
+                            span: expr.get_tmp(*indexing).span(),
+                        }
+                        .into());
+                    }
+                };
+
+                // TODO: Application?
+                match field_type {
+                    AbstractType::Array {
+                        element_type,
+                        size: _,
+                    } => {
+                        next_type = *element_type;
+                    }
+
+                    _ => {
+                        return Err(TypeError::NotAnArray {
+                            found: field_type.clone(),
+                            span: span,
+                        }
+                        .into());
+                    }
+                }
+            }
+        }
+
+        current_type = next_type.clone();
+    }
+
+    let accessed_field_type = current_type;
+
+    Ok(accessed_field_type)
 }
