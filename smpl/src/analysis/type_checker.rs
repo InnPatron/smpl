@@ -260,6 +260,10 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData, context: &mut TypingCont
             resolve_indexing(universe, scope, context, indexing, tmp.span())?
         }
 
+        Value::TypeInst(ref type_inst) => {
+            resolve_type_inst(universe, scope, context, type_inst, tmp.span())?
+        }
+
         _ => unimplemented!(),
 
     }; 
@@ -839,4 +843,37 @@ fn resolve_indexing(universe: &Universe, scope: &ScopedData, context: &TypingCon
     }
 
     Ok(expected_element_type)
+}
+
+fn resolve_type_inst(universe: &Universe, scope: &ScopedData, context: &TypingContext,
+    type_inst: &TypeInst, span: Span) 
+    -> Result<AbstractType, AnalysisError> {
+
+    let fn_id = type_inst
+        .get_id()
+        .expect("No FN ID. Should be caught in scope resolution");
+
+    let fn_type_id = universe
+        .get_fn(fn_id)
+        .fn_type();
+
+    let type_args = type_inst
+        .args()
+        .iter()
+        .map(|ann| {
+            type_from_ann(
+                universe,
+                scope,
+                ann,
+            )
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let inst_type = AbstractType::App {
+        type_cons: fn_type_id,
+        args: type_args,
+    }
+    .apply(universe, scope)?;
+
+    Ok(inst_type)
 }
