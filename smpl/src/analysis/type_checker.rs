@@ -20,6 +20,8 @@ struct TypeChecker {
 
 impl TypeChecker {
 
+    // TODO: Store function (return) type somwhere
+    // TODO: Add function parameters somewhere
     pub fn new(inherited_scope: ScopedData) -> TypeChecker {
         TypeChecker {
             scopes: vec![inherited_scope]

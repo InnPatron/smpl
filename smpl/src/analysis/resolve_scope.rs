@@ -18,6 +18,7 @@ struct ScopeResolver {
 
 impl ScopeResolver {
 
+    // TODO: Add function parameters somewhere
     pub fn new(inherited_scope: ScopedData) -> ScopeResolver {
         ScopeResolver {
             scopes: vec![inherited_scope]
