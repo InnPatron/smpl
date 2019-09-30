@@ -8,7 +8,7 @@ use crate::span::Span;
 use super::linear_cfg_traversal::*;
 use super::control_data::*;
 use super::control_flow::CFG;
-use super::semantic_data::{TmpId, FieldId, FnId, VarId, TypeParamId, TypeId, Universe, ModulePath, BindingId};
+use super::semantic_data::*;
 use super::error::*;
 use super::typed_ast::*;
 use super::type_cons::*;
@@ -25,13 +25,20 @@ impl<'a> TypeChecker<'a> {
 
     // TODO: Store function (return) type somwhere
     // TODO: Add function parameters somewhere
-    pub fn new(universe: &Universe, fn_scope: ScopedData, 
-        fn_typing_context: TypingContext) -> TypeChecker {
+    // TODO: Put formal parameters into function scope within Universe
+    pub fn new(universe: &Universe, fn_id: FnId) -> TypeChecker {
 
-        TypeChecker {
-            universe: universe,
-            scopes: vec![fn_scope],
-            typing_context: fn_typing_context,
+        use super::semantic_data::Function;
+
+        match universe.get_fn(fn_id) {
+
+            Function::Builtin(_) => unimplemented!(),
+
+            Function::SMPL(smpl_function) => TypeChecker {
+                universe: universe,
+                scopes: vec![smpl_function.fn_scope().clone()],
+                typing_context: smpl_function.typing_context().clone(),
+            }
         }
     }
 
