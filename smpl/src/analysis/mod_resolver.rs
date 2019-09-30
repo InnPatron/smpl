@@ -10,6 +10,7 @@ use super::metadata::*;
 use super::semantic_data::Module;
 use super::semantic_data::*;
 use super::resolve_scope::ScopedData;
+use super::type_checker::TypingContext;
 use super::type_cons_gen::*;
 
 use crate::feature::*;
@@ -76,6 +77,7 @@ pub fn check_modules(
                 program,
                 type_id,
                 raw_program.scopes.get(mod_id).unwrap(),
+                &TypingContext::empty(),
                 reserved_type.1.data(),
             )?;
 
@@ -98,9 +100,10 @@ pub fn check_modules(
             let fn_id = reserved_fn.0;
             let fn_decl = reserved_fn.1.data();
             // TODO: Store new function scope storing the type parameters
-            let (fn_scope, fn_type) = generate_fn_type(
+            let (fn_scope, fn_typing_context, fn_type) = generate_fn_type(
                 program,
                 raw_program.scopes.get(mod_id).unwrap(),
+                &TypingContext::empty(),
                 fn_id,
                 reserved_fn.1.data(),
             )?;
@@ -110,13 +113,15 @@ pub fn check_modules(
                 fn_decl.body.clone(),
                 &fn_type,
                 &fn_scope,
+                &fn_typing_context
             )?;
 
+            // TODO: Insert fn typing context
             let fn_type_id = program.universe_mut().insert_type_cons(fn_type);
 
             program
                 .universe_mut()
-                .insert_fn(fn_id, fn_type_id, fn_scope, cfg);
+                .insert_fn(fn_id, fn_type_id, fn_scope, fn_typing_context, cfg);
             program.metadata_mut().insert_module_fn(
                 mod_id.clone(),
                 fn_decl.name.data().clone(),
@@ -133,6 +138,7 @@ pub fn check_modules(
             let fn_type = generate_builtin_fn_type(
                 program,
                 raw_program.scopes.get(mod_id).unwrap(),
+                &TypingContext::empty(),
                 fn_id,
                 reserved_builtin.1.data(),
             )?;
