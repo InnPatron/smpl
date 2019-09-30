@@ -83,7 +83,7 @@ pub fn generate_fn_type(
     typing_context: &TypingContext,
     fn_id: FnId,
     fn_def: &Function,
-) -> Result<(ScopedData, TypeCons), AnalysisError> {
+) -> Result<(ScopedData, TypingContext, TypeCons), AnalysisError> {
 
     let (universe, metadata, _features) = program.analysis_context();
 
@@ -146,7 +146,7 @@ pub fn generate_fn_type(
         return_type: ret_type,
     };
 
-    Ok((scope, type_cons))
+    Ok((scope, typing_context, type_cons))
 }
 
 pub fn generate_builtin_fn_type(
