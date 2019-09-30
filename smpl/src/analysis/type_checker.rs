@@ -12,6 +12,7 @@ use super::semantic_data::{TmpId, FieldId, FnId, VarId, TypeParamId, TypeId, Uni
 use super::error::*;
 use super::typed_ast::*;
 use super::type_cons::*;
+use super::type_resolver;
 use super::resolve_scope::ScopedData;
 
 struct TypeChecker<'a> {
@@ -58,6 +59,32 @@ impl<'a> TypeChecker<'a> {
     }
 }
 
+macro_rules! expr_type {
+    ($self: expr, $expr: expr) => {{
+        resolve_expr($self.universe, 
+            $self.scopes
+                .last()
+                .expect("Should always have a scope"),
+            &mut $self.typing_context,
+            $expr)
+    }}
+}
+
+macro_rules! resolve_type {
+    ($self: expr, $synthesis: expr, $constraint: expr, $span: expr) => {{
+        use super::type_resolver;
+        type_resolver::resolve_types(
+            $self.universe,
+            $self.scopes
+                .last()
+                .expect("Should always have a scope"),
+            &mut $self.typing_context,
+            $synthesis,
+            $constraint,
+            $span)
+    }}
+}
+
 type E = AnalysisError;
 impl<'a> Passenger<E> for TypeChecker<'a> {
     fn start(&mut self, id: NodeIndex) -> Result<(), E> {
@@ -70,9 +97,10 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
 
     fn loop_head(&mut self, id: NodeIndex, ld: &LoopData, expr: &ExprData) 
         -> Result<(), E> {
-        
-        // TODO: Resolve types of expression to boolean
-        unimplemented!();
+       
+        let expr_type = expr_type!(self, &expr.expr)?;
+        resolve_type!(self, &expr_type, &AbstractType::Bool, expr.span);
+
         Ok(())
     }
 
