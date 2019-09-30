@@ -70,7 +70,7 @@ macro_rules! expr_type {
     }}
 }
 
-macro_rules! resolve_type {
+macro_rules! resolve {
     ($self: expr, $synthesis: expr, $constraint: expr, $span: expr) => {{
         use super::type_resolver;
         type_resolver::resolve_types(
@@ -112,7 +112,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         -> Result<(), E> {
        
         let expr_type = expr_type!(self, &expr.expr)?;
-        resolve_type!(self, &expr_type, &AbstractType::Bool, expr.span);
+        resolve!(self, &expr_type, &AbstractType::Bool, expr.span)?;
 
         Ok(())
     }
@@ -147,7 +147,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         let var_type = match var_decl.type_annotation() {
             Some(ann) => {
                 let ann_type = ann_to_type!(self, ann)?;
-                resolve_type!(self, &expr_type, &ann_type, decl.span);
+                resolve!(self, &expr_type, &ann_type, decl.span)?;
 
                 ann_type
             }
