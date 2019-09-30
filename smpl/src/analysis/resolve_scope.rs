@@ -19,11 +19,19 @@ struct ScopeResolver {
 impl ScopeResolver {
 
     // TODO: Add function parameters somewhere
-    pub fn new(inherited_scope: ScopedData) -> ScopeResolver {
-        ScopeResolver {
-            scopes: vec![inherited_scope]
-        }
+    // TODO: Put formal parameters into function scope within Universe
+    pub fn new(universe: &Universe, fn_id: FnId) -> ScopeResolver {
 
+        use super::semantic_data::Function;
+
+        match universe.get_fn(fn_id) {
+
+            Function::Builtin(_) => unimplemented!(),
+
+            Function::SMPL(smpl_function) => ScopeResolver {
+                scopes: vec![smpl_function.fn_scope().clone()],
+            }
+        }
     }
 
     fn current(&self) -> &ScopedData {
