@@ -168,8 +168,19 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
     fn assignment(&mut self, id: NodeIndex, assign: &AssignmentData) -> Result<(), E> {
         let assignment = &assign.assignment;
 
-        // TODO: Resolve types of expression
-        unimplemented!();
+        let value_type = expr_type!(self, assignment.value())?;
+        let assignee_type = resolve_field_access(
+            self.universe,
+            self.scopes
+                .last()
+                .expect("Should always have a scope"),
+            &self.typing_context,
+            assignment.access(),
+            assignment.assignee(),
+            assignment.access_span()
+        )?;
+
+        resolve!(self, &value_type, &assignee_type, assign.span)?;
 
         Ok(())
     }
