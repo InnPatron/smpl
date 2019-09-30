@@ -186,8 +186,8 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
     }
 
     fn expr(&mut self, id: NodeIndex, expr: &ExprData) -> Result<(), E> {
-        // TODO: Resolve types of expression
-        unimplemented!();
+        let _expr_type = expr_type!(self, &expr.expr)?;
+
         Ok(())
     }
 
