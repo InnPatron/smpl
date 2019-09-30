@@ -170,7 +170,7 @@ impl UniquePassenger<E> for TypeChecker {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TypingContext {
     pub type_params: HashMap<TypeParamId, AbstractType>,
     pub var_type_map: HashMap<VarId, AbstractType>,
