@@ -85,6 +85,19 @@ macro_rules! resolve_type {
     }}
 }
 
+macro_rules! ann_to_type {
+    ($self: expr, $ann: expr) => {{
+        use super::type_cons;
+        type_cons::type_from_ann(
+            $self.universe,
+            $self.scopes
+                .last()
+                .expect("Should always have a scope"),
+            &$self.typing_context,
+            $ann)
+    }}
+}
+
 type E = AnalysisError;
 impl<'a> Passenger<E> for TypeChecker<'a> {
     fn start(&mut self, id: NodeIndex) -> Result<(), E> {
@@ -129,8 +142,26 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
     fn local_var_decl(&mut self, id: NodeIndex, decl: &LocalVarDeclData) -> Result<(), E> {
         let var_decl = &decl.decl;
 
-        // TODO: Resolve types of expression
-        unimplemented!();
+        let expr_type = expr_type!(self, var_decl.init_expr())?;
+
+        let var_type = match var_decl.type_annotation() {
+            Some(ann) => {
+                let ann_type = ann_to_type!(self, ann)?;
+                resolve_type!(self, &expr_type, &ann_type, decl.span);
+
+                ann_type
+            }
+
+            None => {
+                // No type annotation
+                // Default to the RHS type
+                expr_type
+            }
+        };
+
+        self.typing_context.var_type_map
+            .insert(var_decl.var_id(), var_type);
+
         Ok(())
     }
 
