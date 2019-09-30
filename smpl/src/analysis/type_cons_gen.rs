@@ -328,7 +328,6 @@ fn type_param_map(
         }
     }
 
-    let mut constraint_map = HashMap::new();
     if let Some(where_clause) = where_clause {
         for (ident, vec_ast_type_ann) in where_clause.0.iter() {
 
