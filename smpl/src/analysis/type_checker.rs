@@ -14,26 +14,23 @@ use super::typed_ast::*;
 use super::type_cons::*;
 use super::resolve_scope::ScopedData;
 
-struct TypeChecker {
+struct TypeChecker<'a> {
+    universe: &'a Universe,
     scopes: Vec<ScopedData>,
     typing_context: TypingContext,
 }
 
-impl TypeChecker {
+impl<'a> TypeChecker<'a> {
 
     // TODO: Store function (return) type somwhere
     // TODO: Add function parameters somewhere
-    pub fn new(inherited_scope: ScopedData) -> TypeChecker {
-        let mut typing_context = TypingContext {
-            type_params: HashMap::new(),
-            var_type_map: HashMap::new(),
-            fn_type_map: HashMap::new(),
-            tmp_type_map: HashMap::new(),
-        };
+    pub fn new(universe: &Universe, fn_scope: ScopedData, 
+        fn_typing_context: TypingContext) -> TypeChecker {
 
         TypeChecker {
-            scopes: vec![inherited_scope],
-            typing_context: typing_context,
+            universe: universe,
+            scopes: vec![fn_scope],
+            typing_context: fn_typing_context,
         }
     }
 
@@ -62,7 +59,7 @@ impl TypeChecker {
 }
 
 type E = AnalysisError;
-impl Passenger<E> for TypeChecker {
+impl<'a> Passenger<E> for TypeChecker<'a> {
     fn start(&mut self, id: NodeIndex) -> Result<(), E> {
         Ok(())
     }
