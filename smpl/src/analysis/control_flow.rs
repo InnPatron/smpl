@@ -12,6 +12,7 @@ use super::resolve_scope::ScopedData;
 use super::semantic_data::{LoopId, Universe};
 use super::type_cons::*;
 use super::type_resolver::resolve_types;
+use super::type_checker::TypingContext;
 use super::typed_ast;
 
 use super::control_data::*;
@@ -308,6 +309,7 @@ impl CFG {
         body: ast::AstNode<ast::Block>,
         fn_type: &TypeCons,
         fn_scope: &ScopedData,
+        fn_typing_context: &TypingContext,
     ) -> Result<Self, AnalysisError> {
         let mut cfg = {
             let mut graph = graph::Graph::new();
@@ -343,7 +345,7 @@ impl CFG {
             ..
         } = fn_type
         {
-            let return_type = return_type.apply(universe, fn_scope)?;
+            let return_type = return_type.apply(universe, fn_scope, fn_typing_context)?;
             if let AbstractType::Unit = return_type {
                 append_node!(
                     cfg,
