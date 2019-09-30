@@ -179,6 +179,15 @@ pub struct TypingContext {
 }
 
 impl TypingContext {
+
+    pub fn empty() -> TypingContext {
+        TypingContext {
+            type_params: HashMap::new(),
+            var_type_map: HashMap::new(),
+            fn_type_map: HashMap::new(),
+            tmp_type_map: HashMap::new(),
+        }
+    }
     pub fn get_type_param(&self, id: TypeParamId) -> Option<&AbstractType> {
         self.type_params
             .get(&id)
