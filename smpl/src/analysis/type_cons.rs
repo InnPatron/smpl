@@ -574,63 +574,34 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
 #[derive(Debug, Clone)]
 pub struct TypeParams {
-    params: Option<HashMap<TypeParamId, Option<AbstractWidthConstraint>>>,
+    params: HashMap<TypeParamId, Option<AbstractWidthConstraint>>,
 }
 
 impl TypeParams {
 
     pub fn new() -> TypeParams {
         TypeParams {
-            params: Some(HashMap::new())
+            params: HashMap::new()
         }
     }
 
     pub fn empty() -> TypeParams {
         TypeParams {
-            params: None
+            params: HashMap::new(),
         }
     }
 
     pub fn add_param(&mut self, param: TypeParamId, constraint: Option<AbstractWidthConstraint>) {
-        match self.params {
-            Some(ref mut p) => {
-                p.insert(param, constraint);
-            }
-
-            None => {
-                let mut hm = HashMap::new();
-                hm.insert(param, constraint);
-                self.params = Some(hm);
-            }
-        }
+        self.params.insert(param, constraint);
     }
 
     pub fn len(&self) -> usize {
-        self.params.as_ref().map_or(0, |tp| tp.len())
+        self.params.len()
     }
 
-    pub fn iter(&self) -> TypeParamsIter {
-        TypeParamsIter {
-            params: self.params.as_ref().map(|tp| tp.iter())
-        }
-    }
-}
-
-pub struct TypeParamsIter<'a> {
-    params: Option<std::collections::hash_map::Iter<'a, 
-        TypeParamId, 
-        Option<AbstractWidthConstraint>
-        >
-    >
-}
-
-impl<'a> std::iter::Iterator for TypeParamsIter<'a> {
-    type Item = (TypeParamId, Option<&'a AbstractWidthConstraint>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.params {
-            Some(ref mut iter) => iter.next().map(|(id, wc)| (*id, wc.as_ref())),
-            None => None,
-        }
+    pub fn iter(&self) -> impl Iterator<Item=(TypeParamId, Option<&AbstractWidthConstraint>)> {
+        self.params
+            .iter()
+            .map(|(id, constraint)| (id.clone(), constraint.as_ref()))
     }
 }
