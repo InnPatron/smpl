@@ -5,7 +5,7 @@ use petgraph::graph::NodeIndex;
 use crate::ast;
 use crate::span::Span;
 
-use super::unique_linear_cfg_traversal::*;
+use super::linear_cfg_traversal::*;
 use super::control_data::*;
 use super::control_flow::CFG;
 use super::semantic_data::{TmpId, FieldId, FnId, VarId, TypeParamId, TypeId, Universe, ModulePath, BindingId};
@@ -62,7 +62,7 @@ impl TypeChecker {
 }
 
 type E = AnalysisError;
-impl UniquePassenger<E> for TypeChecker {
+impl Passenger<E> for TypeChecker {
     fn start(&mut self, id: NodeIndex) -> Result<(), E> {
         Ok(())
     }
@@ -71,7 +71,7 @@ impl UniquePassenger<E> for TypeChecker {
         Ok(())
     }
 
-    fn loop_head(&mut self, id: NodeIndex, ld: &mut LoopData, expr: &mut ExprData) 
+    fn loop_head(&mut self, id: NodeIndex, ld: &LoopData, expr: &ExprData) 
         -> Result<(), E> {
         
         // TODO: Resolve types of expression to boolean
@@ -79,15 +79,15 @@ impl UniquePassenger<E> for TypeChecker {
         Ok(())
     }
 
-    fn loop_foot(&mut self, id: NodeIndex, ld: &mut LoopData) -> Result<(), E> {
+    fn loop_foot(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E> {
         Ok(())
     }
 
-    fn cont(&mut self, id: NodeIndex, ld: &mut LoopData) -> Result<(), E> {
+    fn cont(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E> {
         Ok(())
     }
 
-    fn br(&mut self, id: NodeIndex, ld: &mut LoopData) -> Result<(), E> {
+    fn br(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E> {
         Ok(())
     }
 
@@ -101,16 +101,16 @@ impl UniquePassenger<E> for TypeChecker {
         Ok(())
     }
 
-    fn local_var_decl(&mut self, id: NodeIndex, decl: &mut LocalVarDeclData) -> Result<(), E> {
-        let var_decl = &mut decl.decl;
+    fn local_var_decl(&mut self, id: NodeIndex, decl: &LocalVarDeclData) -> Result<(), E> {
+        let var_decl = &decl.decl;
 
         // TODO: Resolve types of expression
         unimplemented!();
         Ok(())
     }
 
-    fn assignment(&mut self, id: NodeIndex, assign: &mut AssignmentData) -> Result<(), E> {
-        let assignment = &mut assign.assignment;
+    fn assignment(&mut self, id: NodeIndex, assign: &AssignmentData) -> Result<(), E> {
+        let assignment = &assign.assignment;
 
         // TODO: Resolve types of expression
         unimplemented!();
@@ -118,13 +118,13 @@ impl UniquePassenger<E> for TypeChecker {
         Ok(())
     }
 
-    fn expr(&mut self, id: NodeIndex, expr: &mut ExprData) -> Result<(), E> {
+    fn expr(&mut self, id: NodeIndex, expr: &ExprData) -> Result<(), E> {
         // TODO: Resolve types of expression
         unimplemented!();
         Ok(())
     }
 
-    fn ret(&mut self, id: NodeIndex, rdata: &mut ReturnData) -> Result<(), E> {
+    fn ret(&mut self, id: NodeIndex, rdata: &ReturnData) -> Result<(), E> {
         // TODO: Resolve types of expression
         // TODO: Check if return type compatible
         unimplemented!();
@@ -142,14 +142,14 @@ impl UniquePassenger<E> for TypeChecker {
         Ok(())
     }
 
-    fn branch_split(&mut self, id: NodeIndex, b: &mut BranchingData, e: &mut ExprData) 
+    fn branch_split(&mut self, id: NodeIndex, b: &BranchingData, e: &ExprData) 
         -> Result<(), E> {
         // TODO: Resolve types of expression to boolean
         unimplemented!();
         Ok(())
     }
 
-    fn branch_merge(&mut self, id: NodeIndex, b: &mut BranchingData) -> Result<(), E> {
+    fn branch_merge(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E> {
         Ok(())
     }
 
@@ -161,11 +161,11 @@ impl UniquePassenger<E> for TypeChecker {
         Ok(())
     }
 
-    fn branch_end_true_path(&mut self, id: NodeIndex, b: &mut BranchingData) -> Result<(), E> {
+    fn branch_end_true_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E> {
         Ok(())
     }
 
-    fn branch_end_false_path(&mut self, id: NodeIndex, b: &mut BranchingData) -> Result<(), E> {
+    fn branch_end_false_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E> {
         Ok(())
     }
 }
