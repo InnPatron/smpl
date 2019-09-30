@@ -171,10 +171,10 @@ impl UniquePassenger<E> for TypeChecker {
 }
 
 pub struct TypingContext {
-    type_params: HashMap<TypeParamId, AbstractType>,
-    var_type_map: HashMap<VarId, AbstractType>,
-    fn_type_map: HashMap<FnId, AbstractType>,
-    tmp_type_map: HashMap<TmpId, AbstractType>,
+    pub type_params: HashMap<TypeParamId, AbstractType>,
+    pub var_type_map: HashMap<VarId, AbstractType>,
+    pub fn_type_map: HashMap<FnId, AbstractType>,
+    pub tmp_type_map: HashMap<TmpId, AbstractType>,
 }
 
 impl TypingContext {
