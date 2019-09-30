@@ -10,7 +10,8 @@ use crate::ast::ModulePath as AstModulePath;
 use crate::ast::*;
 use crate::feature::PresentFeatures;
 
-use super::resolve_scope::*;
+use super::resolve_scope::ScopedData;
+use super::type_checker::TypingContext;
 use super::control_flow::CFG;
 use super::error::AnalysisError;
 use super::metadata::Metadata;
@@ -182,11 +183,13 @@ impl Universe {
         self.fn_map.remove(&fn_id);
     }
 
-    pub fn insert_fn(&mut self, fn_id: FnId, type_id: TypeId, fn_scope: ScopedData, cfg: CFG) {
+    pub fn insert_fn(&mut self, fn_id: FnId, 
+        type_id: TypeId, fn_scope: ScopedData, typing_context: TypingContext, cfg: CFG) {
         let function = SMPLFunction {
             fn_type: type_id,
             cfg: cfg,
             fn_scope: fn_scope,
+            typing_context: typing_context,
         };
 
         if self.fn_map.insert(fn_id, Function::SMPL(function)).is_some() {
@@ -381,6 +384,7 @@ pub struct SMPLFunction {
     fn_type: TypeId,
     cfg: CFG,
     fn_scope: ScopedData,
+    typing_context: TypingContext,
 }
 
 impl SMPLFunction {
@@ -398,6 +402,10 @@ impl SMPLFunction {
 
     pub(super) fn fn_scope(&self) -> &ScopedData {
         &self.fn_scope
+    }
+
+    pub(super) fn typing_context(&self) -> &TypingContext {
+        &self.typing_context
     }
 }
 
