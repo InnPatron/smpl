@@ -354,6 +354,7 @@ fn type_param_map(
                     current_scope.insert_type_param(ident.clone(), tp.clone());
 
                     if let AbstractType::WidthConstraint(constraint) = abstract_type {
+                        let abstract_type = AbstractType::WidthConstraint(constraint);
                         // Insert type parameter into scope
                         typing_context.type_params.insert(tp.clone(), 
                             AbstractType::ConstrainedParam(tp.clone(), Box::new(abstract_type)));
