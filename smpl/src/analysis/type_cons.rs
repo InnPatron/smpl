@@ -465,6 +465,7 @@ pub struct AbstractWidthConstraint {
 pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
     universe: &'a Universe,
     scope: &'b ScopedData,
+    typing_context: &'d TypingContext,
     anno: T,
 ) -> Result<AbstractType, AnalysisError> {
     match anno.into() {
@@ -509,7 +510,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
             let type_args = typed_path.annotations().map(|ref vec| {
                 vec.iter()
-                    .map(|anno| type_from_ann(universe, scope, anno))
+                    .map(|anno| type_from_ann(universe, scope, typing_context, anno))
                     .collect::<Result<Vec<_>, _>>()
             });
 
@@ -526,7 +527,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
         }
 
         TypeAnnotationRef::Array(element_type, size) => {
-            let element_type_app = type_from_ann(universe, scope, element_type.data())?;
+            let element_type_app = type_from_ann(universe, scope, typing_context, element_type.data())?;
 
             Ok(AbstractType::Array {
                 element_type: Box::new(element_type_app),
@@ -548,13 +549,13 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             let param_types = params.map(|slice| {
                     slice
                         .iter()
-                        .map(|p| type_from_ann(universe, scope, p.data()))
+                        .map(|p| type_from_ann(universe, scope, typing_context, p.data()))
                         .collect::<Result<Vec<_>, _>>()
                 })
                 .unwrap_or(Ok(Vec::new()))?;
 
             let return_type = return_type
-                .map(|return_type| type_from_ann(universe, scope, return_type.data()))
+                .map(|return_type| type_from_ann(universe, scope, typing_context, return_type.data()))
                 .unwrap_or(Ok(AbstractType::Unit))?;
 
 

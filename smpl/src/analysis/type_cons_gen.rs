@@ -9,6 +9,7 @@ use super::error::{AnalysisError, TypeError};
 use super::metadata::*;
 use super::semantic_data::{FieldId, FnId, Program, TypeId, TypeParamId, Universe};
 use super::resolve_scope::ScopedData;
+use super::type_checker::TypingContext;
 use super::type_cons::*;
 
 type TypeParamMap = HashMap<Ident, (TypeParamId, Option<AbstractWidthConstraint>)>;
@@ -18,6 +19,7 @@ pub fn generate_struct_type_cons(
     program: &mut Program,
     type_id: TypeId,
     scope: &ScopedData,
+    typing_context: &TypingContext,
     struct_def: &Struct,
 ) -> Result<(TypeCons, Vec<FieldId>), AnalysisError> {
     let (universe, _metadata, _features) = program.analysis_context();
@@ -28,6 +30,7 @@ pub fn generate_struct_type_cons(
                        struct_def.type_params.as_ref(), 
                        struct_def.where_clause.as_ref(),
                        scope,
+                       typing_context,
                        scope.clone())?;
 
     // Generate the constructor
@@ -42,7 +45,8 @@ pub fn generate_struct_type_cons(
             let field_type_annotation = field.field_type.data();
 
             // TODO: Insert type parameters into scope
-            let field_type_app = type_from_ann(universe, &scope, field_type_annotation)?;
+            let field_type_app = type_from_ann(
+                universe, &scope, typing_context, field_type_annotation)?;
 
             // Map field to type constructor
             fields.insert(f_id, field_type_app);
@@ -75,6 +79,7 @@ pub fn generate_struct_type_cons(
 pub fn generate_fn_type(
     program: &mut Program,
     scope: &ScopedData,
+    typing_context: &TypingContext,
     fn_id: FnId,
     fn_def: &Function,
 ) -> Result<(ScopedData, TypeCons), AnalysisError> {
@@ -87,12 +92,13 @@ pub fn generate_fn_type(
                        fn_def.type_params.as_ref(), 
                        fn_def.where_clause.as_ref(),
                        scope,
+                       typing_context,
                        scope.clone())?;
 
     let ret_type = match fn_def.return_type {
         Some(ref anno) => {
             let anno = anno.data();
-            let type_app = type_from_ann(universe, &scope, anno)?;
+            let type_app = type_from_ann(universe, &scope, typing_context, anno)?;
             // TODO: Function signature scanner?
             type_app
         }
@@ -107,7 +113,7 @@ pub fn generate_fn_type(
                 let param = param.data();
                 let param_anno = param.param_type.data();
 
-                let param_type = type_from_ann(universe, &scope, param_anno)?;
+                let param_type = type_from_ann(universe, &scope, typing_context, param_anno)?;
 
                 typed_params.push(param_type);
 
@@ -143,6 +149,7 @@ pub fn generate_fn_type(
 pub fn generate_builtin_fn_type(
     program: &mut Program,
     scope: &ScopedData,
+    typing_context: &TypingContext,
     fn_id: FnId,
     fn_def: &BuiltinFunction,
 ) -> Result<TypeCons, AnalysisError> {
@@ -154,12 +161,13 @@ pub fn generate_builtin_fn_type(
                        fn_def.type_params.as_ref(), 
                        fn_def.where_clause.as_ref(), 
                        scope,
+                       typing_context,
                        scope.clone())?;
 
     let ret_type = match fn_def.return_type {
         Some(ref anno) => {
             let anno = anno.data();
-            let type_app = type_from_ann(universe, &scope, anno)?;
+            let type_app = type_from_ann(universe, &scope, typing_context, anno)?;
             // TODO: Function signature scanner?
             type_app
         }
@@ -175,7 +183,7 @@ pub fn generate_builtin_fn_type(
                     let param = param.data();
                     let param_anno = param.param_type.data();
 
-                    let param_type = type_from_ann(universe, &scope, param_anno)?;
+                    let param_type = type_from_ann(universe, &scope, typing_context, param_anno)?;
 
                     typed_params.push(param_type);
 
@@ -226,6 +234,7 @@ pub fn generate_builtin_fn_type(
 pub fn generate_anonymous_fn_type(
     universe: &Universe,
     scope: &ScopedData,
+    typing_context: &TypingContext,
     fn_id: FnId,
     fn_def: &AnonymousFn,
 ) -> Result<(ScopedData, TypeCons), AnalysisError> {
@@ -237,7 +246,7 @@ pub fn generate_anonymous_fn_type(
     let ret_type = match fn_def.return_type {
         Some(ref anno) => {
             let anno = anno.data();
-            let type_app = type_from_ann(universe, &scope, anno)?;
+            let type_app = type_from_ann(universe, &scope, typing_context, anno)?;
             // TODO: Function signature scanner?
             type_app
         }
@@ -252,7 +261,7 @@ pub fn generate_anonymous_fn_type(
                 let param = param.data();
                 let param_anno = param.param_type.data();
 
-                let param_type = type_from_ann(universe, &scope, param_anno)?;
+                let param_type = type_from_ann(universe, &scope, typing_context, param_anno)?;
 
                 typed_params.push(param_type);
 
@@ -287,6 +296,7 @@ fn type_param_map(
     type_params: Option<&AstTypeParams>,
     where_clause: Option<&WhereClause>,
     current_scope: &ScopedData,
+    typing_context: &TypingContext,
     mut new_scope: ScopedData,
 ) -> Result<(ScopedData, TypeParamMap), AnalysisError> {
     let mut type_parameter_map = HashMap::new();
@@ -328,6 +338,7 @@ fn type_param_map(
                     let ast_constraint = vec_ast_type_ann.get(0).unwrap();
                     let abstract_type = type_from_ann(universe, 
                                                               &new_scope, 
+                                                              typing_context,
                                                               ast_constraint.data())?;
 
                     // TODO: Also insert into the typing env

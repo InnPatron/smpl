@@ -438,6 +438,7 @@ fn resolve_struct_init(universe: &Universe, scope: &ScopedData,
                 type_from_ann(
                     universe,
                     scope,
+                    context,
                     ann,
                 )
             })
@@ -889,6 +890,7 @@ fn resolve_type_inst(universe: &Universe, scope: &ScopedData, context: &TypingCo
             type_from_ann(
                 universe,
                 scope,
+                context,
                 ann,
             )
         })
@@ -914,7 +916,7 @@ fn resolve_anonymous_fn(universe: &Universe, scope: &ScopedData, context: &Typin
     //      and the type
     // TODO: Make sure scope ONLY has type parameter info
     let (func_scope, fn_type_cons) =
-        super::type_cons_gen::generate_anonymous_fn_type(universe, scope, fn_id, func)?;
+        super::type_cons_gen::generate_anonymous_fn_type(universe, scope, context, fn_id, func)?;
 
     let anon_fn_type = match fn_type_cons {
         TypeCons::Function {
