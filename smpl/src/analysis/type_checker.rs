@@ -211,8 +211,10 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
 
     fn branch_split(&mut self, id: NodeIndex, b: &BranchingData, e: &ExprData) 
         -> Result<(), E> {
-        // TODO: Resolve types of expression to boolean
-        unimplemented!();
+
+        let expr_type = expr_type!(self, &e.expr)?;
+        resolve!(self, &expr_type, &AbstractType::Bool, e.span)?;
+
         Ok(())
     }
 
