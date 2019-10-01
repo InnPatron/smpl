@@ -12,8 +12,6 @@ use super::resolve_scope::ScopedData;
 use super::type_checker::TypingContext;
 use super::type_cons::*;
 
-type TypeParamMap = HashMap<Ident, (TypeParamId, Option<AbstractWidthConstraint>)>;
-
 // TODO: Store type constructors in Program
 pub fn generate_struct_type_cons(
     program: &mut Program,
