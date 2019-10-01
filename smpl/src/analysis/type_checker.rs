@@ -307,20 +307,27 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData,
         }
 
         Value::BinExpr(ref op, ref lhs, ref rhs) => {
+            // TODO: These clones are necessary b/c typing context may mutate
+            //  If type inference becomes a thing, the function will need to be
+            //    re-typechecked. No type inference ATM so nothing to do
             let lhs_type = context
                 .tmp_type_map
                 .get(lhs.data())
-                .expect("Missing tmp");
+                .expect("Missing tmp")
+                .clone();
             let rhs_type = context
                 .tmp_type_map
                 .get(rhs.data())
-                .expect("Missing tmp");
+                .expect("Missing tmp")
+                .clone();
 
-            resolve_bin_op(scope, 
+            resolve_bin_op(
+                universe,
+                scope, 
                 context, 
                 op, 
-                lhs_type, 
-                rhs_type,
+                &lhs_type, 
+                &rhs_type,
                 tmp_span)?
         }
 
@@ -383,8 +390,9 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData,
 }
 
 fn resolve_bin_op(
+    universe: &Universe,
     scope: &ScopedData,
-    context: &TypingContext,
+    context: &mut TypingContext,
     op: &ast::BinOp,
     lhs: &AbstractType,
     rhs: &AbstractType,
@@ -446,16 +454,15 @@ fn resolve_bin_op(
 
         Eq | InEq => {
 
-            // TODO: lhs/rhs already applied?
-            // TODO: Check if rhs, lhs are equal
-            unimplemented!()
-            /*
-            if resolve_types(&rhs, &lhs) {
-                AbstractType::Bool
-            } else {
-                return Err(TypeError::LhsRhsInEq(lhs.clone(), rhs.clone(), span).into());
-            }
-            */
+            // TODO: Stricter equality check?
+            type_resolver::resolve_types(universe,
+                scope,
+                context,
+                lhs,
+                rhs,
+                span)?;
+
+            AbstractType::Bool
         }
     };
 
