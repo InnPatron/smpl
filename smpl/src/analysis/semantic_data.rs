@@ -259,6 +259,10 @@ impl Universe {
         TypeParamId(self.inc_counter())
     }
 
+    pub fn new_type_var_id(&self) -> TypeParamId {
+        TypeParamId(self.inc_counter())
+    }
+
     pub fn new_field_id(&self) -> FieldId {
         FieldId(self.inc_counter())
     }
@@ -452,6 +456,21 @@ impl ::std::fmt::Display for TypeParamId {
 }
 
 impl TypeParamId {
+    pub fn raw(&self) -> u64 {
+        self.0
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TypeVarId(u64);
+
+impl ::std::fmt::Display for TypeVarId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "TypeVarId[{}]", self.0)
+    }
+}
+
+impl TypeVarId {
     pub fn raw(&self) -> u64 {
         self.0
     }
