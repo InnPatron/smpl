@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::ast::{Ident, TypeAnnotationRef, WidthConstraint, AstNode};
 
 use super::error::{AnalysisError, ApplicationError, TypeError as ATypeError};
-use super::semantic_data::{FieldId, TypeId, TypeParamId, Universe};
+use super::semantic_data::{FieldId, TypeId, TypeParamId, TypeVarId, Universe};
 use super::resolve_scope::ScopedData;
 use super::type_checker::TypingContext;
 
@@ -104,8 +104,8 @@ pub enum AbstractType {
 
     WidthConstraint(AbstractWidthConstraint),
 
-    Param(TypeParamId),
-    ConstrainedParam(TypeParamId, Box<AbstractType>),       // Needed to carry nominal type information later
+    TypeVar(TypeVarId),
+    ConstrainedTypeVar(TypeVarId, Box<AbstractType>),       // Needed to carry nominal type information later
 
     Int,
     Float,
@@ -144,7 +144,7 @@ impl AbstractType {
     ///   any type variables in the map with their abstract type.
     ///
     /// No AbstractType returned by apply_internal() should have AbstractType::App() in its tree
-    fn apply_internal(&self, universe: &Universe, map: &HashMap<TypeParamId, AbstractType>) 
+    fn apply_internal(&self, universe: &Universe, map: &HashMap<TypeVarId, AbstractType>) 
         -> Result<AbstractType, Vec<ATypeError>> {
 
         macro_rules! primitive_apply {
@@ -419,7 +419,7 @@ impl AbstractType {
                 Ok(AbstractType::WidthConstraint(new_width))
             },
 
-            AbstractType::Param(ref type_param_id) => {
+            AbstractType::TypeVar(ref type_param_id) => {
                 Ok(map
                     .get(type_param_id)
                     .expect("Type parameter missing from scope")
@@ -427,8 +427,8 @@ impl AbstractType {
                 )
             }
 
-            AbstractType::ConstrainedParam(ref type_param_id, ref constraint) => {
-                Ok(AbstractType::ConstrainedParam(type_param_id.clone(),
+            AbstractType::ConstrainedTypeVar(ref type_param_id, ref constraint) => {
+                Ok(AbstractType::ConstrainedTypeVar(type_param_id.clone(),
                     Box::new(constraint.apply_internal(universe, map)?))
                 )
             }
@@ -488,7 +488,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                         .into());
                     }
 
-                    return Ok(AbstractType::Param(tp_id));
+                    return Ok(AbstractType::TypeVar(tp_id));
                 }
                 */
                 unimplemented!();
