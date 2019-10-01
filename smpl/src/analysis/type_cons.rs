@@ -211,14 +211,16 @@ impl AbstractType {
                         let old_map = map;
                         let mut new_map = map.clone();
                         let mut errors = Vec::new();
-                        for ((type_param, constraint), arg) in 
+                        for ((_type_param, type_var_id, constraint), arg) in 
                             type_params.iter().zip(ok_args.into_iter()) {
 
-                            // TODO: Type variables are stale and won't be replaced properly
-                            //   need to map old type variables to a new one
-                            let type_var_id = universe.new_type_var_id();
+                            // Replace placeholder type vars used in type constructor
+                            //   creation
+                            let new_type_var_id = universe.new_type_var_id();
                             // TODO: Constraint checking
-                            new_map.insert(type_var_id, arg);
+                            new_map.insert(type_var_id,
+                                AbstractType::ConstrainedTypeVar(new_type_var_id, 
+                                    Box::new(arg)));
                         }
 
                         let mut afm = AbstractFieldMap {
@@ -257,14 +259,16 @@ impl AbstractType {
                         //  environment for field applications
                         let old_map = map;
                         let mut new_map = map.clone();
-                        for ((type_param, constraint), arg) in 
+                        for ((_type_param, type_var_id, constraint), arg) in 
                             type_params.iter().zip(ok_args.into_iter()) {
 
-                            let type_var_id = universe.new_type_var_id();
-                            // TODO: Type variables are stale and won't be replaced properly
-                            //   need to map old type variables to a new one
+                            // Replace placeholder type vars used in type constructor
+                            //   creation
+                            let new_type_var_id = universe.new_type_var_id();
                             // TODO: Constraint checking
-                            new_map.insert(type_var_id, arg);
+                            new_map.insert(type_var_id,
+                                AbstractType::ConstrainedTypeVar(new_type_var_id, 
+                                    Box::new(arg)));
                         }
 
                         let mut errors = Vec::new();
@@ -304,14 +308,16 @@ impl AbstractType {
                         //  environment for field applications
                         let old_map = map;
                         let mut new_map = map.clone();
-                        for ((type_param, constraint), arg) in 
+                        for ((_type_param, type_var_id, constraint), arg) in 
                             type_params.iter().zip(ok_args.into_iter()) {
 
-                            let type_var_id = universe.new_type_var_id();
-                            // TODO: Type variables are stale and won't be replaced properly
-                            //   need to map old type variables to a new one
+                            // Replace placeholder type vars used in type constructor
+                            //   creation
+                            let new_type_var_id = universe.new_type_var_id();
                             // TODO: Constraint checking
-                            new_map.insert(type_var_id, arg.clone());
+                            new_map.insert(type_var_id,
+                                AbstractType::ConstrainedTypeVar(new_type_var_id, 
+                                    Box::new(arg)));
                         }
 
                         let return_type = return_type.apply_internal(universe, &new_map)?;
@@ -585,14 +591,14 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
 #[derive(Debug, Clone)]
 pub struct TypeParams {
-    params: HashMap<TypeParamId, Option<AbstractWidthConstraint>>,
+    params: HashMap<TypeParamId, (TypeVarId, Option<AbstractWidthConstraint>)>,
 }
 
 impl TypeParams {
 
     pub fn new() -> TypeParams {
         TypeParams {
-            params: HashMap::new()
+            params: HashMap::new(),
         }
     }
 
@@ -602,17 +608,20 @@ impl TypeParams {
         }
     }
 
-    pub fn add_param(&mut self, param: TypeParamId, constraint: Option<AbstractWidthConstraint>) {
-        self.params.insert(param, constraint);
+    pub fn add_param(&mut self, param: TypeParamId, 
+        constraint: Option<AbstractWidthConstraint>, internal_var_id: TypeVarId) {
+        self.params.insert(param, (internal_var_id, constraint));
     }
 
     pub fn len(&self) -> usize {
         self.params.len()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item=(TypeParamId, Option<&AbstractWidthConstraint>)> {
+    pub fn iter(&self) -> impl Iterator<Item=(TypeParamId, TypeVarId, Option<&AbstractWidthConstraint>)> {
         self.params
             .iter()
-            .map(|(id, constraint)| (id.clone(), constraint.as_ref()))
+            .map(|(type_param_id, (type_var_id, constraint))| {
+                (type_param_id.clone(), type_var_id.clone(), constraint.as_ref())
+            })
     }
 }

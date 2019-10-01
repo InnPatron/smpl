@@ -358,7 +358,8 @@ fn type_param_map(
                                 Box::new(abstract_type)));
 
                         // Add type parameter to type constructor
-                        type_params.add_param(type_param_id.clone(), None);
+                        type_params.add_param(type_param_id.clone(), 
+                            None, type_var_id.clone());
                     } else {
                         // TODO: found non-constraint in constraint position
                         unimplemented!("found non-constraint in constraint position");
@@ -382,7 +383,8 @@ fn type_param_map(
         current_scope.insert_type_var(ident.clone(), type_var_id);
         typing_context.type_vars.insert(type_var_id.clone(), 
             AbstractType::TypeVar(type_var_id.clone()));
-        type_params.add_param(type_param_id.clone(), None);
+        type_params.add_param(type_param_id.clone(), 
+            None, type_var_id.clone());
     }
 
     Ok(type_params)
