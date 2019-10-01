@@ -248,7 +248,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
 
 #[derive(Clone, Debug)]
 pub struct TypingContext {
-    pub type_params: HashMap<TypeParamId, AbstractType>,
+    pub type_vars: HashMap<TypeVarId, AbstractType>,
     pub var_type_map: HashMap<VarId, AbstractType>,
     pub fn_type_map: HashMap<FnId, AbstractType>,
     pub tmp_type_map: HashMap<TmpId, AbstractType>,
@@ -258,14 +258,14 @@ impl TypingContext {
 
     pub fn empty() -> TypingContext {
         TypingContext {
-            type_params: HashMap::new(),
+            type_vars: HashMap::new(),
             var_type_map: HashMap::new(),
             fn_type_map: HashMap::new(),
             tmp_type_map: HashMap::new(),
         }
     }
-    pub fn get_type_param(&self, id: TypeParamId) -> Option<&AbstractType> {
-        self.type_params
+    pub fn get_type_var(&self, id: TypeVarId) -> Option<&AbstractType> {
+        self.type_vars
             .get(&id)
     }
 }

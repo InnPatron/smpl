@@ -7,7 +7,7 @@ use crate::feature::*;
 
 use super::error::{AnalysisError, TypeError};
 use super::metadata::*;
-use super::semantic_data::{FieldId, FnId, Program, TypeId, TypeParamId, Universe};
+use super::semantic_data::{FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId, Universe};
 use super::resolve_scope::ScopedData;
 use super::type_checker::TypingContext;
 use super::type_cons::*;
@@ -28,7 +28,7 @@ pub fn generate_struct_type_cons(
     let mut typing_context = typing_context.clone();
 
     // Check no parameter naming conflicts
-    type_param_map(universe, 
+    let type_params = type_param_map(universe, 
                    struct_def.type_params.as_ref(), 
                    struct_def.where_clause.as_ref(),
                    &mut scope,
@@ -65,8 +65,6 @@ pub fn generate_struct_type_cons(
         }
     }
 
-    let type_params = make_type_params(&scope, &typing_context);
-
     let type_cons = TypeCons::Record {
         type_id: type_id,
         fields: fields,
@@ -92,7 +90,7 @@ pub fn generate_fn_type(
 
 
     // Check no parameter naming conflicts
-    type_param_map(universe, 
+    let type_params = type_param_map(universe, 
                    fn_def.type_params.as_ref(), 
                    fn_def.where_clause.as_ref(),
                    &mut scope,
@@ -138,8 +136,6 @@ pub fn generate_fn_type(
         }
     };
 
-    let type_params = make_type_params(&scope, &typing_context);
-
     let type_cons = TypeCons::Function {
         type_params: type_params,
         parameters: params,
@@ -162,7 +158,7 @@ pub fn generate_builtin_fn_type(
     let mut typing_context = typing_context.clone();
 
     // Check no parameter naming conflicts
-    type_param_map(universe, 
+    let type_params = type_param_map(universe, 
                    fn_def.type_params.as_ref(), 
                    fn_def.where_clause.as_ref(), 
                    &mut scope,
@@ -213,8 +209,6 @@ pub fn generate_builtin_fn_type(
             metadata.insert_unchecked_builtin_params(fn_id);
             features.add_feature(UNCHECKED_BUILTIN_FN_PARAMS);
 
-            let type_params = make_type_params(&scope, &typing_context);
-
             let type_cons = TypeCons::UncheckedFunction {
                 type_params: type_params,
                 return_type: ret_type,
@@ -223,8 +217,6 @@ pub fn generate_builtin_fn_type(
             return Ok(type_cons);
         }
     };
-
-    let type_params = make_type_params(&scope, &typing_context);
 
     let type_cons = TypeCons::Function {
         type_params: type_params,
@@ -297,20 +289,21 @@ pub fn generate_anonymous_fn_type(
 
 fn type_param_map(
     universe: &mut Universe,
-    type_params: Option<&AstTypeParams>,
+    ast_type_params: Option<&AstTypeParams>,
     where_clause: Option<&WhereClause>,
     current_scope: &mut ScopedData,
     typing_context: &mut TypingContext,
-) -> Result<(), AnalysisError> {
+) -> Result<TypeParams, AnalysisError> {
 
-    let mut type_parameter_map = HashMap::new();
+    let mut type_params = TypeParams::new();
+    let mut internal_type_map: HashMap<_, (TypeParamId, TypeVarId)> = HashMap::new();
 
     // TODO: Add type parameters as reflexive self?
 
-    if let Some(params) = type_params {
+    if let Some(params) = ast_type_params {
         for p in params.params.iter() {
             // Check for type parameter naming conflict
-            if type_parameter_map.contains_key(p.data()) {
+            if internal_type_map.contains_key(p.data()) {
                 // Naming conflict
                 return Err(TypeError::ParameterNamingConflict {
                     ident: p.data().clone(),
@@ -318,12 +311,14 @@ fn type_param_map(
                 .into());
             } else {
                 let type_param_id = universe.new_type_param_id(); 
+                let type_var_id = universe.new_type_var_id();
                 // Insert type parameter into set
-                type_parameter_map.insert(p.data().clone(), type_param_id);
+                internal_type_map.insert(p.data().clone(), (type_param_id, type_var_id));
                 
+                // TODO: What kind of recursion to support? Probably equirecursive
                 // Add type parameters to typing context to allow recursive constraints
-                typing_context.type_params
-                    .insert(type_param_id, AbstractType::Param(type_param_id.clone()));
+                typing_context.type_vars
+                    .insert(type_var_id.clone(), AbstractType::TypeVar(type_var_id.clone()));
             }
         }
     }
@@ -332,9 +327,9 @@ fn type_param_map(
         for (ident, vec_ast_type_ann) in where_clause.0.iter() {
 
             // Remove from type_parameter_map
-            match type_parameter_map.remove(ident) {
+            match internal_type_map.remove(ident) {
 
-                Some(tp) => {
+                Some((type_param_id, type_var_id)) => {
                     if vec_ast_type_ann.len() > 1 {
                         // TODO: Allow multiple constraint declarations on one type param? 
                         // where A: { ... }
@@ -351,13 +346,19 @@ fn type_param_map(
                         ast_constraint.data())?;
 
                     // TODO: Also insert into the typing env
-                    current_scope.insert_type_param(ident.clone(), tp.clone());
+                    current_scope.insert_type_var(ident.clone(), type_var_id.clone());
 
                     if let AbstractType::WidthConstraint(constraint) = abstract_type {
                         let abstract_type = AbstractType::WidthConstraint(constraint);
-                        // Insert type parameter into scope
-                        typing_context.type_params.insert(tp.clone(), 
-                            AbstractType::ConstrainedParam(tp.clone(), Box::new(abstract_type)));
+
+                        // Insert type var into scope
+                        typing_context.type_vars.insert(type_var_id.clone(), 
+                            AbstractType::ConstrainedTypeVar(
+                                type_var_id.clone(), 
+                                Box::new(abstract_type)));
+
+                        // Add type parameter to type constructor
+                        type_params.add_param(type_param_id.clone(), None);
                     } else {
                         // TODO: found non-constraint in constraint position
                         unimplemented!("found non-constraint in constraint position");
@@ -376,38 +377,13 @@ fn type_param_map(
     }
 
     // Any type param still left in type_parameter_map has no constraint
-    for (ident, id) in type_parameter_map.into_iter() {
+    for (ident, (type_param_id, type_var_id)) in internal_type_map.into_iter() {
         // TODO: Also insert into the typing env
-        current_scope.insert_type_param(ident.clone(), id);
-        typing_context.type_params.insert(id.clone(), AbstractType::Param(id.clone()));
+        current_scope.insert_type_var(ident.clone(), type_var_id);
+        typing_context.type_vars.insert(type_var_id.clone(), 
+            AbstractType::TypeVar(type_var_id.clone()));
+        type_params.add_param(type_param_id.clone(), None);
     }
 
-    Ok(())
-}
-
-fn make_type_params(scope: &ScopedData, typing_context: &TypingContext) -> TypeParams {
-
-    let mut tp = TypeParams::new();
-    for param_id in scope.type_params() {
-        match typing_context.type_params.get(&param_id).unwrap() {
-            AbstractType::Param(id) => {
-                tp.add_param(id.clone(), None);
-            }
-
-            AbstractType::ConstrainedParam(ref id, ref constraint) => {
-                match **constraint {
-                    AbstractType::WidthConstraint(ref awc) => {
-                        tp.add_param(id.clone(), Some(awc.clone()));
-                    },
-
-                    _ => unreachable!("At this stage, type parameters should only be Param(id) or WidthConstraint"),
-                }
-                
-            }
-
-            _ => unreachable!("Not a valid type for a type parameter"),
-
-        }
-    }
-    unimplemented!();
+    Ok(type_params)
 }

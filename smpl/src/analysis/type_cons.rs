@@ -128,16 +128,16 @@ impl AbstractType {
     pub fn apply(&self, universe: &Universe, scope: &ScopedData, typing_context: &TypingContext) 
         -> Result<AbstractType, Vec<ATypeError>> {
 
-        let mut param_map = HashMap::new();
-        for param_id in scope.type_params() {
-            let param_type = typing_context
-                .get_type_param(param_id)
+        let mut var_map = HashMap::new();
+        for type_var_ids in scope.type_vars() {
+            let var_type = typing_context
+                .get_type_var(type_var_ids)
                 .unwrap();
 
-            param_map.insert(param_id.clone(), param_type.clone());
+            var_map.insert(type_var_ids.clone(), var_type.clone());
         }
 
-        self.apply_internal(universe, &param_map)
+        self.apply_internal(universe, &var_map)
     }
 
     /// Given an environment of type variables to abstract types, recursively substitute
@@ -174,6 +174,8 @@ impl AbstractType {
                 // Still need to internally apply to type arguments in order to catch any nested
                 //   type parameters
                 //
+                // TODO: Applying type arguments will probably cause an infinite loop with
+                //   recursive types
                 let (ok_args, err) = args
                             .iter()
                             .map(|at| at.apply_internal(universe, map))
@@ -212,8 +214,11 @@ impl AbstractType {
                         for ((type_param, constraint), arg) in 
                             type_params.iter().zip(ok_args.into_iter()) {
 
+                            // TODO: Type variables are stale and won't be replaced properly
+                            //   need to map old type variables to a new one
+                            let type_var_id = universe.new_type_var_id();
                             // TODO: Constraint checking
-                            new_map.insert(type_param, arg);
+                            new_map.insert(type_var_id, arg);
                         }
 
                         let mut afm = AbstractFieldMap {
@@ -255,8 +260,11 @@ impl AbstractType {
                         for ((type_param, constraint), arg) in 
                             type_params.iter().zip(ok_args.into_iter()) {
 
+                            let type_var_id = universe.new_type_var_id();
+                            // TODO: Type variables are stale and won't be replaced properly
+                            //   need to map old type variables to a new one
                             // TODO: Constraint checking
-                            new_map.insert(type_param, arg);
+                            new_map.insert(type_var_id, arg);
                         }
 
                         let mut errors = Vec::new();
@@ -299,8 +307,11 @@ impl AbstractType {
                         for ((type_param, constraint), arg) in 
                             type_params.iter().zip(ok_args.into_iter()) {
 
+                            let type_var_id = universe.new_type_var_id();
+                            // TODO: Type variables are stale and won't be replaced properly
+                            //   need to map old type variables to a new one
                             // TODO: Constraint checking
-                            new_map.insert(type_param, arg.clone());
+                            new_map.insert(type_var_id, arg.clone());
                         }
 
                         let return_type = return_type.apply_internal(universe, &new_map)?;
@@ -474,7 +485,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             // Assume naming conflicts detected at type parameter declaration
             if typed_path.module_path().0.len() == 1 {
                 let ident = typed_path.module_path().0.get(0).unwrap().data();
-                let type_param = scope.type_param(ident);
+                let type_var = scope.type_var(ident);
 
                 // Found a type parameter
                 // TODO: Use typing context instead of ScopedData

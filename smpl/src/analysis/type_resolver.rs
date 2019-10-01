@@ -5,7 +5,7 @@ use crate::span::Span;
 
 use super::type_cons::*;
 use super::error::*;
-use super::semantic_data::{TypeParamId, Universe };
+use super::semantic_data::{TypeVarId, Universe };
 use super::resolve_scope::ScopedData;
 use super::type_checker::TypingContext;
 
@@ -156,7 +156,7 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
 
         // Unconstrained type parameters
         // Check if type parameters are equal
-        (Param(synth_id), Param(constraint_id)) => {
+        (TypeVar(synth_id), TypeVar(constraint_id)) => {
             if synth_id == constraint_id {
                 Ok(())
             } else {
@@ -164,9 +164,9 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
             }
         }
 
-        (ConstrainedParam(synth_id, 
+        (ConstrainedTypeVar(synth_id, 
                           synth_type), 
-         ConstrainedParam(constraint_id, constraint_type)) => {
+         ConstrainedTypeVar(constraint_id, constraint_type)) => {
             if synth_id == constraint_id {
                 Ok(())
             } else {
@@ -175,7 +175,7 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
             }
         },
 
-        (ConstrainedParam(synth_id, 
+        (ConstrainedTypeVar(synth_id, 
                           ref synth_type), 
          ref constraint_type @ WidthConstraint(..)) => {
             resolve_types(universe, scoped_data, typing_context,

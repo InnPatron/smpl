@@ -7,7 +7,7 @@ use crate::ast::{ AstNode, Ident, ModulePath as AstModulePath };
 use super::unique_linear_cfg_traversal::*;
 use super::control_data::*;
 use super::control_flow::CFG;
-use super::semantic_data::{FnId, VarId, TypeParamId, TypeId, Universe, ModulePath};
+use super::semantic_data::{FnId, VarId, TypeVarId, TypeId, Universe, ModulePath};
 use super::error::AnalysisError;
 use super::typed_ast::*;
 use super::metadata::Metadata;
@@ -232,7 +232,7 @@ pub struct ScopedData {
     type_cons_map: HashMap<ModulePath, TypeId>,
     var_map: HashMap<Ident, VarId>,
     fn_map: HashMap<ModulePath, FnId>,
-    type_param_map: HashMap<Ident, TypeParamId>,
+    type_param_map: HashMap<Ident, TypeVarId>,
 }
 
 impl ScopedData {
@@ -304,20 +304,20 @@ impl ScopedData {
             .ok_or(AnalysisError::UnknownFn(path.clone()))
     }
 
-    pub fn insert_type_param(&mut self, 
+    pub fn insert_type_var(&mut self, 
                              ident: Ident, 
-                             id: TypeParamId) -> bool {
+                             id: TypeVarId) -> bool {
         self.type_param_map.insert(ident, id).is_some()
     }
 
-    pub fn type_param<'a, 'b>(&'a self, ident: &'b Ident) -> Option<TypeParamId> {
+    pub fn type_var<'a, 'b>(&'a self, ident: &'b Ident) -> Option<TypeVarId> {
         self.type_param_map
             .get(ident)
             .map(|id| id.clone())
     }
 
-    pub fn type_params<'a>(&'a self) 
-        -> impl Iterator<Item = TypeParamId> + 'a {
+    pub fn type_vars<'a>(&'a self) 
+        -> impl Iterator<Item = TypeVarId> + 'a {
         self.type_param_map
             .values()
             .map(|id| id.clone())
