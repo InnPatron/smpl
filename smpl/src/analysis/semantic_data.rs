@@ -259,8 +259,8 @@ impl Universe {
         TypeParamId(self.inc_counter())
     }
 
-    pub fn new_type_var_id(&self) -> TypeParamId {
-        TypeParamId(self.inc_counter())
+    pub fn new_type_var_id(&self) -> TypeVarId {
+        TypeVarId(self.inc_counter())
     }
 
     pub fn new_field_id(&self) -> FieldId {
