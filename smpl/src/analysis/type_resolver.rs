@@ -16,10 +16,10 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
 
     use super::type_cons::AbstractType::*;
 
-    let synthesis = synthesis.apply(universe, scoped_data, typing_context).unwrap();
-    let constraint = constraint.apply(universe, scoped_data, typing_context).unwrap();
+    let new_synthesis = synthesis.apply(universe, scoped_data, typing_context).unwrap();
+    let new_constraint = constraint.apply(universe, scoped_data, typing_context).unwrap();
 
-    match (synthesis, constraint) {
+    match (new_synthesis, new_constraint) {
         (Record {
             type_id: synth_type_id,
             abstract_field_map: AbstractFieldMap {
@@ -36,7 +36,11 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
 
             // Nominal check
             if synth_type_id != constraint_type_id {
-               unimplemented!() 
+                return Err(TypeError::UnexpectedType {
+                    found: synthesis.clone(),
+                    expected: constraint.clone(),
+                    span: span,
+                }.into());
             }
 
             for (synth_field_id, synth_type) in synth_fields.iter() {
@@ -64,7 +68,11 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
 
                     None => {
                         // Synth width constraint is not wider than constraint width
-                        unimplemented!()
+                        return Err(TypeError::UnexpectedType {
+                            found: synthesis.clone(),
+                            expected: constraint.clone(),
+                            span: span,
+                        }.into());
                     }
                 }
             }
@@ -88,7 +96,11 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
                     None => {
                         // TODO: Missing field
                         // Synth nominal record is not wider than constraint width
-                        unimplemented!()
+                        return Err(TypeError::UnexpectedType {
+                            found: synthesis.clone(),
+                            expected: constraint.clone(),
+                            span: span,
+                        }.into());
                     }
                 }
             }
@@ -114,7 +126,11 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
         }) => {
 
             if synth_params.len() != constraint_params.len() {
-                unimplemented!();
+                return Err(TypeError::UnexpectedType {
+                    found: synthesis.clone(),
+                    expected: constraint.clone(),
+                    span: span,
+                }.into());
             }
 
             // Function parameters must be contravariant
@@ -137,7 +153,11 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
 
             // TODO: Allow synth to be larger?
             if synth_size != constraint_size {
-                unimplemented!();
+                return Err(TypeError::UnexpectedType {
+                    found: synthesis.clone(),
+                    expected: constraint.clone(),
+                    span: span,
+                }.into());
             }
 
             resolve_types(universe, scoped_data, typing_context,
@@ -160,7 +180,11 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
             if synth_id == constraint_id {
                 Ok(())
             } else {
-                unimplemented!("Not equal type parameters");
+                return Err(TypeError::UnexpectedType {
+                    found: synthesis.clone(),
+                    expected: constraint.clone(),
+                    span: span,
+                }.into());
             }
         }
 
@@ -171,7 +195,11 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
                 Ok(())
             } else {
                 // TODO: Check if parameters are compatible?
-                unimplemented!("Not equal type parameters");
+                return Err(TypeError::UnexpectedType {
+                    found: synthesis.clone(),
+                    expected: constraint.clone(),
+                    span: span,
+                }.into());
             }
         },
 
@@ -182,7 +210,11 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
                 synth_type, constraint_type, span)
         }
 
-        _ => unimplemented!(),
+        _ => Err(TypeError::UnexpectedType {
+                    found: synthesis.clone(),
+                    expected: constraint.clone(),
+                    span: span,
+                }.into()),
     }
 }
 
