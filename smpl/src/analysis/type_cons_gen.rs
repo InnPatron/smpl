@@ -111,21 +111,27 @@ pub fn generate_fn_type(
             for param in params.iter() {
                 let param = param.data();
                 let param_anno = param.param_type.data();
+                let var_id = universe.new_var_id();
 
                 let param_type = type_from_ann(universe, &scope, &typing_context, param_anno)?;
+
+                // Insert parameters into the typing context
+                typing_context.var_type_map
+                    .insert(var_id, param_type.clone());
 
                 typed_params.push(param_type);
 
                 param_metadata.push(FunctionParameter::new(
                     param.name.data().clone(),
-                    universe.new_var_id(),
+                    var_id,
                 ));
 
                 // Insert parameters into the scope
                 scope.insert_var(
                     param.name.data().clone(),
-                    universe.new_var_id()
+                    var_id
                 );
+
 
                 // TODO: Function signature scanner?
             }
