@@ -323,7 +323,7 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, context: &mut TypingCon
         let tmp = expr.get_tmp(tmp_id);
 
         let tmp_type = resolve_tmp(universe, scope, context, expr, tmp)?;
-        let expr_type = Some(tmp_type.clone());
+        expr_type = Some(tmp_type.clone());
 
         if context.tmp_type_map
             .insert(tmp_id, tmp_type)
