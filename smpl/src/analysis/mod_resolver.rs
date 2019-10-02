@@ -169,9 +169,6 @@ pub fn check_modules(
 
             resolve_scope::resolve(program.universe_mut(), fn_id)?;
             type_checker::type_check(program.universe(), fn_id)?;
-
-            // TODO: Analyze functions
-            unimplemented!("Analyze function");
         }
     }
 
