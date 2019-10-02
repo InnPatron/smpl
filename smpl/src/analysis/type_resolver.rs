@@ -9,8 +9,23 @@ use super::semantic_data::{TypeVarId, Universe };
 use super::resolve_scope::ScopedData;
 use super::type_checker::TypingContext;
 
+/// May or may not alter the typing context for inference purposes
 pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData, 
     typing_context: &mut TypingContext, synthesis: &AbstractType, 
+    constraint: &AbstractType, span: Span) 
+    -> Result<(), TypeError> {
+
+    resolve_types_static(universe, 
+        scoped_data, 
+        typing_context, 
+        synthesis, 
+        constraint, 
+        span)
+}
+
+/// Will NOT perform any inferences
+pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData, 
+    typing_context: &TypingContext, synthesis: &AbstractType, 
     constraint: &AbstractType, span: Span) 
     -> Result<(), TypeError> {
 
@@ -48,7 +63,7 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
                     .get(synth_field_id)
                     .expect("Equal type id means identical field IDs");
 
-                resolve_types(universe, scoped_data, typing_context,
+                resolve_types_static(universe, scoped_data, typing_context,
                     synth_type, constraint_type, span)?;
             }
 
@@ -62,7 +77,7 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
             for (constraint_ident, constraint_type) in constraint_awc.fields.iter() {
                 match synth_awc.fields.get(constraint_ident) {
                     Some(synth_type) => {
-                        resolve_types(universe, scoped_data, typing_context,
+                        resolve_types_static(universe, scoped_data, typing_context,
                             synth_type, constraint_type, span)?;
                     }
 
@@ -89,7 +104,7 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
             for (constraint_ident, constraint_type) in constraint_awc.fields.iter() {
                 match synth_afm.get(constraint_ident) {
                     Some(synth_type) => {
-                        resolve_types(universe, scoped_data, typing_context,
+                        resolve_types_static(universe, scoped_data, typing_context,
                             synth_type, constraint_type, span)?;
                     }
 
@@ -113,7 +128,7 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
         }, UncheckedFunction {
             return_type: ref constraint_return,
         }) => {
-            resolve_types(universe, scoped_data, typing_context, 
+            resolve_types_static(universe, scoped_data, typing_context, 
                 synth_return, constraint_return, span)
         }
 
@@ -135,11 +150,11 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
 
             // Function parameters must be contravariant
             for (sp, cp) in synth_params.iter().zip(constraint_params) {
-                resolve_param(universe, scoped_data, typing_context,
+                resolve_param_static(universe, scoped_data, typing_context,
                     sp, cp, span)?;
             }
 
-            resolve_types(universe, scoped_data, typing_context,
+            resolve_types_static(universe, scoped_data, typing_context,
                 synth_return, constraint_return, span)
         }
 
@@ -160,7 +175,7 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
                 }.into());
             }
 
-            resolve_types(universe, scoped_data, typing_context,
+            resolve_types_static(universe, scoped_data, typing_context,
                 synth_element, constraint_element, span)
         }
 
@@ -206,7 +221,7 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
         (ConstrainedTypeVar(synth_id, 
                           ref synth_type), 
          ref constraint_type @ WidthConstraint(..)) => {
-            resolve_types(universe, scoped_data, typing_context,
+            resolve_types_static(universe, scoped_data, typing_context,
                 synth_type, constraint_type, span)
         }
 
@@ -220,6 +235,19 @@ pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData,
 
 fn resolve_param(universe: &Universe, scoped_data: &ScopedData, 
     typing_context: &mut TypingContext, synth: &AbstractType, 
+    constraint: &AbstractType, span: Span) 
+    -> Result<(), TypeError> {
+
+    resolve_param_static(universe,
+        scoped_data,
+        typing_context,
+        synth,
+        constraint,
+        span)
+}
+
+fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData, 
+    typing_context: &TypingContext, synth: &AbstractType, 
     constraint: &AbstractType, span: Span) 
     -> Result<(), TypeError> {
 
@@ -246,7 +274,7 @@ fn resolve_param(universe: &Universe, scoped_data: &ScopedData,
             for (synth_ident, synth_type) in synth_awc.fields.iter() {
                 match constraint_awc.fields.get(synth_ident) {
                     Some(constraint_type) => {
-                        resolve_types(universe, scoped_data, typing_context,
+                        resolve_types_static(universe, scoped_data, typing_context,
                             synth_type, constraint_type, span)?;
                     }
 
@@ -270,7 +298,7 @@ fn resolve_param(universe: &Universe, scoped_data: &ScopedData,
             for (synth_ident, synth_type) in synth_awc.fields.iter() {
                 match afm.get(synth_ident) {
                     Some(constraint_type) => {
-                        resolve_types(universe, scoped_data, typing_context,
+                        resolve_types_static(universe, scoped_data, typing_context,
                             synth_type, constraint_type, span)?
                     }
 
@@ -284,7 +312,7 @@ fn resolve_param(universe: &Universe, scoped_data: &ScopedData,
             Ok(())
         }
 
-        _ => resolve_types(
+        _ => resolve_types_static(
                 universe, 
                 scoped_data, 
                 typing_context, 
