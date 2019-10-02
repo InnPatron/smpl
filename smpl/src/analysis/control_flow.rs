@@ -305,7 +305,7 @@ impl CFG {
     /// Only performs continue/break statement checking (necessary for CFG generation).
     ///
     pub fn generate(
-        universe: &mut Universe,
+        universe: &Universe,
         body: ast::AstNode<ast::Block>,
         fn_type: &TypeCons,
         fn_scope: &ScopedData,
@@ -374,7 +374,7 @@ impl CFG {
     /// block is appended to the graph.
     ///
     fn generate_scoped_block<'a, 'b, T>(&'a mut self, 
-                                        universe: &'b mut Universe, 
+                                        universe: &'b Universe, 
                                         mut instructions: T,
                                         loop_data: InternalLoopData) 
         -> Result<BranchData, ControlFlowError> 
@@ -561,7 +561,7 @@ impl CFG {
                             //   and BranchMerge at the heads.
                             // If it is the default branch (i.e. no condition), do not generate a
                             //   BranchSplit or BranchMerge (keep ScopeEnter, ScopeExit)
-                            fn generate_branch(cfg: &mut CFG, universe: &mut Universe, body: AstNode<Block>, 
+                            fn generate_branch(cfg: &mut CFG, universe: &Universe, body: AstNode<Block>, 
                                               condition: Option<AstNode<Expr>>,
                                               loop_data: InternalLoopData)
                                 -> Result<BranchData, ControlFlowError> {
@@ -760,6 +760,7 @@ impl CFG {
 #[cfg_attr(rustfmt, rustfmt_skip)]
 mod tests {
     use super::*;
+    use super::super::type_checker::TypingContext;
     use crate::parser::*;
     use crate::parser::parser::*;
     use petgraph::dot::{Config, Dot};
@@ -782,7 +783,7 @@ mod tests {
     fn expected_app(tc: TypeId) -> AbstractType {
         AbstractType::App {
             type_cons: tc,
-            args: None
+            args: Vec::new(),
         }
     }
 
@@ -807,7 +808,10 @@ let b: int = 3;
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
         let scope = universe.std_scope();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
+        let typing_context = TypingContext::empty();
+        let cfg = CFG::generate(&universe, 
+                fn_def.body.clone(), &fn_type, &scope, &typing_context)
+            .unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 

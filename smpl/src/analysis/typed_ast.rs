@@ -72,7 +72,7 @@ pub struct Assignment {
 }
 
 impl Assignment {
-    pub fn new(universe: &mut Universe, assignment: ast::Assignment) -> Assignment {
+    pub fn new(universe: &Universe, assignment: ast::Assignment) -> Assignment {
         let (name, name_span) = assignment.name.to_data();
         let mut access = Expr::new();
         let field_access = FieldAccess::new(universe, &mut access, name);
@@ -120,7 +120,7 @@ pub struct LocalVarDecl {
 }
 
 impl LocalVarDecl {
-    pub fn new(universe: &mut Universe, decl: ast::LocalVarDecl, stmt_span: Span) -> LocalVarDecl {
+    pub fn new(universe: &Universe, decl: ast::LocalVarDecl, stmt_span: Span) -> LocalVarDecl {
         LocalVarDecl {
             type_ann: decl.var_type,
             var_name: decl.var_name,
@@ -485,7 +485,7 @@ pub struct FieldAccess {
 }
 
 impl FieldAccess {
-    pub fn new(universe: &mut Universe, expr: &mut Expr, path: ast::Path) -> FieldAccess {
+    pub fn new(universe: &Universe, expr: &mut Expr, path: ast::Path) -> FieldAccess {
         FieldAccess {
             raw_path: path.clone(),
             path: self::Path::new(universe, expr, path),
@@ -593,7 +593,7 @@ pub struct Path {
 }
 
 impl self::Path {
-    fn new(universe: &mut Universe, expr: &mut self::Expr, path: ast::Path) -> self::Path {
+    fn new(universe: &Universe, expr: &mut self::Expr, path: ast::Path) -> self::Path {
         let mut path_iter = path.0.into_iter();
         let root = path_iter.next().unwrap();
 

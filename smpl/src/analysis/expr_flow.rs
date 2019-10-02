@@ -6,7 +6,7 @@ use crate::span::Span;
 
 use crate::ast::{ArrayInit as AstArrayInit, AstNode, Expr as AstExpr, TypedPath};
 
-pub fn flatten(universe: &mut Universe, e: AstExpr) -> Expr {
+pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
 
     let (_, span) = flatten_expr(universe, &mut expr, e);
@@ -15,7 +15,7 @@ pub fn flatten(universe: &mut Universe, e: AstExpr) -> Expr {
     expr
 }
 
-pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (TmpId, Span) {
+pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId, Span) {
     match e {
         AstExpr::Bin(bin) => {
             let (bin, span) = bin.to_data();
