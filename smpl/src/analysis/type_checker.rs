@@ -18,7 +18,7 @@ use super::resolve_scope::ScopedData;
 pub fn type_check(universe: &Universe, fn_id: FnId) -> Result<(), AnalysisError> {
     use super::semantic_data::Function;
 
-    let mut type_checker = TypeChecker::new(universe, fn_id);
+    let mut type_checker = TypeChecker::new(universe, fn_id)?;
 
     let fn_to_resolve = universe.get_fn(fn_id);
     if let Function::SMPL(ref smpl_fn) = fn_to_resolve {
@@ -35,6 +35,7 @@ struct TypeChecker<'a> {
     universe: &'a Universe,
     scopes: Vec<ScopedData>,
     typing_context: TypingContext,
+    return_type: AbstractType,
 }
 
 impl<'a> TypeChecker<'a> {
@@ -42,7 +43,7 @@ impl<'a> TypeChecker<'a> {
     // TODO: Store function (return) type somwhere
     // TODO: Add function parameters somewhere
     // TODO: Put formal parameters into function scope within Universe
-    pub fn new(universe: &Universe, fn_id: FnId) -> TypeChecker {
+    pub fn new(universe: &Universe, fn_id: FnId) -> Result<TypeChecker, AnalysisError> {
 
         use super::semantic_data::Function;
 
@@ -50,10 +51,35 @@ impl<'a> TypeChecker<'a> {
 
             Function::Builtin(_) => unimplemented!(),
 
-            Function::SMPL(smpl_function) => TypeChecker {
-                universe: universe,
-                scopes: vec![smpl_function.fn_scope().clone()],
-                typing_context: smpl_function.typing_context().clone(),
+            Function::SMPL(smpl_function) => {
+
+                let return_type: AbstractType = {
+                    let typing_context = smpl_function.typing_context().clone();
+                    let scope = smpl_function.fn_scope().clone();
+                    let type_id = smpl_function.fn_type();
+
+                    let fn_type = AbstractType::App {
+                        type_cons: type_id,
+                        args: Vec::new(),
+                    };
+
+                    match fn_type.apply(universe, &scope, &typing_context)? {
+
+                        AbstractType::Function {
+                            return_type,
+                            ..
+                        } => *return_type,
+
+                        _ => panic!("Not a function type constructor"),
+                    }
+                };
+                
+                Ok(TypeChecker {
+                    universe: universe,
+                    scopes: vec![smpl_function.fn_scope().clone()],
+                    typing_context: smpl_function.typing_context().clone(),
+                    return_type: return_type,
+                })
             }
         }
     }
