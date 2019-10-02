@@ -874,7 +874,11 @@ if (test) {
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
         let scope = universe.std_scope();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
+        let typing_context = TypingContext::empty();
+        let cfg = CFG::generate(
+                &universe, fn_def.body.clone(), &fn_type, &scope, &typing_context
+            )
+            .unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -1022,7 +1026,11 @@ if (test) {
         
         let fn_def = testfn_decl(&mut input).unwrap();
         let scope = universe.std_scope();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
+        let typing_context = TypingContext::empty();
+        let cfg = CFG::generate(
+                &universe, fn_def.body.clone(), &fn_type, &scope, &typing_context,
+            )
+            .unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -1229,7 +1237,11 @@ if (test) {
         
         let fn_def = testfn_decl(&mut input).unwrap();
         let scope = universe.std_scope();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
+        let typing_context = TypingContext::empty();
+        let cfg = CFG::generate(
+                &universe, fn_def.body.clone(), &fn_type, &scope, &typing_context
+            )
+            .unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
