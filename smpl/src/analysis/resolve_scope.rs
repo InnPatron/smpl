@@ -18,8 +18,8 @@ struct ScopeResolver {
 
 impl ScopeResolver {
 
-    // TODO: Add function parameters somewhere
-    // TODO: Put formal parameters into function scope within Universe
+    // Formal parameters should already be in the function scope 
+    //  (in generate_fn_type())
     pub fn new(universe: &Universe, fn_id: FnId) -> ScopeResolver {
 
         use super::semantic_data::Function;
