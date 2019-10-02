@@ -5,6 +5,7 @@ use crate::ast::{Ident, TypeAnnotationRef, WidthConstraint, AstNode};
 use super::error::{AnalysisError, ApplicationError, TypeError as ATypeError};
 use super::semantic_data::{FieldId, TypeId, TypeParamId, TypeVarId, Universe};
 use super::resolve_scope::ScopedData;
+use super::type_resolver::resolve_types_static;
 use super::type_checker::TypingContext;
 
 macro_rules! nill_check {
@@ -742,5 +743,95 @@ fn fuse_field_width_constraints(universe: &Universe, scope: &ScopedData,
     typing_context: &TypingContext, constraints: &[AbstractType]) 
     -> Result<AbstractType, AnalysisError> {
 
-    unimplemented!();
+    use super::error::TypeError;
+
+    let mut constraint_iter = constraints.into_iter();
+    let first_constraint = constraint_iter
+        .next()
+        .expect("Always at least one constraint");
+    
+    let is_first_non_width_constraint = match first_constraint {
+        AbstractType::Record { .. } 
+            | AbstractType::App { .. }
+            | AbstractType::Array { .. }
+            | AbstractType::Function { .. }
+            | AbstractType::UncheckedFunction { .. }
+            | AbstractType::Int
+            | AbstractType::Float
+            | AbstractType::String
+            | AbstractType::Bool
+            | AbstractType::Unit
+            | AbstractType::TypeVar(..)
+            | AbstractType::ConstrainedTypeVar(..) => true,
+
+        AbstractType::WidthConstraint(..) => false,
+    };
+
+    let found_non_width_constraint = is_first_non_width_constraint;
+
+    let mut internal_field_constraints: HashMap<Ident, Vec<AbstractType>> = HashMap::new();
+    for constraint in constraint_iter {
+        match constraint {
+            AbstractType::WidthConstraint(AbstractWidthConstraint {
+                ref fields,
+            }) => {
+                if found_non_width_constraint {
+                    // Error: found { foo: int } + { foo: { ... } }
+                    // TODO: Make this collect only conflicting constraints
+                    return Err(TypeError::ConflictingConstraints {
+                        constraints: constraints.iter().map(|c| c.clone()).collect()   
+                    }.into());
+                }
+
+                // Gather internal field constraints to recurse later on
+                for (field, field_type) in fields {
+                    internal_field_constraints.entry(field.clone())
+                            .or_insert(Vec::new())
+                            .push(field_type.clone());
+                }
+
+            }
+
+            _ => {
+                if !found_non_width_constraint {
+                    // Error: found { foo: { ... } } + { foo: int }
+                    // TODO: Make this collect only conflicting constraints
+                    return Err(TypeError::ConflictingConstraints {
+                        constraints: constraints.iter().map(|c| c.clone()).collect()   
+                    }.into());
+                }
+
+                // TODO: Pass span info
+                resolve_types_static(universe, scope, typing_context,
+                    constraint, first_constraint, crate::span::Span::dummy())
+                    .map_err(|e| {
+                        TypeError::ConflictingConstraints {
+                            constraints: constraints.iter().map(|c| c.clone()).collect()   
+                        }
+                    })?;
+            }
+        }
+    }
+
+    // PRECONDITION: 
+    //  All current constraints scanned.
+    if found_non_width_constraint {
+        // No other constraint
+        Ok(first_constraint.clone())
+    } else {
+        // Validate internal field constraints and fuse
+        let mut final_internal_map = HashMap::new();
+        for (field, constraints) in internal_field_constraints {
+
+            let field_constraint = 
+                fuse_field_width_constraints(universe, scope, typing_context, &constraints)?;
+            if final_internal_map.insert(field.clone(), field_constraint).is_some() {
+                panic!("FUSE ERROR");
+            }
+        }
+
+        Ok(AbstractType::WidthConstraint(AbstractWidthConstraint { 
+            fields: final_internal_map,
+        }))
+    }
 }
