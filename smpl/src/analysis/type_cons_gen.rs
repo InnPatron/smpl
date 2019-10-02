@@ -44,8 +44,9 @@ pub fn generate_struct_type_cons(
             let field_type_annotation = field.field_type.data();
 
             // TODO: Insert type parameters into scope
-            let field_type_app = type_from_ann(
-                universe, &scope, &typing_context, field_type_annotation)?;
+            let field_type_app = 
+                type_from_ann(universe, &scope, &typing_context, field_type_annotation)?
+                .apply(universe, &scope, &typing_context)?;
 
             // Map field to type constructor
             fields.insert(f_id, field_type_app);
@@ -113,13 +114,17 @@ pub fn generate_fn_type(
                 let param_anno = param.param_type.data();
                 let var_id = universe.new_var_id();
 
-                let param_type = type_from_ann(universe, &scope, &typing_context, param_anno)?;
+                let param_type = 
+                    type_from_ann(universe, &scope, &typing_context, param_anno)?
+                    .apply(universe, &scope, &typing_context)?;
 
                 // Insert parameters into the typing context
                 typing_context.var_type_map
                     .insert(var_id, param_type.clone());
 
+                println!("Type for {}: {:?} ({:?})", param.name.data(), param_type, param_anno);
                 typed_params.push(param_type);
+
 
                 param_metadata.push(FunctionParameter::new(
                     param.name.data().clone(),
@@ -193,7 +198,9 @@ pub fn generate_builtin_fn_type(
                     let param = param.data();
                     let param_anno = param.param_type.data();
 
-                    let param_type = type_from_ann(universe, &scope, &typing_context, param_anno)?;
+                    let param_type = 
+                        type_from_ann(universe, &scope, &typing_context, param_anno)?
+                        .apply(universe, &scope, &typing_context)?;
 
                     typed_params.push(param_type);
 
@@ -267,7 +274,9 @@ pub fn generate_anonymous_fn_type(
                 let param = param.data();
                 let param_anno = param.param_type.data();
 
-                let param_type = type_from_ann(universe, &scope, typing_context, param_anno)?;
+                let param_type = 
+                    type_from_ann(universe, &scope, typing_context, param_anno)?
+                    .apply(universe, &scope, &typing_context)?;
 
                 typed_params.push(param_type);
 
