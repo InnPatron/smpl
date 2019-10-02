@@ -161,7 +161,7 @@ impl AbstractType {
 
             AbstractType::App {
                 ref type_cons,
-                ref args,
+                args: ref type_args,
             } => {
                 
                 //
@@ -176,7 +176,7 @@ impl AbstractType {
                 //
                 // TODO: Applying type arguments will probably cause an infinite loop with
                 //   recursive types
-                let (ok_args, err) = args
+                let (ok_args, err) = type_args
                             .iter()
                             .map(|at| at.apply_internal(universe, map))
                             .fold((Vec::new(), Vec::new()), | (mut ok, mut err), apply_result| {
@@ -189,7 +189,7 @@ impl AbstractType {
                             });
 
                 if err.len() != 0 {
-                    unimplemented!()
+                    return Err(err);
                 }
 
                 let type_cons_id = *type_cons;
@@ -202,8 +202,12 @@ impl AbstractType {
                         ..
                     } => {
                         if type_params.len() != ok_args.len() {
-                            // TODO: Type app error
-                            unimplemented!();
+                            if type_params.len() != ok_args.len() {
+                                return Err(vec![ApplicationError::Arity {
+                                    found: ok_args.len(),
+                                    expected: type_params.len(),
+                                }.into()]);
+                            }
                         }
 
                         // Make sure type arguments are all applied and mapped into the typing
@@ -251,8 +255,13 @@ impl AbstractType {
                         ref return_type,
                     } => {
 
-                        if type_params.len() != args.len() {
-                            unimplemented!();
+                        if type_params.len() != ok_args.len() {
+                            if type_params.len() != ok_args.len() {
+                                return Err(vec![ApplicationError::Arity {
+                                    found: ok_args.len(),
+                                    expected: type_params.len(),
+                                }.into()]);
+                            }
                         }
 
                         // Make sure type arguments are all applied and mapped into the typing
@@ -284,7 +293,7 @@ impl AbstractType {
                         }
 
                         if errors.len() != 0 {
-                            unimplemented!();
+                            return Err(errors);
                         }
 
                         let return_type = return_type.apply_internal(universe, &new_map)?;
@@ -300,8 +309,11 @@ impl AbstractType {
                         ref return_type,
                     } => {
 
-                        if type_params.len() != args.len() {
-                            unimplemented!();
+                        if type_params.len() != ok_args.len() {
+                            return Err(vec![ApplicationError::Arity {
+                                found: ok_args.len(),
+                                expected: type_params.len(),
+                            }.into()]);
                         }
 
                         // Make sure type arguments are all applied and mapped into the typing
@@ -327,11 +339,11 @@ impl AbstractType {
                         })
                     }
 
-                    TypeCons::Int => primitive_apply!(args, AbstractType::Int),
-                    TypeCons::Float => primitive_apply!(args, AbstractType::Float),
-                    TypeCons::String => primitive_apply!(args, AbstractType::String),
-                    TypeCons::Bool => primitive_apply!(args, AbstractType::Bool),
-                    TypeCons::Unit => primitive_apply!(args, AbstractType::Unit),
+                    TypeCons::Int => primitive_apply!(ok_args, AbstractType::Int),
+                    TypeCons::Float => primitive_apply!(ok_args, AbstractType::Float),
+                    TypeCons::String => primitive_apply!(ok_args, AbstractType::String),
+                    TypeCons::Bool => primitive_apply!(ok_args, AbstractType::Bool),
+                    TypeCons::Unit => primitive_apply!(ok_args, AbstractType::Unit),
                 }
             },
 
@@ -353,7 +365,7 @@ impl AbstractType {
                 });
 
                 if err.len() != 0 {
-                    unimplemented!()
+                    return Err(err);
                 }
 
                 Ok(AbstractType::Record {
@@ -378,7 +390,7 @@ impl AbstractType {
                 ref return_type,
             } => {
 
-                let (ok_parameters, err) = parameters.iter()
+                let (ok_parameters, errors) = parameters.iter()
                     .map(|p| p.apply_internal(universe, map))
                     .fold((Vec::new(), Vec::new()), |(mut ok, mut err), result| {
                         match result {
@@ -389,8 +401,8 @@ impl AbstractType {
                         (ok, err)
                 });
 
-                if err.len() != 0 {
-                    unimplemented!()
+                if errors.len() != 0 {
+                    return Err(errors);
                 }
 
                 let new_return = return_type.apply_internal(universe, map)?;
@@ -414,7 +426,7 @@ impl AbstractType {
 
             AbstractType::WidthConstraint(ref width_constraint) => {
                 
-                let (ok_field_types, err) = width_constraint.fields
+                let (ok_field_types, errors) = width_constraint.fields
                     .iter()
                     .map(|(ident, at)| at.apply_internal(universe, map).map(|r| (ident, r)))
                     .fold((HashMap::new(), Vec::new()), |(mut ok, mut err), apply_result| {
@@ -426,9 +438,10 @@ impl AbstractType {
                         (ok, err)
                 });
 
-                if err.len() != 0 {
-                    unimplemented!();
+                if errors.len() != 0 {
+                    return Err(errors);
                 }
+
                 let new_width = AbstractWidthConstraint {
                     fields: ok_field_types,
                 };
