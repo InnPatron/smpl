@@ -121,6 +121,12 @@ pub fn generate_fn_type(
                     universe.new_var_id(),
                 ));
 
+                // Insert parameters into the scope
+                scope.insert_var(
+                    param.name.data().clone(),
+                    universe.new_var_id()
+                );
+
                 // TODO: Function signature scanner?
             }
 
