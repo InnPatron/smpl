@@ -57,20 +57,15 @@ impl<'a> TypeChecker<'a> {
                     let typing_context = smpl_function.typing_context().clone();
                     let scope = smpl_function.fn_scope().clone();
                     let type_id = smpl_function.fn_type();
+                    let fn_type = universe.get_type_cons(type_id);
 
-                    let fn_type = AbstractType::App {
-                        type_cons: type_id,
-                        args: Vec::new(),
-                    };
-
-                    match fn_type.apply(universe, &scope, &typing_context)? {
-
-                        AbstractType::Function {
-                            return_type,
+                    match fn_type {
+                        TypeCons::Function {
+                            ref return_type,
                             ..
-                        } => *return_type,
+                        } => return_type.apply(universe, &scope, &typing_context)?,
 
-                        _ => panic!("Not a function type constructor"),
+                        _ => panic!("Non-function type constructor for function"),
                     }
                 };
                 
