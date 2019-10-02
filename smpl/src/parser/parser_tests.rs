@@ -105,7 +105,7 @@ init NAME {
         {
             let expected = Expr::StructInit(dummy_node!(StructInit {
                 struct_name: type_path!("NAME"),
-                field_init: None,
+                field_init: Vec::new(),
             }));
 
             assert_eq!(init_1, expected);
@@ -120,10 +120,10 @@ init NAME {
 
             let expected = Expr::StructInit(dummy_node!(StructInit {
                 struct_name: type_path!("NAME"),
-                field_init: Some(vec![
+                field_init: vec![
                     (dummy_node!(ident!("field1")), field_init),
                     (dummy_node!(ident!("field2")), field2_init)
-                ]),
+                ],
             }));
 
             assert_eq!(init_2, expected);
@@ -146,7 +146,7 @@ init {
         // Check init_1
         {
             let expected = Expr::AnonStructInit(dummy_node!(AnonStructInit {
-                field_init: None,
+                field_init: Vec::new(),
             }));
 
             assert_eq!(init_1, expected);
@@ -160,10 +160,10 @@ init {
             let field2_init = boolean!(true => BoxExpr);
 
             let expected = Expr::AnonStructInit(dummy_node!(AnonStructInit {
-                field_init: Some(vec![
+                field_init: vec![
                     (dummy_node!(ident!("field1")), field_init),
                     (dummy_node!(ident!("field2")), field2_init)
-                ]),
+                ],
             }));
 
             assert_eq!(init_2, expected);
