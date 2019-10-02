@@ -343,7 +343,7 @@ fn type_param_map(
                         typing_context,
                         ast_constraint.data())?;
 
-                    // TODO: Also insert into the typing env
+                    // TypeVar already in TypingContext as TypeVar(self_id)
                     current_scope.insert_type_var(ident.clone(), type_var_id.clone());
 
                     if let AbstractType::WidthConstraint(constraint) = abstract_type {
