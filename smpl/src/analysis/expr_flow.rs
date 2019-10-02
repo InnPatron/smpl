@@ -249,7 +249,7 @@ mod tests {
         // Find and validate tmp storing 5.
         let _5_id = order.next().unwrap();
         {
-            match *expr.get_tmp(*_5_id).value().data() {
+            match expr.get_tmp(_5_id).value().data() {
                 Value::Literal(ref literal) => {
                     assert_eq!(*literal, Literal::Int(5));
                 }
@@ -261,7 +261,7 @@ mod tests {
         // Find and validate tmp storing 2.
         let _2_id = order.next().unwrap();
         {
-            match *expr.get_tmp(*_2_id).value().data() {
+            match expr.get_tmp(_2_id).value().data() {
                 Value::Literal(ref literal) => {
                     assert_eq!(*literal, Literal::Int(2));
                 }
@@ -273,7 +273,7 @@ mod tests {
         // Find and validate tmp storing 3.
         let _3_id = order.next().unwrap();
         {
-            match *expr.get_tmp(*_3_id).value().data() {
+            match expr.get_tmp(_3_id).value().data() {
                 Value::Literal(ref literal) => {
                     assert_eq!(*literal, Literal::Int(3));
                 }
@@ -284,7 +284,7 @@ mod tests {
 
         let div_id = order.next().unwrap();
         {
-            let (l_id, r_id) = match *expr.get_tmp(*div_id).value().data() {
+            let (l_id, r_id) = match expr.get_tmp(div_id).value().data() {
                 Value::BinExpr(ref op, ref lhs, ref rhs) => {
                     assert_eq!(*op, BinOp::Div);
                     (lhs.data(), rhs.data())
@@ -293,13 +293,13 @@ mod tests {
                 ref v @ _ => panic!("Unexpected value {:?}. Expected a division expr", v),
             };
 
-            assert_eq!(l_id, _2_id);
-            assert_eq!(r_id, _3_id);
+            assert_eq!(*l_id, _2_id);
+            assert_eq!(*r_id, _3_id);
         }
 
         let add_id = order.next().unwrap();
         {
-            let (l_id, r_id) = match *expr.get_tmp(*add_id).value().data() {
+            let (l_id, r_id) = match expr.get_tmp(add_id).value().data() {
                 Value::BinExpr(ref op, ref lhs, ref rhs) => {
                     assert_eq!(*op, BinOp::Add);
                     (lhs.data(), rhs.data())
@@ -308,8 +308,8 @@ mod tests {
                 ref v @ _ => panic!("Unexpected value {:?}. Expected an addition expr", v),
             };
 
-            assert_eq!(l_id, _5_id);
-            assert_eq!(r_id, div_id);
+            assert_eq!(*l_id, _5_id);
+            assert_eq!(*r_id, div_id);
         }
     }
 }
