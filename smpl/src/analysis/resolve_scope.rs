@@ -12,6 +12,22 @@ use super::error::AnalysisError;
 use super::typed_ast::*;
 use super::metadata::Metadata;
 
+pub fn resolve(universe: &mut Universe, fn_id: FnId) -> Result<(), AnalysisError> {
+
+    use super::semantic_data::Function;
+    
+    let mut scope_resolver = ScopeResolver::new(universe, fn_id);
+
+    let fn_to_resolve = universe.get_fn_mut(fn_id);
+
+    if let Function::SMPL(ref mut smpl_fn) = fn_to_resolve {
+        let cfg_mut = smpl_fn.cfg_mut();
+        traverse(cfg_mut, &mut scope_resolver)
+    } else {
+        panic!("Not a SMPL function");
+    }
+}
+
 struct ScopeResolver {
     scopes: Vec<ScopedData>,
 }
