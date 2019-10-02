@@ -563,7 +563,7 @@ fn resolve_uni_op(
 }
 
 fn resolve_struct_init(universe: &Universe, scope: &ScopedData, 
-    context: &TypingContext, init: &StructInit, span: Span) 
+    context: &mut TypingContext, init: &StructInit, span: Span) 
     -> Result<AbstractType, AnalysisError> {
 
     // Get type info
@@ -628,7 +628,7 @@ fn resolve_struct_init(universe: &Universe, scope: &ScopedData,
     */
 
     // Map init'd field to its type
-    let mut init_expr_type_map: HashMap<FieldId, &'_ AbstractType> = HashMap::new();
+    let mut init_expr_type_map: HashMap<FieldId, AbstractType> = HashMap::new();
     for (field_name, typed_tmp) in init.raw_field_init() {
 
         // Check if the struct type has the corresponding field
@@ -642,7 +642,8 @@ fn resolve_struct_init(universe: &Universe, scope: &ScopedData,
 
         let tmp_type = context.tmp_type_map
             .get(typed_tmp.data())
-            .expect("Missing tmp");
+            .expect("Missing tmp")
+            .clone();
 
         if init_expr_type_map.insert(field_id.clone(), tmp_type).is_some() {
             panic!("Duplicate field init");
@@ -670,13 +671,21 @@ fn resolve_struct_init(universe: &Universe, scope: &ScopedData,
     //   Field init expressions should be fully typed (tmps)
     //   Field names are all present and all valid
 
-    // TODO: Check if field init expressions are of the correct type
     // Check if field init expressions are of the correct type
     for (field_id, field_type) in fields.iter() {
         let init_expr_type = init_expr_type_map
             .get(field_id)
             .unwrap();
-        unimplemented!()
+
+        // TODO: If type inference is implemented, another pass needs to check
+        //   that all types are still valid
+        type_resolver::resolve_types(
+            universe,
+            scope,
+            context,
+            init_expr_type,
+            field_type,
+            span)?;
     }
 
     // SATISFIED CONDITIONS: 
