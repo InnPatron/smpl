@@ -130,6 +130,11 @@ impl UniquePassenger<E> for ScopeResolver {
     fn assignment(&mut self, id: NodeIndex, assign: &mut AssignmentData) -> Result<(), E> {
         let assignment = &mut assign.assignment;
 
+        let path = assignment.assignee_mut().path_mut();
+
+        let var_id = self.current().var_id(path.root_name())?;
+        path.set_root_var(var_id);
+
         resolve_expr_scope(assignment.value_mut(), self.current())?;
         resolve_expr_scope(assignment.access_mut(), self.current())?;
         Ok(())

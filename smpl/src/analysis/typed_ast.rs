@@ -92,6 +92,10 @@ impl Assignment {
         &self.field_access
     }
 
+    pub fn assignee_mut(&mut self) -> &mut FieldAccess {
+        &mut self.field_access
+    }
+
     pub fn value(&self) -> &self::Expr {
         &self.value
     }
