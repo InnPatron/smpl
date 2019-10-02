@@ -595,9 +595,8 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             })
         }
 
-        TypeAnnotationRef::WidthConstraint(constraints) => {
-            // TODO: Fuse constraints
-            unimplemented!();
+        TypeAnnotationRef::WidthConstraint(ast_constraints) =>  {
+            fuse_width_constraints(universe, scope, typing_context, ast_constraints)
         }
     }
 }
@@ -637,4 +636,111 @@ impl TypeParams {
                 (type_param_id.clone(), type_var_id.clone(), constraint.as_ref())
             })
     }
+}
+
+fn fuse_width_constraints(universe: &Universe, scope: &ScopedData,
+    typing_context: &TypingContext, ast_constraints: &[AstNode<WidthConstraint>]) 
+    -> Result<AbstractType, AnalysisError> {
+
+    // TODO: Fuse constraints
+    let mut field_constraints: HashMap<Ident, Vec<AbstractType>> = HashMap::new();
+
+    // Map field to its (unfused) constraints
+    for ast_constraint in ast_constraints {
+        match ast_constraint.data() {
+
+            // base Struct/WidthConstraint
+            // Inspect the type and use it's field types as field constraints
+            //   for a new WidthConstraint
+            WidthConstraint::BaseStruct(ref ann) => {
+
+                let ann_type = 
+                    type_from_ann(universe, scope, typing_context, ann.data())?
+                    .apply(universe, scope, typing_context)?;
+
+                match ann_type {
+                    AbstractType::Record {
+                        abstract_field_map: AbstractFieldMap {
+                            ref fields,
+                            ref field_map,
+                        },
+                        ..
+                    } => {
+                        for (field_name, (_field_id, field_type)) in
+                            field_map.keys().zip(fields.iter()) {
+
+                            field_constraints
+                                .entry(field_name.clone())
+                                .or_insert(vec![field_type.clone()])
+                                .push(field_type.clone());
+                        }
+                    }
+
+                    AbstractType::WidthConstraint(AbstractWidthConstraint {
+                        ref fields,
+                    }) => {
+                        for (field_name, field_type) in fields {
+                            field_constraints
+                                .entry(field_name.clone())
+                                .or_insert(vec![field_type.clone()])
+                                .push(field_type.clone());
+                        }
+                    }
+
+                    _ => unimplemented!("Non-record/width constraint base"),
+                }
+            }
+            
+            // A pseudo-width-constraint type (not actually a type)
+            // Take the fields and use them as a new constraint
+            WidthConstraint::Anonymous(ref ident_ann_pairs) => {
+
+                for (ast_ident, ast_ann) in ident_ann_pairs.iter() {
+                    let ann_type = 
+                        type_from_ann(universe, scope, typing_context, ast_ann.data())?;
+                    field_constraints
+                        .entry(ast_ident.data().clone())
+                        .or_insert(vec![ann_type.clone()])
+                        .push(ann_type);
+                }
+            }
+        }
+    }
+
+    let (ok_constraints, errors) = field_constraints
+        .iter()
+        .map(|(name, field_constraints)| {
+            let fuse = fuse_field_width_constraints(
+                universe, scope,
+                typing_context, field_constraints);
+            (name, fuse)
+        })
+        .fold((HashMap::new(), Vec::new()), |(mut ok, mut err), (name, fuse_result)| {
+            match fuse_result {
+                Ok(r) => { 
+                    ok.insert(name.clone(), r);
+                }
+
+                Err(e) => err.push(e),
+            };
+
+            (ok, err)
+        });
+
+    if errors.len() != 0 {
+        return Err(errors.into());
+
+    }
+
+    Ok(AbstractType::WidthConstraint(AbstractWidthConstraint {
+        fields: ok_constraints
+    }))
+}
+
+/// Ensures that there are no conflicting constraints on a field
+fn fuse_field_width_constraints(universe: &Universe, scope: &ScopedData,
+    typing_context: &TypingContext, constraints: &[AbstractType]) 
+    -> Result<AbstractType, AnalysisError> {
+
+    unimplemented!();
 }
