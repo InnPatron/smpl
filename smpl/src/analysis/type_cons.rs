@@ -216,17 +216,9 @@ impl AbstractType {
                         let old_map = map;
                         let mut new_map = map.clone();
                         let mut errors = Vec::new();
-                        for ((_type_param, type_var_id, constraint), arg) in 
-                            type_params.iter().zip(ok_args.into_iter()) {
 
-                            // Replace placeholder type vars used in type constructor
-                            //   creation
-                            let new_type_var_id = universe.new_type_var_id();
-                            // TODO: Constraint checking
-                            new_map.insert(type_var_id,
-                                AbstractType::ConstrainedTypeVar(new_type_var_id, 
-                                    Box::new(arg)));
-                        }
+                        type_params.map_args(&mut new_map, ok_args.into_iter())
+                            .map_err(|e| vec![e])?;
 
                         let mut afm = AbstractFieldMap {
                             fields: HashMap::new(),
@@ -269,17 +261,9 @@ impl AbstractType {
                         //  environment for field applications
                         let old_map = map;
                         let mut new_map = map.clone();
-                        for ((_type_param, type_var_id, constraint), arg) in 
-                            type_params.iter().zip(ok_args.into_iter()) {
 
-                            // Replace placeholder type vars used in type constructor
-                            //   creation
-                            let new_type_var_id = universe.new_type_var_id();
-                            // TODO: Constraint checking
-                            new_map.insert(type_var_id,
-                                AbstractType::ConstrainedTypeVar(new_type_var_id, 
-                                    Box::new(arg)));
-                        }
+                        type_params.map_args(&mut new_map, ok_args.into_iter())
+                            .map_err(|e| vec![e])?;
 
                         let mut errors = Vec::new();
                         let mut new_params = Vec::new();
@@ -321,17 +305,8 @@ impl AbstractType {
                         //  environment for field applications
                         let old_map = map;
                         let mut new_map = map.clone();
-                        for ((_type_param, type_var_id, constraint), arg) in 
-                            type_params.iter().zip(ok_args.into_iter()) {
-
-                            // Replace placeholder type vars used in type constructor
-                            //   creation
-                            let new_type_var_id = universe.new_type_var_id();
-                            // TODO: Constraint checking
-                            new_map.insert(type_var_id,
-                                AbstractType::ConstrainedTypeVar(new_type_var_id, 
-                                    Box::new(arg)));
-                        }
+                        type_params.map_args(&mut new_map, ok_args.into_iter())
+                            .map_err(|e| vec![e])?;
 
                         let return_type = return_type.apply_internal(universe, &new_map)?;
 
@@ -636,6 +611,20 @@ impl TypeParams {
             .map(|(type_param_id, (type_var_id, constraint))| {
                 (type_param_id.clone(), type_var_id.clone(), constraint.as_ref())
             })
+    }
+
+    // Assume arities are equal
+    fn map_args<T>(&self, map: &mut HashMap<TypeVarId, AbstractType>, args: T) 
+        -> Result<(), ATypeError>
+        where T: Iterator<Item=AbstractType> {
+
+        for (arg, (type_param_id, type_var_id, constraint)) in args.zip(self.iter()) {
+
+            // TODO: Constraint checking
+            map.insert(type_var_id, arg);
+        }
+
+        Ok(())
     }
 }
 
