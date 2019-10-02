@@ -15,6 +15,22 @@ use super::type_cons::*;
 use super::type_resolver;
 use super::resolve_scope::ScopedData;
 
+pub fn type_check(universe: &Universe, fn_id: FnId) -> Result<(), AnalysisError> {
+    use super::semantic_data::Function;
+
+    let mut type_checker = TypeChecker::new(universe, fn_id);
+
+    let fn_to_resolve = universe.get_fn(fn_id);
+    if let Function::SMPL(ref smpl_fn) = fn_to_resolve {
+        let cfg = smpl_fn.cfg();
+        let mut traverser = Traverser::new(cfg, &mut type_checker);
+
+        traverser.traverse()
+    } else {
+        panic!("Not a SMPL function");
+    }
+}
+
 struct TypeChecker<'a> {
     universe: &'a Universe,
     scopes: Vec<ScopedData>,
