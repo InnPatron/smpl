@@ -94,11 +94,16 @@ fn main() {
         let main = program.universe().get_fn(main);
         let called_fn = called_fn.unwrap();
         
-        let fn_call = {
-            let scope_enter = main.cfg().after_start();
-            main.cfg().next(scope_enter)
+        let cfg = if let Function::SMPL(main) = main {
+            main.cfg()
+        } else {
+            panic!("Expected a SMPL function. Found {:?}", main);
         };
-        match *main.cfg().node_weight(fn_call) {
+        let fn_call = {
+            let scope_enter = cfg.after_start();
+            cfg.next(scope_enter)
+        };
+        match cfg.node_weight(fn_call) {
             Node::Block(ref block) => {
                 assert!(block.graph().len() == 1);
                 let mut iter = block.graph().iter();
@@ -107,7 +112,7 @@ fn main() {
                     BlockNode::Expr(ref edata) => {
                         let e = &edata.expr;
                         let mut iter = e.execution_order();
-                        let tmp = e.get_tmp(*iter.last().unwrap());
+                        let tmp = e.get_tmp(iter.last().unwrap());
                         match *tmp.value().data() {
                             Value::FnCall(ref call) => {
                                 let fn_value = call.fn_value();
