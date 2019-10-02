@@ -243,11 +243,19 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
     fn ret(&mut self, id: NodeIndex, rdata: &ReturnData) -> Result<(), E> {
         // TODO: Resolve types of expression
         // TODO: Check if return type compatible
-        unimplemented!();
-        if let Some(ref mut return_data) = rdata.expr {
-            
+
+        match rdata.expr {
+            Some(ref expr) => {
+                let expr_type = expr_type!(self, expr)?;
+                resolve!(self, &expr_type, &self.return_type, rdata.span)
+                    .map_err(|e| e.into())
+            }
+
+            None => {
+                resolve!(self, &AbstractType::Unit, &self.return_type, rdata.span)
+                    .map_err(|e| e.into())
+            }
         }
-        Ok(())
     }
 
     fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), E> {
