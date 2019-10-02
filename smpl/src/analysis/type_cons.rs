@@ -494,9 +494,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                 let type_var = scope.type_var(ident);
 
                 // Found a type parameter
-                // TODO: Use typing context instead of ScopedData
-                /*
-                if let Some((tp_id, _constraint)) = type_param {
+                if let Some(tv_id) = type_var {
                     // Do not allow type arguments on a type parameter
                     if typed_path.annotations().is_some() {
                         return Err(ATypeError::ParameterizedParameter {
@@ -505,10 +503,12 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                         .into());
                     }
 
-                    return Ok(AbstractType::TypeVar(tp_id));
+                    return Ok(typing_context
+                        .type_vars
+                        .get(&tv_id)
+                        .expect("Missing type variable")
+                        .clone());
                 }
-                */
-                unimplemented!();
             }
 
             // Not a type parameter
