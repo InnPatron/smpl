@@ -359,12 +359,12 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData,
                 .tmp_type_map
                 .get(lhs.data())
                 .expect("Missing tmp")
-                .clone();
+                .apply(universe, scope, context)?;
             let rhs_type = context
                 .tmp_type_map
                 .get(rhs.data())
                 .expect("Missing tmp")
-                .clone();
+                .apply(universe, scope, context)?;
 
             resolve_bin_op(
                 universe,
@@ -380,9 +380,10 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData,
             let uni_tmp_type = context
                 .tmp_type_map
                 .get(uni_tmp.data())
-                .expect("Missing tmp");
+                .expect("Missing tmp")
+                .apply(universe, scope, context)?;
 
-            resolve_uni_op(scope, context, op, uni_tmp_type, tmp.span())?
+            resolve_uni_op(scope, context, op, &uni_tmp_type, tmp.span())?
         }
 
         Value::StructInit(ref init) => {
@@ -434,6 +435,7 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData,
     Ok(tmp_type)
 }
 
+/// Assume types are already applied
 fn resolve_bin_op(
     universe: &Universe,
     scope: &ScopedData,
@@ -449,7 +451,6 @@ fn resolve_bin_op(
     let expected_float = AbstractType::Float;
     let expected_bool = AbstractType::Bool;
 
-    // TODO: lhs/rhs already applied?
     let resolve_type = match *op {
         Add | Sub | Mul | Div | Mod => match (&lhs, &rhs) {
             (&AbstractType::Int, &AbstractType::Int) => AbstractType::Int,
@@ -514,6 +515,7 @@ fn resolve_bin_op(
     Ok(resolve_type)
 }
 
+/// Assume types are already applied
 fn resolve_uni_op(
     scope: &ScopedData,
     context: &TypingContext,
@@ -529,7 +531,6 @@ fn resolve_uni_op(
 
     let expected_bool = AbstractType::Bool;
 
-    // TODO: lhs/rhs already applied?
     match *op {
         Negate => match tmp_type {
             AbstractType::Int | AbstractType::Float => Ok(tmp_type.clone()),
