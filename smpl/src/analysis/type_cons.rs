@@ -579,7 +579,8 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
 #[derive(Debug, Clone)]
 pub struct TypeParams {
-    params: HashMap<TypeParamId, (TypeVarId, Option<AbstractWidthConstraint>)>,
+    params: HashMap<TypeParamId, Option<AbstractWidthConstraint>>,
+    placeholder_variables: HashMap<TypeParamId, TypeVarId>,
 }
 
 impl TypeParams {
@@ -587,29 +588,32 @@ impl TypeParams {
     pub fn new() -> TypeParams {
         TypeParams {
             params: HashMap::new(),
+            placeholder_variables: HashMap::new(),
         }
     }
 
     pub fn empty() -> TypeParams {
         TypeParams {
             params: HashMap::new(),
+            placeholder_variables: HashMap::new(),
         }
     }
 
     pub fn add_param(&mut self, param: TypeParamId, 
-        constraint: Option<AbstractWidthConstraint>, internal_var_id: TypeVarId) {
-        self.params.insert(param, (internal_var_id, constraint));
+        constraint: Option<AbstractWidthConstraint>, placeholder_var: TypeVarId) {
+        self.params.insert(param, constraint);
+        self.placeholder_variables.insert(param, placeholder_var);
     }
 
     pub fn len(&self) -> usize {
         self.params.len()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item=(TypeParamId, TypeVarId, Option<&AbstractWidthConstraint>)> {
+    pub fn iter(&self) -> impl Iterator<Item=(TypeParamId, Option<&AbstractWidthConstraint>)> {
         self.params
             .iter()
-            .map(|(type_param_id, (type_var_id, constraint))| {
-                (type_param_id.clone(), type_var_id.clone(), constraint.as_ref())
+            .map(|(type_param_id, constraint)| {
+                (type_param_id.clone(), constraint.as_ref())
             })
     }
 
@@ -618,10 +622,14 @@ impl TypeParams {
         -> Result<(), ATypeError>
         where T: Iterator<Item=AbstractType> {
 
-        for (arg, (type_param_id, type_var_id, constraint)) in args.zip(self.iter()) {
+        for (arg, (type_param_id, constraint)) in args.zip(self.iter()) {
+
+            let type_var_id = self.placeholder_variables
+                .get(&type_param_id)
+                .unwrap();
 
             // TODO: Constraint checking
-            map.insert(type_var_id, arg);
+            map.insert(type_var_id.clone(), arg);
         }
 
         Ok(())
