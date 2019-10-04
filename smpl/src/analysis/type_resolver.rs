@@ -195,34 +195,13 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
             if synth_id == constraint_id {
                 Ok(())
             } else {
+                // TODO: Check if types are compatible
                 return Err(TypeError::UnexpectedType {
                     found: synthesis.clone(),
                     expected: constraint.clone(),
                     span: span,
                 }.into());
             }
-        }
-
-        (ConstrainedTypeVar(synth_id, 
-                          synth_type), 
-         ConstrainedTypeVar(constraint_id, constraint_type)) => {
-            if synth_id == constraint_id {
-                Ok(())
-            } else {
-                // TODO: Check if parameters are compatible?
-                return Err(TypeError::UnexpectedType {
-                    found: synthesis.clone(),
-                    expected: constraint.clone(),
-                    span: span,
-                }.into());
-            }
-        },
-
-        (ConstrainedTypeVar(synth_id, 
-                          ref synth_type), 
-         ref constraint_type @ WidthConstraint(..)) => {
-            resolve_types_static(universe, scoped_data, typing_context,
-                synth_type, constraint_type, span)
         }
 
         _ => Err(TypeError::UnexpectedType {

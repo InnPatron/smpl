@@ -106,7 +106,6 @@ pub enum AbstractType {
     WidthConstraint(AbstractWidthConstraint),
 
     TypeVar(TypeVarId),
-    ConstrainedTypeVar(TypeVarId, Box<AbstractType>),       // Needed to carry nominal type information later
 
     Int,
     Float,
@@ -433,12 +432,6 @@ impl AbstractType {
                 )
             }
 
-            AbstractType::ConstrainedTypeVar(ref type_param_id, ref constraint) => {
-                Ok(AbstractType::ConstrainedTypeVar(type_param_id.clone(),
-                    Box::new(constraint.apply_internal(universe, map)?))
-                )
-            }
-
             AbstractType::Int => Ok(AbstractType::Int),
             AbstractType::Float => Ok(AbstractType::Float),
             AbstractType::String => Ok(AbstractType::String),
@@ -762,8 +755,7 @@ fn fuse_field_width_constraints(universe: &Universe, scope: &ScopedData,
             | AbstractType::String
             | AbstractType::Bool
             | AbstractType::Unit
-            | AbstractType::TypeVar(..)
-            | AbstractType::ConstrainedTypeVar(..) => true,
+            | AbstractType::TypeVar(..) => true,
 
         AbstractType::WidthConstraint(..) => false,
     };

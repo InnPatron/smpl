@@ -344,9 +344,7 @@ fn type_param_map(
 
                         // Insert type var into scope
                         typing_context.type_vars.insert(type_var_id.clone(), 
-                            AbstractType::ConstrainedTypeVar(
-                                type_var_id.clone(), 
-                                Box::new(abstract_type)));
+                            abstract_type);
 
                         // Add type parameter to type constructor
                         type_params.add_param(type_param_id.clone(), 
