@@ -54,7 +54,7 @@ impl TypeCons {
         }
     }
 
-    fn type_params(&self) -> Option<&TypeParams> {
+    pub fn type_params(&self) -> Option<&TypeParams> {
         match *self {
             TypeCons::Function {
                 ref type_params,
@@ -579,7 +579,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
 #[derive(Debug, Clone)]
 pub struct TypeParams {
-    params: HashMap<TypeParamId, Option<AbstractWidthConstraint>>,
+    params: Vec<(TypeParamId, Option<AbstractWidthConstraint>)>,
     placeholder_variables: HashMap<TypeParamId, TypeVarId>,
 }
 
@@ -587,21 +587,18 @@ impl TypeParams {
 
     pub fn new() -> TypeParams {
         TypeParams {
-            params: HashMap::new(),
+            params: Vec::new(),
             placeholder_variables: HashMap::new(),
         }
     }
 
     pub fn empty() -> TypeParams {
-        TypeParams {
-            params: HashMap::new(),
-            placeholder_variables: HashMap::new(),
-        }
+        TypeParams::new()
     }
 
     pub fn add_param(&mut self, param: TypeParamId, 
         constraint: Option<AbstractWidthConstraint>, placeholder_var: TypeVarId) {
-        self.params.insert(param, constraint);
+        self.params.push((param, constraint));
         self.placeholder_variables.insert(param, placeholder_var);
     }
 
@@ -615,6 +612,13 @@ impl TypeParams {
             .map(|(type_param_id, constraint)| {
                 (type_param_id.clone(), constraint.as_ref())
             })
+    }
+
+    pub fn placeholder_type_var(&self, id: TypeParamId) -> TypeVarId {
+        self.placeholder_variables
+            .get(&id)
+            .unwrap()
+            .clone()
     }
 
     // Assume arities are equal

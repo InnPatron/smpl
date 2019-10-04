@@ -13,7 +13,8 @@ use super::resolve_scope::ScopedData;
 use super::resolve_scope;
 use super::type_checker::TypingContext;
 use super::type_checker;
-use super::type_cons_gen::*;
+use super::type_cons_gen;
+use super::analysis_helpers;
 
 use crate::feature::*;
 
@@ -75,7 +76,7 @@ pub fn check_modules(
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_type) in raw_mod.reserved_structs.iter() {
             let type_id = reserved_type.0;
-            let (struct_type, field_ordering) = generate_struct_type_cons(
+            let (struct_type, field_ordering) = type_cons_gen::generate_struct_type_cons(
                 program,
                 type_id,
                 raw_program.scopes.get(mod_id).unwrap(),
@@ -102,24 +103,31 @@ pub fn check_modules(
             let fn_id = reserved_fn.0;
             let fn_decl = reserved_fn.1.data();
             // TODO: Store new function scope storing the type parameters
-            let (fn_scope, fn_typing_context, fn_type) = generate_fn_type(
-                program,
+            let fn_type_cons = type_cons_gen::generate_fn_type_cons(
+                program.universe(),
                 raw_program.scopes.get(mod_id).unwrap(),
                 &TypingContext::empty(),
                 fn_id,
                 reserved_fn.1.data(),
             )?;
 
+            let (fn_scope, fn_typing_context) = analysis_helpers::generate_fn_analysis_data(
+                program.universe(),
+                raw_program.scopes.get(mod_id).unwrap(),
+                &TypingContext::empty(),
+                &fn_type_cons,
+                reserved_fn.1.data())?;
+
             let cfg = CFG::generate(
                 program.universe_mut(),
                 fn_decl.body.clone(),
-                &fn_type,
+                &fn_type_cons,
                 &fn_scope,
                 &fn_typing_context
             )?;
 
             // TODO: Insert fn typing context
-            let fn_type_id = program.universe_mut().insert_type_cons(fn_type);
+            let fn_type_id = program.universe_mut().insert_type_cons(fn_type_cons);
 
             program
                 .universe_mut()
@@ -137,7 +145,7 @@ pub fn check_modules(
         for (_, reserved_builtin) in raw_mod.reserved_builtins.iter() {
             let fn_id = reserved_builtin.0;
             let fn_decl = reserved_builtin.1.data();
-            let fn_type = generate_builtin_fn_type(
+            let fn_type = type_cons_gen::generate_builtin_fn_type(
                 program,
                 raw_program.scopes.get(mod_id).unwrap(),
                 &TypingContext::empty(),

@@ -74,92 +74,55 @@ pub fn generate_struct_type_cons(
     Ok((type_cons, order))
 }
 
-pub fn generate_fn_type(
-    program: &mut Program,
+pub fn generate_fn_type_cons(universe: &Universe,
     outer_scope: &ScopedData,
-    outer_typing_context: &TypingContext,
+    outer_context: &TypingContext,
     fn_id: FnId,
-    fn_def: &Function,
-) -> Result<(ScopedData, TypingContext, TypeCons), AnalysisError> {
+    fn_def: &Function)
+    -> Result<TypeCons, AnalysisError> {
 
-    let (universe, metadata, _features) = program.analysis_context();
-
-    let mut fn_scope = outer_scope.clone();
-    let mut fn_typing_context = outer_typing_context.clone();
-
-    // Check no parameter naming conflicts
     let (type_params, type_param_scope, type_param_typing_context) = 
         type_param_map(universe, 
            fn_def.type_params.as_ref(), 
            fn_def.where_clause.as_ref(),
            &outer_scope,
-           &outer_typing_context)?;
+           &outer_context)?;
 
-    let ret_type = match fn_def.return_type {
-        Some(ref anno) => {
-            let anno = anno.data();
-            let type_app = 
-                type_from_ann(universe, &type_param_scope, &type_param_typing_context, anno)?;
-            // TODO: Function signature scanner?
-            type_app
+    let return_type = match fn_def.return_type {
+        Some(ref ann) => {
+            let ann = ann.data();
+
+            type_from_ann(universe, &type_param_scope, &type_param_typing_context, ann)?
         }
+
         None => AbstractType::Unit,
     };
 
-    // TODO: Insert existential type variables representing the type parameters in any context 
-    // Go through all type paremters in scope (type_param_scope.type_variables)
-    //   and replace with new ones
-
-    let params = match fn_def.params {
+    let typed_formal_params = match fn_def.params {
         Some(ref params) => {
             let mut typed_formal_params = Vec::new();
-            let mut param_metadata = Vec::new();
+
             for param in params.iter() {
                 let param = param.data();
-                let param_anno = param.param_type.data();
-                let var_id = universe.new_var_id();
+                let param_ann = param.param_type.data();
 
-                let param_type = 
-                    type_from_ann(universe, &fn_scope, &fn_typing_context, param_anno)?;
-
-                // Insert parameters into the typing context
-                fn_typing_context.var_type_map
-                    .insert(var_id, param_type.clone());
+                let param_type =
+                    type_from_ann(universe, &type_param_scope, &type_param_typing_context, param_ann)?;
 
                 typed_formal_params.push(param_type);
-
-                param_metadata.push(FunctionParameter::new(
-                    param.name.data().clone(),
-                    var_id,
-                ));
-
-                // Insert parameters into the scope
-                fn_scope.insert_var(
-                    param.name.data().clone(),
-                    var_id
-                );
-
-
-                // TODO: Function signature scanner?
             }
 
-            metadata.insert_function_param_ids(fn_id, param_metadata);
-
             typed_formal_params
-        }
-        None => {
-            metadata.insert_function_param_ids(fn_id, Vec::with_capacity(0));
-            Vec::with_capacity(0)
-        }
+        },
+
+        None => Vec::new(),
     };
 
-    let type_cons = TypeCons::Function {
+    Ok(TypeCons::Function {
         type_params: type_params,
-        parameters: params,
-        return_type: ret_type,
-    };
-
-    Ok((fn_scope, fn_typing_context, type_cons))
+        parameters: typed_formal_params,
+        return_type: return_type,
+    })
 }
 
 pub fn generate_builtin_fn_type(
