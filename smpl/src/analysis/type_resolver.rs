@@ -35,6 +35,9 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
     let new_constraint = constraint.apply(universe, scoped_data, typing_context).unwrap();
 
     match (new_synthesis, new_constraint) {
+
+        (_, Any) => Ok(()),
+
         (Record {
             type_id: synth_type_id,
             abstract_field_map: AbstractFieldMap {
@@ -233,6 +236,17 @@ fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData,
     use super::type_cons::AbstractType::*;
 
     match (synth, constraint) {
+
+
+        (Any, Any) => {
+            Ok(())
+        }
+
+        // If the synth is Any but a specific type is expected, reject
+        // EVAL ORDER
+        (Any, _) => {
+            unimplemented!(); 
+        }
 
         // If the constraint is a width constraint, the provided parameter type cannot be a nominal
         // type. Values of nominal types may carry additional metadata that is generally difficult to
