@@ -427,11 +427,8 @@ impl AbstractType {
             },
 
             AbstractType::TypeVar(ref type_param_id) => {
-                Ok(map
-                    .get(type_param_id)
-                    .expect("Type parameter missing from scope")
-                    .clone()
-                )
+                assert!(map.contains_key(type_param_id));
+                Ok(AbstractType::TypeVar(type_param_id.clone()))
             }
 
             AbstractType::Int => Ok(AbstractType::Int),
