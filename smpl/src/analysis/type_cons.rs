@@ -758,8 +758,9 @@ fn fuse_field_width_constraints(universe: &Universe, scope: &ScopedData,
             | AbstractType::String
             | AbstractType::Bool
             | AbstractType::Unit
-            | AbstractType::Any
-            | AbstractType::TypeVar(..) => true,
+            | AbstractType::Any => true,
+        
+        AbstractType::TypeVar(..) => true,        // TODO: Check the type var in the context?
 
         AbstractType::WidthConstraint(..) => false,
     };
