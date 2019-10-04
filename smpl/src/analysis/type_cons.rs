@@ -79,6 +79,8 @@ impl TypeCons {
 #[derive(Debug, Clone)]
 pub enum AbstractType {
 
+    Any,
+
     Record {
         type_id: TypeId,
         abstract_field_map: AbstractFieldMap,
@@ -437,6 +439,7 @@ impl AbstractType {
             AbstractType::String => Ok(AbstractType::String),
             AbstractType::Bool => Ok(AbstractType::Bool),
             AbstractType::Unit => Ok(AbstractType::Unit),
+            AbstractType::Any => Ok(AbstractType::Any),
         }
         
     }
@@ -755,6 +758,7 @@ fn fuse_field_width_constraints(universe: &Universe, scope: &ScopedData,
             | AbstractType::String
             | AbstractType::Bool
             | AbstractType::Unit
+            | AbstractType::Any
             | AbstractType::TypeVar(..) => true,
 
         AbstractType::WidthConstraint(..) => false,
