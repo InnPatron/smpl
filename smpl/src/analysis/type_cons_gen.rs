@@ -309,7 +309,7 @@ fn type_param_map(
                 // TODO: What kind of recursion to support? Probably equirecursive
                 // Add type parameters to typing context to allow recursive constraints
                 typing_context.type_vars
-                    .insert(type_var_id.clone(), AbstractType::TypeVar(type_var_id.clone()));
+                    .insert(type_var_id.clone(), AbstractType::Any);
             }
         }
     }
@@ -371,7 +371,7 @@ fn type_param_map(
         // TODO: Also insert into the typing env
         current_scope.insert_type_var(ident.clone(), type_var_id);
         typing_context.type_vars.insert(type_var_id.clone(), 
-            AbstractType::TypeVar(type_var_id.clone()));
+            AbstractType::Any);
         type_params.add_param(type_param_id.clone(), 
             None, type_var_id.clone());
     }
