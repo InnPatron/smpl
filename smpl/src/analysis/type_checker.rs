@@ -1136,7 +1136,7 @@ fn resolve_field_access(
             .get(&e)
             .expect("Missing TMP");
 
-        match indexing_type {
+        match indexing_type.apply(universe, scope, context)? {
             AbstractType::Int => (),
             _ => {
                 return Err(TypeError::InvalidIndex {
@@ -1147,7 +1147,7 @@ fn resolve_field_access(
             }
         }
 
-        match root_var_type {
+        match current_type.apply(universe, scope, context)? {
             AbstractType::Array {
                 element_type,
                 ..
@@ -1168,7 +1168,7 @@ fn resolve_field_access(
         let next_type: AbstractType;
         let field_type_retriever: 
             Box<dyn Fn(&crate::ast::Ident) -> Result<AbstractType, AnalysisError>> = 
-            match current_type {
+            match current_type.apply(universe, scope, context)? {
 
             AbstractType::WidthConstraint(awc) => {
                 Box::new(move |name| {
