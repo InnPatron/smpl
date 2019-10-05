@@ -136,7 +136,6 @@ impl UniquePassenger<E> for ScopeResolver {
         path.set_root_var(var_id);
 
         resolve_expr_scope(assignment.value_mut(), self.current())?;
-        resolve_expr_scope(assignment.access_mut(), self.current())?;
         Ok(())
     }
 
