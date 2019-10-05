@@ -901,7 +901,7 @@ fn resolve_fn_call(universe: &Universe, scope: &ScopedData, context: &TypingCont
     }
 }
 
-fn resolve_array_init(universe: &Universe, scope: &ScopedData, context: &TypingContext,
+fn resolve_array_init(universe: &Universe, scope: &ScopedData, context: &mut TypingContext,
     init: &ArrayInit, span: Span)
     -> Result<AbstractType, AnalysisError> {
 
@@ -911,32 +911,39 @@ fn resolve_array_init(universe: &Universe, scope: &ScopedData, context: &TypingC
             let element_types = vec.iter().map(|ref tmp_id| {
                 let tmp_type = context.tmp_type_map
                     .get(tmp_id.data())
-                    .expect("Missing TMP");
+                    .expect("Missing TMP")
+                    .clone();
                 (tmp_type, span)
-            });
+            }).collect::<Vec<_>>();
 
             let mut expected_element_type = None;
 
-            for (i, (current_element_type, span)) in element_types.enumerate() {
+            for (i, (current_element_type, span)) in element_types.into_iter().enumerate() {
                 if expected_element_type.is_none() {
-                    expected_element_type = Some(current_element_type);
+                    expected_element_type = Some(
+                        current_element_type
+                            .apply(universe, scope, context)?
+                    );
                     continue;
                 }
 
-                let expected_element_type = expected_element_type.as_ref().unwrap();
+                let expected_element_type = expected_element_type
+                    .as_ref()
+                    .unwrap();
 
-                // TODO: Implement element consistency check
-                /*
-                if !resolve_types(&current_element_type, expected_element_type) {
-                    return Err(TypeError::HeterogenousArray {
+                type_resolver::resolve_types(
+                    universe,
+                    scope,
+                    context,
+                    &current_element_type, 
+                    expected_element_type,
+                    span)
+                    .map_err(|_| TypeError::HeterogenousArray {
                         expected: expected_element_type.clone(),
-                        found: current_element_type,
+                        found: current_element_type.clone(),
                         index: i,
                         span: span,
-                    }
-                    .into());
-                }
-                */
+                    })?;
             }
 
             let array_type = AbstractType::Array {
