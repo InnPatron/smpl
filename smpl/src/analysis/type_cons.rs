@@ -130,16 +130,7 @@ impl AbstractType {
     pub fn apply(&self, universe: &Universe, scope: &ScopedData, typing_context: &TypingContext) 
         -> Result<AbstractType, Vec<ATypeError>> {
 
-        let mut var_map = HashMap::new();
-        for type_var_ids in scope.type_vars() {
-            let var_type = typing_context
-                .get_type_var(type_var_ids)
-                .unwrap();
-
-            var_map.insert(type_var_ids.clone(), var_type.clone());
-        }
-
-        self.apply_internal(universe, &var_map)
+        self.apply_internal(universe, &typing_context.type_vars)
     }
 
     /// Given an environment of type variables to abstract types, recursively substitute
