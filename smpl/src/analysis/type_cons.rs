@@ -423,7 +423,10 @@ impl AbstractType {
                 dbg!(type_param_id, map);
                 assert!(map.contains_key(type_param_id));
 
-                Ok(AbstractType::TypeVar(type_param_id.clone()))
+                Ok(map
+                    .get(type_param_id)
+                    .unwrap()
+                    .clone())
             }
 
             AbstractType::Int => Ok(AbstractType::Int),
