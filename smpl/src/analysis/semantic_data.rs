@@ -183,9 +183,10 @@ impl Universe {
         self.fn_map.remove(&fn_id);
     }
 
-    pub fn insert_fn(&mut self, fn_id: FnId, 
+    pub fn insert_fn(&mut self, fn_id: FnId, name: Ident,
         type_id: TypeId, fn_scope: ScopedData, typing_context: TypingContext, cfg: CFG) {
         let function = SMPLFunction {
+            name: name,
             fn_type: type_id,
             cfg: cfg,
             fn_scope: fn_scope,
@@ -200,8 +201,11 @@ impl Universe {
         }
     }
 
-    pub fn insert_builtin_fn(&mut self, fn_id: FnId, fn_type: TypeId) {
-        let builtin = BuiltinFunction { fn_type: fn_type };
+    pub fn insert_builtin_fn(&mut self, fn_id: FnId, name: Ident, fn_type: TypeId) {
+        let builtin = BuiltinFunction { 
+            name: name,
+            fn_type: fn_type,
+        };
 
         self.builtin_fn_set.insert(fn_id);
 
@@ -370,14 +374,27 @@ impl Function {
             Function::SMPL(ref sf) => sf.fn_type(),
         }
     }
+
+    pub fn name(&self) -> &Ident {
+        match self {
+            Function::Builtin(ref bf) => bf.name(),
+            Function::SMPL(ref func) => func.name(),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
 pub struct BuiltinFunction {
+    name: Ident,
     fn_type: TypeId,
 }
 
 impl BuiltinFunction {
+
+    pub fn name(&self) -> &Ident {
+        &self.name
+    }
+
     pub fn fn_type(&self) -> TypeId {
         self.fn_type
     }
@@ -385,6 +402,7 @@ impl BuiltinFunction {
 
 #[derive(Clone, Debug)]
 pub struct SMPLFunction {
+    name: Ident,
     fn_type: TypeId,
     cfg: CFG,
     fn_scope: ScopedData,
@@ -392,6 +410,11 @@ pub struct SMPLFunction {
 }
 
 impl SMPLFunction {
+
+    pub fn name(&self) -> &Ident {
+        &self.name
+    }
+
     pub fn fn_type(&self) -> TypeId {
         self.fn_type
     }

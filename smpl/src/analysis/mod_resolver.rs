@@ -102,6 +102,7 @@ pub fn check_modules(
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;
             let fn_decl = reserved_fn.1.data();
+            let fn_name = fn_decl.name.data();
             // TODO: Store new function scope storing the type parameters
             let fn_type_cons = type_cons_gen::generate_fn_type_cons(
                 program.universe(),
@@ -131,10 +132,10 @@ pub fn check_modules(
 
             program
                 .universe_mut()
-                .insert_fn(fn_id, fn_type_id, fn_scope, fn_typing_context, cfg);
+                .insert_fn(fn_id, fn_name.clone(), fn_type_id, fn_scope, fn_typing_context, cfg);
             program.metadata_mut().insert_module_fn(
                 mod_id.clone(),
-                fn_decl.name.data().clone(),
+                fn_name.clone(),
                 fn_id,
             );
             program
@@ -145,6 +146,8 @@ pub fn check_modules(
         for (_, reserved_builtin) in raw_mod.reserved_builtins.iter() {
             let fn_id = reserved_builtin.0;
             let fn_decl = reserved_builtin.1.data();
+            let fn_name = fn_decl.name.data();
+
             let fn_type = type_cons_gen::generate_builtin_fn_type(
                 program,
                 raw_program.scopes.get(mod_id).unwrap(),
@@ -157,12 +160,12 @@ pub fn check_modules(
 
             program.features_mut().add_feature(BUILTIN_FN);
 
-            program.universe_mut().insert_builtin_fn(fn_id, fn_type_id);
+            program.universe_mut().insert_builtin_fn(fn_id, fn_name.clone(), fn_type_id);
 
             program.metadata_mut().insert_builtin(fn_id);
             program.metadata_mut().insert_module_fn(
                 mod_id.clone(),
-                fn_decl.name.data().clone(),
+                fn_name.clone(),
                 fn_id,
             );
             program
