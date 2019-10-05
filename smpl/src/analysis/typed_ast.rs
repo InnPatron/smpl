@@ -67,18 +67,15 @@ where
 pub struct Assignment {
     field_access: FieldAccess,
     access_span: Span,
-    access: self::Expr,
     value: self::Expr,
 }
 
 impl Assignment {
     pub fn new(universe: &Universe, assignment: ast::Assignment) -> Assignment {
         let (name, name_span) = assignment.name.to_data();
-        let mut access = Expr::new();
-        let field_access = FieldAccess::new(universe, &mut access, name);
+        let field_access = FieldAccess::new(universe, name);
         Assignment {
             field_access: field_access,
-            access: access,
             value: expr_flow::flatten(universe, assignment.value),
             access_span: name_span,
         }
@@ -102,14 +99,6 @@ impl Assignment {
 
     pub fn value_mut(&mut self) -> &mut self::Expr {
         &mut self.value
-    }
-
-    pub fn access(&self) -> &self::Expr {
-        &self.access
-    }
-
-    pub fn access_mut(&mut self) -> &mut self::Expr {
-        &mut self.access
     }
 }
 
@@ -489,10 +478,10 @@ pub struct FieldAccess {
 }
 
 impl FieldAccess {
-    pub fn new(universe: &Universe, expr: &mut Expr, path: ast::Path) -> FieldAccess {
+    pub fn new(universe: &Universe, path: ast::Path) -> FieldAccess {
         FieldAccess {
             raw_path: path.clone(),
-            path: self::Path::new(universe, expr, path),
+            path: self::Path::new(universe, path),
             field_type: None,
         }
     }
@@ -591,20 +580,20 @@ impl FnCall {
 #[derive(Debug, Clone)]
 pub struct Path {
     root_name: ast::AstNode<ast::Ident>,
-    root_indexing: Option<TmpId>,
+    root_indexing: Option<Expr>,
     root_var: Option<Typed<VarId>>,
     path: Vec<self::PathSegment>,
 }
 
 impl self::Path {
-    fn new(universe: &Universe, expr: &mut self::Expr, path: ast::Path) -> self::Path {
+    fn new(universe: &Universe, path: ast::Path) -> self::Path {
         let mut path_iter = path.0.into_iter();
         let root = path_iter.next().unwrap();
 
         let (name, indexing) = match root {
             ast::PathSegment::Ident(i) => (i, None),
             ast::PathSegment::Indexing(i, e) => {
-                (i, Some(expr_flow::flatten_expr(universe, expr, *e).0))
+                (i, Some(expr_flow::flatten(universe, *e)))
             }
         };
 
@@ -613,7 +602,7 @@ impl self::Path {
                 ast::PathSegment::Ident(i) => self::PathSegment::Ident(Field::new(i)),
                 ast::PathSegment::Indexing(i, e) => self::PathSegment::Indexing(
                     Field::new(i),
-                    expr_flow::flatten_expr(universe, expr, *e).0,
+                    expr_flow::flatten(universe, *e),
                 ),
             })
             .collect();
@@ -630,8 +619,8 @@ impl self::Path {
         &self.root_name
     }
 
-    pub fn root_indexing_expr(&self) -> Option<TmpId> {
-        self.root_indexing.clone()
+    pub fn root_indexing_expr(&self) -> Option<&Expr> {
+        self.root_indexing.as_ref()
     }
 
     pub fn root_var_id(&self) -> VarId {
@@ -671,7 +660,7 @@ impl self::Path {
 #[derive(Debug, Clone)]
 pub enum PathSegment {
     Ident(Field),
-    Indexing(Field, TmpId),
+    Indexing(Field, Expr),
 }
 
 #[derive(Debug, Clone)]
