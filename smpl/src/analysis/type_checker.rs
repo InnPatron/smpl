@@ -213,17 +213,13 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         let assignment = &assign.assignment;
 
         let value_type = expr_type!(self, assignment.value())?;
-        // Resolve the access expression
-        // access() is just a storage for temporaries and has no type
-        let _access_type = expr_type!(self, assignment.access())?;
 
         let assignee_type = resolve_field_access(
             self.universe,
             self.scopes
                 .last()
                 .expect("Should always have a scope"),
-            &self.typing_context,
-            assignment.access(),
+            &mut self.typing_context,
             assignment.assignee(),
             assignment.access_span()
         )?;
@@ -430,7 +426,6 @@ fn resolve_tmp(universe: &Universe, scope: &ScopedData,
             resolve_field_access(universe, 
                 scope, 
                 context, 
-                expr,
                 field_access, 
                 tmp.span())?
         }
@@ -1120,8 +1115,7 @@ fn resolve_anonymous_fn(universe: &Universe, scope: &ScopedData, context: &Typin
 fn resolve_field_access(
     universe: &Universe,
     scope: &ScopedData,
-    context: &TypingContext,
-    expr: &Expr,
+    context: &mut TypingContext,
     field_access: &FieldAccess,
     span: Span,
 ) -> Result<AbstractType, AnalysisError> {
@@ -1132,21 +1126,20 @@ fn resolve_field_access(
     let root_var_id = path.root_var_id();
     let root_var_type = context.var_type_map
         .get(&root_var_id)
-        .expect("Missing VAR");
+        .expect("Missing VAR")
+        .clone();
 
     let mut current_type: AbstractType = root_var_type.clone();
 
-    if let Some(e) = path.root_indexing_expr() {
-        let indexing_type = context.tmp_type_map
-            .get(&e)
-            .expect("Missing TMP");
+    if let Some(expr) = path.root_indexing_expr() {
+        let indexing_type = resolve_expr(universe, scope, context,expr)?;
 
         match indexing_type.apply(universe, scope, context)? {
             AbstractType::Int => (),
             _ => {
                 return Err(TypeError::InvalidIndex {
                     found: indexing_type.clone(),
-                    span: expr.get_tmp(e).span(),
+                    span: expr.get_tmp(expr.last()).span(),
                 }
                 .into());
             }
@@ -1162,7 +1155,7 @@ fn resolve_field_access(
             _ => {
                 return Err(TypeError::NotAnArray {
                     found: root_var_type.clone(),
-                    span: expr.get_tmp(e).span(),
+                    span: expr.get_tmp(expr.last()).span(),
                 }
                 .into());
             }
@@ -1243,9 +1236,7 @@ fn resolve_field_access(
 
                 let field_type = field_type_retriever(field.name())?;
 
-                let indexing_type = context.tmp_type_map
-                    .get(indexing)
-                    .expect("Missing TMP");
+                let indexing_type = resolve_expr(universe, scope, context, indexing)?;
 
                 // TODO: Application?
                 match indexing_type {
@@ -1254,7 +1245,7 @@ fn resolve_field_access(
                     _ => {
                         return Err(TypeError::InvalidIndex {
                             found: indexing_type.clone(),
-                            span: expr.get_tmp(*indexing).span(),
+                            span: indexing.get_tmp(indexing.last()).span(),
                         }
                         .into());
                     }
