@@ -486,8 +486,8 @@ fn test() {
                 match e {
                     AnalysisError::TypeError(e) => {
                         match e {
-                            TypeError::LhsRhsInEq(..) => (),
-                            e @ _ => panic!("Expected TypeError::LhsRhsInEq. Found {:?}", e),
+                            TypeError::UnexpectedType {..} => (),
+                            e @ _ => panic!("Expected TypeError::UnexpectedType. Found {:?}", e),
                         }
                     }
 
