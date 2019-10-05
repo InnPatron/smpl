@@ -784,7 +784,6 @@ fn recurse_b(i: int) -> int {
     }
 
     #[test]
-    #[should_panic]
     fn anonymous_fn_invalid() {
         let mod1 =
 "mod mod1;
@@ -796,7 +795,15 @@ fn test() {
 }";
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        check_program(vec![mod1]).unwrap();
+        let result = check_program(vec![mod1]);
+        if let Err(AnalysisError::TypeError(t)) = result {
+            ();
+        } else {
+            match result {
+                Ok(_) => panic!("Expected a type error. Found Ok"),
+                Err(e) => panic!("Expected a type error. Found {:?}", e),
+            }
+        }
     }
     
     #[test]
