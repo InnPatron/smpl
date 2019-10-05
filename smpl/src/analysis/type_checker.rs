@@ -213,6 +213,10 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         let assignment = &assign.assignment;
 
         let value_type = expr_type!(self, assignment.value())?;
+        // Resolve the access expression
+        // access() is just a storage for temporaries and has no type
+        let _access_type = expr_type!(self, assignment.access())?;
+
         let assignee_type = resolve_field_access(
             self.universe,
             self.scopes
@@ -1112,6 +1116,7 @@ fn resolve_anonymous_fn(universe: &Universe, scope: &ScopedData, context: &Typin
     Ok(anon_fn_type)
 }
 
+/// Assumes that all previous temporaries in Expr are already typed
 fn resolve_field_access(
     universe: &Universe,
     scope: &ScopedData,
