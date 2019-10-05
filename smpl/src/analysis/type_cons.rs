@@ -265,11 +265,13 @@ impl AbstractType {
 
                         type_params.map_args(&mut new_map, ok_args.into_iter())
                             .map_err(|e| vec![e])?;
+                        dbg!(&new_map, type_params);
 
                         let mut errors = Vec::new();
                         let mut new_params = Vec::new();
                         for param in parameters.iter() {
                             let param_app_result = param.apply_internal(universe, &new_map);
+                            dbg!(param, &param_app_result);
 
                             match param_app_result {
                                 Ok(p) => new_params.push(p),
@@ -427,7 +429,9 @@ impl AbstractType {
             },
 
             AbstractType::TypeVar(ref type_param_id) => {
+                dbg!(type_param_id, map);
                 assert!(map.contains_key(type_param_id));
+
                 Ok(AbstractType::TypeVar(type_param_id.clone()))
             }
 
@@ -485,11 +489,8 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                         .into());
                     }
 
-                    return Ok(typing_context
-                        .type_vars
-                        .get(&tv_id)
-                        .expect("Missing type variable")
-                        .clone());
+                    assert!(typing_context.type_vars.contains_key(&tv_id));
+                    return Ok(AbstractType::TypeVar(tv_id.clone()));
                 }
             }
 
