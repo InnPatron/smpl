@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::feature::*;
 use crate::ast::Function;
+use crate::ast;
 
 use super::error::{AnalysisError, TypeError};
 use super::metadata::*;
@@ -10,15 +11,50 @@ use super::resolve_scope::ScopedData;
 use super::type_checker::TypingContext;
 use super::type_cons::*;
 
-pub fn generate_fn_analysis_data(universe: &Universe,
-    outer_scope: &ScopedData,
-    outer_context: &TypingContext,
-    fn_type_cons: &TypeCons,
-    fn_def: &Function)
-    -> Result<(ScopedData, TypingContext), AnalysisError> {
+pub struct ContextData<'a> {
+    type_params: Option<&'a ast::TypeParams>,
+    params: Option<&'a [ast::AstNode<ast::FnParameter>]>,
+    clear_variables: bool,
+}
+
+impl<'a> From<&'a ast::Function> for ContextData<'a> {
+
+    fn from(ast_fn: &ast::Function) -> ContextData {
+        ContextData {
+            type_params: ast_fn.type_params.as_ref(),
+            params: ast_fn.params.as_ref().map(|v| v.as_slice()),
+            clear_variables: true,
+        }
+    }
+}
+
+impl<'a> From<&'a ast::AnonymousFn> for ContextData<'a> {
+
+    fn from(ast_fn: &ast::AnonymousFn) -> ContextData {
+        ContextData {
+            type_params: None,
+            params: ast_fn.params.as_ref().map(|v| v.as_slice()),
+            clear_variables: true,
+        }
+    }
+}
+
+pub fn generate_fn_analysis_data<'a, 'b, 'c, 'd, 'e, T>(universe: &'a Universe,
+    outer_scope: &'b ScopedData,
+    outer_context: &'c TypingContext,
+    fn_type_cons: &'d TypeCons,
+    fn_def: &'e T)
+    -> Result<(ScopedData, TypingContext), AnalysisError> 
+    where &'e T: Into<ContextData<'e>> {
+
+    let fn_def: ContextData = fn_def.into();
 
     let mut fn_scope = outer_scope.clone();
     let mut fn_context = outer_context.clone();
+
+    if fn_def.clear_variables {
+        fn_scope.clear_scoped_vars();
+    }
 
     match fn_type_cons {
 
