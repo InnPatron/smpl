@@ -149,9 +149,20 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
             }
 
             // Function parameters must be contravariant
-            for (sp, cp) in synth_params.iter().zip(constraint_params) {
+            for (index, (sp, cp)) in synth_params
+                .iter().zip(constraint_params).enumerate() {
                 resolve_param_static(universe, scoped_data, typing_context,
-                    sp, cp, span)?;
+                    sp, cp, span)
+                    .map_err(|_| {
+                        TypeError::FunctionTypeMismatch {
+                            fn_found: synthesis.clone(),
+                            fn_expected: constraint.clone(),
+                            param_found: sp.clone(),
+                            param_expected: cp.clone(),
+                            index: index,
+                            span: span
+                        }
+                    })?;
             }
 
             resolve_types_static(universe, scoped_data, typing_context,

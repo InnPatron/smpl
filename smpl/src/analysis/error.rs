@@ -60,6 +60,15 @@ pub enum TypeError {
         return_span: Span,
     },
 
+    FunctionTypeMismatch {
+        fn_found: AbstractType,
+        fn_expected: AbstractType,
+        param_found: AbstractType,
+        param_expected: AbstractType,
+        index: usize,
+        span: Span,
+    },
+
     UnexpectedType {
         found: AbstractType,
         expected: AbstractType,
