@@ -10,10 +10,7 @@ use super::metadata::*;
 use super::semantic_data::Module;
 use super::semantic_data::*;
 use super::resolve_scope::ScopedData;
-use super::resolve_scope;
 use super::type_checker::TypingContext;
-use super::type_checker;
-use super::return_trace;
 use super::type_cons_gen;
 use super::analysis_helpers;
 
@@ -179,9 +176,7 @@ pub fn check_modules(
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;
 
-            resolve_scope::resolve(program.universe_mut(), fn_id)?;
-            type_checker::type_check(program.universe(), fn_id)?;
-            return_trace::return_trace(program.universe(), fn_id)?;
+            analysis_helpers::analyze_fn(program.universe_mut(), fn_id)?;
         }
     }
 

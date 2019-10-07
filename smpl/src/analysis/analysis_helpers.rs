@@ -11,6 +11,18 @@ use super::resolve_scope::ScopedData;
 use super::type_checker::TypingContext;
 use super::type_cons::*;
 
+pub fn analyze_fn(universe: &mut Universe, fn_id: FnId) -> Result<(), AnalysisError> {
+    use super::resolve_scope;
+    use super::type_checker;
+    use super::return_trace;
+
+    resolve_scope::resolve(universe, fn_id)?;
+    type_checker::type_check(universe, fn_id)?;
+    return_trace::return_trace(universe, fn_id)?;
+
+    Ok(())
+}
+
 pub struct ContextData<'a> {
     type_params: Option<&'a ast::TypeParams>,
     params: Option<&'a [ast::AstNode<ast::FnParameter>]>,
