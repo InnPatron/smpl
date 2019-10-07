@@ -245,7 +245,11 @@ fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData,
         // If the synth is Any but a specific type is expected, reject
         // EVAL ORDER
         (Any, _) => {
-            unimplemented!(); 
+            return Err(TypeError::UnexpectedType {
+                found: constraint.clone(),
+                expected: synth.clone(),
+                span: span,
+            }.into());
         }
 
         // If the constraint is a width constraint, the provided parameter type cannot be a nominal
@@ -256,8 +260,11 @@ fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData,
         // The constraint being a width constriant means that in general, an anonymous struct will
         // be provided to the concrete function.
         (Record { .. }, WidthConstraint { .. }) => {
-            // False
-            unimplemented!()
+            return Err(TypeError::UnexpectedType {
+                found: constraint.clone(),
+                expected: synth.clone(),
+                span: span,
+            }.into());
         }
 
         // NOTE(alex): Synth width must be narrower than the constraint width
@@ -273,7 +280,12 @@ fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData,
 
                     None => {
                         // Synth width constraint is not narrower than constraint width
-                        unimplemented!()
+
+                        return Err(TypeError::UnexpectedType {
+                            found: constraint.clone(),
+                            expected: synth.clone(),
+                            span: span,
+                        }.into());
                     }
                 }
             }
@@ -297,7 +309,11 @@ fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData,
 
                     None => {
                         // Synth width constraint is not narrower than nominal constraint
-                        unimplemented!()
+                        return Err(TypeError::UnexpectedType {
+                            found: synth.clone(),
+                            expected: constraint.clone(),
+                            span: span,
+                        }.into());
                     }
                 }
             }
