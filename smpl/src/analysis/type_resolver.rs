@@ -190,7 +190,7 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
         (Float, Float) => Ok(()),
         (Bool, Bool) => Ok(()),
         (String, String) => Ok(()),
-        (Unit, Unit) => Ok(()),
+        (Unit, Unit) => Ok(()), 
 
         // Unconstrained type parameters
         // Check if type parameters are equal
@@ -198,13 +198,52 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
             if synth_id == constraint_id {
                 Ok(())
             } else {
-                // TODO: Check if types are compatible
-                return Err(TypeError::UnexpectedType {
-                    found: synthesis.clone(),
-                    expected: constraint.clone(),
-                    span: span,
-                }.into());
+
+                let synth_type = typing_context.get_type_var(synth_id)
+                    .expect("Missing synth var");
+                let constraint_type = typing_context.get_type_var(constraint_id)
+                    .expect("Missing synth var");
+
+                resolve_types_static(universe, scoped_data, typing_context,
+                    synth_type, constraint_type, span)
+                    .map_err(|_| {
+                        TypeError::UnexpectedType {
+                            found: synthesis.clone(),
+                            expected: constraint.clone(),
+                            span: span,
+                        }.into()
+                    })
             }
+        }
+
+        (TypeVar(synth_id), _) => {
+            let synth_var_type = typing_context.get_type_var(synth_id)
+                    .expect("Missing synth var");
+
+            resolve_types_static(universe, scoped_data, typing_context,
+                    synth_var_type, constraint, span)
+                    .map_err(|_| {
+                        TypeError::UnexpectedType {
+                            found: synthesis.clone(),
+                            expected: constraint.clone(),
+                            span: span,
+                        }.into()
+                    })
+        }
+
+        (_, TypeVar(constraint_id)) => {
+            let constraint_var_type = typing_context.get_type_var(constraint_id)
+                    .expect("Missing synth var");
+
+            resolve_types_static(universe, scoped_data, typing_context,
+                    synthesis, constraint_var_type, span)
+                    .map_err(|_| {
+                        TypeError::UnexpectedType {
+                            found: synthesis.clone(),
+                            expected: constraint.clone(),
+                            span: span,
+                        }.into()
+                    })
         }
 
         _ => Err(TypeError::UnexpectedType {
@@ -319,6 +358,58 @@ fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData,
             }
 
             Ok(())
+        }
+
+        (TypeVar(synth_id), TypeVar(constraint_id)) => {
+            if synth_id == constraint_id {
+                Ok(())
+            } else {
+
+                let synth_type = typing_context.get_type_var(synth_id.clone())
+                    .expect("Missing synth var");
+                let constraint_type = typing_context.get_type_var(constraint_id.clone())
+                    .expect("Missing synth var");
+
+                resolve_param_static(universe, scoped_data, typing_context,
+                    synth_type, constraint_type, span)
+                    .map_err(|_| {
+                        TypeError::UnexpectedType {
+                            found: synth.clone(),
+                            expected: constraint.clone(),
+                            span: span,
+                        }.into()
+                    })
+            }
+        }
+
+        (TypeVar(synth_id), _) => {
+            let synth_var_type = typing_context.get_type_var(synth_id.clone())
+                    .expect("Missing synth var");
+
+            resolve_param_static(universe, scoped_data, typing_context,
+                    synth_var_type, constraint, span)
+                    .map_err(|_| {
+                        TypeError::UnexpectedType {
+                            found: synth.clone(),
+                            expected: constraint.clone(),
+                            span: span,
+                        }.into()
+                    })
+        }
+
+        (_, TypeVar(constraint_id)) => {
+            let constraint_var_type = typing_context.get_type_var(constraint_id.clone())
+                    .expect("Missing synth var");
+
+            resolve_param_static(universe, scoped_data, typing_context,
+                    synth, constraint_var_type, span)
+                    .map_err(|_| {
+                        TypeError::UnexpectedType {
+                            found: synth.clone(),
+                            expected: constraint.clone(),
+                            span: span,
+                        }.into()
+                    })
         }
 
         _ => resolve_types_static(
