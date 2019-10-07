@@ -100,7 +100,7 @@ pub fn generate_fn_analysis_data<'a, 'b, 'c, 'd, 'e, T>(universe: &'a Universe,
                         None => {
                             fn_context.type_vars
                                 .insert(existential_type_var, 
-                                    AbstractType::TypeVar(existential_type_var));
+                                    AbstractType::Any);
                         }
                     }
                 }
