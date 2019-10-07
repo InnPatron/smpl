@@ -22,11 +22,8 @@ pub fn generate_struct_type_cons(
 ) -> Result<(TypeCons, Vec<FieldId>), AnalysisError> {
     let (universe, _metadata, _features) = program.analysis_context();
 
-    let mut scope = scope.clone();
-    let mut typing_context = typing_context.clone();
-
     // Check no parameter naming conflicts
-    let (type_params, _type_param_scope, _type_param_typing_context) = 
+    let (type_params, type_param_scope, type_param_typing_context) = 
         type_param_map(universe, 
                    struct_def.type_params.as_ref(), 
                    struct_def.where_clause.as_ref(),
@@ -46,7 +43,7 @@ pub fn generate_struct_type_cons(
 
             // TODO: Insert type parameters into scope
             let field_type_app = type_from_ann(
-                universe, &scope, &typing_context, field_type_annotation)?;
+                universe, &type_param_scope, &type_param_typing_context, field_type_annotation)?;
 
             // Map field to type constructor
             fields.insert(f_id, field_type_app);
