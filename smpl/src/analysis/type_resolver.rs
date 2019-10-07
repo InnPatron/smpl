@@ -31,10 +31,7 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
 
     use super::type_cons::AbstractType::*;
 
-    let new_synthesis = synthesis.apply(universe, scoped_data, typing_context).unwrap();
-    let new_constraint = constraint.apply(universe, scoped_data, typing_context).unwrap();
-
-    match (new_synthesis, new_constraint) {
+    match (synthesis, constraint) {
 
         (_, Any) => Ok(()),
 
@@ -182,8 +179,20 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
                 synth_element, constraint_element, span)
         }
 
-        (App { .. }, _) | (_, App { .. }) => {
-            unreachable!("No AbstractType::App after apply");
+        (synth_app @ App { .. }, constraint) => {
+            let new_synthesis = synth_app
+                .apply(universe, scoped_data, typing_context).unwrap();
+
+            resolve_types_static(universe, scoped_data, typing_context,
+                &new_synthesis, constraint, span)
+        }
+
+        (synthesis, constraint_app @ App { .. }) => {
+            let new_constraint = constraint_app
+                .apply(universe, scoped_data, typing_context).unwrap();
+
+            resolve_types_static(universe, scoped_data, typing_context,
+                synthesis, &new_constraint, span)
         }
 
         (Int, Int) => Ok(()),
@@ -199,9 +208,9 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
                 Ok(())
             } else {
 
-                let synth_type = typing_context.get_type_var(synth_id)
+                let synth_type = typing_context.get_type_var(synth_id.clone())
                     .expect("Missing synth var");
-                let constraint_type = typing_context.get_type_var(constraint_id)
+                let constraint_type = typing_context.get_type_var(constraint_id.clone())
                     .expect("Missing synth var");
 
                 resolve_types_static(universe, scoped_data, typing_context,
@@ -216,8 +225,8 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
             }
         }
 
-        (TypeVar(synth_id), _) => {
-            let synth_var_type = typing_context.get_type_var(synth_id)
+        (TypeVar(synth_id), constraint) => {
+            let synth_var_type = typing_context.get_type_var(synth_id.clone())
                     .expect("Missing synth var");
 
             resolve_types_static(universe, scoped_data, typing_context,
@@ -231,8 +240,8 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
                     })
         }
 
-        (_, TypeVar(constraint_id)) => {
-            let constraint_var_type = typing_context.get_type_var(constraint_id)
+        (synthesis, TypeVar(constraint_id)) => {
+            let constraint_var_type = typing_context.get_type_var(constraint_id.clone())
                     .expect("Missing synth var");
 
             resolve_types_static(universe, scoped_data, typing_context,
@@ -410,6 +419,22 @@ fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData,
                             span: span,
                         }.into()
                     })
+        }
+
+        (synth_app @ App { .. }, constraint) => {
+            let new_synthesis = synth_app
+                .apply(universe, scoped_data, typing_context).unwrap();
+
+            resolve_param_static(universe, scoped_data, typing_context,
+                &new_synthesis, constraint, span)
+        }
+
+        (synthesis, constraint_app @ App { .. }) => {
+            let new_constraint = constraint_app
+                .apply(universe, scoped_data, typing_context).unwrap();
+
+            resolve_param_static(universe, scoped_data, typing_context,
+                synthesis, &new_constraint, span)
         }
 
         _ => resolve_types_static(
