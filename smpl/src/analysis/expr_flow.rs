@@ -6,7 +6,7 @@ use crate::span::Span;
 
 use crate::ast::{ArrayInit as AstArrayInit, AstNode, Expr as AstExpr, TypedPath};
 
-pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
+pub fn flatten(universe: &mut Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
 
     let (_, span) = flatten_expr(universe, &mut expr, e);
@@ -15,7 +15,7 @@ pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
     expr
 }
 
-pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId, Span) {
+pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (TmpId, Span) {
     match e {
         AstExpr::Bin(bin) => {
             let (bin, span) = bin.to_data();
@@ -177,9 +177,12 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
 
         AstExpr::AnonymousFn(a_fn) => {
             let (a_fn, span) = a_fn.to_data();
+            let fn_id = universe.new_fn_id();
+            universe.reserve_anonymous_fn(fn_id, a_fn);
             (
+
                 scope.map_tmp(universe, 
-                    Value::AnonymousFn(AnonymousFn::new(universe, a_fn)), span),
+                    Value::AnonymousFn(AnonymousFn::new(fn_id)), span),
                 span,
             )
         }
@@ -240,9 +243,9 @@ mod tests {
         let mut input = buffer_input(input);
         let expr = piped_expr(&mut input, &[]).unwrap().to_data().0;
 
-        let universe = Universe::std();
+        let mut universe = Universe::std();
 
-        let expr = flatten(&universe, expr);
+        let expr = flatten(&mut universe, expr);
 
         let mut order = expr.execution_order();
 

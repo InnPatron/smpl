@@ -6,7 +6,7 @@ use std::slice::Iter;
 
 use uuid::Uuid;
 
-use crate::ast::ModulePath as AstModulePath;
+use crate::ast::{ AnonymousFn as AstAnonymousFn, ModulePath as AstModulePath };
 use crate::ast::*;
 use crate::feature::PresentFeatures;
 
@@ -188,7 +188,7 @@ impl Universe {
         let function = SMPLFunction {
             name: name,
             fn_type: type_id,
-            cfg: cfg,
+            cfg: Rc::new(RefCell::new(cfg)),
             fn_scope: fn_scope,
             typing_context: typing_context,
         };
@@ -212,6 +212,17 @@ impl Universe {
         if self.fn_map.insert(fn_id, Function::Builtin(builtin)).is_some() {
             panic!(
                 "Attempting to override builtin function with FnId {} in the Universe",
+                fn_id.0
+            );
+        }
+    }
+
+    pub fn reserve_anonymous_fn(&mut self, fn_id: FnId, ast_fn: AstAnonymousFn) {
+        let anon_fn = AnonymousFunction::Reserved(ast_fn);
+
+        if self.fn_map.insert(fn_id, Function::Anonymous(anon_fn)).is_some() {
+            panic!(
+                "Attempting to override function with FnId {} in the Universe",
                 fn_id.0
             );
         }
@@ -364,24 +375,54 @@ pub enum BindingInfo {
 #[derive(Clone, Debug)]
 pub enum Function {
     Builtin(BuiltinFunction),
-    SMPL(SMPLFunction)
+    SMPL(SMPLFunction),
+    Anonymous(AnonymousFunction),
 }
 
 impl Function {
-    pub fn fn_type(&self) -> TypeId {
+    pub fn fn_type(&self) -> Option<TypeId> {
         match self {
-            Function::Builtin(ref bf) => bf.fn_type(),
-            Function::SMPL(ref sf) => sf.fn_type(),
+            Function::Builtin(ref bf) => Some(bf.fn_type()),
+            Function::SMPL(ref sf) => Some(sf.fn_type()),
+            Function::Anonymous(ref af) => af.fn_type(),
         }
     }
 
-    pub fn name(&self) -> &Ident {
+    pub fn name(&self) -> Option<&Ident> {
         match self {
-            Function::Builtin(ref bf) => bf.name(),
-            Function::SMPL(ref func) => func.name(),
+            Function::Builtin(ref bf) => Some(bf.name()),
+            Function::SMPL(ref func) => Some(func.name()),
+            Function::Anonymous(ref anon) => anon.name(),
         }
     }
 }
+
+#[derive(Clone, Debug)]
+pub enum AnonymousFunction {
+    Reserved(AstAnonymousFn),
+    Resolved {
+        fn_type: TypeId,
+        cfg: Rc<RefCell<CFG>>,
+        fn_scope: ScopedData,
+        typing_context: TypingContext,
+    }
+}
+
+impl AnonymousFunction {
+
+    pub fn name(&self) -> Option<&Ident> {
+        None
+    }
+
+    pub fn fn_type(&self) -> Option<TypeId> {
+
+        match self {
+            AnonymousFunction::Reserved(_) => None,
+            AnonymousFunction::Resolved { fn_type, .. } => Some(fn_type.clone()),
+        }
+    }
+}
+
 
 #[derive(Clone, Debug)]
 pub struct BuiltinFunction {
@@ -404,7 +445,7 @@ impl BuiltinFunction {
 pub struct SMPLFunction {
     name: Ident,
     fn_type: TypeId,
-    cfg: CFG,
+    cfg: Rc<RefCell<CFG>>,
     fn_scope: ScopedData,
     typing_context: TypingContext,
 }
@@ -419,12 +460,8 @@ impl SMPLFunction {
         self.fn_type
     }
 
-    pub fn cfg(&self) -> &CFG {
-        &self.cfg
-    }
-
-    pub fn cfg_mut(&mut self) -> &mut CFG {
-        &mut self.cfg
+    pub fn cfg(&self) -> Rc<RefCell<CFG>> {
+        self.cfg.clone()
     }
 
     pub(super) fn fn_scope(&self) -> &ScopedData {

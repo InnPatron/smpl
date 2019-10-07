@@ -216,62 +216,54 @@ pub fn generate_builtin_fn_type(
 
 pub fn generate_anonymous_fn_type(
     universe: &Universe,
-    scope: &ScopedData,
-    typing_context: &TypingContext,
+    outer_scope: &ScopedData,
+    outer_context: &TypingContext,
     fn_id: FnId,
     fn_def: &AnonymousFn,
-) -> Result<(ScopedData, TypeCons), AnalysisError> {
+) -> Result<TypeCons, AnalysisError> {
 
-    // Check no parameter naming conflicts
-    // TODO: Allow type parameters on anonymous functions?
-    let scope = scope.clone();
+    let (type_params, type_param_scope, type_param_typing_context) = 
+        type_param_map(universe, 
+            None,
+            None,
+            &outer_scope,
+            &outer_context)?;
 
-    let ret_type = match fn_def.return_type {
-        Some(ref anno) => {
-            let anno = anno.data();
-            let type_app = type_from_ann(universe, &scope, typing_context, anno)?;
-            // TODO: Function signature scanner?
-            type_app
+    let return_type = match fn_def.return_type {
+        Some(ref ann) => {
+            let ann = ann.data();
+
+            type_from_ann(universe, &type_param_scope, &type_param_typing_context, ann)?
         }
+
         None => AbstractType::Unit,
     };
 
-    let params = match fn_def.params {
+    let typed_formal_params = match fn_def.params {
         Some(ref params) => {
-            let mut typed_params = Vec::new();
-            let mut param_metadata = Vec::new();
+            let mut typed_formal_params = Vec::new();
+
             for param in params.iter() {
                 let param = param.data();
-                let param_anno = param.param_type.data();
+                let param_ann = param.param_type.data();
 
-                let param_type = type_from_ann(universe, &scope, typing_context, param_anno)?;
+                let param_type =
+                    type_from_ann(universe, &type_param_scope, &type_param_typing_context, param_ann)?;
 
-                typed_params.push(param_type);
-
-                param_metadata.push(FunctionParameter::new(
-                    param.name.data().clone(),
-                    universe.new_var_id(),
-                ));
-
-                // TODO: Function signature scanner?
+                typed_formal_params.push(param_type);
             }
-            typed_params
-        }
-        None => {
-            Vec::with_capacity(0)
-        }
+
+            typed_formal_params
+        },
+
+        None => Vec::new(),
     };
 
-    // TODO: Type parameters on anonymous functions?
-    let type_params = TypeParams::empty();
-
-    let type_cons = TypeCons::Function {
+    Ok(TypeCons::Function {
         type_params: type_params,
-        parameters: params,
-        return_type: ret_type,
-    };
-
-    Ok((scope, type_cons))
+        parameters: typed_formal_params,
+        return_type: return_type,
+    })
 }
 
 fn type_param_map(

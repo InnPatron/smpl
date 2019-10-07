@@ -71,7 +71,7 @@ pub struct Assignment {
 }
 
 impl Assignment {
-    pub fn new(universe: &Universe, assignment: ast::Assignment) -> Assignment {
+    pub fn new(universe: &mut Universe, assignment: ast::Assignment) -> Assignment {
         let (name, name_span) = assignment.name.to_data();
         let field_access = FieldAccess::new(universe, name);
         Assignment {
@@ -113,7 +113,7 @@ pub struct LocalVarDecl {
 }
 
 impl LocalVarDecl {
-    pub fn new(universe: &Universe, decl: ast::LocalVarDecl, stmt_span: Span) -> LocalVarDecl {
+    pub fn new(universe: &mut Universe, decl: ast::LocalVarDecl, stmt_span: Span) -> LocalVarDecl {
         LocalVarDecl {
             type_ann: decl.var_type,
             var_name: decl.var_name,
@@ -478,7 +478,7 @@ pub struct FieldAccess {
 }
 
 impl FieldAccess {
-    pub fn new(universe: &Universe, path: ast::Path) -> FieldAccess {
+    pub fn new(universe: &mut Universe, path: ast::Path) -> FieldAccess {
         FieldAccess {
             raw_path: path.clone(),
             path: self::Path::new(universe, path),
@@ -586,7 +586,7 @@ pub struct Path {
 }
 
 impl self::Path {
-    fn new(universe: &Universe, path: ast::Path) -> self::Path {
+    fn new(universe: &mut Universe, path: ast::Path) -> self::Path {
         let mut path_iter = path.0.into_iter();
         let root = path_iter.next().unwrap();
 
@@ -713,20 +713,14 @@ impl Field {
 
 #[derive(Clone, Debug)]
 pub struct AnonymousFn {
-    a_fn: ast::AnonymousFn,
     fn_id: FnId,
 }
 
 impl AnonymousFn {
-    pub fn new(universe: &Universe, a_fn: ast::AnonymousFn) -> AnonymousFn {
+    pub fn new(fn_id: FnId) -> AnonymousFn {
         AnonymousFn {
-            a_fn: a_fn,
-            fn_id: universe.new_fn_id(),
+            fn_id: fn_id
         }
-    }
-
-    pub fn a_fn(&self) -> &ast::AnonymousFn {
-        &self.a_fn
     }
 
     pub fn fn_id(&self) -> FnId {

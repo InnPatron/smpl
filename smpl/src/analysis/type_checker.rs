@@ -9,30 +9,46 @@ use super::linear_cfg_traversal::*;
 use super::control_data::*;
 use super::control_flow::CFG;
 use super::semantic_data::*;
+use super::semantic_data::Function;
 use super::error::*;
 use super::typed_ast::*;
 use super::type_cons::*;
 use super::type_resolver;
 use super::resolve_scope::ScopedData;
+use super::analysis_helpers;
 
-pub fn type_check(universe: &Universe, fn_id: FnId) -> Result<(), AnalysisError> {
+pub fn type_check(universe: &mut Universe, fn_id: FnId) -> Result<(), AnalysisError> {
     use super::semantic_data::Function;
 
+    let cfg = {
+        let fn_to_resolve = universe.get_fn(fn_id);
+        match fn_to_resolve {
+            Function::SMPL(ref smpl_fn) => smpl_fn.cfg(),
+            Function::Anonymous(ref afn) => {
+                match afn {
+                    AnonymousFunction::Reserved(_) => panic!("Anonymous function should be resolved"),
+
+                    AnonymousFunction::Resolved {
+                        ref cfg,
+                        ..
+                    } => {
+                        cfg.clone()
+                    }
+                }
+            }
+
+            _ => panic!("Not a function with a type-checkable body"),
+        }
+    };
+
     let mut type_checker = TypeChecker::new(universe, fn_id)?;
-
-    let fn_to_resolve = universe.get_fn(fn_id);
-    if let Function::SMPL(ref smpl_fn) = fn_to_resolve {
-        let cfg = smpl_fn.cfg();
-        let mut traverser = Traverser::new(cfg, &mut type_checker);
-
-        traverser.traverse()
-    } else {
-        panic!("Not a SMPL function");
-    }
+    let cfg = cfg.borrow();
+    let mut traverser = Traverser::new(&*cfg, &mut type_checker);
+    traverser.traverse()
 }
 
 struct TypeChecker<'a> {
-    universe: &'a Universe,
+    universe: &'a mut Universe,
     scopes: Vec<ScopedData>,
     typing_context: TypingContext,
     return_type: AbstractType,
@@ -43,13 +59,51 @@ impl<'a> TypeChecker<'a> {
     // TODO: Store function (return) type somwhere
     // TODO: Add function parameters somewhere
     // TODO: Put formal parameters into function scope within Universe
-    pub fn new(universe: &Universe, fn_id: FnId) -> Result<TypeChecker, AnalysisError> {
+    pub fn new(universe: &mut Universe, fn_id: FnId) -> Result<TypeChecker, AnalysisError> {
 
         use super::semantic_data::Function;
 
         match universe.get_fn(fn_id) {
 
             Function::Builtin(_) => unimplemented!(),
+
+            Function::Anonymous(anonymous_fn) => {
+                match anonymous_fn {
+                    AnonymousFunction::Reserved(..) => {
+                        panic!("Expected anonymous functions to already be resolved");
+                    }
+
+                    AnonymousFunction::Resolved {
+                        ref fn_type,
+                        ref fn_scope,
+                        ref typing_context,
+                        ..
+                    } => {
+                        let return_type: AbstractType = {
+                            let typing_context = typing_context.clone();
+                            let scope = fn_scope.clone();
+                            let type_id = fn_type.clone();
+                            let fn_type = universe.get_type_cons(type_id);
+
+                            match fn_type {
+                                TypeCons::Function {
+                                    ref return_type,
+                                    ..
+                                } => return_type.apply(universe, &scope, &typing_context)?,
+
+                                _ => panic!("Non-function type constructor for function"),
+                            }
+                        };
+                        
+                        Ok(TypeChecker {
+                            scopes: vec![fn_scope.clone()],
+                            typing_context: typing_context.clone(),
+                            universe: universe,
+                            return_type: return_type,
+                        })
+                    }
+                }
+            }
 
             Function::SMPL(smpl_function) => {
 
@@ -68,11 +122,11 @@ impl<'a> TypeChecker<'a> {
                         _ => panic!("Non-function type constructor for function"),
                     }
                 };
-                
+
                 Ok(TypeChecker {
-                    universe: universe,
                     scopes: vec![smpl_function.fn_scope().clone()],
                     typing_context: smpl_function.typing_context().clone(),
+                    universe: universe,
                     return_type: return_type,
                 })
             }
@@ -315,7 +369,7 @@ impl TypingContext {
     }
 }
 
-fn resolve_expr(universe: &Universe, scope: &ScopedData, context: &mut TypingContext, expr: &Expr) 
+fn resolve_expr(universe: &mut Universe, scope: &ScopedData, context: &mut TypingContext, expr: &Expr) 
     -> Result<AbstractType, AnalysisError> {
 
     let mut expr_type = None;
@@ -335,7 +389,7 @@ fn resolve_expr(universe: &Universe, scope: &ScopedData, context: &mut TypingCon
     Ok(expr_type.unwrap())
 }
 
-fn resolve_tmp(universe: &Universe, scope: &ScopedData, 
+fn resolve_tmp(universe: &mut Universe, scope: &ScopedData, 
     context: &mut TypingContext, expr: &Expr, tmp: &Tmp) 
     -> Result<AbstractType, AnalysisError> {
 
@@ -758,6 +812,7 @@ fn resolve_binding(universe: &Universe, scope: &ScopedData,
             let fn_type_id = universe
                 .get_fn(fn_id)
                 .fn_type()
+                .expect("Expect anonymous function types to already be resolved")
                 .clone();
             /*
             let fn_type_id = if self.program.metadata().is_builtin(fn_id) {
@@ -800,7 +855,8 @@ fn resolve_mod_access(universe: &Universe, scope: &ScopedData,
 
     let fn_type_id = universe
         .get_fn(fn_id)
-        .fn_type();
+        .fn_type()
+        .expect("Expect anonymous functions to already be resolved");
 
     let fn_type = AbstractType::App {
         type_cons: fn_type_id,
@@ -1035,7 +1091,8 @@ fn resolve_type_inst(universe: &Universe, scope: &ScopedData, context: &TypingCo
 
     let fn_type_id = universe
         .get_fn(fn_id)
-        .fn_type();
+        .fn_type()
+        .expect("Expect anonymous functions to already be resolved");
 
     let type_args = type_inst
         .args()
@@ -1059,68 +1116,83 @@ fn resolve_type_inst(universe: &Universe, scope: &ScopedData, context: &TypingCo
     Ok(inst_type)
 }
 
-fn resolve_anonymous_fn(universe: &Universe, scope: &ScopedData, context: &TypingContext,
+fn resolve_anonymous_fn(universe: &mut Universe, scope: &ScopedData, context: &TypingContext,
     a_fn: &AnonymousFn, span: Span)
     -> Result<AbstractType, AnalysisError> {
 
+    use std::rc::Rc;
+    use std::cell::RefCell;
+
     let fn_id = a_fn.fn_id();
-    let func = a_fn.a_fn();
 
-    // TODO: For inserting later into the Universe, need to store the current scope
-    //      and the type
-    // TODO: Make sure scope ONLY has type parameter info
-    let (func_scope, fn_type_cons) =
-        super::type_cons_gen::generate_anonymous_fn_type(universe, scope, context, fn_id, func)?;
+    let mut resolved = None;
+    if let Function::Anonymous(ref afn) = universe.get_fn(fn_id) {
 
-    let anon_fn_type = match fn_type_cons {
-        TypeCons::Function {
-            type_params,
-            parameters,
-            return_type,
-        } => {
+        if let AnonymousFunction::Reserved(ref ast_anonymous_fn) = afn {
+            let fn_type_cons =
+                super::type_cons_gen::generate_anonymous_fn_type(
+                    universe, scope, context, fn_id, ast_anonymous_fn)?; 
 
-            if type_params.len() != 0 {
-                // TODO: lift restrictions?
-                unimplemented!("Anonymous functions are not allowed to have their own type params");
-            }
+            let (fn_scope, fn_context) = 
+                analysis_helpers::generate_fn_analysis_data(
+                    universe, scope, context, &fn_type_cons, ast_anonymous_fn)?;
 
-            AbstractType::Function {
-                parameters: parameters,
-                return_type: Box::new(return_type),
-            }
-        },
+            let cfg = super::control_flow::CFG::generate(
+                universe,
+                ast_anonymous_fn.body.clone(),
+                &fn_type_cons,
+                &fn_scope,
+                &fn_context,
+            )?;
 
-        _ => unreachable!(),
+            let fn_type_id = universe.insert_type_cons(fn_type_cons);
+
+            resolved = Some(AnonymousFunction::Resolved {
+                fn_type: fn_type_id,
+                fn_scope: fn_scope,
+                typing_context: fn_context,
+                cfg: Rc::new(RefCell::new(cfg)),
+            });
+        }
+
+    } else {
+        panic!("FN ID did not refer to an anonymous function");
+    }
+
+    if let Some(resolved) = resolved {
+        *universe.get_fn_mut(fn_id) = Function::Anonymous(resolved);
+        analysis_helpers::analyze_fn(universe, fn_id)?;
+    }
+
+    let fn_type = if let Function::Anonymous(ref afn) = universe.get_fn(fn_id) {
+        if let AnonymousFunction::Resolved {
+            ref fn_type,
+            ref fn_scope,
+            ref typing_context,
+            ..
+        } = afn {
+
+            let fn_type_cons = universe.get_type_cons(fn_type.clone());
+            
+            // TODO: Anonymous functions are not allowed to have type parameters
+            AbstractType::App {
+                type_cons: fn_type.clone(),
+                args: Vec::new(),
+            }.apply(universe, fn_scope, typing_context)?
+
+        } else {
+            panic!("Anonymous function should be resolved.");
+        }
+    } else {
+        panic!("FN ID did not refer to an anonymous function");
     };
 
-
-    // TODO: Generate and check anonymous functions in a later phase
-    /*
-    let cfg = CFG::generate(
-        self.program.universe_mut(),
-        func.body.clone(),
-        &fn_type,
-        &func_scope,
-    )?;
-
-    let fn_type_id = self.program.universe_mut().insert_type_cons(fn_type);
-
-
-    self.program
-        .universe_mut()
-        .insert_fn(fn_id, fn_type_id, func_scope, cfg);
-
-    // Since anonymous functions are ALWAYS inside another function
-    // Assume the global scope is at the bottom of the scope stack
-    analyze_fn(self.program, fn_id, self.module_id)?;
-    */
-
-    Ok(anon_fn_type)
+    Ok(fn_type)
 }
 
 /// Assumes that all previous temporaries in Expr are already typed
 fn resolve_field_access(
-    universe: &Universe,
+    universe: &mut Universe,
     scope: &ScopedData,
     context: &mut TypingContext,
     field_access: &FieldAccess,

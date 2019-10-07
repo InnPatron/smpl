@@ -7,7 +7,7 @@ use crate::ast::{ AstNode, Ident, ModulePath as AstModulePath };
 use super::unique_linear_cfg_traversal::*;
 use super::control_data::*;
 use super::control_flow::CFG;
-use super::semantic_data::{FnId, VarId, TypeVarId, TypeId, Universe, ModulePath};
+use super::semantic_data::{FnId, VarId, TypeVarId, TypeId, Universe, ModulePath, AnonymousFunction};
 use super::error::AnalysisError;
 use super::typed_ast::*;
 use super::metadata::Metadata;
@@ -20,11 +20,28 @@ pub fn resolve(universe: &mut Universe, fn_id: FnId) -> Result<(), AnalysisError
 
     let fn_to_resolve = universe.get_fn_mut(fn_id);
 
-    if let Function::SMPL(ref mut smpl_fn) = fn_to_resolve {
-        let cfg_mut = smpl_fn.cfg_mut();
-        traverse(cfg_mut, &mut scope_resolver)
-    } else {
-        panic!("Not a SMPL function");
+    match fn_to_resolve {
+        Function::SMPL(ref mut smpl_fn) => {
+            let cfg = smpl_fn.cfg();
+            let mut cfg_mut = cfg.borrow_mut();
+            traverse(&mut *cfg_mut, &mut scope_resolver)
+        }
+
+        Function::Anonymous(ref mut anon_fn) => {
+            match anon_fn {
+                AnonymousFunction::Reserved(..) => panic!("Anonymous function should be resolved"),
+                AnonymousFunction::Resolved {
+                    ref cfg, 
+                    ..
+                } => {
+                    let mut cfg_mut = cfg.borrow_mut();
+                    traverse(&mut *cfg_mut, &mut scope_resolver)
+                }
+            }
+
+        }
+
+        Function::Builtin(..) => panic!("Unable to resolve scope of builtin functions"),
     }
 }
 
@@ -43,6 +60,24 @@ impl ScopeResolver {
         match universe.get_fn(fn_id) {
 
             Function::Builtin(_) => unimplemented!(),
+            Function::Anonymous(anonymous_fn) => {
+                let fn_scope = match anonymous_fn {
+                    AnonymousFunction::Reserved(..) => {
+                        panic!("Expected anonymous functions to already be resolved");
+                    }
+
+                    AnonymousFunction::Resolved {
+                        ref fn_scope,
+                        ..
+                    } => {
+                        fn_scope.clone()
+                    }
+                };
+
+                ScopeResolver {
+                    scopes: vec![fn_scope],
+                }
+            }
 
             Function::SMPL(smpl_function) => ScopeResolver {
                 scopes: vec![smpl_function.fn_scope().clone()],
@@ -264,6 +299,10 @@ impl ScopedData {
             fn_map: HashMap::new(),
             type_param_map: HashMap::new(),
         }
+    }
+
+    pub fn clear_scoped_vars(&mut self) {
+        self.var_map.clear();
     }
 
     pub fn insert_fn(&mut self, name: ModulePath, fn_id: FnId) {

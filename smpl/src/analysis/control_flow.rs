@@ -305,7 +305,7 @@ impl CFG {
     /// Only performs continue/break statement checking (necessary for CFG generation).
     ///
     pub fn generate(
-        universe: &Universe,
+        universe: &mut Universe,
         body: ast::AstNode<ast::Block>,
         fn_type: &TypeCons,
         fn_scope: &ScopedData,
@@ -374,7 +374,7 @@ impl CFG {
     /// block is appended to the graph.
     ///
     fn generate_scoped_block<'a, 'b, T>(&'a mut self, 
-                                        universe: &'b Universe, 
+                                        universe: &'b mut Universe, 
                                         mut instructions: T,
                                         loop_data: InternalLoopData) 
         -> Result<BranchData, ControlFlowError> 
@@ -561,7 +561,7 @@ impl CFG {
                             //   and BranchMerge at the heads.
                             // If it is the default branch (i.e. no condition), do not generate a
                             //   BranchSplit or BranchMerge (keep ScopeEnter, ScopeExit)
-                            fn generate_branch(cfg: &mut CFG, universe: &Universe, body: AstNode<Block>, 
+                            fn generate_branch(cfg: &mut CFG, universe: &mut Universe, body: AstNode<Block>, 
                                               condition: Option<AstNode<Expr>>,
                                               loop_data: InternalLoopData)
                                 -> Result<BranchData, ControlFlowError> {
@@ -804,12 +804,12 @@ let a: int = 2;
 let b: int = 3;
 }";
         let mut input = buffer_input(input);
-        let universe = Universe::std();
+        let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
         let scope = universe.std_scope();
         let typing_context = TypingContext::empty();
-        let cfg = CFG::generate(&universe, 
+        let cfg = CFG::generate(&mut universe, 
                 fn_def.body.clone(), &fn_type, &scope, &typing_context)
             .unwrap();
 
@@ -870,13 +870,13 @@ if (test) {
 }";
         let mut input = buffer_input(input);
 
-        let universe = Universe::std();
+        let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
         let scope = universe.std_scope();
         let typing_context = TypingContext::empty();
         let cfg = CFG::generate(
-                &universe, fn_def.body.clone(), &fn_type, &scope, &typing_context
+                &mut universe, fn_def.body.clone(), &fn_type, &scope, &typing_context
             )
             .unwrap();
 
@@ -1021,14 +1021,14 @@ if (test) {
     }
 }";
         let mut input = buffer_input(input);
-        let universe = Universe::std();
+        let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         
         let fn_def = testfn_decl(&mut input).unwrap();
         let scope = universe.std_scope();
         let typing_context = TypingContext::empty();
         let cfg = CFG::generate(
-                &universe, fn_def.body.clone(), &fn_type, &scope, &typing_context,
+                &mut universe, fn_def.body.clone(), &fn_type, &scope, &typing_context,
             )
             .unwrap();
 
@@ -1232,14 +1232,14 @@ if (test) {
     }
 }";
         let mut input = buffer_input(input);
-        let universe = Universe::std();
+        let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         
         let fn_def = testfn_decl(&mut input).unwrap();
         let scope = universe.std_scope();
         let typing_context = TypingContext::empty();
         let cfg = CFG::generate(
-                &universe, fn_def.body.clone(), &fn_type, &scope, &typing_context
+                &mut universe, fn_def.body.clone(), &fn_type, &scope, &typing_context
             )
             .unwrap();
 
