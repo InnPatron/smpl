@@ -74,6 +74,7 @@ impl fmt::Display for ByteCodeFunction {
 pub fn compile_to_byte_code(function: &SMPLFunction) -> ByteCodeFunction {
 
     let cfg = function.cfg();
+    let cfg = cfg.borrow();
 
     // Goes through the CFG and collects the main function body, loops, and branches
     //   into organized groups of instructions with metadata
