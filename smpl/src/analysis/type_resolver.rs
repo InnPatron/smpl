@@ -219,20 +219,11 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
                 Ok(())
             } else {
 
-                let synth_type = typing_context.get_type_var(synth_id.clone())
-                    .expect("Missing synth var");
-                let constraint_type = typing_context.get_type_var(constraint_id.clone())
-                    .expect("Missing synth var");
-
-                resolve_types_static(universe, scoped_data, typing_context,
-                    synth_type, constraint_type, span)
-                    .map_err(|_| {
-                        TypeError::UnexpectedType {
-                            found: synthesis.clone(),
-                            expected: constraint.clone(),
-                            span: span,
-                        }.into()
-                    })
+                Err(TypeError::UnexpectedType {
+                    found: synthesis.clone(),
+                    expected: constraint.clone(),
+                    span: span,
+                }.into())
             }
         }
 
