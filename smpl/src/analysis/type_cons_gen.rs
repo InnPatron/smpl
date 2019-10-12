@@ -333,13 +333,13 @@ fn type_param_map(
                     current_scope.insert_type_var(ident.clone(), type_var_id.clone());
 
                     if let AbstractType::WidthConstraint(constraint) = abstract_type {
-                        let abstract_type = AbstractType::WidthConstraint(constraint);
+                        let abstract_type = AbstractType::WidthConstraint(constraint.clone());
 
                         // Insert type var into scope
                         typing_context.type_vars.insert(type_var_id.clone(), 
                             abstract_type);
 
-                        finished.insert(type_param_id.clone(), (None, type_var_id.clone()));
+                        finished.insert(type_param_id.clone(), (Some(constraint), type_var_id.clone()));
                             
                     } else {
                         // TODO: found non-constraint in constraint position
