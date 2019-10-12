@@ -54,6 +54,14 @@ impl From<ControlFlowError> for AnalysisError {
 #[derive(Clone, Debug)]
 pub enum TypeError {
     LhsRhsInEq(AbstractType, AbstractType, Span),
+
+    IncompatibleLocal {
+        name: Ident,
+        local_type: AbstractType,
+        found_type: AbstractType,
+        span: Span,
+    },
+
     InEqFnReturn {
         expr: AbstractType,
         fn_return: AbstractType,
