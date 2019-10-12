@@ -1592,4 +1592,41 @@ fn test() {
         let mod2 = parse_module(wrap_input!(mod2)).unwrap();
         check_program(vec![mod1, mod2]).unwrap();
     }
+
+    #[test]
+    fn fn_multi_type_param() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type A, B)(a: A, b: B) {
+    let a2: A = a;
+    let b2: B = b;
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn fn_multi_type_param_err() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type A, B)(a: A, b: B) {
+    let a2: A = b;
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Expected a type error. Found OK"),
+
+            Err(e) => {
+                if let AnalysisError::TypeError(_) = e {
+                    ()
+                } else {
+                    panic!("Expected a type error. Found {:?}", e);
+                }
+            }
+        }
+    }
 }
