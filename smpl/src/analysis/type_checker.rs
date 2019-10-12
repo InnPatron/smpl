@@ -1226,6 +1226,82 @@ fn resolve_field_access(
     span: Span,
 ) -> Result<AbstractType, AnalysisError> {
 
+    fn generate_field_retriever(universe: &Universe, context: &TypingContext, 
+        current_type: AbstractType, index: usize, 
+        field_access: &FieldAccess, root_var_type: &AbstractType, span: Span) 
+        -> Result<
+            Box<dyn Fn(&crate::ast::Ident) -> Result<AbstractType, AnalysisError>>, 
+            AnalysisError> {
+        match current_type.substitute(universe)? {
+
+            AbstractType::WidthConstraint(awc) => {
+                Ok(Box::new(move |name| {
+                    awc
+                        .fields
+                        .get(name)
+                        .map(|t| t.clone())
+                        .ok_or(TypeError::UnknownField {
+                            name: name.clone(),
+                            struct_type: AbstractType::WidthConstraint(awc.clone()),
+                            span: span,
+                        }.into())
+                }))
+            }
+
+            AbstractType::Record {
+                type_id,
+                abstract_field_map: afm,
+            } => {
+                let fields = afm.fields;
+                let field_map = afm.field_map;
+
+                Ok(Box::new(move |name| {
+                    let field_id = field_map
+                        .get(name)
+                        .map(|t| t.clone())
+                        .ok_or(TypeError::UnknownField {
+                            name: name.clone(),
+                            struct_type: AbstractType::Record {
+                                type_id: type_id,
+                                abstract_field_map: AbstractFieldMap {
+                                    fields: fields.clone(),
+                                    field_map: field_map.clone(),
+                                }
+                            },
+                            span: span,
+                        })?;
+
+                    let field_type = fields
+                        .get(&field_id)
+                        .map(|t| t.clone())
+                        .unwrap();
+
+                    Ok(field_type)
+                }))
+            }
+
+            AbstractType::TypeVar(ref type_var) => {
+                let type_var_value = context
+                    .get_type_var(*type_var)
+                    .expect(&format!("Missing type variable: {}", type_var));
+
+                generate_field_retriever(universe, context, 
+                    type_var_value.substitute(universe)?, index, field_access, root_var_type, span)
+            }
+
+            _ => {
+                return Err(TypeError::FieldAccessOnNonStruct {
+                    path: field_access.raw_path().clone(),
+                    index: index,
+                    invalid_type: current_type,
+                    root_type: root_var_type.clone(),
+                    span: span,
+                }
+                .into());
+            }
+        }
+    }
+
     let path = field_access.path();
     let path_iter = path.path().iter();
 
@@ -1272,65 +1348,8 @@ fn resolve_field_access(
         let next_type: AbstractType;
         let field_type_retriever: 
             Box<dyn Fn(&crate::ast::Ident) -> Result<AbstractType, AnalysisError>> = 
-            match current_type.substitute(universe)? {
-
-            AbstractType::WidthConstraint(awc) => {
-                Box::new(move |name| {
-                    awc
-                        .fields
-                        .get(name)
-                        .map(|t| t.clone())
-                        .ok_or(TypeError::UnknownField {
-                            name: name.clone(),
-                            struct_type: AbstractType::WidthConstraint(awc.clone()),
-                            span: span,
-                        }.into())
-                })
-            }
-
-            AbstractType::Record {
-                type_id,
-                abstract_field_map: afm,
-            } => {
-                let fields = afm.fields;
-                let field_map = afm.field_map;
-
-                Box::new(move |name| {
-                    let field_id = field_map
-                        .get(name)
-                        .map(|t| t.clone())
-                        .ok_or(TypeError::UnknownField {
-                            name: name.clone(),
-                            struct_type: AbstractType::Record {
-                                type_id: type_id,
-                                abstract_field_map: AbstractFieldMap {
-                                    fields: fields.clone(),
-                                    field_map: field_map.clone(),
-                                }
-                            },
-                            span: span,
-                        })?;
-
-                    let field_type = fields
-                        .get(&field_id)
-                        .map(|t| t.clone())
-                        .unwrap();
-
-                    Ok(field_type)
-                })
-            }
-
-            _ => {
-                return Err(TypeError::FieldAccessOnNonStruct {
-                    path: field_access.raw_path().clone(),
-                    index: index,
-                    invalid_type: current_type,
-                    root_type: root_var_type.clone(),
-                    span: span,
-                }
-                .into());
-            }
-        };
+            generate_field_retriever(universe, context, current_type, 
+                index, field_access, &root_var_type, span)?;
 
         match *field {
             PathSegment::Ident(ref field) => {
