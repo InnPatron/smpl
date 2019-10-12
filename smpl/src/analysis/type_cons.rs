@@ -148,7 +148,10 @@ impl AbstractType {
                     Some(type_params) => {
 
                         if type_params.len() != args.len() {
-                            unimplemented!()
+                            return Err(vec![ATypeError::ApplicationError(ApplicationError::Arity {
+                                expected: type_params.len(),
+                                found: args.len(),
+                            })]);
                         }
 
                         let mut map = HashMap::new();
@@ -164,7 +167,10 @@ impl AbstractType {
 
                     None => {
                         if args.len() != 0 {
-                            unimplemented!()
+                            return Err(vec![ATypeError::ApplicationError(ApplicationError::Arity {
+                                expected: 0,
+                                found: args.len(),
+                            })]);
                         }
 
                         HashMap::new()
