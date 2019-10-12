@@ -75,29 +75,38 @@ impl<'a> TypeChecker<'a> {
 
                     AnonymousFunction::Resolved {
                         ref fn_type,
-                        ref fn_scope,
-                        ref typing_context,
+                        ref analysis_context,
                         ..
                     } => {
+                        let typing_context = analysis_context.typing_context().clone();
+                        let fn_scope = analysis_context.fn_scope().clone();
+
                         let return_type: AbstractType = {
-                            let typing_context = typing_context.clone();
-                            let scope = fn_scope.clone();
+                            
                             let type_id = fn_type.clone();
-                            let fn_type = universe.get_type_cons(type_id);
+
+                            let fn_type = AbstractType::App {
+                                type_cons: type_id,
+                                args: analysis_context
+                                    .existential_type_vars()
+                                    .iter()
+                                    .map(|id| AbstractType::TypeVar(id.clone()))
+                                    .collect::<Vec<_>>(),
+                            }.substitute(universe)?;
 
                             match fn_type {
-                                TypeCons::Function {
+                                AbstractType::Function {
                                     ref return_type,
                                     ..
-                                } => return_type.substitute(universe)?,
+                                } => *return_type.clone(),
 
                                 _ => panic!("Non-function type constructor for function"),
                             }
                         };
                         
                         Ok(TypeChecker {
-                            scopes: vec![fn_scope.clone()],
-                            typing_context: typing_context.clone(),
+                            scopes: vec![fn_scope],
+                            typing_context: typing_context,
                             universe: universe,
                             return_type: return_type,
                         })
@@ -107,25 +116,37 @@ impl<'a> TypeChecker<'a> {
 
             Function::SMPL(smpl_function) => {
 
+                let typing_context = smpl_function.analysis_context().typing_context().clone();
+                let fn_scope = smpl_function.analysis_context().fn_scope().clone();
+
                 let return_type: AbstractType = {
-                    let typing_context = smpl_function.typing_context().clone();
-                    let scope = smpl_function.fn_scope().clone();
+                        
                     let type_id = smpl_function.fn_type();
-                    let fn_type = universe.get_type_cons(type_id);
+
+                    let fn_type = AbstractType::App {
+                        type_cons: type_id,
+                        args: smpl_function.analysis_context()
+                            .existential_type_vars()
+                            .iter()
+                            .map(|id| AbstractType::TypeVar(id.clone()))
+                            .collect::<Vec<_>>(),
+                    }.substitute(universe)?;
 
                     match fn_type {
-                        TypeCons::Function {
+                        AbstractType::Function {
                             ref return_type,
                             ..
-                        } => return_type.substitute(universe)?,
+                        } => *return_type.clone(),
 
                         _ => panic!("Non-function type constructor for function"),
                     }
                 };
 
+                dbg!(&return_type);
+
                 Ok(TypeChecker {
-                    scopes: vec![smpl_function.fn_scope().clone()],
-                    typing_context: smpl_function.typing_context().clone(),
+                    scopes: vec![fn_scope],
+                    typing_context: typing_context,
                     universe: universe,
                     return_type: return_type,
                 })
@@ -296,6 +317,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         match rdata.expr {
             Some(ref expr) => {
                 let expr_type = expr_type!(self, expr)?;
+                dbg!(&expr_type, &self.return_type);
                 resolve!(self, &expr_type, &self.return_type, rdata.span)
                     .map_err(|e| e.into())
             }
@@ -1133,7 +1155,7 @@ fn resolve_anonymous_fn(universe: &mut Universe, scope: &ScopedData, context: &T
                 super::type_cons_gen::generate_anonymous_fn_type(
                     universe, scope, context, fn_id, ast_anonymous_fn)?; 
 
-            let (fn_scope, fn_context) = 
+            let analysis_context = 
                 analysis_helpers::generate_fn_analysis_data(
                     universe, scope, context, &fn_type_cons, ast_anonymous_fn)?;
 
@@ -1141,16 +1163,14 @@ fn resolve_anonymous_fn(universe: &mut Universe, scope: &ScopedData, context: &T
                 universe,
                 ast_anonymous_fn.body.clone(),
                 &fn_type_cons,
-                &fn_scope,
-                &fn_context,
+                &analysis_context,
             )?;
 
             let fn_type_id = universe.insert_type_cons(fn_type_cons);
 
             resolved = Some(AnonymousFunction::Resolved {
                 fn_type: fn_type_id,
-                fn_scope: fn_scope,
-                typing_context: fn_context,
+                analysis_context: analysis_context,
                 cfg: Rc::new(RefCell::new(cfg)),
             });
         }
@@ -1167,8 +1187,6 @@ fn resolve_anonymous_fn(universe: &mut Universe, scope: &ScopedData, context: &T
     let fn_type = if let Function::Anonymous(ref afn) = universe.get_fn(fn_id) {
         if let AnonymousFunction::Resolved {
             ref fn_type,
-            ref fn_scope,
-            ref typing_context,
             ..
         } = afn {
 
