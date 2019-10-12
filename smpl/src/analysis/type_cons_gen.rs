@@ -105,6 +105,7 @@ pub fn generate_fn_type_cons(universe: &Universe,
 
                 let param_type =
                     type_from_ann(universe, &type_param_scope, &type_param_typing_context, param_ann)?;
+                dbg!(&param.name, &param_type);
 
                 typed_formal_params.push(param_type);
             }
@@ -275,8 +276,8 @@ fn type_param_map(
     let mut current_scope = outer_scope.clone();
     let mut typing_context = outer_typing_context.clone();
 
-    let mut type_params = TypeParams::new();
     let mut internal_type_map: HashMap<_, (TypeParamId, TypeVarId)> = HashMap::new();
+    let mut type_param_order = Vec::new();
 
     // TODO: Add type parameters as reflexive self?
 
@@ -292,6 +293,7 @@ fn type_param_map(
             } else {
                 let type_param_id = universe.new_type_param_id(); 
                 let type_var_id = universe.new_type_var_id();
+                dbg!(p.data(), type_var_id);
                 // Insert type parameter into set
                 internal_type_map.insert(p.data().clone(), (type_param_id, type_var_id));
                 
@@ -299,10 +301,12 @@ fn type_param_map(
                 // Add type parameters to typing context to allow recursive constraints
                 typing_context.type_vars
                     .insert(type_var_id.clone(), AbstractType::Any);
+                type_param_order.push(type_param_id);
             }
         }
     }
 
+    let mut finished = HashMap::new();
     if let Some(where_clause) = where_clause {
         for (ident, vec_ast_type_ann) in where_clause.0.iter() {
 
@@ -335,9 +339,8 @@ fn type_param_map(
                         typing_context.type_vars.insert(type_var_id.clone(), 
                             abstract_type);
 
-                        // Add type parameter to type constructor
-                        type_params.add_param(type_param_id.clone(), 
-                            None, type_var_id.clone());
+                        finished.insert(type_param_id.clone(), (None, type_var_id.clone()));
+                            
                     } else {
                         // TODO: found non-constraint in constraint position
                         unimplemented!("found non-constraint in constraint position");
@@ -361,8 +364,15 @@ fn type_param_map(
         current_scope.insert_type_var(ident.clone(), type_var_id);
         typing_context.type_vars.insert(type_var_id.clone(), 
             AbstractType::Any);
-        type_params.add_param(type_param_id.clone(), 
-            None, type_var_id.clone());
+
+        finished.insert(type_param_id.clone(), (None, type_var_id.clone()));
+    }
+
+    let mut type_params = TypeParams::new();
+    // NEED TO PRESERVE ORDER
+    for param_id in type_param_order {
+        let (opt, ty) = finished.remove(&param_id).unwrap();
+        type_params.add_param(param_id.clone(), opt, ty);
     }
 
     Ok((type_params, current_scope, typing_context))
