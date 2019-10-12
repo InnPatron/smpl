@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::ast::{Ident, TypeAnnotationRef, WidthConstraint, AstNode};
 
 use super::error::{AnalysisError, ApplicationError, TypeError as ATypeError};
-use super::semantic_data::{FieldId, TypeId, TypeParamId, TypeVarId, Universe};
+use super::semantic_data::{FieldId, TypeId, TypeParamId, TypeVarId, Universe, AnalysisContext};
 use super::resolve_scope::ScopedData;
 use super::type_resolver::resolve_types_static;
 use super::type_checker::TypingContext;
@@ -124,6 +124,83 @@ impl AbstractType {
             } => Some(tc.clone()),
 
             _ => None,
+        }
+    }
+
+    pub fn substitute_with(&self, universe: &Universe, map: &HashMap<TypeVarId, AbstractType>) 
+        -> Result<AbstractType, Vec<ATypeError>> {
+        match self {
+
+            AbstractType::App {
+                ref type_cons,
+                ref args,
+            } => {
+
+                let type_cons = universe.get_type_cons(*type_cons);
+                match type_cons {
+                    TypeCons::UncheckedFunction {
+                        ref return_type,
+                        ..
+                    } => {
+                        Ok(AbstractType::UncheckedFunction {
+                            return_type: Box::new(return_type.substitute_with(universe, &map)?),
+                        })
+                    }
+
+                    TypeCons::Function {
+                        ref parameters,
+                        ref return_type,
+                        ..
+                    } => {
+                        Ok(AbstractType::Function {
+                            parameters: parameters.iter()
+                                .map(|p| p.substitute_with(universe, &map))
+                                .collect::<Result<_, _>>()?,
+                            return_type: Box::new(return_type.substitute_with(universe, &map)?),
+                        })
+                    }
+
+                    TypeCons::Record {
+                        ref type_id,
+                        ref type_params,
+                        ref fields,
+                        ref field_map,
+                        ..
+                    } => {
+
+                        let mut subbed_fields: HashMap<FieldId, AbstractType> = HashMap::new();
+
+                        for (id, ty) in fields.iter() {
+                            subbed_fields.insert(id.clone(),
+                                ty.substitute_with(universe, &map)?);
+                        }
+
+                        Ok(AbstractType::Record {
+                            type_id: type_id.clone(),
+                            abstract_field_map: AbstractFieldMap {
+                                fields: subbed_fields,
+                                field_map: field_map.clone(),
+                            },
+                        })
+                    }
+
+                    TypeCons::Int => Ok(AbstractType::Int),
+                    TypeCons::Float => Ok(AbstractType::Float),
+                    TypeCons::Bool => Ok(AbstractType::Bool),
+                    TypeCons::String => Ok(AbstractType::String),
+                    TypeCons::Unit => Ok(AbstractType::Unit),
+                }
+            }
+
+            AbstractType::TypeVar(ref type_var_id) => {
+                Ok(map
+                    .get(type_var_id)
+                    .map(|t| t.clone())
+                    .unwrap_or(AbstractType::TypeVar(type_var_id.clone()))
+                )
+            }
+
+            t => Ok(t.clone()),
         }
     }
 
@@ -366,11 +443,12 @@ impl AbstractType {
                 dbg!(type_param_id, map);
                 assert!(map.contains_key(type_param_id));
 
-                Ok(map
+                let result = map
                     .get(type_param_id)
                     .map(|t| t.clone())
-                    .unwrap_or(AbstractType::TypeVar(type_param_id.clone()))
-                )
+                    .unwrap_or(AbstractType::TypeVar(type_param_id.clone()));
+
+                Ok(result)
             }
 
             AbstractType::Int => Ok(AbstractType::Int),
