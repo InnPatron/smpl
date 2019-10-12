@@ -127,28 +127,109 @@ impl AbstractType {
         }
     }
 
-    pub fn apply(&self, universe: &Universe, scope: &ScopedData, typing_context: &TypingContext) 
+    pub fn substitute(&self, universe: &Universe) 
         -> Result<AbstractType, Vec<ATypeError>> {
 
-        self.apply_internal(universe, &typing_context.type_vars)
+        match self {
+
+            AbstractType::App {
+                ref type_cons,
+                ref args,
+            } => {
+
+                let type_cons = universe.get_type_cons(*type_cons);
+                let map : HashMap<TypeVarId, AbstractType> = match type_cons.type_params() {
+                    Some(type_params) => {
+
+                        if type_params.len() != args.len() {
+                            unimplemented!()
+                        }
+
+                        let mut map = HashMap::new();
+                        for ((type_param_id, placeholder_type_var_id), arg) in 
+                            type_params.placeholder_variables.iter().zip(args.iter()) {
+
+                            map.insert(placeholder_type_var_id.clone(), arg.clone());
+
+                        }
+
+                        map
+                    }
+
+                    None => {
+                        if args.len() != 0 {
+                            unimplemented!()
+                        }
+
+                        HashMap::new()
+                    }
+                };
+
+                match type_cons {
+                    TypeCons::UncheckedFunction {
+                        ref return_type,
+                        ..
+                    } => {
+                        Ok(AbstractType::UncheckedFunction {
+                            return_type: Box::new(return_type.substitute_internal(&map)?),
+                        })
+                    }
+
+                    TypeCons::Function {
+                        ref parameters,
+                        ref return_type,
+                        ..
+                    } => {
+                        Ok(AbstractType::Function {
+                            parameters: parameters.iter()
+                                .map(|p| p.substitute_internal(&map))
+                                .collect::<Result<_, _>>()?,
+                            return_type: Box::new(return_type.substitute_internal(&map)?),
+                        })
+                    }
+
+                    TypeCons::Record {
+                        ref type_id,
+                        ref type_params,
+                        ref fields,
+                        ref field_map,
+                        ..
+                    } => {
+
+                        let mut subbed_fields: HashMap<FieldId, AbstractType> = HashMap::new();
+
+                        for (id, ty) in fields.iter() {
+                            subbed_fields.insert(id.clone(),
+                                ty.substitute_internal(&map)?);
+                        }
+
+                        Ok(AbstractType::Record {
+                            type_id: type_id.clone(),
+                            abstract_field_map: AbstractFieldMap {
+                                fields: subbed_fields,
+                                field_map: field_map.clone(),
+                            },
+                        })
+                    }
+
+                    TypeCons::Int => Ok(AbstractType::Int),
+                    TypeCons::Float => Ok(AbstractType::Float),
+                    TypeCons::Bool => Ok(AbstractType::Bool),
+                    TypeCons::String => Ok(AbstractType::String),
+                    TypeCons::Unit => Ok(AbstractType::Unit),
+                }
+            }
+
+            t => Ok(t.clone()),
+        }
     }
 
     /// Given an environment of type variables to abstract types, recursively substitute
     ///   any type variables in the map with their abstract type.
     ///
-    /// No AbstractType returned by apply_internal() should have AbstractType::App() in its tree
-    fn apply_internal(&self, universe: &Universe, map: &HashMap<TypeVarId, AbstractType>) 
+    /// No AbstractType returned by substitute_internal() should have AbstractType::App() in its tree
+    fn substitute_internal(&self, map: &HashMap<TypeVarId, AbstractType>) 
         -> Result<AbstractType, Vec<ATypeError>> {
-
-        macro_rules! primitive_apply {
-            ($args: expr, $result: expr) => {{
-                if $args.len() != 0 {
-                    unimplemented!("Primitive type app");
-                }
-
-                Ok($result)
-            }}
-        }
 
         match *self {
 
@@ -156,22 +237,10 @@ impl AbstractType {
                 ref type_cons,
                 args: ref type_args,
             } => {
-                
-                //
-                // Type parameters of app's target type constructor are NOT in scope. Any type
-                //   parameters within the type constructor are guaranteed to come from solely
-                //   that type constructor.
-                //
-                // NOTE: If polymorphic modules are introduced, the above assumption is broken.
-                // 
-                // Still need to internally apply to type arguments in order to catch any nested
-                //   type parameters
-                //
-                // TODO: Applying type arguments will probably cause an infinite loop with
-                //   recursive types
+               
                 let (ok_args, err) = type_args
                             .iter()
-                            .map(|at| at.apply_internal(universe, map))
+                            .map(|at| at.substitute_internal(map))
                             .fold((Vec::new(), Vec::new()), | (mut ok, mut err), apply_result| {
                                 match apply_result {
                                     Ok(app) => ok.push(app),
@@ -185,136 +254,10 @@ impl AbstractType {
                     return Err(err);
                 }
 
-                let type_cons_id = *type_cons;
-                let type_cons = universe.get_type_cons(type_cons_id);
-                match type_cons {
-                    TypeCons::Record {
-                        ref type_params,
-                        ref fields,
-                        ref field_map,
-                        ..
-                    } => {
-                        if type_params.len() != ok_args.len() {
-                            if type_params.len() != ok_args.len() {
-                                return Err(vec![ApplicationError::Arity {
-                                    found: ok_args.len(),
-                                    expected: type_params.len(),
-                                }.into()]);
-                            }
-                        }
-
-                        // Make sure type arguments are all applied and mapped into the typing
-                        //  environment for field applications
-                        let old_map = map;
-                        let mut new_map = map.clone();
-                        let mut errors = Vec::new();
-
-                        type_params.map_args(&mut new_map, ok_args.into_iter())
-                            .map_err(|e| vec![e])?;
-
-                        let mut afm = AbstractFieldMap {
-                            fields: HashMap::new(),
-                            field_map: field_map.clone(),
-                        };
-                        for (field_id, field_abstract_type) in fields.iter() {
-                            let field_app_result = 
-                                field_abstract_type.apply_internal(universe, &new_map);
-                            match field_app_result {
-
-                                Ok(at) => {
-                                    afm.fields.insert(field_id.clone(), at);
-                                }
-
-                                Err(mut es) => errors.append(&mut es),
-                            }
-                        }
-                        Ok(AbstractType::Record {
-                            type_id: type_cons_id,
-                            abstract_field_map: afm,
-                        })
-                    }
-
-                    TypeCons::Function {
-                        ref type_params,
-                        ref parameters,
-                        ref return_type,
-                    } => {
-
-                        if type_params.len() != ok_args.len() {
-                            if type_params.len() != ok_args.len() {
-                                return Err(vec![ApplicationError::Arity {
-                                    found: ok_args.len(),
-                                    expected: type_params.len(),
-                                }.into()]);
-                            }
-                        }
-
-                        // Make sure type arguments are all applied and mapped into the typing
-                        //  environment for field applications
-                        let old_map = map;
-                        let mut new_map = map.clone();
-
-                        type_params.map_args(&mut new_map, ok_args.into_iter())
-                            .map_err(|e| vec![e])?;
-                        dbg!(&new_map, type_params);
-
-                        let mut errors = Vec::new();
-                        let mut new_params = Vec::new();
-                        for param in parameters.iter() {
-                            let param_app_result = param.apply_internal(universe, &new_map);
-                            dbg!(param, &param_app_result);
-
-                            match param_app_result {
-                                Ok(p) => new_params.push(p),
-
-                                Err(mut es) => errors.append(&mut es),
-                            }
-                        }
-
-                        if errors.len() != 0 {
-                            return Err(errors);
-                        }
-
-                        let return_type = return_type.apply_internal(universe, &new_map)?;
-
-                        Ok(AbstractType::Function {
-                            parameters: new_params,
-                            return_type: Box::new(return_type),
-                        })
-                    }
-
-                    TypeCons::UncheckedFunction {
-                        ref type_params,
-                        ref return_type,
-                    } => {
-
-                        if type_params.len() != ok_args.len() {
-                            return Err(vec![ApplicationError::Arity {
-                                found: ok_args.len(),
-                                expected: type_params.len(),
-                            }.into()]);
-                        }
-
-                        // Make sure type arguments are all applied and mapped into the typing
-                        //  environment for field applications
-                        let old_map = map;
-                        let mut new_map = map.clone();
-                        type_params.map_args(&mut new_map, ok_args.into_iter())
-                            .map_err(|e| vec![e])?;
-
-                        let return_type = return_type.apply_internal(universe, &new_map)?;
-
-                        Ok(AbstractType::UncheckedFunction {
-                            return_type: Box::new(return_type),
-                        })
-                    }
-
-                    TypeCons::Int => primitive_apply!(ok_args, AbstractType::Int),
-                    TypeCons::Float => primitive_apply!(ok_args, AbstractType::Float),
-                    TypeCons::String => primitive_apply!(ok_args, AbstractType::String),
-                    TypeCons::Bool => primitive_apply!(ok_args, AbstractType::Bool),
-                    TypeCons::Unit => primitive_apply!(ok_args, AbstractType::Unit),
-                }
+                Ok(AbstractType::App {
+                    type_cons: type_cons.clone(),
+                    args: ok_args.clone(),
+                })
             },
 
             AbstractType::Record {
@@ -322,7 +265,7 @@ impl AbstractType {
                 ref abstract_field_map,
             } => {
                 let (ok_fields, err) = abstract_field_map.fields.iter()
-                    .map(|(f_id, ty)| (f_id.clone(), ty.apply_internal(universe, map)))
+                    .map(|(f_id, ty)| (f_id.clone(), ty.substitute_internal(map)))
                     .fold((HashMap::new(), Vec::new()), |(mut ok, mut err), (f_id, result)| {
                         match result {
                             Ok(app) => {
@@ -351,7 +294,7 @@ impl AbstractType {
                 ref element_type,
                 ref size
             } => Ok(AbstractType::Array {
-                element_type: Box::new(element_type.apply_internal(universe, map)?),
+                element_type: Box::new(element_type.substitute_internal(map)?),
                 size: *size,
             }),
 
@@ -361,7 +304,7 @@ impl AbstractType {
             } => {
 
                 let (ok_parameters, errors) = parameters.iter()
-                    .map(|p| p.apply_internal(universe, map))
+                    .map(|p| p.substitute_internal(map))
                     .fold((Vec::new(), Vec::new()), |(mut ok, mut err), result| {
                         match result {
                             Ok(app) => ok.push(app),
@@ -375,7 +318,7 @@ impl AbstractType {
                     return Err(errors);
                 }
 
-                let new_return = return_type.apply_internal(universe, map)?;
+                let new_return = return_type.substitute_internal(map)?;
 
                 Ok(AbstractType::Function {
                     parameters: ok_parameters,
@@ -387,7 +330,7 @@ impl AbstractType {
                 ref return_type,
             } => {
 
-                let new_return = return_type.apply_internal(universe, map)?;
+                let new_return = return_type.substitute_internal(map)?;
 
                 Ok(AbstractType::UncheckedFunction {
                     return_type: Box::new(new_return),
@@ -398,7 +341,7 @@ impl AbstractType {
                 
                 let (ok_field_types, errors) = width_constraint.fields
                     .iter()
-                    .map(|(ident, at)| at.apply_internal(universe, map).map(|r| (ident, r)))
+                    .map(|(ident, at)| at.substitute_internal(map).map(|r| (ident, r)))
                     .fold((HashMap::new(), Vec::new()), |(mut ok, mut err), apply_result| {
                         match apply_result {
                             Ok((ref_ident, at)) => { ok.insert(ref_ident.clone(), at); },
@@ -425,8 +368,9 @@ impl AbstractType {
 
                 Ok(map
                     .get(type_param_id)
-                    .unwrap()
-                    .clone())
+                    .map(|t| t.clone())
+                    .unwrap_or(AbstractType::TypeVar(type_param_id.clone()))
+                )
             }
 
             AbstractType::Int => Ok(AbstractType::Int),
