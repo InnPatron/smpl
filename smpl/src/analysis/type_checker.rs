@@ -89,7 +89,7 @@ impl<'a> TypeChecker<'a> {
                                 TypeCons::Function {
                                     ref return_type,
                                     ..
-                                } => return_type.apply(universe, &scope, &typing_context)?,
+                                } => return_type.substitute(universe)?,
 
                                 _ => panic!("Non-function type constructor for function"),
                             }
@@ -117,7 +117,7 @@ impl<'a> TypeChecker<'a> {
                         TypeCons::Function {
                             ref return_type,
                             ..
-                        } => return_type.apply(universe, &scope, &typing_context)?,
+                        } => return_type.substitute(universe)?,
 
                         _ => panic!("Non-function type constructor for function"),
                     }
@@ -413,12 +413,12 @@ fn resolve_tmp(universe: &mut Universe, scope: &ScopedData,
                 .tmp_type_map
                 .get(lhs.data())
                 .expect("Missing tmp")
-                .apply(universe, scope, context)?;
+                .substitute(universe)?;
             let rhs_type = context
                 .tmp_type_map
                 .get(rhs.data())
                 .expect("Missing tmp")
-                .apply(universe, scope, context)?;
+                .substitute(universe)?;
 
             resolve_bin_op(
                 universe,
@@ -435,7 +435,7 @@ fn resolve_tmp(universe: &mut Universe, scope: &ScopedData,
                 .tmp_type_map
                 .get(uni_tmp.data())
                 .expect("Missing tmp")
-                .apply(universe, scope, context)?;
+                .substitute(universe)?;
 
             resolve_uni_op(scope, context, op, &uni_tmp_type, tmp.span())?
         }
@@ -643,7 +643,7 @@ fn resolve_struct_init(universe: &Universe, scope: &ScopedData,
         type_cons: struct_type_id,
         args: type_args,
     }
-    .apply(universe, scope, context)?;
+    .substitute(universe)?;
 
     // Check if type is a struct.
     let (struct_type_id, fields, field_map) = match struct_type {
@@ -828,7 +828,7 @@ fn resolve_binding(universe: &Universe, scope: &ScopedData,
                 type_cons: fn_type_id,
                 args: Vec::new(),
             }
-            .apply(universe, scope, context)?;
+            .substitute(universe)?;
 
             Ok(fn_type)
         }
@@ -862,7 +862,7 @@ fn resolve_mod_access(universe: &Universe, scope: &ScopedData,
         type_cons: fn_type_id,
         args: Vec::new(),
     }
-    .apply(universe, scope, context)?;
+    .substitute(universe)?;
 
     Ok(fn_type)
 }
@@ -978,7 +978,7 @@ fn resolve_array_init(universe: &Universe, scope: &ScopedData, context: &mut Typ
                 if expected_element_type.is_none() {
                     expected_element_type = Some(
                         current_element_type
-                            .apply(universe, scope, context)?
+                            .substitute(universe)?
                     );
                     continue;
                 }
@@ -1111,7 +1111,7 @@ fn resolve_type_inst(universe: &Universe, scope: &ScopedData, context: &TypingCo
         type_cons: fn_type_id,
         args: type_args,
     }
-    .apply(universe, scope, context)?;
+    .substitute(universe)?;
 
     Ok(inst_type)
 }
@@ -1178,7 +1178,7 @@ fn resolve_anonymous_fn(universe: &mut Universe, scope: &ScopedData, context: &T
             AbstractType::App {
                 type_cons: fn_type.clone(),
                 args: Vec::new(),
-            }.apply(universe, fn_scope, typing_context)?
+            }.substitute(universe)?
 
         } else {
             panic!("Anonymous function should be resolved.");
@@ -1213,7 +1213,7 @@ fn resolve_field_access(
     if let Some(expr) = path.root_indexing_expr() {
         let indexing_type = resolve_expr(universe, scope, context,expr)?;
 
-        match indexing_type.apply(universe, scope, context)? {
+        match indexing_type.substitute(universe)? {
             AbstractType::Int => (),
             _ => {
                 return Err(TypeError::InvalidIndex {
@@ -1224,7 +1224,7 @@ fn resolve_field_access(
             }
         }
 
-        match current_type.apply(universe, scope, context)? {
+        match current_type.substitute(universe)? {
             AbstractType::Array {
                 element_type,
                 ..
@@ -1245,7 +1245,7 @@ fn resolve_field_access(
         let next_type: AbstractType;
         let field_type_retriever: 
             Box<dyn Fn(&crate::ast::Ident) -> Result<AbstractType, AnalysisError>> = 
-            match current_type.apply(universe, scope, context)? {
+            match current_type.substitute(universe)? {
 
             AbstractType::WidthConstraint(awc) => {
                 Box::new(move |name| {

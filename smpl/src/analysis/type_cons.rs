@@ -590,7 +590,7 @@ fn fuse_width_constraints(universe: &Universe, scope: &ScopedData,
 
                 let ann_type = 
                     type_from_ann(universe, scope, typing_context, ann.data())?
-                    .apply(universe, scope, typing_context)?;
+                    .substitute(universe)?;
 
                 match ann_type {
                     AbstractType::Record {

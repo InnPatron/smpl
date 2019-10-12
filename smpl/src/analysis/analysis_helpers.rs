@@ -112,10 +112,8 @@ pub fn generate_fn_analysis_data<'a, 'b, 'c, 'd, 'e, T>(universe: &'a Universe,
                     .iter().zip(parameters.iter()) {
 
                     let formal_param_var_id = universe.new_var_id();
-                    let formal_param_type = formal_param_type.apply(
-                        universe,
-                        &fn_scope,
-                        &fn_context)?;
+                    let formal_param_type = formal_param_type
+                        .substitute(universe)?;
 
                     fn_scope.insert_var(formal_param.data().name.data().clone(),
                         formal_param_var_id);

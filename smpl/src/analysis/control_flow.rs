@@ -345,7 +345,7 @@ impl CFG {
             ..
         } = fn_type
         {
-            let return_type = return_type.apply(universe, fn_scope, fn_typing_context)?;
+            let return_type = return_type.substitute(universe)?;
             if let AbstractType::Unit = return_type {
                 append_node!(
                     cfg,
