@@ -266,7 +266,16 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         let var_type = match var_decl.type_annotation() {
             Some(ann) => {
                 let ann_type = ann_to_type!(self, ann)?;
-                resolve!(self, &expr_type, &ann_type, decl.span)?;
+                resolve!(self, &expr_type, &ann_type, decl.span)
+                    .map_err(|_| {
+                        let name = var_decl.var_name();
+                        TypeError::IncompatibleLocal {
+                            name: name.clone(),
+                            local_type: ann_type.clone(),
+                            found_type: expr_type,
+                            span: decl.span,
+                        }
+                    })?;
 
                 ann_type
             }
