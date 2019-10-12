@@ -184,13 +184,12 @@ impl Universe {
     }
 
     pub fn insert_fn(&mut self, fn_id: FnId, name: Ident,
-        type_id: TypeId, fn_scope: ScopedData, typing_context: TypingContext, cfg: CFG) {
+        type_id: TypeId, analysis_context: AnalysisContext, cfg: CFG) {
         let function = SMPLFunction {
             name: name,
             fn_type: type_id,
             cfg: Rc::new(RefCell::new(cfg)),
-            fn_scope: fn_scope,
-            typing_context: typing_context,
+            analysis_context: analysis_context,
         };
 
         if self.fn_map.insert(fn_id, Function::SMPL(function)).is_some() {
@@ -373,6 +372,37 @@ pub enum BindingInfo {
 }
 
 #[derive(Clone, Debug)]
+pub struct AnalysisContext {
+    fn_scope: ScopedData,
+    typing_context: TypingContext,
+    existential_type_vars: Vec<TypeVarId>,
+}
+
+impl AnalysisContext {
+    pub fn new(fn_scope: ScopedData, typing_context: TypingContext, 
+        existential_type_vars: Vec<TypeVarId>) -> AnalysisContext {
+
+        AnalysisContext {
+            fn_scope: fn_scope,
+            typing_context: typing_context,
+            existential_type_vars: existential_type_vars
+        }
+    }
+
+    pub fn fn_scope(&self) -> &ScopedData {
+        &self.fn_scope
+    }
+
+    pub fn typing_context(&self) -> &TypingContext {
+        &self.typing_context
+    }
+
+    pub fn existential_type_vars(&self) -> &[TypeVarId] {
+        &self.existential_type_vars
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum Function {
     Builtin(BuiltinFunction),
     SMPL(SMPLFunction),
@@ -403,8 +433,7 @@ pub enum AnonymousFunction {
     Resolved {
         fn_type: TypeId,
         cfg: Rc<RefCell<CFG>>,
-        fn_scope: ScopedData,
-        typing_context: TypingContext,
+        analysis_context: AnalysisContext,
     }
 }
 
@@ -446,8 +475,7 @@ pub struct SMPLFunction {
     name: Ident,
     fn_type: TypeId,
     cfg: Rc<RefCell<CFG>>,
-    fn_scope: ScopedData,
-    typing_context: TypingContext,
+    analysis_context: AnalysisContext
 }
 
 impl SMPLFunction {
@@ -464,12 +492,8 @@ impl SMPLFunction {
         self.cfg.clone()
     }
 
-    pub(super) fn fn_scope(&self) -> &ScopedData {
-        &self.fn_scope
-    }
-
-    pub(super) fn typing_context(&self) -> &TypingContext {
-        &self.typing_context
+    pub(super) fn analysis_context(&self) -> &AnalysisContext {
+        &self.analysis_context
     }
 }
 

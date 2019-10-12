@@ -9,7 +9,7 @@ use crate::span::Span;
 use super::error::{AnalysisError, ControlFlowError};
 use super::expr_flow;
 use super::resolve_scope::ScopedData;
-use super::semantic_data::{LoopId, Universe};
+use super::semantic_data::{LoopId, Universe, AnalysisContext};
 use super::type_cons::*;
 use super::type_resolver::resolve_types;
 use super::type_checker::TypingContext;
@@ -308,8 +308,7 @@ impl CFG {
         universe: &mut Universe,
         body: ast::AstNode<ast::Block>,
         fn_type: &TypeCons,
-        fn_scope: &ScopedData,
-        fn_typing_context: &TypingContext,
+        analysis_context: &AnalysisContext,
     ) -> Result<Self, AnalysisError> {
         let mut cfg = {
             let mut graph = graph::Graph::new();
@@ -761,6 +760,7 @@ impl CFG {
 mod tests {
     use super::*;
     use super::super::type_checker::TypingContext;
+    use super::super::analysis_helpers::*;
     use crate::parser::*;
     use crate::parser::parser::*;
     use petgraph::dot::{Config, Dot};
@@ -807,10 +807,15 @@ let b: int = 3;
         let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
-        let scope = universe.std_scope();
-        let typing_context = TypingContext::empty();
+        let analysis_context = 
+            generate_fn_analysis_data(&universe, 
+                &universe.std_scope(), 
+                &TypingContext::empty(),
+                &fn_type,
+                &fn_def
+                ).unwrap();
         let cfg = CFG::generate(&mut universe, 
-                fn_def.body.clone(), &fn_type, &scope, &typing_context)
+                fn_def.body.clone(), &fn_type, &analysis_context)
             .unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
@@ -873,10 +878,15 @@ if (test) {
         let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
-        let scope = universe.std_scope();
-        let typing_context = TypingContext::empty();
+        let analysis_context = 
+            generate_fn_analysis_data(&universe, 
+                &universe.std_scope(), 
+                &TypingContext::empty(),
+                &fn_type,
+                &fn_def
+                ).unwrap();
         let cfg = CFG::generate(
-                &mut universe, fn_def.body.clone(), &fn_type, &scope, &typing_context
+                &mut universe, fn_def.body.clone(), &fn_type, &analysis_context,
             )
             .unwrap();
 
@@ -1025,10 +1035,15 @@ if (test) {
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         
         let fn_def = testfn_decl(&mut input).unwrap();
-        let scope = universe.std_scope();
-        let typing_context = TypingContext::empty();
+        let analysis_context = 
+            generate_fn_analysis_data(&universe, 
+                &universe.std_scope(), 
+                &TypingContext::empty(),
+                &fn_type,
+                &fn_def
+                ).unwrap();
         let cfg = CFG::generate(
-                &mut universe, fn_def.body.clone(), &fn_type, &scope, &typing_context,
+                &mut universe, fn_def.body.clone(), &fn_type, &analysis_context,
             )
             .unwrap();
 
@@ -1236,10 +1251,16 @@ if (test) {
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         
         let fn_def = testfn_decl(&mut input).unwrap();
-        let scope = universe.std_scope();
-        let typing_context = TypingContext::empty();
+        let analysis_context = 
+            generate_fn_analysis_data(&universe, 
+                &universe.std_scope(), 
+                &TypingContext::empty(),
+                &fn_type,
+                &fn_def
+                ).unwrap();
+
         let cfg = CFG::generate(
-                &mut universe, fn_def.body.clone(), &fn_type, &scope, &typing_context
+                &mut universe, fn_def.body.clone(), &fn_type, &analysis_context
             )
             .unwrap();
 

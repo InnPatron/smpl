@@ -6,7 +6,7 @@ use crate::ast;
 
 use super::error::{AnalysisError, TypeError};
 use super::metadata::*;
-use super::semantic_data::{FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId, Universe};
+use super::semantic_data::{FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId, Universe, AnalysisContext};
 use super::resolve_scope::ScopedData;
 use super::type_checker::TypingContext;
 use super::type_cons::*;
@@ -56,13 +56,14 @@ pub fn generate_fn_analysis_data<'a, 'b, 'c, 'd, 'e, T>(universe: &'a Universe,
     outer_context: &'c TypingContext,
     fn_type_cons: &'d TypeCons,
     fn_def: &'e T)
-    -> Result<(ScopedData, TypingContext), AnalysisError> 
+    -> Result<AnalysisContext, AnalysisError> 
     where &'e T: Into<ContextData<'e>> {
 
     let fn_def: ContextData = fn_def.into();
 
     let mut fn_scope = outer_scope.clone();
     let mut fn_context = outer_context.clone();
+    let mut existential_type_vars = Vec::new();
 
     if fn_def.clear_variables {
         fn_scope.clear_scoped_vars();
@@ -76,6 +77,7 @@ pub fn generate_fn_analysis_data<'a, 'b, 'c, 'd, 'e, T>(universe: &'a Universe,
             ..
         } => {
             
+            let mut existential_map = HashMap::new();
             // Map placeholder type variables to an existential type variable
             if let Some(ref tps) =  fn_def.type_params {
                 for (param_name, (type_param_id, constraint)) in tps.params
@@ -84,17 +86,24 @@ pub fn generate_fn_analysis_data<'a, 'b, 'c, 'd, 'e, T>(universe: &'a Universe,
 
                     let existential_type_var = universe.new_type_var_id();
                     let placeholder_variable = type_params.placeholder_type_var(type_param_id);
+                    dbg!(existential_type_var);
+                    dbg!(placeholder_variable);
 
                     fn_scope.insert_type_var(param_name.data().clone(), 
                         existential_type_var);
 
-                    fn_context.type_vars
-                        .insert(placeholder_variable, AbstractType::TypeVar(existential_type_var));
+                    existential_map.insert(placeholder_variable, 
+                                AbstractType::TypeVar(existential_type_var));
+
+                    existential_type_vars
+                        .push(existential_type_var);
                     match constraint {
                         Some(width_constraint) => {
+                            let width_constraint = 
+                                AbstractType::WidthConstraint(width_constraint.clone());
                             fn_context.type_vars
-                                .insert(existential_type_var, 
-                                    AbstractType::WidthConstraint(width_constraint.clone()));
+                                .insert(existential_type_var, width_constraint.clone());
+
                         }
 
                         None => {
@@ -113,7 +122,9 @@ pub fn generate_fn_analysis_data<'a, 'b, 'c, 'd, 'e, T>(universe: &'a Universe,
 
                     let formal_param_var_id = universe.new_var_id();
                     let formal_param_type = formal_param_type
-                        .substitute(universe)?;
+                        .substitute_with(universe, &existential_map)?;
+
+                    dbg!(&existential_map, &formal_param_type);
 
                     fn_scope.insert_var(formal_param.data().name.data().clone(),
                         formal_param_var_id);
@@ -129,5 +140,9 @@ pub fn generate_fn_analysis_data<'a, 'b, 'c, 'd, 'e, T>(universe: &'a Universe,
         _ => unreachable!("Only pass in a function type constructor"),
     }
 
-    Ok((fn_scope, fn_context))
+    Ok(AnalysisContext::new(
+        fn_scope,
+        fn_context,
+        existential_type_vars,
+    ))
 }

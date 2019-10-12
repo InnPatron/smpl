@@ -110,7 +110,7 @@ pub fn check_modules(
                 reserved_fn.1.data(),
             )?;
 
-            let (fn_scope, fn_typing_context) = analysis_helpers::generate_fn_analysis_data(
+            let analysis_context = analysis_helpers::generate_fn_analysis_data(
                 program.universe(),
                 raw_program.scopes.get(mod_id).unwrap(),
                 &TypingContext::empty(),
@@ -121,8 +121,7 @@ pub fn check_modules(
                 program.universe_mut(),
                 fn_decl.body.clone(),
                 &fn_type_cons,
-                &fn_scope,
-                &fn_typing_context
+                &analysis_context,
             )?;
 
             // TODO: Insert fn typing context
@@ -130,7 +129,7 @@ pub fn check_modules(
 
             program
                 .universe_mut()
-                .insert_fn(fn_id, fn_name.clone(), fn_type_id, fn_scope, fn_typing_context, cfg);
+                .insert_fn(fn_id, fn_name.clone(), fn_type_id, analysis_context, cfg);
             program.metadata_mut().insert_module_fn(
                 mod_id.clone(),
                 fn_name.clone(),
