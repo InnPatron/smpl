@@ -613,13 +613,16 @@ fn fuse_width_constraints(universe: &Universe, scope: &ScopedData,
                         },
                         ..
                     } => {
-                        for (field_name, (_field_id, field_type)) in
-                            field_map.keys().zip(fields.iter()) {
+                        for (field_name, field_id) in field_map.iter() {
+                            let field_type = fields
+                                .get(field_id)
+                                .expect("Missing field id")
+                                .clone();
 
                             field_constraints
                                 .entry(field_name.clone())
-                                .or_insert(vec![field_type.clone()])
-                                .push(field_type.clone());
+                                .or_insert(Vec::new())
+                                .push(field_type);
                         }
                     }
 
