@@ -1626,4 +1626,40 @@ fn foo(type A, B)(a: A, b: B) {
             }
         }
     }
+
+    #[test]
+    fn invalid_type_arg() {
+        let mod1 =
+"mod mod1;
+
+struct Baz {
+    x: bool,
+}
+
+fn foo(type A)(a: A) -> A
+    where A: { x: int } {
+
+
+    return a;
+}
+
+fn bar() {
+   foo(type Baz)(init Baz {
+        x: true
+   });
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Expected a type error. Found OK"),
+
+            Err(e) => {
+                if let AnalysisError::TypeError(_) = e {
+                    ()
+                } else {
+                    panic!("Expected a type error. Found {:?}", e);
+                }
+            }
+        }
+    }
 }
