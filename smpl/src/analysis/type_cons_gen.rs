@@ -105,7 +105,6 @@ pub fn generate_fn_type_cons(universe: &Universe,
 
                 let param_type =
                     type_from_ann(universe, &type_param_scope, &type_param_typing_context, param_ann)?;
-                dbg!(&param.name, &param_type);
 
                 typed_formal_params.push(param_type);
             }
@@ -293,7 +292,6 @@ fn type_param_map(
             } else {
                 let type_param_id = universe.new_type_param_id(); 
                 let type_var_id = universe.new_type_var_id();
-                dbg!(p.data(), type_var_id);
                 // Insert type parameter into set
                 internal_type_map.insert(p.data().clone(), (type_param_id, type_var_id));
                 

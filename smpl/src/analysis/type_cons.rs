@@ -375,7 +375,6 @@ impl AbstractType {
             },
 
             AbstractType::TypeVar(ref type_param_id) => {
-                dbg!(type_param_id, map);
                 assert!(map.contains_key(type_param_id));
 
                 let result = map

@@ -142,8 +142,6 @@ impl<'a> TypeChecker<'a> {
                     }
                 };
 
-                dbg!(&return_type);
-
                 Ok(TypeChecker {
                     scopes: vec![fn_scope],
                     typing_context: typing_context,
@@ -326,7 +324,6 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         match rdata.expr {
             Some(ref expr) => {
                 let expr_type = expr_type!(self, expr)?;
-                dbg!(&expr_type, &self.return_type);
                 resolve!(self, &expr_type, &self.return_type, rdata.span)
                     .map_err(|e| e.into())
             }

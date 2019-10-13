@@ -86,8 +86,6 @@ pub fn generate_fn_analysis_data<'a, 'b, 'c, 'd, 'e, T>(universe: &'a Universe,
 
                     let existential_type_var = universe.new_type_var_id();
                     let placeholder_variable = type_params.placeholder_type_var(type_param_id);
-                    dbg!(existential_type_var);
-                    dbg!(placeholder_variable);
 
                     fn_scope.insert_type_var(param_name.data().clone(), 
                         existential_type_var);
@@ -123,8 +121,6 @@ pub fn generate_fn_analysis_data<'a, 'b, 'c, 'd, 'e, T>(universe: &'a Universe,
                     let formal_param_var_id = universe.new_var_id();
                     let formal_param_type = formal_param_type
                         .substitute_with(universe, &existential_map)?;
-
-                    dbg!(&existential_map, &formal_param_type);
 
                     fn_scope.insert_var(formal_param.data().name.data().clone(),
                         formal_param_var_id);
