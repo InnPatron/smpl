@@ -295,7 +295,7 @@ impl AbstractType {
 
                         // Build substitution map for constraints
                         for ((type_param_id, _), arg_type) in 
-                            type_params.iter().zip(type_args.iter()) {
+                            type_params.iter().zip(ok_args.iter()) {
 
                             let placeholder_type_var = type_params
                                 .placeholder_type_var(type_param_id);
@@ -325,7 +325,7 @@ impl AbstractType {
                     };
 
                     let mut arg_constraint_errors = Vec::new();
-                    for (arg_type, constraint) in type_args.iter().zip(constraints.iter()) {
+                    for (arg_type, constraint) in ok_args.iter().zip(constraints.iter()) {
                         // TODO: Pass the correct Span
                         match super::type_resolver::resolve_types_static(universe, 
                             scoped_data, 
