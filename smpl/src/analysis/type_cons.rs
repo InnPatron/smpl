@@ -146,94 +146,11 @@ impl AbstractType {
                 ref type_cons,
                 ref args,
             } => {
-
-                let type_cons = universe.get_type_cons(*type_cons);
-                let map : HashMap<TypeVarId, AbstractType> = match type_cons.type_params() {
-                    Some(type_params) => {
-
-                        if type_params.len() != args.len() {
-                            return Err(vec![ATypeError::ApplicationError(ApplicationError::Arity {
-                                expected: type_params.len(),
-                                found: args.len(),
-                            })]);
-                        }
-
-                        let mut map = HashMap::new();
-                        for ((type_param_id, placeholder_type_var_id), arg) in 
-                            type_params.placeholder_variables.iter().zip(args.iter()) {
-
-                            map.insert(placeholder_type_var_id.clone(), arg.clone());
-
-                        }
-
-                        map
-                    }
-
-                    None => {
-                        if args.len() != 0 {
-                            return Err(vec![ATypeError::ApplicationError(ApplicationError::Arity {
-                                expected: 0,
-                                found: args.len(),
-                            })]);
-                        }
-
-                        HashMap::new()
-                    }
-                };
-
-                match type_cons {
-                    TypeCons::UncheckedFunction {
-                        ref return_type,
-                        ..
-                    } => {
-                        Ok(AbstractType::UncheckedFunction {
-                            return_type: Box::new(return_type.substitute_internal(universe, scoped_data, typing_context, &map)?),
-                        })
-                    }
-
-                    TypeCons::Function {
-                        ref parameters,
-                        ref return_type,
-                        ..
-                    } => {
-                        Ok(AbstractType::Function {
-                            parameters: parameters.iter()
-                                .map(|p| p.substitute_internal(universe, scoped_data, typing_context, &map))
-                                .collect::<Result<_, _>>()?,
-                            return_type: Box::new(return_type.substitute_internal(universe, scoped_data, typing_context, &map)?),
-                        })
-                    }
-
-                    TypeCons::Record {
-                        ref type_id,
-                        ref type_params,
-                        ref fields,
-                        ref field_map,
-                        ..
-                    } => {
-
-                        let mut subbed_fields: HashMap<FieldId, AbstractType> = HashMap::new();
-
-                        for (id, ty) in fields.iter() {
-                            subbed_fields.insert(id.clone(),
-                                ty.substitute_internal(universe, scoped_data, typing_context, &map)?);
-                        }
-
-                        Ok(AbstractType::Record {
-                            type_id: type_id.clone(),
-                            abstract_field_map: AbstractFieldMap {
-                                fields: subbed_fields,
-                                field_map: field_map.clone(),
-                            },
-                        })
-                    }
-
-                    TypeCons::Int => Ok(AbstractType::Int),
-                    TypeCons::Float => Ok(AbstractType::Float),
-                    TypeCons::Bool => Ok(AbstractType::Bool),
-                    TypeCons::String => Ok(AbstractType::String),
-                    TypeCons::Unit => Ok(AbstractType::Unit),
-                }
+                let no_sub_map = HashMap::new();
+                self.substitute_internal(universe, 
+                    scoped_data, 
+                    typing_context,
+                    &no_sub_map)
             }
 
             t => Ok(t.clone()),
