@@ -157,12 +157,19 @@ impl AbstractType {
         }
     }
 
+    ///
+    /// Takes a type constructor and applies its given arguments.
+    ///
+    /// Arguments are in the form of a map
+    ///   from (placholder type variables) -> (type values)
+    ///
+    /// Assume all constraints are already met
+    ///
     fn apply_internal(type_cons: &TypeCons, universe: &Universe,
         scoped_data: &ScopedData, typing_context: &TypingContext, 
         map: &HashMap<TypeVarId, AbstractType>)
         -> Result<AbstractType, Vec<ATypeError>> {
 
-        // Assume all constraint requirements are met
         match type_cons {
             TypeCons::UncheckedFunction {
                 ref return_type,
@@ -219,10 +226,19 @@ impl AbstractType {
 
     }
 
-    /// Given an environment of type variables to abstract types, recursively substitute
+    /// Given a map of type variables to abstract types, recursively substitute
     ///   any type variables in the map with their abstract type.
     ///
+    /// Only relies on scope/typing context for constraint resolution. They are NOT used for
+    ///   substitution.
+    ///
+    /// Substitution literally replaces whatever the type variable with its mapped element
+    ///  (or itself if it is not in the map)
+    ///
     /// No AbstractType returned by substitute_internal() should have AbstractType::App() in its tree
+    ///
+    /// Type variable constraints are checked.
+    ///
     fn substitute_internal(&self, universe: &Universe, scoped_data: &ScopedData, 
     typing_context: &TypingContext, map: &HashMap<TypeVarId, AbstractType>) 
         -> Result<AbstractType, Vec<ATypeError>> {
