@@ -344,7 +344,10 @@ impl CFG {
             ..
         } = fn_type
         {
-            let return_type = return_type.substitute(universe)?;
+            let outer_scope = universe.std_scope();
+            let outer_context = TypingContext::empty();
+            // TODO: Should this be the function scope/context?
+            let return_type = return_type.substitute(universe, &outer_scope, &outer_context)?;
             if let AbstractType::Unit = return_type {
                 append_node!(
                     cfg,

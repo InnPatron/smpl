@@ -192,7 +192,7 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
 
         (synth_app @ App { .. }, constraint) => {
             let new_synthesis = synth_app
-                .substitute(universe).unwrap();
+                .substitute(universe, scoped_data, typing_context).unwrap();
 
             resolve_types_static(universe, scoped_data, typing_context,
                 &new_synthesis, constraint, span)
@@ -200,7 +200,7 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
 
         (synthesis, constraint_app @ App { .. }) => {
             let new_constraint = constraint_app
-                .substitute(universe).unwrap();
+                .substitute(universe, scoped_data, typing_context).unwrap();
 
             resolve_types_static(universe, scoped_data, typing_context,
                 synthesis, &new_constraint, span)
@@ -425,7 +425,7 @@ fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData,
 
         (synth_app @ App { .. }, constraint) => {
             let new_synthesis = synth_app
-                .substitute(universe).unwrap();
+                .substitute(universe, scoped_data, typing_context).unwrap();
 
             resolve_param_static(universe, scoped_data, typing_context,
                 &new_synthesis, constraint, span)
@@ -433,7 +433,7 @@ fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData,
 
         (synthesis, constraint_app @ App { .. }) => {
             let new_constraint = constraint_app
-                .substitute(universe).unwrap();
+                .substitute(universe, scoped_data, typing_context).unwrap();
 
             resolve_param_static(universe, scoped_data, typing_context,
                 synthesis, &new_constraint, span)

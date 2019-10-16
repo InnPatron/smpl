@@ -110,7 +110,7 @@ pub fn generate_fn_analysis_data<'a, 'b, 'c, 'd, 'e, T>(universe: &'a Universe,
 
                     let formal_param_var_id = universe.new_var_id();
                     let formal_param_type = formal_param_type
-                        .substitute_with(universe, &existential_map)?;
+                        .substitute_with(universe, outer_scope, outer_context, &existential_map)?;
 
                     fn_scope.insert_var(formal_param.data().name.data().clone(),
                         formal_param_var_id);
