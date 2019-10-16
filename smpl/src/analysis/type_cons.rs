@@ -127,13 +127,17 @@ impl AbstractType {
         }
     }
 
-    pub fn substitute_with(&self, universe: &Universe, map: &HashMap<TypeVarId, AbstractType>) 
+    pub fn substitute_with(&self, universe: &Universe, 
+        scoped_data: &ScopedData, typing_context: &TypingContext,
+        map: &HashMap<TypeVarId, AbstractType>) 
         -> Result<AbstractType, Vec<ATypeError>> {
 
-        self.substitute_internal(map)
+        self.substitute_internal(universe, scoped_data, typing_context, map)
     }
 
-    pub fn substitute(&self, universe: &Universe) 
+    pub fn substitute(&self, universe: &Universe, 
+        scoped_data: &ScopedData, 
+        typing_context: &TypingContext) 
         -> Result<AbstractType, Vec<ATypeError>> {
 
         match self {
@@ -183,7 +187,7 @@ impl AbstractType {
                         ..
                     } => {
                         Ok(AbstractType::UncheckedFunction {
-                            return_type: Box::new(return_type.substitute_internal(&map)?),
+                            return_type: Box::new(return_type.substitute_internal(universe, scoped_data, typing_context, &map)?),
                         })
                     }
 
@@ -194,9 +198,9 @@ impl AbstractType {
                     } => {
                         Ok(AbstractType::Function {
                             parameters: parameters.iter()
-                                .map(|p| p.substitute_internal(&map))
+                                .map(|p| p.substitute_internal(universe, scoped_data, typing_context, &map))
                                 .collect::<Result<_, _>>()?,
-                            return_type: Box::new(return_type.substitute_internal(&map)?),
+                            return_type: Box::new(return_type.substitute_internal(universe, scoped_data, typing_context, &map)?),
                         })
                     }
 
@@ -212,7 +216,7 @@ impl AbstractType {
 
                         for (id, ty) in fields.iter() {
                             subbed_fields.insert(id.clone(),
-                                ty.substitute_internal(&map)?);
+                                ty.substitute_internal(universe, scoped_data, typing_context, &map)?);
                         }
 
                         Ok(AbstractType::Record {
@@ -240,19 +244,22 @@ impl AbstractType {
     ///   any type variables in the map with their abstract type.
     ///
     /// No AbstractType returned by substitute_internal() should have AbstractType::App() in its tree
-    fn substitute_internal(&self, map: &HashMap<TypeVarId, AbstractType>) 
+    fn substitute_internal(&self, universe: &Universe, scoped_data: &ScopedData, 
+    typing_context: &TypingContext, map: &HashMap<TypeVarId, AbstractType>) 
         -> Result<AbstractType, Vec<ATypeError>> {
 
         match *self {
 
             AbstractType::App {
-                ref type_cons,
+                type_cons: ref type_cons_id,
                 args: ref type_args,
             } => {
                
                 let (ok_args, err) = type_args
                             .iter()
-                            .map(|at| at.substitute_internal(map))
+                            .map(|at| {
+                                at.substitute_internal(universe, scoped_data, typing_context, map)
+                            })
                             .fold((Vec::new(), Vec::new()), | (mut ok, mut err), apply_result| {
                                 match apply_result {
                                     Ok(app) => ok.push(app),
@@ -266,8 +273,79 @@ impl AbstractType {
                     return Err(err);
                 }
 
+                let type_cons = universe.get_type_cons(*type_cons_id);
+
+                // Check if args match constraints
+                if let Some(type_params) = type_cons.type_params() {
+
+                    if ok_args.len() != type_params.len() {
+                        return unimplemented!();
+                    }
+
+
+                    // Need to substitute all args into constraints
+                    let constraints = {
+                        let mut constraints = Vec::new();
+                        let mut constraint_errors = Vec::new();
+                        let mut constraint_sub_map = HashMap::new();
+
+                        // Build substitution map for constraints
+                        for ((type_param_id, _), arg_type) in 
+                            type_params.iter().zip(type_args.iter()) {
+
+                            let placeholder_type_var = type_params
+                                .placeholder_type_var(type_param_id);
+
+                            constraint_sub_map.insert(placeholder_type_var, arg_type.clone());
+                        }
+
+                        // Substitute constraint
+                        for (_, constraint) in type_params.iter() {
+                            let constraint = constraint
+                                .substitute_internal(universe, 
+                                    scoped_data, 
+                                    typing_context,
+                                    &constraint_sub_map);
+
+                            match constraint {
+                                Ok(c) => constraints.push(c),
+                                Err(mut e) => constraint_errors.append(&mut e),
+                            }
+                        }
+
+                        if constraint_errors.len() != 0 {
+                            return Err(constraint_errors);
+                        } else {
+                            constraints
+                        }
+                    };
+
+                    let mut arg_constraint_errors = Vec::new();
+                    for (arg_type, constraint) in type_args.iter().zip(constraints.iter()) {
+                        // TODO: Pass the correct Span
+                        match super::type_resolver::resolve_types_static(universe, 
+                            scoped_data, 
+                            typing_context,
+                            arg_type,
+                            &constraint,
+                            crate::span::Span::dummy()) {
+
+                            Ok(_) => (),
+
+                            Err(e) => arg_constraint_errors.push(e),
+                        }
+                    }
+
+                    if arg_constraint_errors.len() != 0 {
+                        return Err(arg_constraint_errors);
+                    }
+
+                } else if ok_args.len() != 0 {
+                    return unimplemented!();
+                }
+
                 Ok(AbstractType::App {
-                    type_cons: type_cons.clone(),
+                    type_cons: type_cons_id.clone(),
                     args: ok_args.clone(),
                 })
             },
@@ -277,7 +355,7 @@ impl AbstractType {
                 ref abstract_field_map,
             } => {
                 let (ok_fields, err) = abstract_field_map.fields.iter()
-                    .map(|(f_id, ty)| (f_id.clone(), ty.substitute_internal(map)))
+                    .map(|(f_id, ty)| (f_id.clone(), ty.substitute_internal(universe, scoped_data, typing_context, map)))
                     .fold((HashMap::new(), Vec::new()), |(mut ok, mut err), (f_id, result)| {
                         match result {
                             Ok(app) => {
@@ -306,7 +384,7 @@ impl AbstractType {
                 ref element_type,
                 ref size
             } => Ok(AbstractType::Array {
-                element_type: Box::new(element_type.substitute_internal(map)?),
+                element_type: Box::new(element_type.substitute_internal(universe, scoped_data, typing_context, map)?),
                 size: *size,
             }),
 
@@ -316,7 +394,7 @@ impl AbstractType {
             } => {
 
                 let (ok_parameters, errors) = parameters.iter()
-                    .map(|p| p.substitute_internal(map))
+                    .map(|p| p.substitute_internal(universe, scoped_data, typing_context, map))
                     .fold((Vec::new(), Vec::new()), |(mut ok, mut err), result| {
                         match result {
                             Ok(app) => ok.push(app),
@@ -330,7 +408,7 @@ impl AbstractType {
                     return Err(errors);
                 }
 
-                let new_return = return_type.substitute_internal(map)?;
+                let new_return = return_type.substitute_internal(universe, scoped_data, typing_context, map)?;
 
                 Ok(AbstractType::Function {
                     parameters: ok_parameters,
@@ -342,7 +420,7 @@ impl AbstractType {
                 ref return_type,
             } => {
 
-                let new_return = return_type.substitute_internal(map)?;
+                let new_return = return_type.substitute_internal(universe, scoped_data, typing_context, map)?;
 
                 Ok(AbstractType::UncheckedFunction {
                     return_type: Box::new(new_return),
@@ -353,7 +431,7 @@ impl AbstractType {
                 
                 let (ok_field_types, errors) = width_constraint.fields
                     .iter()
-                    .map(|(ident, at)| at.substitute_internal(map).map(|r| (ident, r)))
+                    .map(|(ident, at)| at.substitute_internal(universe, scoped_data, typing_context, map).map(|r| (ident, r)))
                     .fold((HashMap::new(), Vec::new()), |(mut ok, mut err), apply_result| {
                         match apply_result {
                             Ok((ref_ident, at)) => { ok.insert(ref_ident.clone(), at); },
@@ -590,7 +668,7 @@ fn fuse_width_constraints(universe: &Universe, scope: &ScopedData,
 
                 let ann_type = 
                     type_from_ann(universe, scope, typing_context, ann.data())?
-                    .substitute(universe)?;
+                    .substitute(universe, scope, typing_context)?;
 
                 match ann_type {
                     AbstractType::Record {
