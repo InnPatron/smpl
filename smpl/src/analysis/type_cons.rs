@@ -279,7 +279,11 @@ impl AbstractType {
                 if let Some(type_params) = type_cons.type_params() {
 
                     if ok_args.len() != type_params.len() {
-                        return unimplemented!();
+
+                        return Err(vec![ATypeError::ApplicationError(ApplicationError::Arity {
+                                expected: type_params.len(),
+                                found: ok_args.len(),
+                            })]);
                     }
 
 
@@ -341,7 +345,10 @@ impl AbstractType {
                     }
 
                 } else if ok_args.len() != 0 {
-                    return unimplemented!();
+                    return Err(vec![ATypeError::ApplicationError(ApplicationError::Arity {
+                        expected: 0,
+                        found: ok_args.len(),
+                    })]);
                 }
 
                 Ok(AbstractType::App {
