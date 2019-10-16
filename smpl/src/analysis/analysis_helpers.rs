@@ -95,21 +95,11 @@ pub fn generate_fn_analysis_data<'a, 'b, 'c, 'd, 'e, T>(universe: &'a Universe,
 
                     existential_type_vars
                         .push(existential_type_var);
-                    match constraint {
-                        Some(width_constraint) => {
-                            let width_constraint = 
-                                AbstractType::WidthConstraint(width_constraint.clone());
-                            fn_context.type_vars
-                                .insert(existential_type_var, width_constraint.clone());
-
-                        }
-
-                        None => {
-                            fn_context.type_vars
-                                .insert(existential_type_var, 
-                                    AbstractType::Any);
-                        }
-                    }
+                 
+                    // Constraint guarenteed to be AbstractType::WidthConstraint or
+                    //   AbstractType::Any by TypeParams
+                    fn_context.type_vars
+                        .insert(existential_type_var, constraint.clone());
                 }
             }
 

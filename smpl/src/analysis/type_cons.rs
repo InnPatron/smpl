@@ -523,7 +523,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
 #[derive(Debug, Clone)]
 pub struct TypeParams {
-    params: Vec<(TypeParamId, Option<AbstractWidthConstraint>)>,
+    params: Vec<(TypeParamId, AbstractType)>,
     placeholder_variables: HashMap<TypeParamId, TypeVarId>,
 }
 
@@ -542,6 +542,11 @@ impl TypeParams {
 
     pub fn add_param(&mut self, param: TypeParamId, 
         constraint: Option<AbstractWidthConstraint>, placeholder_var: TypeVarId) {
+
+        let constraint = constraint
+            .map(|awc| AbstractType::WidthConstraint(awc))
+            .unwrap_or(AbstractType::Any);
+
         self.params.push((param, constraint));
         self.placeholder_variables.insert(param, placeholder_var);
     }
@@ -550,11 +555,12 @@ impl TypeParams {
         self.params.len()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item=(TypeParamId, Option<&AbstractWidthConstraint>)> {
+    // Guarenteed to be AbstractType::WidthConstraint or AbstractType::Any
+    pub fn iter(&self) -> impl Iterator<Item=(TypeParamId, &AbstractType)> {
         self.params
             .iter()
             .map(|(type_param_id, constraint)| {
-                (type_param_id.clone(), constraint.as_ref())
+                (type_param_id.clone(), constraint)
             })
     }
 
