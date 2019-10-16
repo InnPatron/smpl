@@ -570,24 +570,6 @@ impl TypeParams {
             .unwrap()
             .clone()
     }
-
-    // Assume arities are equal
-    fn map_args<T>(&self, map: &mut HashMap<TypeVarId, AbstractType>, args: T) 
-        -> Result<(), ATypeError>
-        where T: Iterator<Item=AbstractType> {
-
-        for (arg, (type_param_id, constraint)) in args.zip(self.iter()) {
-
-            let type_var_id = self.placeholder_variables
-                .get(&type_param_id)
-                .unwrap();
-
-            // TODO: Constraint checking
-            map.insert(type_var_id.clone(), arg);
-        }
-
-        Ok(())
-    }
 }
 
 fn fuse_width_constraints(universe: &Universe, scope: &ScopedData,
