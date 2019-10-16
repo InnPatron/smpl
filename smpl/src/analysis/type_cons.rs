@@ -240,6 +240,68 @@ impl AbstractType {
         }
     }
 
+    fn apply_internal(type_cons: &TypeCons, universe: &Universe,
+        scoped_data: &ScopedData, typing_context: &TypingContext, 
+        map: &HashMap<TypeVarId, AbstractType>)
+        -> Result<AbstractType, Vec<ATypeError>> {
+
+        // Assume all constraint requirements are met
+        match type_cons {
+            TypeCons::UncheckedFunction {
+                ref return_type,
+                ..
+            } => {
+                Ok(AbstractType::UncheckedFunction {
+                    return_type: Box::new(return_type.substitute_internal(universe, scoped_data, typing_context, &map)?),
+                })
+            }
+
+            TypeCons::Function {
+                ref parameters,
+                ref return_type,
+                ..
+            } => {
+                Ok(AbstractType::Function {
+                    parameters: parameters.iter()
+                        .map(|p| p.substitute_internal(universe, scoped_data, typing_context, &map))
+                        .collect::<Result<_, _>>()?,
+                    return_type: Box::new(return_type.substitute_internal(universe, scoped_data, typing_context, &map)?),
+                })
+            }
+
+            TypeCons::Record {
+                ref type_id,
+                ref type_params,
+                ref fields,
+                ref field_map,
+                ..
+            } => {
+
+                let mut subbed_fields: HashMap<FieldId, AbstractType> = HashMap::new();
+
+                for (id, ty) in fields.iter() {
+                    subbed_fields.insert(id.clone(),
+                        ty.substitute_internal(universe, scoped_data, typing_context, &map)?);
+                }
+
+                Ok(AbstractType::Record {
+                    type_id: type_id.clone(),
+                    abstract_field_map: AbstractFieldMap {
+                        fields: subbed_fields,
+                        field_map: field_map.clone(),
+                    },
+                })
+            }
+
+            TypeCons::Int => Ok(AbstractType::Int),
+            TypeCons::Float => Ok(AbstractType::Float),
+            TypeCons::Bool => Ok(AbstractType::Bool),
+            TypeCons::String => Ok(AbstractType::String),
+            TypeCons::Unit => Ok(AbstractType::Unit),
+        }
+
+    }
+
     /// Given an environment of type variables to abstract types, recursively substitute
     ///   any type variables in the map with their abstract type.
     ///
