@@ -446,8 +446,10 @@ impl AbstractType {
             },
 
             AbstractType::TypeVar(ref type_param_id) => {
-                assert!(map.contains_key(type_param_id));
 
+                // Map not guaranteed to contain the type var b/c
+                //   type var may not necessarily be something to substitute 
+                //   (e.g. may be a top-level type arg)
                 let result = map
                     .get(type_param_id)
                     .map(|t| t.clone())
