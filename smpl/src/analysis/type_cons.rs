@@ -350,7 +350,7 @@ impl AbstractType {
 
 
                     // Need to substitute all args into constraints
-                    let constraints = {
+                    let (constraints, constraint_sub_map) = {
                         let mut constraints = Vec::new();
                         let mut constraint_errors = Vec::new();
                         let mut constraint_sub_map = HashMap::new();
@@ -382,7 +382,7 @@ impl AbstractType {
                         if constraint_errors.len() != 0 {
                             return Err(constraint_errors);
                         } else {
-                            constraints
+                            (constraints, constraint_sub_map)
                         }
                     };
 
@@ -406,17 +406,24 @@ impl AbstractType {
                         return Err(arg_constraint_errors);
                     }
 
+                    AbstractType::apply_internal(type_cons,
+                        universe,
+                        scoped_data,
+                        typing_context,
+                        &constraint_sub_map)
+
                 } else if ok_args.len() != 0 {
                     return Err(vec![ATypeError::ApplicationError(ApplicationError::Arity {
                         expected: 0,
                         found: ok_args.len(),
                     })]);
+                } else {
+                    AbstractType::apply_internal(type_cons,
+                        universe,
+                        scoped_data,
+                        typing_context,
+                        &HashMap::new())
                 }
-
-                Ok(AbstractType::App {
-                    type_cons: type_cons_id.clone(),
-                    args: ok_args.clone(),
-                })
             },
 
             AbstractType::Record {
