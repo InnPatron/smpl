@@ -53,6 +53,7 @@ macro_rules! peek_token {
 pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
     enum ModDec {
         Struct,
+        Opaque,
         Annotation,
         Function(bool),
         Use,
@@ -86,11 +87,21 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
                 Token::Pound => ModDec::Annotation,
                 Token::Fn => ModDec::Function(false),
                 Token::Builtin => ModDec::Function(true),
+                Token::Opaque => ModDec::Opaque,
                 Token::Use => ModDec::Use,
                 _ => ModDec::Err,
             },
             parser_state!("module", "decl-kind")
         ) {
+
+            ModDec::Opaque => {
+                decls.push(DeclStmt::Opaque(production!(
+                            opaque_decl(tokens, anno),
+                            parser_state!("module", "opaque-decl")
+                )));
+                anno = Vec::new();
+            }
+
             ModDec::Struct => {
                 decls.push(DeclStmt::Struct(production!(
                     struct_decl(tokens, anno),
@@ -547,6 +558,63 @@ fn fn_param(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<FnParameter>> {
 pub fn teststruct_decl(tokens: &mut BufferedTokenizer) -> ParseErr<Struct> {
     let decl = struct_decl(tokens, vec![])?.to_data().0;
     Ok(decl)
+}
+
+fn opaque_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseErr<AstNode<Opaque>> {
+    let (opaque_loc, _) = consume_token!(
+        tokens,
+        Token::Opaque,
+        parser_state!("opaque-decl", "opaque")
+    );
+    let (name_loc, struct_name) = consume_token!(tokens, 
+                                               Token::Identifier(i) => Ident(i),
+                                               parser_state!("opaque-decl", "name"));
+
+    let type_params = if peek_token!(
+        tokens,
+        |tok| match tok {
+            Token::LParen => true,
+
+            _ => false,
+        },
+        parser_state!("opaque-decl", "type-parameters?")
+    ) {
+        Some(type_param_list(tokens)?)
+    } else {
+        None
+    };
+
+    let where_clause = if peek_token!(
+        tokens,
+        |tok| match tok {
+            Token::Where => true,
+            _ => false,
+        },
+        parser_state!("struct-decl", "where-clause?")) {
+        
+        Some(production!(
+                where_clause(tokens),
+                parser_state!("struct-decl", "where-clause")))
+    } else {
+        None
+    };
+
+    let (semi_loc, _) = consume_token!(tokens,
+        Token::Semi,
+        parser_state!("opaque-decl", "end-semi")
+    );
+
+    let overall_span = LocationSpan::new(opaque_loc.start(), semi_loc.start());
+
+    Ok(AstNode::new(
+        Opaque {
+            name: AstNode::new(struct_name, name_loc),
+            annotations: anns,
+            type_params: type_params,
+            where_clause: where_clause,
+        },
+        overall_span,
+    ))
 }
 
 fn struct_decl(tokens: &mut BufferedTokenizer, anns: Vec<Annotation>) -> ParseErr<AstNode<Struct>> {
