@@ -1656,6 +1656,22 @@ fn bar() {
             Err(e) => {
                 if let AnalysisError::TypeError(_) = e {
                     ()
+                } else if let AnalysisError::Errors(e) = e {
+                    let mut type_error = false;
+
+                    e
+                        .iter()
+                        .for_each(|err| {
+                            if let AnalysisError::TypeError(_) = err {
+                                type_error = true;
+                            }
+                        });
+
+                    if type_error {
+                        ()
+                    } else {
+                        panic!("Expected a type error. Found {:?}", e);
+                    }
                 } else {
                     panic!("Expected a type error. Found {:?}", e);
                 }
