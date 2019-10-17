@@ -15,6 +15,7 @@ pub enum AnalysisError {
     UnresolvedUses(Vec<AstNode<UseDecl>>),
     UnresolvedStructs(Vec<AstNode<Struct>>),
     UnresolvedFns(Vec<AstNode<Function>>),
+    TopLevelError(TopLevelError),
     MissingModName,
     Errors(Vec<AnalysisError>),
 }
@@ -36,6 +37,18 @@ impl From<AnalysisError> for Error {
     fn from(e: AnalysisError) -> Error {
         Error::AnalysisError(format!("{:?}", e))
     }
+}
+
+impl From<TopLevelError> for AnalysisError {
+    fn from(t: TopLevelError) -> AnalysisError {
+        AnalysisError::TopLevelError(t)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum TopLevelError {
+    DuplicateTypes(Ident),
+    DuplicateFns(Ident),
 }
 
 #[derive(Clone, Debug)]
