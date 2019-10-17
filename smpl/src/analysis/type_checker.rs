@@ -676,6 +676,7 @@ fn resolve_struct_init(universe: &Universe, scope: &ScopedData,
     .substitute(universe, scope, context)?;
 
     // Check if type is a struct.
+    // Opaque types are represented using AbstractType::Opaque
     let (struct_type_id, fields, field_map) = match struct_type {
         AbstractType::Record {
             type_id: struct_type_id,
@@ -692,19 +693,6 @@ fn resolve_struct_init(universe: &Universe, scope: &ScopedData,
             .into());
         }
     };
-
-    // Check if the struct is an 'opaque' type (i.e. cannot be initialized by SMPL
-    // code)
-    // TODO: Opaque check
-    /*
-    if self.program.metadata().is_opaque(struct_type_id) {
-        return Err(TypeError::InitOpaqueType {
-            struct_type: struct_type,
-            span: tmp.span(),
-        }
-        .into());
-    }
-    */
 
     // Map init'd field to its type
     let mut init_expr_type_map: HashMap<FieldId, AbstractType> = HashMap::new();
