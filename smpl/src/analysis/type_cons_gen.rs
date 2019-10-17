@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::{
-    AnonymousFn, BuiltinFnParams, BuiltinFunction, Function, Ident, Struct, TypeParams as AstTypeParams, WhereClause
+    AnonymousFn, BuiltinFnParams, BuiltinFunction, Function, Ident, Struct, TypeParams as AstTypeParams, WhereClause, Opaque
 };
 use crate::feature::*;
 
@@ -374,4 +374,29 @@ fn type_param_map(
     }
 
     Ok((type_params, current_scope, typing_context))
+}
+
+pub fn generate_opaque_type_cons(
+    program: &mut Program,
+    type_id: TypeId,
+    scope: &ScopedData,
+    typing_context: &TypingContext,
+    opaque_def: &Opaque,
+) -> Result<TypeCons, AnalysisError> {
+    let (universe, _metadata, _features) = program.analysis_context();
+
+    // Check no parameter naming conflicts
+    let (type_params, type_param_scope, type_param_typing_context) = 
+        type_param_map(universe, 
+                   opaque_def.type_params.as_ref(), 
+                   opaque_def.where_clause.as_ref(),
+                   &scope,
+                   &typing_context)?;
+
+    let type_cons = TypeCons::Opaque {
+        type_id: type_id,
+        type_params: type_params,
+    };
+
+    Ok(type_cons)
 }
