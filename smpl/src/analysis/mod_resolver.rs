@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::{AstNode, BuiltinFunction as AstBuiltinFunction, Ident, UseDecl};
-use crate::ast::{DeclStmt, Function as AstFunction, Struct};
+use crate::ast::{DeclStmt, Function as AstFunction, Struct, Opaque};
 use crate::module::{ModuleSource, ParsedModule};
 
 use super::control_flow::CFG;
@@ -25,13 +25,15 @@ struct RawProgram {
 struct RawModData {
     name: AstNode<Ident>,
     id: ModuleId,
-    reserved_structs: HashMap<Ident, ReservedType>,
+    reserved_opaque: HashMap<Ident, ReservedOpaque>,
+    reserved_structs: HashMap<Ident, ReservedStruct>,
     reserved_fns: HashMap<Ident, ReservedFn>,
     reserved_builtins: HashMap<Ident, ReservedBuiltinFn>,
     uses: Vec<AstNode<UseDecl>>,
 }
 
-struct ReservedType(TypeId, AstNode<Struct>);
+struct ReservedOpaque(TypeId, AstNode<Opaque>);
+struct ReservedStruct(TypeId, AstNode<Struct>);
 struct ReservedFn(FnId, AstNode<AstFunction>);
 struct ReservedBuiltinFn(FnId, AstNode<AstBuiltinFunction>);
 
@@ -72,14 +74,14 @@ pub fn check_modules(
 
     // Map ALL structs into the universe before generating functions
     for (mod_id, raw_mod) in raw_data.iter() {
-        for (_, reserved_type) in raw_mod.reserved_structs.iter() {
-            let type_id = reserved_type.0;
+        for (_, reserved_struct) in raw_mod.reserved_structs.iter() {
+            let type_id = reserved_struct.0;
             let (struct_type, field_ordering) = type_cons_gen::generate_struct_type_cons(
                 program,
                 type_id,
                 raw_program.scopes.get(mod_id).unwrap(),
                 &TypingContext::empty(),
-                reserved_type.1.data(),
+                reserved_struct.1.data(),
             )?;
 
             program
@@ -92,7 +94,22 @@ pub fn check_modules(
                 .insert_field_ordering(type_id, field_ordering);
             program
                 .metadata_mut()
-                .set_struct_annotations(type_id, &reserved_type.1.data().annotations);
+                .set_struct_annotations(type_id, &reserved_struct.1.data().annotations);
+        }
+
+        for (_, reserved_opaque) in raw_mod.reserved_opaque.iter() {
+            let type_id = reserved_opaque.0;
+            let opaque_type_cons = type_cons_gen::generate_opaque_type_cons(
+                program,
+                type_id,
+                raw_program.scopes.get(mod_id).unwrap(),
+                &TypingContext::empty(),
+                reserved_opaque.1.data(),
+            )?;
+
+            program
+                .universe_mut()
+                .manual_insert_type_cons(type_id, opaque_type_cons);
         }
     }
 
@@ -186,6 +203,7 @@ pub fn check_modules(
             .reserved_structs
             .into_iter()
             .map(|(_, r)| r.0)
+            .chain(module_data.reserved_opaque.iter().map(|(_, r)| r.0))
             .collect::<Vec<_>>();
         let owned_fns = module_data
             .reserved_fns
@@ -282,7 +300,13 @@ fn map_usings(
 }
 
 fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
+    // TODO: Perform name collision check here?
     for (_ident, r) in raw.reserved_structs.iter() {
+        scope.insert_type_cons(r.1.data().name.data().clone().into(), r.0.clone());
+    }
+
+    // TODO: Perform name collision check here?
+    for (_ident, r) in raw.reserved_opaque.iter() {
         scope.insert_type_cons(r.1.data().name.data().clone().into(), r.0.clone());
     }
 
@@ -304,6 +328,7 @@ fn raw_mod_data(
 
     for module in modules { 
 
+        let mut opaque_reserve = HashMap::new();
         let mut struct_reserve = HashMap::new();
         let mut fn_reserve = HashMap::new();
         let mut builtin_fn_reserve = HashMap::new();
@@ -315,7 +340,7 @@ fn raw_mod_data(
                 DeclStmt::Struct(d) => {
                     struct_reserve.insert(
                         d.data().name.data().clone().clone(),
-                        ReservedType(program.universe_mut().new_type_id(), d),
+                        ReservedStruct(program.universe_mut().new_type_id(), d),
                     );
                 }
 
@@ -336,12 +361,20 @@ fn raw_mod_data(
                 DeclStmt::Use(u) => {
                     uses.push(u);
                 }
+
+                DeclStmt::Opaque(o) => {
+                    opaque_reserve.insert(
+                        o.data().name.data().clone(),
+                        ReservedOpaque(program.universe_mut().new_type_id(), o)
+                    );
+                }
             }
         }
 
         let raw = RawModData {
             name: ast_module.0.ok_or(AnalysisError::MissingModName)?,
             id: module.id,
+            reserved_opaque: opaque_reserve,
             reserved_structs: struct_reserve,
             reserved_fns: fn_reserve,
             reserved_builtins: builtin_fn_reserve,
