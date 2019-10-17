@@ -355,9 +355,6 @@ impl Passenger<FirstPassError> for FirstPass {
         let assignment = &assign.assignment;
         let assignee = assignment.assignee();
 
-        // Generate lhs tmps
-        let access_tmps = byte_expr::translate_expr(assignment.access());
-
         // Generate rhs tmps
         let value_tmps = byte_expr::translate_expr(assignment.value());
         let value = Arg::Location(Location::Tmp(byte_expr::tmp_id(assignment.value().last())));
@@ -367,7 +364,7 @@ impl Passenger<FirstPassError> for FirstPass {
         let assign_root_var = 
             internal_path.root_name().data().as_str().to_owned();
         let assign_root_indexing_expr = internal_path.root_indexing_expr()
-            .map(|tmp_id| byte_expr::tmp_id(tmp_id));
+            .map(|index_expr| byte_expr::tmp_id(index_expr.last()));
         let path: Vec<_> = internal_path
             .path()
             .iter()
@@ -377,10 +374,10 @@ impl Passenger<FirstPassError> for FirstPass {
                         super::byte_code::FieldAccess::Field(field.name().to_string())
                     }
 
-                    PathSegment::Indexing(ref field, ref index_tmp) => {
+                    PathSegment::Indexing(ref field, ref index_expr) => {
                         super::byte_code::FieldAccess::FieldIndex {
                             field: field.name().to_string(),
-                            index_tmp: byte_expr::tmp_id(*index_tmp),
+                            index_tmp: byte_expr::tmp_id(index_expr.last()),
                         }
                     }
                 }
@@ -399,7 +396,6 @@ impl Passenger<FirstPassError> for FirstPass {
 
         // Emit access expressions before evaluating the assignment
         // Emit storage instruction last
-        self.extend_current_frame(access_tmps.into_iter());
         self.extend_current_frame(value_tmps.into_iter());
         self.push_to_current_frame(Instruction::Store(assign_location, value));
         Ok(())

@@ -1,4 +1,4 @@
-use crate::analysis::type_cons::{Type, AbstractType};
+use crate::analysis::type_cons::AbstractType;
 use crate::ast::*;
 use crate::err::Error;
 use crate::span::Span;
@@ -16,6 +16,20 @@ pub enum AnalysisError {
     UnresolvedStructs(Vec<AstNode<Struct>>),
     UnresolvedFns(Vec<AstNode<Function>>),
     MissingModName,
+    Errors(Vec<AnalysisError>),
+}
+
+impl<T, I> From<T> for AnalysisError 
+    where T: std::iter::IntoIterator<Item=I>,
+          I: Into<AnalysisError> {
+    
+    fn from(t: T) -> AnalysisError {
+        AnalysisError::Errors(t
+            .into_iter()
+            .map(|i| i.into())
+            .collect()
+        )
+    }
 }
 
 impl From<AnalysisError> for Error {
@@ -39,21 +53,38 @@ impl From<ControlFlowError> for AnalysisError {
 
 #[derive(Clone, Debug)]
 pub enum TypeError {
-    LhsRhsInEq(Type, Type, Span),
+    LhsRhsInEq(AbstractType, AbstractType, Span),
+
+    IncompatibleLocal {
+        name: Ident,
+        local_type: AbstractType,
+        found_type: AbstractType,
+        span: Span,
+    },
+
     InEqFnReturn {
-        expr: Type,
-        fn_return: Type,
+        expr: AbstractType,
+        fn_return: AbstractType,
         return_span: Span,
     },
 
+    FunctionTypeMismatch {
+        fn_found: AbstractType,
+        fn_expected: AbstractType,
+        param_found: AbstractType,
+        param_expected: AbstractType,
+        index: usize,
+        span: Span,
+    },
+
     UnexpectedType {
-        found: Type,
-        expected: Type,
+        found: AbstractType,
+        expected: AbstractType,
         span: Span,
     },
 
     Arity {
-        fn_type: Type,
+        fn_type: AbstractType,
         found_args: usize,
         expected_param: usize,
         span: Span,
@@ -61,44 +92,44 @@ pub enum TypeError {
 
     BinOp {
         op: BinOp,
-        expected: Vec<Type>,
-        lhs: Type,
-        rhs: Type,
+        expected: Vec<AbstractType>,
+        lhs: AbstractType,
+        rhs: AbstractType,
         span: Span,
     },
 
     UniOp {
         op: UniOp,
-        expected: Vec<Type>,
-        expr: Type,
+        expected: Vec<AbstractType>,
+        expr: AbstractType,
         span: Span,
     },
 
     ArgMismatch {
-        fn_type: Type,
+        fn_type: AbstractType,
         index: usize,
-        arg: Type,
-        param: Type,
+        arg: AbstractType,
+        param: AbstractType,
         span: Span,
     },
 
     FieldAccessOnNonStruct {
         path: Path,
         index: usize,
-        invalid_type: Type,
-        root_type: Type,
+        invalid_type: AbstractType,
+        root_type: AbstractType,
         span: Span,
     },
 
     NotAStruct {
         type_name: ModulePath,
-        found: Type,
+        found: AbstractType,
         span: Span,
     },
 
     StructNotFullyInitialized {
         type_name: ModulePath,
-        struct_type: Type,
+        struct_type: AbstractType,
         missing_fields: Vec<Ident>,
         span: Span,
     },
@@ -110,29 +141,29 @@ pub enum TypeError {
 
     UnknownField {
         name: Ident,
-        struct_type: Type,
+        struct_type: AbstractType,
         span: Span,
     },
 
     HeterogenousArray {
-        expected: Type,
-        found: Type,
+        expected: AbstractType,
+        found: AbstractType,
         index: usize,
         span: Span,
     },
 
     NotAnArray {
-        found: Type,
+        found: AbstractType,
         span: Span,
     },
 
     InvalidIndex {
-        found: Type,
+        found: AbstractType,
         span: Span,
     },
 
     InitOpaqueType {
-        struct_type: Type,
+        struct_type: AbstractType,
         span: Span,
     },
 
@@ -153,11 +184,11 @@ pub enum TypeError {
     },
 
     InvalidTypeConstraintBase {
-        found: Type,
+        found: AbstractType,
     },
 
     ConflictingConstraints {
-        constraints: Vec<Type>,
+        constraints: Vec<AbstractType>,
     },
 
     UnknownTypeParameter {

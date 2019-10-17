@@ -8,9 +8,11 @@ use crate::span::Span;
 
 use super::error::{AnalysisError, ControlFlowError};
 use super::expr_flow;
-use super::semantic_data::{LoopId, ScopedData, Universe};
+use super::resolve_scope::ScopedData;
+use super::semantic_data::{LoopId, Universe, AnalysisContext};
 use super::type_cons::*;
 use super::type_resolver::resolve_types;
+use super::type_checker::TypingContext;
 use super::typed_ast;
 
 use super::control_data::*;
@@ -285,6 +287,10 @@ impl CFG {
         self.graph.node_weight(node).unwrap()
     }
 
+    pub fn node_weight_mut(&mut self, node: graph::NodeIndex) -> &mut Node {
+        self.graph.node_weight_mut(node).unwrap()
+    }
+
     pub fn neighbors_out(&self, node: graph::NodeIndex) -> graph::Neighbors<Edge> {
         self.graph.neighbors_directed(node, Direction::Outgoing)
     }
@@ -299,10 +305,10 @@ impl CFG {
     /// Only performs continue/break statement checking (necessary for CFG generation).
     ///
     pub fn generate(
-        universe: &Universe,
+        universe: &mut Universe,
         body: ast::AstNode<ast::Block>,
         fn_type: &TypeCons,
-        fn_scope: &ScopedData,
+        analysis_context: &AnalysisContext,
     ) -> Result<Self, AnalysisError> {
         let mut cfg = {
             let mut graph = graph::Graph::new();
@@ -338,8 +344,11 @@ impl CFG {
             ..
         } = fn_type
         {
-            let return_type = return_type.apply(universe, fn_scope)?;
-            if resolve_types(&return_type, &Type::Unit) {
+            let outer_scope = universe.std_scope();
+            let outer_context = TypingContext::empty();
+            // TODO: Should this be the function scope/context?
+            let return_type = return_type.substitute(universe, &outer_scope, &outer_context)?;
+            if let AbstractType::Unit = return_type {
                 append_node!(
                     cfg,
                     head,
@@ -367,7 +376,7 @@ impl CFG {
     /// block is appended to the graph.
     ///
     fn generate_scoped_block<'a, 'b, T>(&'a mut self, 
-                                        universe: &'b Universe, 
+                                        universe: &'b mut Universe, 
                                         mut instructions: T,
                                         loop_data: InternalLoopData) 
         -> Result<BranchData, ControlFlowError> 
@@ -554,7 +563,7 @@ impl CFG {
                             //   and BranchMerge at the heads.
                             // If it is the default branch (i.e. no condition), do not generate a
                             //   BranchSplit or BranchMerge (keep ScopeEnter, ScopeExit)
-                            fn generate_branch(cfg: &mut CFG, universe: &Universe, body: AstNode<Block>, 
+                            fn generate_branch(cfg: &mut CFG, universe: &mut Universe, body: AstNode<Block>, 
                                               condition: Option<AstNode<Expr>>,
                                               loop_data: InternalLoopData)
                                 -> Result<BranchData, ControlFlowError> {
@@ -753,6 +762,8 @@ impl CFG {
 #[cfg_attr(rustfmt, rustfmt_skip)]
 mod tests {
     use super::*;
+    use super::super::type_checker::TypingContext;
+    use super::super::analysis_helpers::*;
     use crate::parser::*;
     use crate::parser::parser::*;
     use petgraph::dot::{Config, Dot};
@@ -775,7 +786,7 @@ mod tests {
     fn expected_app(tc: TypeId) -> AbstractType {
         AbstractType::App {
             type_cons: tc,
-            args: None
+            args: Vec::new(),
         }
     }
 
@@ -796,11 +807,19 @@ let a: int = 2;
 let b: int = 3;
 }";
         let mut input = buffer_input(input);
-        let universe = Universe::std();
+        let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
-        let scope = universe.std_scope();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
+        let analysis_context = 
+            generate_fn_analysis_data(&universe, 
+                &universe.std_scope(), 
+                &TypingContext::empty(),
+                &fn_type,
+                &fn_def
+                ).unwrap();
+        let cfg = CFG::generate(&mut universe, 
+                fn_def.body.clone(), &fn_type, &analysis_context)
+            .unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -859,11 +878,20 @@ if (test) {
 }";
         let mut input = buffer_input(input);
 
-        let universe = Universe::std();
+        let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
-        let scope = universe.std_scope();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
+        let analysis_context = 
+            generate_fn_analysis_data(&universe, 
+                &universe.std_scope(), 
+                &TypingContext::empty(),
+                &fn_type,
+                &fn_def
+                ).unwrap();
+        let cfg = CFG::generate(
+                &mut universe, fn_def.body.clone(), &fn_type, &analysis_context,
+            )
+            .unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -1006,12 +1034,21 @@ if (test) {
     }
 }";
         let mut input = buffer_input(input);
-        let universe = Universe::std();
+        let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         
         let fn_def = testfn_decl(&mut input).unwrap();
-        let scope = universe.std_scope();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
+        let analysis_context = 
+            generate_fn_analysis_data(&universe, 
+                &universe.std_scope(), 
+                &TypingContext::empty(),
+                &fn_type,
+                &fn_def
+                ).unwrap();
+        let cfg = CFG::generate(
+                &mut universe, fn_def.body.clone(), &fn_type, &analysis_context,
+            )
+            .unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -1213,12 +1250,22 @@ if (test) {
     }
 }";
         let mut input = buffer_input(input);
-        let universe = Universe::std();
+        let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         
         let fn_def = testfn_decl(&mut input).unwrap();
-        let scope = universe.std_scope();
-        let cfg = CFG::generate(&universe, fn_def.body.clone(), &fn_type, &scope).unwrap();
+        let analysis_context = 
+            generate_fn_analysis_data(&universe, 
+                &universe.std_scope(), 
+                &TypingContext::empty(),
+                &fn_type,
+                &fn_def
+                ).unwrap();
+
+        let cfg = CFG::generate(
+                &mut universe, fn_def.body.clone(), &fn_type, &analysis_context
+            )
+            .unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 

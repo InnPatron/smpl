@@ -1,15 +1,17 @@
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
+use std::collections::{HashSet, HashMap};
 use std::fmt;
 use std::rc::Rc;
 use std::slice::Iter;
 
 use uuid::Uuid;
 
-use crate::ast::ModulePath as AstModulePath;
+use crate::ast::{ AnonymousFn as AstAnonymousFn, ModulePath as AstModulePath };
 use crate::ast::*;
 use crate::feature::PresentFeatures;
 
+use super::resolve_scope::ScopedData;
+use super::type_checker::TypingContext;
 use super::control_flow::CFG;
 use super::error::AnalysisError;
 use super::metadata::Metadata;
@@ -73,10 +75,9 @@ impl Program {
 
 #[derive(Clone, Debug)]
 pub struct Universe {
-    generated_type_cons_map: RefCell<HashMap<TypeId, TypeCons>>,
     type_cons_map: HashMap<TypeId, TypeCons>,
     fn_map: HashMap<FnId, Function>,
-    builtin_fn_map: HashMap<FnId, BuiltinFunction>,
+    builtin_fn_set: HashSet<FnId>,
     module_map: HashMap<ModuleId, Module>,
     module_name: HashMap<Ident, ModuleId>,
     id_counter: Cell<u64>,
@@ -113,28 +114,21 @@ impl Universe {
         ];
 
         Universe {
-            generated_type_cons_map: RefCell::new(HashMap::new()),
             type_cons_map: type_map
                 .clone()
                 .into_iter()
                 .map(|(id, _, tc)| (id, tc))
                 .collect(),
             fn_map: HashMap::new(),
-            builtin_fn_map: HashMap::new(),
+            builtin_fn_set: HashSet::new(),
             module_map: HashMap::new(),
             module_name: HashMap::new(),
             id_counter: Cell::new(5),
-            std_scope: ScopedData {
-                type_cons_map: type_map
+            std_scope: ScopedData::new(type_map
                     .clone()
                     .into_iter()
                     .map(|(id, path, _)| (path, id))
-                    .collect(),
-                var_map: HashMap::new(),
-                var_type_map: HashMap::new(),
-                fn_map: HashMap::new(),
-                type_param_map: HashMap::new(),
-            },
+                    .collect()),
             unit: unit.0,
             int: int.0,
             float: float.0,
@@ -189,14 +183,16 @@ impl Universe {
         self.fn_map.remove(&fn_id);
     }
 
-    pub fn insert_fn(&mut self, fn_id: FnId, type_id: TypeId, fn_scope: ScopedData, cfg: CFG) {
-        let function = Function {
+    pub fn insert_fn(&mut self, fn_id: FnId, name: Ident,
+        type_id: TypeId, analysis_context: AnalysisContext, cfg: CFG) {
+        let function = SMPLFunction {
+            name: name,
             fn_type: type_id,
-            cfg: Rc::new(cfg),
-            fn_scope: fn_scope,
+            cfg: Rc::new(RefCell::new(cfg)),
+            analysis_context: analysis_context,
         };
 
-        if self.fn_map.insert(fn_id, function).is_some() {
+        if self.fn_map.insert(fn_id, Function::SMPL(function)).is_some() {
             panic!(
                 "Attempting to override Function with FnId {} in the Universe",
                 fn_id.0
@@ -204,12 +200,28 @@ impl Universe {
         }
     }
 
-    pub fn insert_builtin_fn(&mut self, fn_id: FnId, fn_type: TypeId) {
-        let builtin = BuiltinFunction { fn_type: fn_type };
+    pub fn insert_builtin_fn(&mut self, fn_id: FnId, name: Ident, fn_type: TypeId) {
+        let builtin = BuiltinFunction { 
+            name: name,
+            fn_type: fn_type,
+        };
 
-        if self.builtin_fn_map.insert(fn_id, builtin).is_some() {
+        self.builtin_fn_set.insert(fn_id);
+
+        if self.fn_map.insert(fn_id, Function::Builtin(builtin)).is_some() {
             panic!(
                 "Attempting to override builtin function with FnId {} in the Universe",
+                fn_id.0
+            );
+        }
+    }
+
+    pub fn reserve_anonymous_fn(&mut self, fn_id: FnId, ast_fn: AstAnonymousFn) {
+        let anon_fn = AnonymousFunction::Reserved(ast_fn);
+
+        if self.fn_map.insert(fn_id, Function::Anonymous(anon_fn)).is_some() {
+            panic!(
+                "Attempting to override function with FnId {} in the Universe",
                 fn_id.0
             );
         }
@@ -227,30 +239,22 @@ impl Universe {
         type_id
     }
 
-    pub fn insert_generated_type_cons(&self, cons: TypeCons) -> TypeId {
-        let type_id = self.new_type_id();
-        let mut borrow = self.generated_type_cons_map.borrow_mut();
-
-        if borrow.insert(type_id, cons).is_some() {
-            panic!("Duplicate type constructor for type id");
-        }
-
-        type_id
-    }
-
-    pub fn get_type_cons(&self, id: TypeId) -> Option<TypeCons> {
-        self.type_cons_map.get(&id).map(|cons| cons.clone()).or({
-            let borrow = self.generated_type_cons_map.borrow();
-            borrow.get(&id).map(|cons| cons.clone())
-        })
+    pub fn get_type_cons(&self, id: TypeId) -> &TypeCons {
+        self.type_cons_map
+            .get(&id)
+            .expect("Expected TypeID to always resolve to a TypeCons")
     }
 
     pub fn get_fn(&self, id: FnId) -> &Function {
         self.fn_map.get(&id).unwrap()
     }
 
-    pub fn get_builtin_fn(&self, id: FnId) -> &BuiltinFunction {
-        self.builtin_fn_map.get(&id).unwrap()
+    pub fn get_fn_mut(&mut self, id: FnId) -> &mut Function {
+        self.fn_map.get_mut(&id).unwrap()
+    }
+
+    pub fn is_builtin_fn(&self, id: FnId) -> bool {
+        self.builtin_fn_set.contains(&id)
     }
 
     fn inc_counter(&self) -> u64 {
@@ -267,6 +271,10 @@ impl Universe {
 
     pub fn new_type_param_id(&self) -> TypeParamId {
         TypeParamId(self.inc_counter())
+    }
+
+    pub fn new_type_var_id(&self) -> TypeVarId {
+        TypeVarId(self.inc_counter())
     }
 
     pub fn new_field_id(&self) -> FieldId {
@@ -358,147 +366,134 @@ impl Module {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct ScopedData {
-    type_cons_map: HashMap<ModulePath, TypeId>,
-    var_map: HashMap<Ident, VarId>,
-    var_type_map: HashMap<VarId, Type>,
-    fn_map: HashMap<ModulePath, FnId>,
-    type_param_map: HashMap<Ident, (TypeParamId, Option<AbstractType>)>,
-}
-
-impl ScopedData {
-    pub fn insert_fn(&mut self, name: ModulePath, fn_id: FnId) {
-        // TODO: Fn name override behaviour?
-        self.fn_map.insert(name, fn_id);
-    }
-
-    pub fn unmap_fn(&mut self, name: &ModulePath) {
-        self.fn_map.remove(&name).unwrap();
-    }
-
-    pub fn type_cons<'a, 'b, 'c>(
-        &'a self,
-        _universe: &'b Universe,
-        path: &'c ModulePath,
-    ) -> Option<TypeId> {
-        self.type_cons_map.get(path).map(|id| id.clone())
-    }
-
-    pub fn insert_type_cons(&mut self, path: ModulePath, id: TypeId) -> Option<TypeId> {
-        self.type_cons_map.insert(path, id)
-    }
-
-    pub fn binding_info(&self, name: &AstNode<Ident>) -> Result<BindingInfo, AnalysisError> {
-        match self.var_map.get(name.data()) {
-            Some(v_id) => Ok(BindingInfo::Var(
-                v_id.clone(),
-                self.var_type_map.get(v_id).unwrap().clone(),
-            )),
-            None => {
-                let p = ModulePath(vec![name.data().clone()]);
-                self.fn_map
-                    .get(&p)
-                    .map(|f| BindingInfo::Fn(f.clone()))
-                    .ok_or(AnalysisError::UnknownBinding(name.data().clone(), name.span()))
-            }
-        }
-    }
-
-    pub fn var_info(&self, name: &AstNode<Ident>) -> Result<(VarId, Type), AnalysisError> {
-        let var_id = self
-            .var_map
-            .get(name.data())
-            .ok_or(AnalysisError::UnknownBinding(name.data().clone(), name.span()))?
-            .clone();
-        let type_id = self.var_type_map.get(&var_id).unwrap().clone();
-
-        Ok((var_id, type_id))
-    }
-
-    pub fn insert_var(&mut self, name: Ident, id: VarId, var_type: Type) {
-        self.var_map.insert(name, id);
-
-        if self.var_type_map.insert(id, var_type).is_some() {
-            panic!("Attempting to override variable {} with a different type. Shadowing should produce a new variable id.", id);
-        }
-    }
-
-    pub fn get_fn(&self, path: &AstModulePath) -> Result<FnId, AnalysisError> {
-        self.fn_map
-            .get(&path.clone().into())
-            .map(|id| id.clone())
-            .ok_or(AnalysisError::UnknownFn(path.clone()))
-    }
-
-    pub fn insert_type_param(&mut self, 
-                             ident: Ident, 
-                             id: TypeParamId, 
-                             constraint: Option<AbstractType>) -> bool {
-        self.type_param_map.insert(ident, (id, constraint)).is_some()
-    }
-
-    pub fn type_param<'a, 'b>(&'a self, ident: &'b Ident) 
-        -> Option<(TypeParamId, Option<&'a AbstractType>)> {
-        self.type_param_map
-            .get(ident)
-            .map(|(id, constraint)| (id.clone(), constraint.as_ref()))
-    }
-
-    pub fn type_params<'a>(&'a self) 
-        -> impl Iterator<Item = (TypeParamId, Option<&'a AbstractType>)> + 'a {
-        self.type_param_map
-            .values()
-            .map(|(id, constraint)| (id.clone(), constraint.as_ref()))
-    }
-
-    pub fn all_types(&self) -> impl Iterator<Item=(&ModulePath, TypeId)> {
-        self.type_cons_map
-            .iter()
-            .map(|(path, id)| (path, id.clone()))
-    }
-
-    pub fn all_fns(&self) -> impl Iterator<Item=(&ModulePath, FnId)> {
-        self.fn_map
-            .iter()
-            .map(|(path, id)| (path, id.clone()))
-    }
-}
-
 pub enum BindingInfo {
-    Var(VarId, Type),
+    Var(VarId, AbstractType),
     Fn(FnId),
 }
 
 #[derive(Clone, Debug)]
+pub struct AnalysisContext {
+    fn_scope: ScopedData,
+    typing_context: TypingContext,
+    existential_type_vars: Vec<TypeVarId>,
+}
+
+impl AnalysisContext {
+    pub fn new(fn_scope: ScopedData, typing_context: TypingContext, 
+        existential_type_vars: Vec<TypeVarId>) -> AnalysisContext {
+
+        AnalysisContext {
+            fn_scope: fn_scope,
+            typing_context: typing_context,
+            existential_type_vars: existential_type_vars
+        }
+    }
+
+    pub fn fn_scope(&self) -> &ScopedData {
+        &self.fn_scope
+    }
+
+    pub fn typing_context(&self) -> &TypingContext {
+        &self.typing_context
+    }
+
+    pub fn existential_type_vars(&self) -> &[TypeVarId] {
+        &self.existential_type_vars
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum Function {
+    Builtin(BuiltinFunction),
+    SMPL(SMPLFunction),
+    Anonymous(AnonymousFunction),
+}
+
+impl Function {
+    pub fn fn_type(&self) -> Option<TypeId> {
+        match self {
+            Function::Builtin(ref bf) => Some(bf.fn_type()),
+            Function::SMPL(ref sf) => Some(sf.fn_type()),
+            Function::Anonymous(ref af) => af.fn_type(),
+        }
+    }
+
+    pub fn name(&self) -> Option<&Ident> {
+        match self {
+            Function::Builtin(ref bf) => Some(bf.name()),
+            Function::SMPL(ref func) => Some(func.name()),
+            Function::Anonymous(ref anon) => anon.name(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum AnonymousFunction {
+    Reserved(AstAnonymousFn),
+    Resolved {
+        fn_type: TypeId,
+        cfg: Rc<RefCell<CFG>>,
+        analysis_context: AnalysisContext,
+    }
+}
+
+impl AnonymousFunction {
+
+    pub fn name(&self) -> Option<&Ident> {
+        None
+    }
+
+    pub fn fn_type(&self) -> Option<TypeId> {
+
+        match self {
+            AnonymousFunction::Reserved(_) => None,
+            AnonymousFunction::Resolved { fn_type, .. } => Some(fn_type.clone()),
+        }
+    }
+}
+
+
+#[derive(Clone, Debug)]
 pub struct BuiltinFunction {
+    name: Ident,
     fn_type: TypeId,
 }
 
 impl BuiltinFunction {
+
+    pub fn name(&self) -> &Ident {
+        &self.name
+    }
+
     pub fn fn_type(&self) -> TypeId {
         self.fn_type
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct Function {
+pub struct SMPLFunction {
+    name: Ident,
     fn_type: TypeId,
-    cfg: Rc<CFG>,
-    fn_scope: ScopedData,
+    cfg: Rc<RefCell<CFG>>,
+    analysis_context: AnalysisContext
 }
 
-impl Function {
+impl SMPLFunction {
+
+    pub fn name(&self) -> &Ident {
+        &self.name
+    }
+
     pub fn fn_type(&self) -> TypeId {
         self.fn_type
     }
 
-    pub fn cfg(&self) -> Rc<CFG> {
+    pub fn cfg(&self) -> Rc<RefCell<CFG>> {
         self.cfg.clone()
     }
 
-    pub(super) fn fn_scope(&self) -> &ScopedData {
-        &self.fn_scope
+    pub(super) fn analysis_context(&self) -> &AnalysisContext {
+        &self.analysis_context
     }
 }
 
@@ -545,6 +540,21 @@ impl ::std::fmt::Display for TypeParamId {
 }
 
 impl TypeParamId {
+    pub fn raw(&self) -> u64 {
+        self.0
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TypeVarId(u64);
+
+impl ::std::fmt::Display for TypeVarId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "TypeVarId[{}]", self.0)
+    }
+}
+
+impl TypeVarId {
     pub fn raw(&self) -> u64 {
         self.0
     }

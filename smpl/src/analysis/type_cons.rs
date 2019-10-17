@@ -2,9 +2,11 @@ use std::collections::HashMap;
 
 use crate::ast::{Ident, TypeAnnotationRef, WidthConstraint, AstNode};
 
-use super::error::{AnalysisError, ApplicationError, TypeError};
-use super::semantic_data::{FieldId, ScopedData, TypeId, TypeParamId, Universe};
-use super::type_resolver::resolve_types;
+use super::error::{AnalysisError, ApplicationError, TypeError as ATypeError};
+use super::semantic_data::{FieldId, TypeId, TypeParamId, TypeVarId, Universe, AnalysisContext};
+use super::resolve_scope::ScopedData;
+use super::type_resolver::resolve_types_static;
+use super::type_checker::TypingContext;
 
 macro_rules! nill_check {
     ($type_args: expr) => {{
@@ -13,106 +15,6 @@ macro_rules! nill_check {
             unimplemented!()
         }
     }};
-}
-
-/// Use during analysis
-#[derive(Clone, Debug)]
-pub enum Type {
-    UncheckedFunction {
-        return_type: Box<Type>,
-    },
-
-    Function {
-        parameters: Vec<Type>,
-        return_type: Box<Type>,
-    },
-
-    Array {
-        element_type: Box<Type>,
-        size: u64,
-    },
-
-    Record {
-        type_id: TypeId,
-        fields: HashMap<FieldId, Type>,
-        field_map: HashMap<Ident, FieldId>,
-    },
-
-    WidthConstraint {
-        fields: HashMap<FieldId, Type>,
-        field_map: HashMap<Ident, FieldId>,
-    },
-
-    Param(TypeParamId),
-
-    Int,
-    Float,
-    String,
-    Bool,
-    Unit,
-}
-
-#[derive(Debug, Clone)]
-pub struct TypeParams {
-    params: Option<HashMap<TypeParamId, Option<AbstractWidthConstraint>>>,
-}
-
-impl TypeParams {
-
-    pub fn new() -> TypeParams {
-        TypeParams {
-            params: Some(HashMap::new())
-        }
-    }
-
-    pub fn empty() -> TypeParams {
-        TypeParams {
-            params: None
-        }
-    }
-
-    pub fn add_param(&mut self, param: TypeParamId, constraint: Option<AbstractWidthConstraint>) {
-        match self.params {
-            Some(ref mut p) => {
-                p.insert(param, constraint);
-            }
-
-            None => {
-                let mut hm = HashMap::new();
-                hm.insert(param, constraint);
-                self.params = Some(hm);
-            }
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.params.as_ref().map_or(0, |tp| tp.len())
-    }
-
-    pub fn iter(&self) -> TypeParamsIter {
-        TypeParamsIter {
-            params: self.params.as_ref().map(|tp| tp.iter())
-        }
-    }
-}
-
-pub struct TypeParamsIter<'a> {
-    params: Option<std::collections::hash_map::Iter<'a, 
-        TypeParamId, 
-        Option<AbstractWidthConstraint>
-        >
-    >
-}
-
-impl<'a> std::iter::Iterator for TypeParamsIter<'a> {
-    type Item = (TypeParamId, Option<&'a AbstractWidthConstraint>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.params {
-            Some(ref mut iter) => iter.next().map(|(id, wc)| (*id, wc.as_ref())),
-            None => None,
-        }
-    }
 }
 
 /// Use TypeCons and AbstractType for type constructor mapping and graphing
@@ -127,11 +29,6 @@ pub enum TypeCons {
         type_params: TypeParams,
         parameters: Vec<AbstractType>,
         return_type: AbstractType,
-    },
-
-    Array {
-        element_type: AbstractType,
-        size: u64,
     },
 
     Record {
@@ -157,7 +54,7 @@ impl TypeCons {
         }
     }
 
-    fn type_params(&self) -> Option<&TypeParams> {
+    pub fn type_params(&self) -> Option<&TypeParams> {
         match *self {
             TypeCons::Function {
                 ref type_params,
@@ -180,21 +77,43 @@ impl TypeCons {
 }
 
 #[derive(Debug, Clone)]
-pub struct AbstractWidthConstraint {
-    base_types: Vec<AbstractType>,
-    fields: HashMap<Ident, Vec<AbstractType>>,
-}
-
-#[derive(Debug, Clone)]
 pub enum AbstractType {
+
+    Any,
+
+    Record {
+        type_id: TypeId,
+        abstract_field_map: AbstractFieldMap,
+    },
+
     App {
         type_cons: TypeId,
-        args: Option<Vec<AbstractType>>,
+        args: Vec<AbstractType>,
+    },
+
+    Array {
+        element_type: Box<AbstractType>,
+        size: u64,
+    },
+
+    UncheckedFunction {
+        return_type: Box<AbstractType>,
+    },
+
+    Function {
+        parameters: Vec<AbstractType>,
+        return_type: Box<AbstractType>,
     },
 
     WidthConstraint(AbstractWidthConstraint),
 
-    Param(TypeParamId),
+    TypeVar(TypeVarId),
+
+    Int,
+    Float,
+    String,
+    Bool,
+    Unit,
 }
 
 impl AbstractType {
@@ -208,245 +127,387 @@ impl AbstractType {
         }
     }
 
-    pub fn apply(&self, universe: &Universe, scope: &ScopedData) -> Result<Type, TypeError> {
-        let param_map = scope
-            .type_params()
-            .map(|(id, constraint)| {
-                match constraint {
-                    Some(constraint) => (id, constraint.clone()),
-                    None => (id, AbstractType::Param(id))
-                }
-            })
-            .collect::<HashMap<_, _>>();
+    pub fn substitute_with(&self, universe: &Universe, 
+        scoped_data: &ScopedData, typing_context: &TypingContext,
+        map: &HashMap<TypeVarId, AbstractType>) 
+        -> Result<AbstractType, Vec<ATypeError>> {
 
-        self.apply_internal(universe, &param_map)
+        self.substitute_internal(universe, scoped_data, typing_context, map)
     }
 
-    fn apply_internal(
-        &self,
-        universe: &Universe,
-        param_map: &HashMap<TypeParamId, AbstractType>,
-    ) -> Result<Type, TypeError> {
-        match *self {
+    pub fn substitute(&self, universe: &Universe, 
+        scoped_data: &ScopedData, 
+        typing_context: &TypingContext) 
+        -> Result<AbstractType, Vec<ATypeError>> {
+
+        match self {
+
             AbstractType::App {
                 ref type_cons,
-                args: ref type_args,
+                ref args,
             } => {
-                let type_cons = universe.get_type_cons(*type_cons).unwrap();
-                let new_param_map = match (type_cons.type_params(), type_args) {
-                    (Some(ref type_params), Some(ref type_args)) => {
-                        if type_params.len() != type_args.len() {
-                            return Err(ApplicationError::Arity {
-                                expected: type_params.len(),
-                                found: type_args.len(),
-                            }
-                            .into());
-                        }
+                let no_sub_map = HashMap::new();
+                self.substitute_internal(universe, 
+                    scoped_data, 
+                    typing_context,
+                    &no_sub_map)
+            }
 
-                        let mut param_map = param_map.clone();
+            t => Ok(t.clone()),
+        }
+    }
 
-                        for ((param_id, constraint), type_arg) in type_params
-                                .iter()
-                                .zip(type_args.iter()) {
+    ///
+    /// Takes a type constructor and applies its given arguments.
+    ///
+    /// Arguments are in the form of a map
+    ///   from (placholder type variables) -> (type values)
+    ///
+    /// Assume all constraints are already met
+    ///
+    fn apply_internal(type_cons: &TypeCons, universe: &Universe,
+        scoped_data: &ScopedData, typing_context: &TypingContext, 
+        map: &HashMap<TypeVarId, AbstractType>)
+        -> Result<AbstractType, Vec<ATypeError>> {
 
-                            // TODO: Check width constraint
-                            param_map.insert(param_id.clone(), type_arg.clone());
-                        }
-
-                        Some(param_map)
-                    }
-
-                    (Some(ref type_params), None) => {
-                        // None if TypeCons does not store any type parameters
-                        if type_params.len() != 0 {
-                            return Err(ApplicationError::Arity {
-                                expected: type_params.len(),
-                                found: 0,
-                            }
-                            .into());
-                        }
-
-                        None
-                    }
-
-                    (None, Some(ref type_args)) => {
-                        return Err(ApplicationError::Arity {
-                            expected: 0,
-                            found: type_args.len(),
-                        }
-                        .into());
-                    }
-
-                    (None, None) => None,
-                };
-
-                let param_map = new_param_map.as_ref().unwrap_or(param_map);
-
-                match type_cons {
-                    TypeCons::Function {
-                        ref parameters,
-                        ref return_type,
-                        ..
-                    } => {
-                        let parameters = parameters
-                            .iter()
-                            .map(|app| app.apply_internal(universe, param_map))
-                            .collect::<Result<Vec<_>, _>>()?;
-
-                        let return_type = return_type.apply_internal(universe, param_map)?;
-
-                        Ok(Type::Function {
-                            parameters: parameters,
-                            return_type: Box::new(return_type),
-                        })
-                    }
-
-                    TypeCons::UncheckedFunction {
-                        ref return_type,
-                        ..
-                    } => {
-                        let return_type = return_type.apply_internal(universe, param_map)?;
-
-                        Ok(Type::UncheckedFunction {
-                            return_type: Box::new(return_type),
-                        })
-                    }
-
-                    TypeCons::Array {
-                        ref element_type,
-                        size,
-                    } => {
-                        let element_type = element_type.apply_internal(universe, param_map)?;
-                        Ok(Type::Array {
-                            element_type: Box::new(element_type),
-                            size: size,
-                        })
-                    }
-
-                    TypeCons::Record {
-                        type_id,
-                        ref fields,
-                        ref field_map,
-                        ..
-                    } => Ok(Type::Record {
-                        type_id: type_id.clone(),
-                        fields: fields
-                            .iter()
-                            .map(|(k, v)| match v.apply_internal(universe, param_map) {
-                                Ok(v) => Ok((k.clone(), v)),
-                                Err(e) => Err(e),
-                            })
-                            .collect::<Result<HashMap<_, _>, _>>()?,
-
-                        field_map: field_map.clone(),
-                    }),
-
-                    TypeCons::Int => {
-                        nill_check!(type_args);
-                        Ok(Type::Int)
-                    }
-
-                    TypeCons::Float => {
-                        nill_check!(type_args);
-                        Ok(Type::Float)
-                    }
-
-                    TypeCons::Bool => {
-                        nill_check!(type_args);
-                        Ok(Type::Bool)
-                    }
-
-                    TypeCons::String => {
-                        nill_check!(type_args);
-                        Ok(Type::String)
-                    }
-
-                    TypeCons::Unit => {
-                        nill_check!(type_args);
-                        Ok(Type::Unit)
-                    }
-                }
-            },
-
-            AbstractType::WidthConstraint(AbstractWidthConstraint {
-                ref base_types,
-                ref fields,
-            }) => {
-
-                let mut concrete_constraints: HashMap<Ident, Vec<Type>> = HashMap::new();
-
-                // Gather base constraints
-                for base in base_types {
-                    let concrete_base = base.apply_internal(universe, param_map)?;
-
-                    match concrete_base {
-                        Type::Record {
-                            ref fields,
-                            ref field_map,
-                            ..
-                        } => {
-                            for (field, field_id) in field_map.iter() {
-                                let field_type = fields.get(field_id).unwrap();
-                                concrete_constraints.entry(field.clone())
-                                    .and_modify(|vec| vec.push(field_type.clone()))
-                                    .or_insert(vec![field_type.clone()]);
-                            }
-                        },
-
-                        invalid_base => {
-                            return Err(TypeError::InvalidTypeConstraintBase {
-                                found: invalid_base
-                            });
-                        },
-                    }
-                }
-
-                // Gather constraints
-                for (field, constraints) in fields.iter() {
-                    for constraint in constraints {
-                        let concrete = constraint.apply_internal(universe, param_map)?;
-
-                        concrete_constraints.entry(field.clone())
-                            .or_insert(Vec::new())
-                            .push(concrete);
-                    }
-                    
-                }
-
-                // Perform width-constraint validation and fuse
-                let mut final_map = HashMap::new();
-                let mut final_constraints = HashMap::new();
-                for (field, constraints) in concrete_constraints {
-                    let field_id = universe.new_field_id();
-                    let final_constraint = fuse_validate_concrete_field_constraints(universe,
-                                                                                    &constraints)?;
-                    if final_constraints.insert(field_id, final_constraint).is_some() {
-                        panic!("FUSE ERROR")
-                    }
-
-                    final_map.insert(field, field_id);
-                }
-
-                Ok(Type::WidthConstraint { 
-                    fields: final_constraints,
-                    field_map: final_map,
+        match type_cons {
+            TypeCons::UncheckedFunction {
+                ref return_type,
+                ..
+            } => {
+                Ok(AbstractType::UncheckedFunction {
+                    return_type: Box::new(return_type.substitute_internal(universe, scoped_data, typing_context, &map)?),
                 })
             }
 
-            AbstractType::Param(ref param_id) => {
-                let type_app = param_map.get(param_id).unwrap();
-                match type_app {
-                    AbstractType::Param(ref param_id) => Ok(Type::Param(param_id.clone())),
-                    _ => type_app.apply_internal(universe, param_map),
-                }
+            TypeCons::Function {
+                ref parameters,
+                ref return_type,
+                ..
+            } => {
+                Ok(AbstractType::Function {
+                    parameters: parameters.iter()
+                        .map(|p| p.substitute_internal(universe, scoped_data, typing_context, &map))
+                        .collect::<Result<_, _>>()?,
+                    return_type: Box::new(return_type.substitute_internal(universe, scoped_data, typing_context, &map)?),
+                })
             }
+
+            TypeCons::Record {
+                ref type_id,
+                ref type_params,
+                ref fields,
+                ref field_map,
+                ..
+            } => {
+
+                let mut subbed_fields: HashMap<FieldId, AbstractType> = HashMap::new();
+
+                for (id, ty) in fields.iter() {
+                    subbed_fields.insert(id.clone(),
+                        ty.substitute_internal(universe, scoped_data, typing_context, &map)?);
+                }
+
+                Ok(AbstractType::Record {
+                    type_id: type_id.clone(),
+                    abstract_field_map: AbstractFieldMap {
+                        fields: subbed_fields,
+                        field_map: field_map.clone(),
+                    },
+                })
+            }
+
+            TypeCons::Int => Ok(AbstractType::Int),
+            TypeCons::Float => Ok(AbstractType::Float),
+            TypeCons::Bool => Ok(AbstractType::Bool),
+            TypeCons::String => Ok(AbstractType::String),
+            TypeCons::Unit => Ok(AbstractType::Unit),
         }
+
+    }
+
+    /// Given a map of type variables to abstract types, recursively substitute
+    ///   any type variables in the map with their abstract type.
+    ///
+    /// Only relies on scope/typing context for constraint resolution. They are NOT used for
+    ///   substitution.
+    ///
+    /// Substitution literally replaces whatever the type variable with its mapped element
+    ///  (or itself if it is not in the map)
+    ///
+    /// No AbstractType returned by substitute_internal() should have AbstractType::App() in its tree
+    ///
+    /// Type variable constraints are checked.
+    ///
+    fn substitute_internal(&self, universe: &Universe, scoped_data: &ScopedData, 
+    typing_context: &TypingContext, map: &HashMap<TypeVarId, AbstractType>) 
+        -> Result<AbstractType, Vec<ATypeError>> {
+
+        match *self {
+
+            AbstractType::App {
+                type_cons: ref type_cons_id,
+                args: ref type_args,
+            } => {
+               
+                let (ok_args, err) = type_args
+                            .iter()
+                            .map(|at| {
+                                at.substitute_internal(universe, scoped_data, typing_context, map)
+                            })
+                            .fold((Vec::new(), Vec::new()), | (mut ok, mut err), apply_result| {
+                                match apply_result {
+                                    Ok(app) => ok.push(app),
+                                    Err(mut e) => err.append(&mut e),
+                                }
+
+                                (ok, err)
+                            });
+
+                if err.len() != 0 {
+                    return Err(err);
+                }
+
+                let type_cons = universe.get_type_cons(*type_cons_id);
+
+                // Check if args match constraints
+                if let Some(type_params) = type_cons.type_params() {
+
+                    if ok_args.len() != type_params.len() {
+
+                        return Err(vec![ATypeError::ApplicationError(ApplicationError::Arity {
+                                expected: type_params.len(),
+                                found: ok_args.len(),
+                            })]);
+                    }
+
+
+                    // Need to substitute all args into constraints
+                    let (constraints, constraint_sub_map) = {
+                        let mut constraints = Vec::new();
+                        let mut constraint_errors = Vec::new();
+                        let mut constraint_sub_map = HashMap::new();
+
+                        // Build substitution map for constraints
+                        for ((type_param_id, _), arg_type) in 
+                            type_params.iter().zip(ok_args.iter()) {
+
+                            let placeholder_type_var = type_params
+                                .placeholder_type_var(type_param_id);
+
+                            constraint_sub_map.insert(placeholder_type_var, arg_type.clone());
+                        }
+
+                        // Substitute constraint
+                        for (_, constraint) in type_params.iter() {
+                            let constraint = constraint
+                                .substitute_internal(universe, 
+                                    scoped_data, 
+                                    typing_context,
+                                    &constraint_sub_map);
+
+                            match constraint {
+                                Ok(c) => constraints.push(c),
+                                Err(mut e) => constraint_errors.append(&mut e),
+                            }
+                        }
+
+                        if constraint_errors.len() != 0 {
+                            return Err(constraint_errors);
+                        } else {
+                            (constraints, constraint_sub_map)
+                        }
+                    };
+
+                    let mut arg_constraint_errors = Vec::new();
+                    for (arg_type, constraint) in ok_args.iter().zip(constraints.iter()) {
+                        // TODO: Pass the correct Span
+                        match super::type_resolver::resolve_types_static(universe, 
+                            scoped_data, 
+                            typing_context,
+                            arg_type,
+                            &constraint,
+                            crate::span::Span::dummy()) {
+
+                            Ok(_) => (),
+
+                            Err(e) => arg_constraint_errors.push(e),
+                        }
+                    }
+
+                    if arg_constraint_errors.len() != 0 {
+                        return Err(arg_constraint_errors);
+                    }
+
+                    AbstractType::apply_internal(type_cons,
+                        universe,
+                        scoped_data,
+                        typing_context,
+                        &constraint_sub_map)
+
+                } else if ok_args.len() != 0 {
+                    return Err(vec![ATypeError::ApplicationError(ApplicationError::Arity {
+                        expected: 0,
+                        found: ok_args.len(),
+                    })]);
+                } else {
+                    AbstractType::apply_internal(type_cons,
+                        universe,
+                        scoped_data,
+                        typing_context,
+                        &HashMap::new())
+                }
+            },
+
+            AbstractType::Record {
+                ref type_id,
+                ref abstract_field_map,
+            } => {
+                let (ok_fields, err) = abstract_field_map.fields.iter()
+                    .map(|(f_id, ty)| (f_id.clone(), ty.substitute_internal(universe, scoped_data, typing_context, map)))
+                    .fold((HashMap::new(), Vec::new()), |(mut ok, mut err), (f_id, result)| {
+                        match result {
+                            Ok(app) => {
+                                ok.insert(f_id, app);
+                            }
+                            Err(mut e) => err.append(&mut e),
+                        }
+
+                        (ok, err)
+                });
+
+                if err.len() != 0 {
+                    return Err(err);
+                }
+
+                Ok(AbstractType::Record {
+                    type_id: *type_id,
+                    abstract_field_map: AbstractFieldMap {
+                        fields: ok_fields,
+                        field_map: abstract_field_map.field_map.clone()
+                    }
+                })
+            }
+
+            AbstractType::Array {
+                ref element_type,
+                ref size
+            } => Ok(AbstractType::Array {
+                element_type: Box::new(element_type.substitute_internal(universe, scoped_data, typing_context, map)?),
+                size: *size,
+            }),
+
+            AbstractType::Function {
+                ref parameters,
+                ref return_type,
+            } => {
+
+                let (ok_parameters, errors) = parameters.iter()
+                    .map(|p| p.substitute_internal(universe, scoped_data, typing_context, map))
+                    .fold((Vec::new(), Vec::new()), |(mut ok, mut err), result| {
+                        match result {
+                            Ok(app) => ok.push(app),
+                            Err(mut e) => err.append(&mut e),
+                        }
+
+                        (ok, err)
+                });
+
+                if errors.len() != 0 {
+                    return Err(errors);
+                }
+
+                let new_return = return_type.substitute_internal(universe, scoped_data, typing_context, map)?;
+
+                Ok(AbstractType::Function {
+                    parameters: ok_parameters,
+                    return_type: Box::new(new_return),
+                })
+            }
+
+            AbstractType::UncheckedFunction {
+                ref return_type,
+            } => {
+
+                let new_return = return_type.substitute_internal(universe, scoped_data, typing_context, map)?;
+
+                Ok(AbstractType::UncheckedFunction {
+                    return_type: Box::new(new_return),
+                })
+            }
+
+            AbstractType::WidthConstraint(ref width_constraint) => {
+                
+                let (ok_field_types, errors) = width_constraint.fields
+                    .iter()
+                    .map(|(ident, at)| at.substitute_internal(universe, scoped_data, typing_context, map).map(|r| (ident, r)))
+                    .fold((HashMap::new(), Vec::new()), |(mut ok, mut err), apply_result| {
+                        match apply_result {
+                            Ok((ref_ident, at)) => { ok.insert(ref_ident.clone(), at); },
+                            Err(mut e) => err.append(&mut e),
+                        };
+
+                        (ok, err)
+                });
+
+                if errors.len() != 0 {
+                    return Err(errors);
+                }
+
+                let new_width = AbstractWidthConstraint {
+                    fields: ok_field_types,
+                };
+
+                Ok(AbstractType::WidthConstraint(new_width))
+            },
+
+            AbstractType::TypeVar(ref type_param_id) => {
+
+                // Map not guaranteed to contain the type var b/c
+                //   type var may not necessarily be something to substitute 
+                //   (e.g. may be a top-level type arg)
+                let result = map
+                    .get(type_param_id)
+                    .map(|t| t.clone())
+                    .unwrap_or(AbstractType::TypeVar(type_param_id.clone()));
+
+                Ok(result)
+            }
+
+            AbstractType::Int => Ok(AbstractType::Int),
+            AbstractType::Float => Ok(AbstractType::Float),
+            AbstractType::String => Ok(AbstractType::String),
+            AbstractType::Bool => Ok(AbstractType::Bool),
+            AbstractType::Unit => Ok(AbstractType::Unit),
+            AbstractType::Any => Ok(AbstractType::Any),
+        }
+        
     }
 }
 
-pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
-    universe: &'a mut Universe,
+#[derive(Debug, Clone)]
+pub struct AbstractFieldMap {
+    pub fields: HashMap<FieldId, AbstractType>,
+    pub field_map: HashMap<Ident, FieldId>,
+}
+
+impl AbstractFieldMap {
+    pub fn get(&self, name: &Ident) -> Option<&AbstractType> {
+        self.field_map
+            .get(name)
+            .and_then(|id| self.fields.get(id))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AbstractWidthConstraint {
+    pub fields: HashMap<Ident, AbstractType>,
+}
+
+pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
+    universe: &'a Universe,
     scope: &'b ScopedData,
+    typing_context: &'d TypingContext,
     anno: T,
 ) -> Result<AbstractType, AnalysisError> {
     match anno.into() {
@@ -455,19 +516,20 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             // Assume naming conflicts detected at type parameter declaration
             if typed_path.module_path().0.len() == 1 {
                 let ident = typed_path.module_path().0.get(0).unwrap().data();
-                let type_param = scope.type_param(ident);
+                let type_var = scope.type_var(ident);
 
                 // Found a type parameter
-                if let Some((tp_id, _constraint)) = type_param {
+                if let Some(tv_id) = type_var {
                     // Do not allow type arguments on a type parameter
                     if typed_path.annotations().is_some() {
-                        return Err(TypeError::ParameterizedParameter {
+                        return Err(ATypeError::ParameterizedParameter {
                             ident: typed_path.module_path().0.get(0).unwrap().data().clone(),
                         }
                         .into());
                     }
 
-                    return Ok(AbstractType::Param(tp_id));
+                    assert!(typing_context.type_vars.contains_key(&tv_id));
+                    return Ok(AbstractType::TypeVar(tv_id.clone()));
                 }
             }
 
@@ -487,14 +549,14 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
             let type_args = typed_path.annotations().map(|ref vec| {
                 vec.iter()
-                    .map(|anno| type_app_from_annotation(universe, scope, anno))
+                    .map(|anno| type_from_ann(universe, scope, typing_context, anno))
                     .collect::<Result<Vec<_>, _>>()
             });
 
             let type_args = match type_args {
-                Some(dat) => Some(dat?),
+                Some(dat) => dat?,
 
-                None => None,
+                None => Vec::new(),
             };
 
             Ok(AbstractType::App {
@@ -504,24 +566,18 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
         }
 
         TypeAnnotationRef::Array(element_type, size) => {
-            let element_type_app = type_app_from_annotation(universe, scope, element_type.data())?;
-            let cons = TypeCons::Array {
-                element_type: element_type_app,
+            let element_type_app = type_from_ann(universe, scope, typing_context, element_type.data())?;
+
+            Ok(AbstractType::Array {
+                element_type: Box::new(element_type_app),
                 size: *size,
-            };
-
-            let type_id = universe.insert_generated_type_cons(cons);
-
-            Ok(AbstractType::App {
-                type_cons: type_id,
-                args: None,
             })
         }
 
-        TypeAnnotationRef::FnType(tp, args, ret_type) => {
+        TypeAnnotationRef::FnType(tp, params, return_type) => {
             let (local_type_params, new_scope) = match tp {
                 Some(local_type_params) => {
-                    return Err(TypeError::FnAnnLocalTypeParameter.into());     
+                    return Err(ATypeError::FnAnnLocalTypeParameter.into());     
                 },
 
                 None => (TypeParams::empty(), None),
@@ -529,194 +585,279 @@ pub fn type_app_from_annotation<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
             let scope = new_scope.as_ref().unwrap_or(scope);
 
-            let arg_type_cons = match args.map(|slice| {
-                slice
-                    .iter()
-                    .map(|arg| type_app_from_annotation(universe, scope, arg.data()))
-                    .collect::<Result<Vec<_>, _>>()
-            }) {
-                Some(args) => Some(args?),
-                None => None,
-            };
+            let param_types = params.map(|slice| {
+                    slice
+                        .iter()
+                        .map(|p| type_from_ann(universe, scope, typing_context, p.data()))
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .unwrap_or(Ok(Vec::new()))?;
 
-            let return_type_cons = match ret_type
-                .map(|ret_type| type_app_from_annotation(universe, scope, ret_type.data()))
-            {
-                Some(ret) => Some(ret?),
-                None => None,
-            };
+            let return_type = return_type
+                .map(|return_type| type_from_ann(universe, scope, typing_context, return_type.data()))
+                .unwrap_or(Ok(AbstractType::Unit))?;
 
-            let cons = TypeCons::Function {
-                type_params: local_type_params,
-                parameters: arg_type_cons.unwrap_or(Vec::new()),
-                return_type: return_type_cons.unwrap_or(AbstractType::App {
-                    type_cons: universe.unit(),
-                    args: None,
-                }),
-            };
 
-            let type_id = universe.insert_generated_type_cons(cons);
-
-            Ok(AbstractType::App {
-                type_cons: type_id,
-                args: None,
+            Ok(AbstractType::Function {
+                parameters: param_types,
+                return_type: Box::new(return_type),
             })
         }
 
-        TypeAnnotationRef::WidthConstraint(constraints) => {
-            abstract_fuse_width_constraints(universe, scope, constraints)
+        TypeAnnotationRef::WidthConstraint(ast_constraints) =>  {
+            fuse_width_constraints(universe, scope, typing_context, ast_constraints)
         }
     }
 }
 
-fn abstract_fuse_width_constraints(universe: &mut Universe, 
-                          scope: &ScopedData, 
-                          constraints: &[AstNode<WidthConstraint>]) 
+#[derive(Debug, Clone)]
+pub struct TypeParams {
+    params: Vec<(TypeParamId, AbstractType)>,
+    placeholder_variables: HashMap<TypeParamId, TypeVarId>,
+}
+
+impl TypeParams {
+
+    pub fn new() -> TypeParams {
+        TypeParams {
+            params: Vec::new(),
+            placeholder_variables: HashMap::new(),
+        }
+    }
+
+    pub fn empty() -> TypeParams {
+        TypeParams::new()
+    }
+
+    pub fn add_param(&mut self, param: TypeParamId, 
+        constraint: Option<AbstractWidthConstraint>, placeholder_var: TypeVarId) {
+
+        let constraint = constraint
+            .map(|awc| AbstractType::WidthConstraint(awc))
+            .unwrap_or(AbstractType::Any);
+
+        self.params.push((param, constraint));
+        self.placeholder_variables.insert(param, placeholder_var);
+    }
+
+    pub fn len(&self) -> usize {
+        self.params.len()
+    }
+
+    // Guarenteed to be AbstractType::WidthConstraint or AbstractType::Any
+    pub fn iter(&self) -> impl Iterator<Item=(TypeParamId, &AbstractType)> {
+        self.params
+            .iter()
+            .map(|(type_param_id, constraint)| {
+                (type_param_id.clone(), constraint)
+            })
+    }
+
+    pub fn placeholder_type_var(&self, id: TypeParamId) -> TypeVarId {
+        self.placeholder_variables
+            .get(&id)
+            .unwrap()
+            .clone()
+    }
+}
+
+fn fuse_width_constraints(universe: &Universe, scope: &ScopedData,
+    typing_context: &TypingContext, ast_constraints: &[AstNode<WidthConstraint>]) 
     -> Result<AbstractType, AnalysisError> {
-    
-    // Does NOT perform any validation
-    // Validation is performed on type application
 
-    let mut bases = Vec::new();
-    let mut constrained_fields: HashMap<Ident, Vec<AbstractType>> = HashMap::new();
-    for constraint in constraints {
+    // TODO: Fuse constraints
+    let mut field_constraints: HashMap<Ident, Vec<AbstractType>> = HashMap::new();
 
-        match constraint.data() {
-            WidthConstraint::BaseStruct(ref base_constraint) => {
-                let app = type_app_from_annotation(universe,
-                                                   scope,
-                                                   base_constraint.data())?;
+    // Map field to its (unfused) constraints
+    for ast_constraint in ast_constraints {
+        match ast_constraint.data() {
 
-                bases.push(app);
+            // base Struct/WidthConstraint
+            // Inspect the type and use it's field types as field constraints
+            //   for a new WidthConstraint
+            WidthConstraint::BaseStruct(ref ann) => {
+
+                let ann_type = 
+                    type_from_ann(universe, scope, typing_context, ann.data())?
+                    .substitute(universe, scope, typing_context)?;
+
+                match ann_type {
+                    AbstractType::Record {
+                        abstract_field_map: AbstractFieldMap {
+                            ref fields,
+                            ref field_map,
+                        },
+                        ..
+                    } => {
+                        for (field_name, field_id) in field_map.iter() {
+                            let field_type = fields
+                                .get(field_id)
+                                .expect("Missing field id")
+                                .clone();
+
+                            field_constraints
+                                .entry(field_name.clone())
+                                .or_insert(Vec::new())
+                                .push(field_type);
+                        }
+                    }
+
+                    AbstractType::WidthConstraint(AbstractWidthConstraint {
+                        ref fields,
+                    }) => {
+                        for (field_name, field_type) in fields {
+                            field_constraints
+                                .entry(field_name.clone())
+                                .or_insert(vec![field_type.clone()])
+                                .push(field_type.clone());
+                        }
+                    }
+
+                    _ => unimplemented!("Non-record/width constraint base"),
+                }
             }
+            
+            // A pseudo-width-constraint type (not actually a type)
+            // Take the fields and use them as a new constraint
+            WidthConstraint::Anonymous(ref ident_ann_pairs) => {
 
-            WidthConstraint::Anonymous(ref fields) => {
-                for (name, ann) in fields.iter() {
-                    let app = type_app_from_annotation(universe,
-                                                       scope,
-                                                       ann.data())?;
+                for (ast_ident, ast_ann) in ident_ann_pairs.iter() {
+                    let ann_type = 
+                        type_from_ann(universe, scope, typing_context, ast_ann.data())?;
+                    field_constraints
+                        .entry(ast_ident.data().clone())
+                        .or_insert(vec![ann_type.clone()])
+                        .push(ann_type);
+                }
+            }
+        }
+    }
 
-                    constrained_fields.entry(name.data().clone())
-                        .or_insert(Vec::new())
-                        .push(app);
+    let (ok_constraints, errors) = field_constraints
+        .iter()
+        .map(|(name, field_constraints)| {
+            let fuse = fuse_field_width_constraints(
+                universe, scope,
+                typing_context, field_constraints);
+            (name, fuse)
+        })
+        .fold((HashMap::new(), Vec::new()), |(mut ok, mut err), (name, fuse_result)| {
+            match fuse_result {
+                Ok(r) => { 
+                    ok.insert(name.clone(), r);
                 }
 
+                Err(e) => err.push(e),
+            };
 
-            },
-        }
+            (ok, err)
+        });
+
+    if errors.len() != 0 {
+        return Err(errors.into());
+
     }
 
-    let width_constraint = AbstractType::WidthConstraint(AbstractWidthConstraint {
-        base_types: bases,
-        fields: constrained_fields,
-    });
-
-    Ok(width_constraint)
+    Ok(AbstractType::WidthConstraint(AbstractWidthConstraint {
+        fields: ok_constraints
+    }))
 }
 
-/// Validates type constraints
-/// If all type constraints pass validation, then all type constraints can be fused into one
-/// constraint
-fn fuse_validate_concrete_field_constraints(universe: &Universe, constraints: &[Type]) -> Result<Type, TypeError> {
+/// Ensures that there are no conflicting constraints on a field
+fn fuse_field_width_constraints(universe: &Universe, scope: &ScopedData,
+    typing_context: &TypingContext, constraints: &[AbstractType]) 
+    -> Result<AbstractType, AnalysisError> {
+
+    use super::error::TypeError;
 
     let mut constraint_iter = constraints.into_iter();
+    let first_constraint = constraint_iter
+        .next()
+        .expect("Always at least one constraint");
+    
+    let is_first_non_width_constraint = match first_constraint {
+        AbstractType::Record { .. } 
+            | AbstractType::App { .. }
+            | AbstractType::Array { .. }
+            | AbstractType::Function { .. }
+            | AbstractType::UncheckedFunction { .. }
+            | AbstractType::Int
+            | AbstractType::Float
+            | AbstractType::String
+            | AbstractType::Bool
+            | AbstractType::Unit
+            | AbstractType::Any => true,
+        
+        AbstractType::TypeVar(..) => true,        // TODO: Check the type var in the context?
 
-    let mut internal_field_constraints = HashMap::new();
-    let mut first_constraint = constraint_iter.next().unwrap();
-    // Flag to see if first constraint is a concrete type (i.e. int or a width constraint)
-    let is_first_concrete_constraint = match first_constraint {
-        Type::WidthConstraint { 
-            ref fields,
-            ref field_map,
-        } => {
-
-            // Add first constraint to internal field constraints
-            // Gather internal field constraints to recurse later on
-            for (field, field_id) in field_map {
-                let concrete_constraint = fields.get(field_id).unwrap();
-                internal_field_constraints.entry(field)
-                        .or_insert(Vec::new())
-                        .push(concrete_constraint.clone());
-            }
-            false
-        },
-        _ => true,
+        AbstractType::WidthConstraint(..) => false,
     };
 
-    // Flag to see if constraint is a concrete type (i.e. int or a width constraint)
-    let found_base_type_constraint = is_first_concrete_constraint;
+    let found_non_width_constraint = is_first_non_width_constraint;
 
-
-    // Check for invalid constraints like:
-    //      { foo: int } + { foo: String }
-    //      { foo: int, foo: String }
-    //      { foo: int } + { foo: { ... } }
-    //      { foo: { bar: int } } + { foo: { bar: String } }
+    let mut internal_field_constraints: HashMap<Ident, Vec<AbstractType>> = HashMap::new();
     for constraint in constraint_iter {
         match constraint {
-            Type::WidthConstraint {
+            AbstractType::WidthConstraint(AbstractWidthConstraint {
                 ref fields,
-                ref field_map,
-            } => {
-                if found_base_type_constraint {
+            }) => {
+                if found_non_width_constraint {
                     // Error: found { foo: int } + { foo: { ... } }
                     // TODO: Make this collect only conflicting constraints
                     return Err(TypeError::ConflictingConstraints {
                         constraints: constraints.iter().map(|c| c.clone()).collect()   
-                    });
+                    }.into());
                 }
 
                 // Gather internal field constraints to recurse later on
-                for (field, field_id) in field_map {
-                    let concrete_constraint = fields.get(field_id).unwrap();
-                    internal_field_constraints.entry(field)
+                for (field, field_type) in fields {
+                    internal_field_constraints.entry(field.clone())
                             .or_insert(Vec::new())
-                            .push(concrete_constraint.clone());
+                            .push(field_type.clone());
                 }
 
             }
 
             _ => {
-                if !found_base_type_constraint {
+                if !found_non_width_constraint {
                     // Error: found { foo: { ... } } + { foo: int }
                     // TODO: Make this collect only conflicting constraints
                     return Err(TypeError::ConflictingConstraints {
                         constraints: constraints.iter().map(|c| c.clone()).collect()   
-                    });
+                    }.into());
                 }
 
-                if !resolve_types(constraint, first_constraint) {
-                    // Error: found { foo: int } + { foo: String }
-                    // TODO: Make this collect only conflicting constraints
-                    return Err(TypeError::ConflictingConstraints {
-                        constraints: constraints.iter().map(|c| c.clone()).collect()   
-                    });
-
-                }
+                // TODO: Pass span info
+                resolve_types_static(universe, scope, typing_context,
+                    constraint, first_constraint, crate::span::Span::dummy())
+                    .map_err(|e| {
+                        TypeError::ConflictingConstraints {
+                            constraints: constraints.iter().map(|c| c.clone()).collect()   
+                        }
+                    })?;
             }
         }
     }
 
-    if is_first_concrete_constraint {
+    // PRECONDITION: 
+    //  All current constraints scanned.
+    if found_non_width_constraint {
+        // No other constraint
         Ok(first_constraint.clone())
     } else {
         // Validate internal field constraints and fuse
         let mut final_internal_map = HashMap::new();
-        let mut final_internal_constraints = HashMap::new();
         for (field, constraints) in internal_field_constraints {
-            let field_id = universe.new_field_id();
 
-            let field_constraint = fuse_validate_concrete_field_constraints(universe, &constraints)?;
-            if final_internal_constraints.insert(field_id, field_constraint).is_some() {
+            let field_constraint = 
+                fuse_field_width_constraints(universe, scope, typing_context, &constraints)?;
+            if final_internal_map.insert(field.clone(), field_constraint).is_some() {
                 panic!("FUSE ERROR");
             }
-
-            final_internal_map.insert(field.clone(), field_id);
         }
 
-        Ok(Type::WidthConstraint { 
-            fields: final_internal_constraints,
-            field_map: final_internal_map,
-        })
+        Ok(AbstractType::WidthConstraint(AbstractWidthConstraint { 
+            fields: final_internal_map,
+        }))
     }
 }

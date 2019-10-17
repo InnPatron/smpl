@@ -6,7 +6,7 @@ use crate::span::Span;
 
 use crate::ast::{ArrayInit as AstArrayInit, AstNode, Expr as AstExpr, TypedPath};
 
-pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
+pub fn flatten(universe: &mut Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
 
     let (_, span) = flatten_expr(universe, &mut expr, e);
@@ -15,7 +15,7 @@ pub fn flatten(universe: &Universe, e: AstExpr) -> Expr {
     expr
 }
 
-pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId, Span) {
+pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (TmpId, Span) {
     match e {
         AstExpr::Bin(bin) => {
             let (bin, span) = bin.to_data();
@@ -48,15 +48,13 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
         AstExpr::StructInit(init) => {
             let (init, span) = init.to_data();
             let struct_name = init.struct_name;
-            let field_init = init.field_init.map(|field_init_list| {
-                field_init_list
-                    .into_iter()
-                    .map(|(name, expr)| {
+            let field_init = init.field_init
+                .into_iter()
+                .map(|(name, expr)| {
                         let expr = Typed::untyped(flatten_expr(universe, scope, *expr).0);
                         (name.data().clone(), expr)
-                    })
-                    .collect::<Vec<_>>()
-            });
+                })
+                .collect::<Vec<_>>();
             (
                 scope.map_tmp(
                     universe,
@@ -69,15 +67,13 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
 
         AstExpr::AnonStructInit(init) => {
             let (init, span) = init.to_data();
-            let field_init = init.field_init.map(|field_init_list| {
-                field_init_list
-                    .into_iter()
-                    .map(|(name, expr)| {
-                        let expr = flatten_expr(universe, scope, *expr).0;
-                        (name.data().clone(), expr)
-                    })
-                    .collect::<Vec<_>>()
-            });
+            let field_init = init.field_init
+                .into_iter()
+                .map(|(name, expr)| {
+                    let expr = flatten_expr(universe, scope, *expr).0;
+                    (name.data().clone(), expr)
+                })
+                .collect::<Vec<_>>();
             (
                 scope.map_tmp(
                     universe,
@@ -98,7 +94,7 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
 
         AstExpr::FieldAccess(path) => {
             let (path, span) = path.to_data();
-            let field_access = FieldAccess::new(universe, scope, path);
+            let field_access = FieldAccess::new(universe, path);
             (
                 scope.map_tmp(universe, Value::FieldAccess(field_access), span),
                 span,
@@ -181,8 +177,12 @@ pub fn flatten_expr(universe: &Universe, scope: &mut Expr, e: AstExpr) -> (TmpId
 
         AstExpr::AnonymousFn(a_fn) => {
             let (a_fn, span) = a_fn.to_data();
+            let fn_id = universe.new_fn_id();
+            universe.reserve_anonymous_fn(fn_id, a_fn);
             (
-                scope.map_tmp(universe, Value::AnonymousFn(AnonymousFn::new(a_fn)), span),
+
+                scope.map_tmp(universe, 
+                    Value::AnonymousFn(AnonymousFn::new(fn_id)), span),
                 span,
             )
         }
@@ -243,16 +243,16 @@ mod tests {
         let mut input = buffer_input(input);
         let expr = piped_expr(&mut input, &[]).unwrap().to_data().0;
 
-        let universe = Universe::std();
+        let mut universe = Universe::std();
 
-        let expr = flatten(&universe, expr);
+        let expr = flatten(&mut universe, expr);
 
         let mut order = expr.execution_order();
 
         // Find and validate tmp storing 5.
         let _5_id = order.next().unwrap();
         {
-            match *expr.get_tmp(*_5_id).value().data() {
+            match expr.get_tmp(_5_id).value().data() {
                 Value::Literal(ref literal) => {
                     assert_eq!(*literal, Literal::Int(5));
                 }
@@ -264,7 +264,7 @@ mod tests {
         // Find and validate tmp storing 2.
         let _2_id = order.next().unwrap();
         {
-            match *expr.get_tmp(*_2_id).value().data() {
+            match expr.get_tmp(_2_id).value().data() {
                 Value::Literal(ref literal) => {
                     assert_eq!(*literal, Literal::Int(2));
                 }
@@ -276,7 +276,7 @@ mod tests {
         // Find and validate tmp storing 3.
         let _3_id = order.next().unwrap();
         {
-            match *expr.get_tmp(*_3_id).value().data() {
+            match expr.get_tmp(_3_id).value().data() {
                 Value::Literal(ref literal) => {
                     assert_eq!(*literal, Literal::Int(3));
                 }
@@ -287,7 +287,7 @@ mod tests {
 
         let div_id = order.next().unwrap();
         {
-            let (l_id, r_id) = match *expr.get_tmp(*div_id).value().data() {
+            let (l_id, r_id) = match expr.get_tmp(div_id).value().data() {
                 Value::BinExpr(ref op, ref lhs, ref rhs) => {
                     assert_eq!(*op, BinOp::Div);
                     (lhs.data(), rhs.data())
@@ -296,13 +296,13 @@ mod tests {
                 ref v @ _ => panic!("Unexpected value {:?}. Expected a division expr", v),
             };
 
-            assert_eq!(l_id, _2_id);
-            assert_eq!(r_id, _3_id);
+            assert_eq!(*l_id, _2_id);
+            assert_eq!(*r_id, _3_id);
         }
 
         let add_id = order.next().unwrap();
         {
-            let (l_id, r_id) = match *expr.get_tmp(*add_id).value().data() {
+            let (l_id, r_id) = match expr.get_tmp(add_id).value().data() {
                 Value::BinExpr(ref op, ref lhs, ref rhs) => {
                     assert_eq!(*op, BinOp::Add);
                     (lhs.data(), rhs.data())
@@ -311,8 +311,8 @@ mod tests {
                 ref v @ _ => panic!("Unexpected value {:?}. Expected an addition expr", v),
             };
 
-            assert_eq!(l_id, _5_id);
-            assert_eq!(r_id, div_id);
+            assert_eq!(*l_id, _5_id);
+            assert_eq!(*r_id, div_id);
         }
     }
 }

@@ -94,11 +94,17 @@ fn main() {
         let main = program.universe().get_fn(main);
         let called_fn = called_fn.unwrap();
         
-        let fn_call = {
-            let scope_enter = main.cfg().after_start();
-            main.cfg().next(scope_enter)
+        let cfg = if let Function::SMPL(main) = main {
+            main.cfg()
+        } else {
+            panic!("Expected a SMPL function. Found {:?}", main);
         };
-        match *main.cfg().node_weight(fn_call) {
+        let cfg = cfg.borrow();
+        let fn_call = {
+            let scope_enter = cfg.after_start();
+            cfg.next(scope_enter)
+        };
+        match cfg.node_weight(fn_call) {
             Node::Block(ref block) => {
                 assert!(block.graph().len() == 1);
                 let mut iter = block.graph().iter();
@@ -107,7 +113,7 @@ fn main() {
                     BlockNode::Expr(ref edata) => {
                         let e = &edata.expr;
                         let mut iter = e.execution_order();
-                        let tmp = e.get_tmp(*iter.last().unwrap());
+                        let tmp = e.get_tmp(iter.last().unwrap());
                         match *tmp.value().data() {
                             Value::FnCall(ref call) => {
                                 let fn_value = call.fn_value();
@@ -480,10 +486,7 @@ fn test() {
             Err(e) => {
                 match e {
                     AnalysisError::TypeError(e) => {
-                        match e {
-                            TypeError::LhsRhsInEq(..) => (),
-                            e @ _ => panic!("Expected TypeError::LhsRhsInEq. Found {:?}", e),
-                        }
+                        ()
                     }
 
                     e @ _ => panic!("Expected TypeError::LhsRhsInEq. Found {:?}", e),
@@ -779,7 +782,6 @@ fn recurse_b(i: int) -> int {
     }
 
     #[test]
-    #[should_panic]
     fn anonymous_fn_invalid() {
         let mod1 =
 "mod mod1;
@@ -791,7 +793,15 @@ fn test() {
 }";
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        check_program(vec![mod1]).unwrap();
+        let result = check_program(vec![mod1]);
+        if let Err(AnalysisError::TypeError(t)) = result {
+            ();
+        } else {
+            match result {
+                Ok(_) => panic!("Expected a type error. Found Ok"),
+                Err(e) => panic!("Expected a type error. Found {:?}", e),
+            }
+        }
     }
     
     #[test]
@@ -1578,5 +1588,94 @@ fn test() {
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let mod2 = parse_module(wrap_input!(mod2)).unwrap();
         check_program(vec![mod1, mod2]).unwrap();
+    }
+
+    #[test]
+    fn fn_multi_type_param() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type A, B)(a: A, b: B) {
+    let a2: A = a;
+    let b2: B = b;
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn fn_multi_type_param_err() {
+        let mod1 =
+"mod mod1;
+
+fn foo(type A, B)(a: A, b: B) {
+    let a2: A = b;
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Expected a type error. Found OK"),
+
+            Err(e) => {
+                if let AnalysisError::TypeError(_) = e {
+                    ()
+                } else {
+                    panic!("Expected a type error. Found {:?}", e);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn invalid_type_arg() {
+        let mod1 =
+"mod mod1;
+
+struct Baz {
+    x: bool,
+}
+
+fn foo(type A)(a: A) -> A
+    where A: { x: int } {
+
+
+    return a;
+}
+
+fn bar() {
+   foo(type Baz)(init Baz {
+        x: true
+   });
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Expected a type error. Found OK"),
+
+            Err(e) => {
+                if let AnalysisError::TypeError(_) = e {
+                    ()
+                } else if let AnalysisError::Errors(e) = e {
+                    let mut type_error = false;
+
+                    e
+                        .iter()
+                        .for_each(|err| {
+                            if let AnalysisError::TypeError(_) = err {
+                                type_error = true;
+                            }
+                        });
+
+                    if type_error {
+                        ()
+                    } else {
+                        panic!("Expected a type error. Found {:?}", e);
+                    }
+                } else {
+                    panic!("Expected a type error. Found {:?}", e);
+                }
+            }
+        }
     }
 }

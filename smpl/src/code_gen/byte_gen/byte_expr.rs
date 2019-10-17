@@ -8,7 +8,7 @@ pub fn translate_expr(expr: &Expr) -> Vec<Instruction> {
 
     let mut translated = Vec::new();
     for tmp in execution_order {
-        translated.extend(translate_tmp(expr.get_tmp(*tmp)));
+        translated.extend(translate_tmp(expr.get_tmp(tmp)));
     }
 
     translated
@@ -45,11 +45,18 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
         },
 
         Value::FieldAccess(ref access) => {
+
+            let mut instruction_buffer: Vec<Instruction> = Vec::new();
+
             let internal_path = access.path();
             let root_var = 
                 internal_path.root_name().data().as_str().to_owned();
-            let root_indexing_expr = internal_path.root_indexing_expr()
-                .map(|tmp| tmp_id(tmp));
+            let root_indexing_expr = internal_path.root_indexing_expr();
+
+            if let Some(root_indexing_expr) = root_indexing_expr {
+                instruction_buffer.extend(translate_expr(root_indexing_expr));
+            }
+
             let path: Vec<_> = internal_path
                 .path()
                 .iter()
@@ -59,10 +66,11 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
                             super::byte_code::FieldAccess::Field(field.name().to_string())
                         }
 
-                        PathSegment::Indexing(ref field, ref index_tmp) => {
+                        PathSegment::Indexing(ref field, ref index_expr) => {
+                            instruction_buffer.extend(translate_expr(index_expr));
                             super::byte_code::FieldAccess::FieldIndex {
                                 field: field.name().to_string(),
-                                index_tmp: tmp_id(*index_tmp),
+                                index_tmp: tmp_id(index_expr.last()),
                             }
                         }
                     }
@@ -72,24 +80,28 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
             let field_access_location = if path.len() > 0 || root_indexing_expr.is_some() {
                 Location::Compound {
                     root: root_var,
-                    root_index: root_indexing_expr,
+                    root_index: root_indexing_expr.map(|expr| tmp_id(expr.last())),
                     path: path,
                 }
             } else {
                 Location::Namespace(root_var)
             };
 
-            Store(Location::Tmp(store), Arg::Location(field_access_location))
+            let access_instr = 
+                Store(Location::Tmp(store), Arg::Location(field_access_location));
+
+            instruction_buffer.push(access_instr);
+            return instruction_buffer;
         }
 
         Value::BinExpr(ref op, ref lhs, ref rhs) => {
-            use crate::analysis::type_cons::Type;
+            use crate::analysis::type_cons::AbstractType;
 
             macro_rules! specific_math_op {
                 ($ty: expr, $store: expr, $lhs: expr, $rhs: expr, $integer: path, $float: path) => {
                     match $ty {
-                        Type::Int => $integer($store, $lhs, $rhs),
-                        Type::Float => $float($store, $lhs, $rhs),
+                        AbstractType::Int => $integer($store, $lhs, $rhs),
+                        AbstractType::Float => $float($store, $lhs, $rhs),
 
                         _ => unreachable!(),
                     }
@@ -150,7 +162,7 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
         }
 
         Value::StructInit(ref struct_init) => {
-            let field_init = struct_init.raw_field_init().unwrap();
+            let field_init = struct_init.raw_field_init();
 
             let mut map = HashMap::new();
             for (field, typed_tmp_id) in field_init.into_iter() {
@@ -213,7 +225,7 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
         }
 
         Value::AnonStructInit(ref struct_init) => {
-            let field_init = struct_init.raw_field_init().unwrap();
+            let field_init = struct_init.raw_field_init();
 
             let mut map = HashMap::new();
             for (field, tmp) in field_init.into_iter() {

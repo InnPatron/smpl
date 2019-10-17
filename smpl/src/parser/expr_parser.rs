@@ -845,7 +845,7 @@ fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         parser_state!("struct-init", "lbrace")
     );
 
-    let mut init = None;
+    let mut init = Vec::new();
     if peek_token!(
         tokens,
         |tok| match tok {
@@ -854,10 +854,10 @@ fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         },
         parser_state!("struct-init", "rbrace?")
     ) {
-        init = Some(production!(
+        init = production!(
             struct_field_init_list(tokens),
             parser_state!("struct init", "field-init-list")
-        ));
+        );
     }
 
     let (lroc, _rbrace) = consume_token!(

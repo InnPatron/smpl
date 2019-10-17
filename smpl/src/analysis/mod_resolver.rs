@@ -6,11 +6,13 @@ use crate::module::{ModuleSource, ParsedModule};
 
 use super::control_flow::CFG;
 use super::error::AnalysisError;
-use super::fn_analyzer::analyze_fn;
 use super::metadata::*;
 use super::semantic_data::Module;
 use super::semantic_data::*;
-use super::type_cons_gen::*;
+use super::resolve_scope::ScopedData;
+use super::type_checker::TypingContext;
+use super::type_cons_gen;
+use super::analysis_helpers;
 
 use crate::feature::*;
 
@@ -72,10 +74,11 @@ pub fn check_modules(
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_type) in raw_mod.reserved_structs.iter() {
             let type_id = reserved_type.0;
-            let (struct_type, field_ordering) = generate_struct_type_cons(
+            let (struct_type, field_ordering) = type_cons_gen::generate_struct_type_cons(
                 program,
                 type_id,
                 raw_program.scopes.get(mod_id).unwrap(),
+                &TypingContext::empty(),
                 reserved_type.1.data(),
             )?;
 
@@ -97,29 +100,39 @@ pub fn check_modules(
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;
             let fn_decl = reserved_fn.1.data();
+            let fn_name = fn_decl.name.data();
             // TODO: Store new function scope storing the type parameters
-            let (fn_scope, fn_type) = generate_fn_type(
-                program,
+            let fn_type_cons = type_cons_gen::generate_fn_type_cons(
+                program.universe(),
                 raw_program.scopes.get(mod_id).unwrap(),
+                &TypingContext::empty(),
                 fn_id,
                 reserved_fn.1.data(),
             )?;
 
+            let analysis_context = analysis_helpers::generate_fn_analysis_data(
+                program.universe(),
+                raw_program.scopes.get(mod_id).unwrap(),
+                &TypingContext::empty(),
+                &fn_type_cons,
+                reserved_fn.1.data())?;
+
             let cfg = CFG::generate(
                 program.universe_mut(),
                 fn_decl.body.clone(),
-                &fn_type,
-                &fn_scope,
+                &fn_type_cons,
+                &analysis_context,
             )?;
 
-            let fn_type_id = program.universe_mut().insert_type_cons(fn_type);
+            // TODO: Insert fn typing context
+            let fn_type_id = program.universe_mut().insert_type_cons(fn_type_cons);
 
             program
                 .universe_mut()
-                .insert_fn(fn_id, fn_type_id, fn_scope, cfg);
+                .insert_fn(fn_id, fn_name.clone(), fn_type_id, analysis_context, cfg);
             program.metadata_mut().insert_module_fn(
                 mod_id.clone(),
-                fn_decl.name.data().clone(),
+                fn_name.clone(),
                 fn_id,
             );
             program
@@ -130,9 +143,12 @@ pub fn check_modules(
         for (_, reserved_builtin) in raw_mod.reserved_builtins.iter() {
             let fn_id = reserved_builtin.0;
             let fn_decl = reserved_builtin.1.data();
-            let fn_type = generate_builtin_fn_type(
+            let fn_name = fn_decl.name.data();
+
+            let fn_type = type_cons_gen::generate_builtin_fn_type(
                 program,
                 raw_program.scopes.get(mod_id).unwrap(),
+                &TypingContext::empty(),
                 fn_id,
                 reserved_builtin.1.data(),
             )?;
@@ -141,12 +157,12 @@ pub fn check_modules(
 
             program.features_mut().add_feature(BUILTIN_FN);
 
-            program.universe_mut().insert_builtin_fn(fn_id, fn_type_id);
+            program.universe_mut().insert_builtin_fn(fn_id, fn_name.clone(), fn_type_id);
 
             program.metadata_mut().insert_builtin(fn_id);
             program.metadata_mut().insert_module_fn(
                 mod_id.clone(),
-                fn_decl.name.data().clone(),
+                fn_name.clone(),
                 fn_id,
             );
             program
@@ -158,7 +174,8 @@ pub fn check_modules(
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;
-            analyze_fn(program, fn_id, mod_id.clone())?;
+
+            analysis_helpers::analyze_fn(program.universe_mut(), fn_id)?;
         }
     }
 
