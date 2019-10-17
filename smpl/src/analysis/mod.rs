@@ -15,6 +15,7 @@ mod mod_resolver;
 pub mod type_cons;
 mod type_cons_gen;
 mod type_resolver;
+mod type_equality;
 mod resolve_scope;
 mod type_checker;
 mod analysis_helpers;
