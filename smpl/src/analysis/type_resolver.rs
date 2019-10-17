@@ -212,6 +212,21 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
         (String, String) => Ok(()),
         (Unit, Unit) => Ok(()), 
 
+
+        (synthesis @ Opaque {
+            ..
+        }, constraint @ Opaque {
+            ..
+        }) => {
+            super::type_equality::equal_types_static(
+                universe,
+                scoped_data,
+                typing_context,
+                synthesis,
+                constraint,
+                span)
+        }
+
         // Unconstrained type parameters
         // Check if type parameters are equal
         (TypeVar(synth_id), TypeVar(constraint_id)) => {
