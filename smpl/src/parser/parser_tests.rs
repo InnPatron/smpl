@@ -765,4 +765,35 @@ fn test() {
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let mod2 = parse_module(wrap_input!(mod2)).unwrap();
     }
+
+    #[test]
+    fn parse_opaque_type() {
+        let mod1 =
+"mod mod1;
+
+opaque Vec;";
+
+        let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
+    }
+
+    #[test]
+    fn parse_opaque_type_type_params() {
+        let mod1 =
+"mod mod1;
+
+opaque Vec(type T, B);";
+
+        let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
+    }
+
+    #[test]
+    fn parse_opaque_type_type_params_where_clause() {
+        let mod1 =
+"mod mod1;
+
+opaque Vec(type T, B)
+    where T: base Foo;";
+
+        let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
+    }
 }
