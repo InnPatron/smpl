@@ -684,6 +684,13 @@ fn resolve_struct_init(universe: &Universe, scope: &ScopedData,
             ..
         } => (struct_type_id, &abstract_field_map.fields, &abstract_field_map.field_map),
 
+        AbstractType::Opaque { .. } => {
+            return Err(TypeError::InitOpaqueType {
+                struct_type: struct_type,
+                span: span,
+            }.into());
+        }
+
         _ => {
             return Err(TypeError::NotAStruct {
                 type_name: type_name.clone(),
