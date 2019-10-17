@@ -901,8 +901,7 @@ fn foo() { }";
     fn opaque_struct() {
         let input =
 "mod mod1;
-#[opaque]
-struct Foo { bla: int }
+opaque Foo;
 
 fn test() {
     init Foo {
@@ -924,7 +923,7 @@ fn test() {
                         }
                     },
 
-                    _ => panic!("Expected type err"),
+                    _ => panic!("Expected type err. Found {:?}", err),
                 }
             },
         }
