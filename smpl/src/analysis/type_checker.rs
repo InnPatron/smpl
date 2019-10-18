@@ -422,9 +422,16 @@ impl TypingContext {
             tmp_type_map: HashMap::new(),
         }
     }
+
     pub fn get_type_var(&self, id: TypeVarId) -> Option<&AbstractType> {
         self.type_vars
             .get(&id)
+    }
+
+    pub fn tmp_type(&self, tmp_id: TmpId) -> &AbstractType  {
+        self.tmp_type_map
+            .get(&tmp_id)
+            .expect("Missing type for tmp")
     }
 }
 
