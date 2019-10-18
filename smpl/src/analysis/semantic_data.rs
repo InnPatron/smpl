@@ -52,6 +52,23 @@ impl Program {
         self.universe.all_fns()
     }
 
+    pub fn smpl_fns(&self) -> impl Iterator<Item=(FnId, &SMPLFunction)> {
+        self.universe
+            .all_fns()
+            .filter(|(_, f)| {
+                match f {
+                    Function::SMPL(_) => true,
+                    _ => false
+                }
+            })
+            .map(|(f_id, f)| {
+                match f {
+                    Function::SMPL(f) => (f_id, f),
+                    _ => unreachable!(),
+                }
+            })
+    }
+
     pub fn metadata(&self) -> &Metadata {
         &self.metadata
     }
