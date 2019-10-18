@@ -323,6 +323,8 @@ fn raw_mod_data(
     program: &mut Program,
     modules: Vec<ParsedModule>,
 ) -> Result<(HashMap<ModuleId, RawModData>, Vec<(ModuleId, ModuleSource)>), AnalysisError> {
+    use super::error::TopLevelError;
+
     let mut mod_map = HashMap::new();
     let mut source_map = Vec::new();
 
@@ -338,24 +340,34 @@ fn raw_mod_data(
         for decl_stmt in ast_module.1.into_iter() {
             match decl_stmt {
                 DeclStmt::Struct(d) => {
-                    struct_reserve.insert(
-                        d.data().name.data().clone().clone(),
+                    let name = d.data().name.data().clone();
+                    if struct_reserve.insert(
+                        name.clone(),
                         ReservedStruct(program.universe_mut().new_type_id(), d),
-                    );
+                    ).is_some() || opaque_reserve.contains_key(&name) {
+                        return Err(TopLevelError::DuplicateTypes(name).into());
+                    }
+
                 }
 
                 DeclStmt::Function(d) => {
-                    fn_reserve.insert(
-                        d.data().name.data().clone(),
+                    let name = d.data().name.data().clone();
+                    if fn_reserve.insert(
+                        name.clone(),
                         ReservedFn(program.universe_mut().new_fn_id(), d),
-                    );
+                    ).is_some() || builtin_fn_reserve.contains_key(&name) {
+                        return Err(TopLevelError::DuplicateFns(name).into());
+                    }
                 }
 
                 DeclStmt::BuiltinFunction(d) => {
-                    builtin_fn_reserve.insert(
-                        d.data().name.data().clone(),
+                    let name = d.data().name.data().clone();
+                    if builtin_fn_reserve.insert(
+                        name.clone(),
                         ReservedBuiltinFn(program.universe_mut().new_fn_id(), d),
-                    );
+                    ).is_some() || fn_reserve.contains_key(&name) {
+                        return Err(TopLevelError::DuplicateFns(name).into());
+                    }
                 }
 
                 DeclStmt::Use(u) => {
@@ -363,10 +375,13 @@ fn raw_mod_data(
                 }
 
                 DeclStmt::Opaque(o) => {
-                    opaque_reserve.insert(
-                        o.data().name.data().clone(),
+                    let name = o.data().name.data().clone();
+                    if opaque_reserve.insert(
+                        name.clone(),
                         ReservedOpaque(program.universe_mut().new_type_id(), o)
-                    );
+                    ).is_some() || struct_reserve.contains_key(&name) {
+                        return Err(TopLevelError::DuplicateTypes(name).into());
+                    }
                 }
             }
         }

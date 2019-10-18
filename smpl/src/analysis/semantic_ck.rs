@@ -1845,4 +1845,142 @@ fn bar() {
             }
         }
     }
+
+    #[test]
+    fn top_level_name_collision_struct() {
+        let mod1 =
+"mod mod1;
+
+struct Foo { }
+
+struct Foo { }";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Expected an error. Found OK"),
+
+            Err(e) => {
+                if let AnalysisError::TopLevelError(_) = e {
+                    ()
+                } else {
+                    panic!("Expected a top level error. Found {:?}", e);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn top_level_name_collision_struct_opaque() {
+        let mod1 =
+"mod mod1;
+
+struct Foo { }
+
+opaque Foo;";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Expected an error. Found OK"),
+
+            Err(e) => {
+                if let AnalysisError::TopLevelError(_) = e {
+                    ()
+                } else {
+                    panic!("Expected a top level error. Found {:?}", e);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn top_level_name_collision_opaque() {
+        let mod1 =
+"mod mod1;
+
+opaque Foo;
+
+opaque Foo;";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Expected an error. Found OK"),
+
+            Err(e) => {
+                if let AnalysisError::TopLevelError(_) = e {
+                    ()
+                } else {
+                    panic!("Expected a top level error. Found {:?}", e);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn top_level_name_collision_fn() {
+        let mod1 =
+"mod mod1;
+
+fn Foo() { }
+
+fn Foo() { }";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Expected an error. Found OK"),
+
+            Err(e) => {
+                if let AnalysisError::TopLevelError(_) = e {
+                    ()
+                } else {
+                    panic!("Expected a top level error. Found {:?}", e);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn top_level_name_collision_fn_builtin() {
+        let mod1 =
+"mod mod1;
+
+fn Foo() { }
+
+builtin fn Foo();";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Expected an error. Found OK"),
+
+            Err(e) => {
+                if let AnalysisError::TopLevelError(_) = e {
+                    ()
+                } else {
+                    panic!("Expected a top level error. Found {:?}", e);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn top_level_name_collision_builtin_fn() {
+        let mod1 =
+"mod mod1;
+
+builtin fn Foo();
+
+builtin fn Foo();";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        match check_program(vec![mod1]) {
+            Ok(_) => panic!("Expected an error. Found OK"),
+
+            Err(e) => {
+                if let AnalysisError::TopLevelError(_) = e {
+                    ()
+                } else {
+                    panic!("Expected a top level error. Found {:?}", e);
+                }
+            }
+        }
+    }
 }
