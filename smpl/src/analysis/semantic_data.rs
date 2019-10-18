@@ -414,6 +414,10 @@ impl AnalysisContext {
         &self.typing_context
     }
 
+    pub fn set_typing_context(&mut self, tc: TypingContext) {
+        self.typing_context = tc;
+    }
+
     pub fn existential_type_vars(&self) -> &[TypeVarId] {
         &self.existential_type_vars
     }
@@ -511,6 +515,10 @@ impl SMPLFunction {
 
     pub(super) fn analysis_context(&self) -> &AnalysisContext {
         &self.analysis_context
+    }
+
+    pub(super) fn analysis_context_mut(&mut self) -> &mut AnalysisContext {
+        &mut self.analysis_context
     }
 }
 

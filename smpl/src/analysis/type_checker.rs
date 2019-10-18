@@ -44,7 +44,36 @@ pub fn type_check(universe: &mut Universe, fn_id: FnId) -> Result<(), AnalysisEr
     let mut type_checker = TypeChecker::new(universe, fn_id)?;
     let cfg = cfg.borrow();
     let mut traverser = Traverser::new(&*cfg, &mut type_checker);
-    traverser.traverse()
+    traverser.traverse()?;
+
+    // Update the typing context
+    let typing_context = type_checker.typing_context;
+    {
+        let resolved_fn = universe.get_fn_mut(fn_id);
+        match resolved_fn {
+            Function::SMPL(ref mut smpl_fn) => {
+                smpl_fn
+                    .analysis_context_mut()
+                    .set_typing_context(typing_context);
+            }
+            Function::Anonymous(ref mut afn) => {
+                match afn {
+                    AnonymousFunction::Reserved(_) => unreachable!(),
+
+                    AnonymousFunction::Resolved {
+                        ref mut analysis_context,
+                        ..
+                    } => {
+                        analysis_context.set_typing_context(typing_context);
+                    }
+                }
+            }
+
+            _ => unreachable!(),
+        }
+    };
+
+    Ok(())
 }
 
 struct TypeChecker<'a> {
