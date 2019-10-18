@@ -119,8 +119,12 @@ pub fn check_modules(
             let fn_decl = reserved_fn.1.data();
             let fn_name = fn_decl.name.data();
             // TODO: Store new function scope storing the type parameters
+            
+            let (universe, metadata, _) = program.analysis_context();
+
             let fn_type_cons = type_cons_gen::generate_fn_type_cons(
-                program.universe(),
+                universe,
+                metadata,
                 raw_program.scopes.get(mod_id).unwrap(),
                 &TypingContext::empty(),
                 fn_id,
@@ -128,7 +132,7 @@ pub fn check_modules(
             )?;
 
             let analysis_context = analysis_helpers::generate_fn_analysis_data(
-                program.universe(),
+                universe,
                 raw_program.scopes.get(mod_id).unwrap(),
                 &TypingContext::empty(),
                 &fn_type_cons,
