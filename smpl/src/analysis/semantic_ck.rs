@@ -1026,6 +1026,78 @@ fn qux() {
     }
 
     #[test]
+    fn opaque_type_field() {
+        let mod1 =
+"mod mod1;
+
+opaque Foo(type P);
+
+struct Bar {
+   x: int 
+}
+
+struct Container(type T) {
+    f: Foo(type T)
+}
+
+builtin fn baz(type T)() -> Foo(type T);
+
+fn qux() {
+    let a: Foo(type Bar) = baz(type Bar)();
+    let b: Foo(type Bar) = baz(type Bar)();
+
+    let c1 = init Container(type Bar) {
+        f: a
+    };
+
+    let c2 = init Container(type Bar) {
+        f: a
+    };
+
+    c2 = c1;
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _program = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn opaque_type_field_invariance() {
+        let mod1 =
+"mod mod1;
+
+opaque Foo(type P);
+
+struct Bar {
+   x: int 
+}
+
+struct Container(type T) {
+    f: Foo(type T)
+}
+
+builtin fn baz(type T)() -> Foo(type T);
+
+fn qux() {
+    let a: Foo(type Bar) = baz(type Bar)();
+    let b: Foo(type {x: int}) = baz(type {x: int, y: int})();
+
+    let c1 = init Container(type Bar) {
+        f: a
+    };
+
+    let c2 = init Container(type {x: int, y: int}) {
+        f: a
+    };
+
+    c2 = c1;
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        error_variant!(check_program(vec![mod1]), AnalysisError::TypeError(_));
+    }
+
+    #[test]
     fn builtin_bind() {
         let mod1 = 
 "mod mod1;
