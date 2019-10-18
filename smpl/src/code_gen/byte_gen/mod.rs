@@ -75,10 +75,11 @@ pub fn compile_to_byte_code(function: &CompilableFn) -> ByteCodeFunction {
 
     let cfg = function.cfg();
     let cfg = cfg.borrow();
+    let typing_context = function.typing_context();
 
     // Goes through the CFG and collects the main function body, loops, and branches
     //   into organized groups of instructions with metadata
-    let mut first_pass = first_pass::FirstPass::new();
+    let mut first_pass = first_pass::FirstPass::new(typing_context);
     {
         let traverser = Traverser::new(&*cfg, &mut first_pass);
 

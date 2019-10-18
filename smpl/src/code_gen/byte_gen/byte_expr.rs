@@ -3,18 +3,18 @@ use std::collections::HashMap;
 use crate::analysis::*;
 use super::byte_code::*;
 
-pub fn translate_expr(expr: &Expr) -> Vec<Instruction> {
+pub fn translate_expr(expr: &Expr, typing_context: &TypingContext) -> Vec<Instruction> {
     let execution_order = expr.execution_order();
 
     let mut translated = Vec::new();
     for tmp in execution_order {
-        translated.extend(translate_tmp(expr.get_tmp(tmp)));
+        translated.extend(translate_tmp(expr.get_tmp(tmp), typing_context));
     }
 
     translated
 }
 
-fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
+fn translate_tmp(tmp: &Tmp, typing_context: &TypingContext) -> Vec<Instruction> {
     use super::byte_code::Instruction::*;
 
     let id = tmp.id();
@@ -54,7 +54,7 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
             let root_indexing_expr = internal_path.root_indexing_expr();
 
             if let Some(root_indexing_expr) = root_indexing_expr {
-                instruction_buffer.extend(translate_expr(root_indexing_expr));
+                instruction_buffer.extend(translate_expr(root_indexing_expr, typing_context));
             }
 
             let path: Vec<_> = internal_path
@@ -67,7 +67,7 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
                         }
 
                         PathSegment::Indexing(ref field, ref index_expr) => {
-                            instruction_buffer.extend(translate_expr(index_expr));
+                            instruction_buffer.extend(translate_expr(index_expr, typing_context));
                             super::byte_code::FieldAccess::FieldIndex {
                                 field: field.name().to_string(),
                                 index_tmp: tmp_id(index_expr.last()),
@@ -108,9 +108,8 @@ fn translate_tmp(tmp: &Tmp) -> Vec<Instruction> {
                 }
             }
 
-            let ty = lhs 
-                .get_type()
-                .expect("All values should be typed before code gen");
+            let ty = typing_context
+                .tmp_type(tmp.id());
             let lhs = Arg::Location(Location::Tmp(tmp_id(*lhs.data())));
             let rhs = Arg::Location(Location::Tmp(tmp_id(*rhs.data())));
             match op {

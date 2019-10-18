@@ -149,7 +149,8 @@ impl BranchFrame {
     }
 }
 
-pub(super) struct FirstPass {
+pub(super) struct FirstPass<'a> {
+    typing_context: &'a TypingContext,
     instructions: Option<Vec<PartialInstruction>>,
     loops: HashMap<LoopId, LoopFrame>,
     branches: HashMap<BranchingId, BranchFrame>,
@@ -157,7 +158,7 @@ pub(super) struct FirstPass {
     states: Vec<State>,
 }
 
-impl From<FirstPass> for super::second_pass::SecondPass {
+impl<'a> From<FirstPass<'a>> for super::second_pass::SecondPass {
     fn from(fp: FirstPass) -> super::second_pass::SecondPass {
         super::second_pass::SecondPass::new(
             fp.instructions.expect("FirstPass.instructions should be set to some"),
@@ -167,10 +168,11 @@ impl From<FirstPass> for super::second_pass::SecondPass {
     }
 }
 
-impl FirstPass {
+impl<'a> FirstPass<'a> {
 
-    pub(super) fn new() -> FirstPass {
+    pub(super) fn new(typing_context: &TypingContext) -> FirstPass {
         FirstPass {
+            typing_context: typing_context,
             instructions: None,
             loops: HashMap::new(),
             branches: HashMap::new(),
@@ -248,7 +250,7 @@ impl FirstPass {
     }
 }
 
-impl Passenger<FirstPassError> for FirstPass {
+impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
     fn start(&mut self, _id: NodeIndex) -> Result<(), FirstPassError> {
         self.push_state(State::Start);
 
@@ -287,10 +289,12 @@ impl Passenger<FirstPassError> for FirstPass {
         // Setup loop frame
         self.new_loop_frame(ld.loop_id);
 
-        let frame = self.get_loop_frame_mut(ld.loop_id);
-        let condition_instructions = byte_expr::translate_expr(&condition.expr)
+        let condition_instructions = 
+            byte_expr::translate_expr(&condition.expr, self.typing_context)
             .into_iter()
             .map(|instr| PartialInstruction::Instruction(instr));
+
+        let frame = self.get_loop_frame_mut(ld.loop_id);
         frame.set_condition(condition_instructions);
 
         let result_location = Arg::Location(Location::Tmp(byte_expr::tmp_id(condition.expr.last())));
@@ -340,7 +344,8 @@ impl Passenger<FirstPassError> for FirstPass {
 
     fn local_var_decl(&mut self, _id: NodeIndex, decl: &LocalVarDeclData) -> Result<(), FirstPassError> {
 
-        let init_instructions = byte_expr::translate_expr(decl.decl.init_expr());
+        let init_instructions = 
+            byte_expr::translate_expr(decl.decl.init_expr(), self.typing_context);
         self.extend_current_frame(init_instructions.into_iter());
 
         let key = decl.decl.var_name().as_str().to_owned();
@@ -356,7 +361,8 @@ impl Passenger<FirstPassError> for FirstPass {
         let assignee = assignment.assignee();
 
         // Generate rhs tmps
-        let value_tmps = byte_expr::translate_expr(assignment.value());
+        let value_tmps = 
+            byte_expr::translate_expr(assignment.value(), self.typing_context);
         let value = Arg::Location(Location::Tmp(byte_expr::tmp_id(assignment.value().last())));
 
         // Create location to store rhs value
@@ -402,7 +408,8 @@ impl Passenger<FirstPassError> for FirstPass {
     }
 
     fn expr(&mut self, _id: NodeIndex, expr: &ExprData) -> Result<(), FirstPassError> {
-        let expr_instructions = byte_expr::translate_expr(&expr.expr);
+        let expr_instructions = 
+            byte_expr::translate_expr(&expr.expr, self.typing_context);
         self.extend_current_frame(expr_instructions.into_iter());
         Ok(())
     }
@@ -412,7 +419,8 @@ impl Passenger<FirstPassError> for FirstPass {
             // Return expression
 
             // Append return expression instructions to current frame
-            let return_instructions = byte_expr::translate_expr(return_expr);
+            let return_instructions = 
+                byte_expr::translate_expr(return_expr, self.typing_context);
             self.extend_current_frame(return_instructions.into_iter());
 
             // Append return instruction
@@ -443,12 +451,13 @@ impl Passenger<FirstPassError> for FirstPass {
         // Setup branch frame
         self.new_branch_frame(b.branch_id);
 
-        let frame = self.get_branch_frame_mut(b.branch_id);
-        let condition_instructions = byte_expr::translate_expr(&condition.expr)
+        let condition_instructions = 
+            byte_expr::translate_expr(&condition.expr, self.typing_context)
             .into_iter()
             .map(|instr| PartialInstruction::Instruction(instr));
-        frame.set_condition(condition_instructions);
 
+        let frame = self.get_branch_frame_mut(b.branch_id);
+        frame.set_condition(condition_instructions);
         let result_location = Arg::Location(Location::Tmp(byte_expr::tmp_id(condition.expr.last())));
         frame.set_result_location(result_location);
 
