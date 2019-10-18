@@ -29,6 +29,35 @@ mod tests {
     use crate::ast::Ident;
     use crate::module::UnparsedModule;
 
+    macro_rules! error_variant {
+        ($value: expr, $e_pat: pat) => {{
+            let value = $value;
+            if let Ok(_) = value {
+                panic!("Expected {}. Found Ok", stringify!($e_pat));
+            } else if let Err($e_pat) = value {
+                ()
+            } else if let Err(AnalysisError::Errors(errors)) = value {
+                let mut found_error = false;
+
+                errors
+                    .iter()
+                    .for_each(|err| {
+                        if let $e_pat = err {
+                            found_error = true;
+                        }
+                    });
+
+                if !found_error {
+                    panic!("Expected {}. Found {:?}", stringify!($e_pat), errors);
+                }
+
+                ()
+            } else if let Err(e) = value {
+                panic!("Expected {}. Found {:?}", stringify!($e_pat), e);
+            }
+        }}
+    }
+
     macro_rules! wrap_input {
         ($input: expr) => {{ 
             UnparsedModule::anonymous($input)
@@ -927,6 +956,73 @@ fn test() {
                 }
             },
         }
+    }
+
+    #[test]
+    fn opaque_type_param() {
+        let mod1 =
+"mod mod1;
+
+opaque Foo(type P);
+
+struct Bar { }
+
+builtin fn baz() -> Foo(type Bar);
+
+fn qux() {
+    let q: Foo(type Bar) = baz();
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _program = check_program(vec![mod1]).unwrap();
+    }
+
+    #[test]
+    fn opaque_type_invariance() {
+        let mod1 =
+"mod mod1;
+
+opaque Foo(type P);
+
+struct Bar {
+   x: int 
+}
+
+builtin fn baz(type T)() -> Foo(type T);
+
+fn qux() {
+    let a: Foo(type Bar) = baz(type Bar)();
+    let b: Foo(type {x: int}) = baz(type {x: int, y: int})();
+
+    b = a;
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        error_variant!(check_program(vec![mod1]), AnalysisError::TypeError(_));
+    }
+
+    #[test]
+    fn opaque_type_assignment() {
+        let mod1 =
+"mod mod1;
+
+opaque Foo(type P);
+
+struct Bar {
+   x: int 
+}
+
+builtin fn baz(type T)() -> Foo(type T);
+
+fn qux() {
+    let a: Foo(type Bar) = baz(type Bar)();
+    let b: Foo(type Bar) = baz(type Bar)();
+
+    b = a;
+}";
+
+        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _program = check_program(vec![mod1]).unwrap();
     }
 
     #[test]
