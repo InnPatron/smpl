@@ -513,7 +513,7 @@ impl SMPLFunction {
         self.cfg.clone()
     }
 
-    pub(super) fn analysis_context(&self) -> &AnalysisContext {
+    pub(crate) fn analysis_context(&self) -> &AnalysisContext {
         &self.analysis_context
     }
 
