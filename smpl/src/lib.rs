@@ -31,4 +31,4 @@ pub use crate::analysis::{ metadata };
 
 pub use crate::code_gen::byte_gen;
 
-pub use crate::program::Program;
+pub use crate::program::{ CompilableFn, Program };
