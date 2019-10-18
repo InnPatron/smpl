@@ -79,6 +79,7 @@ impl Module {
 #[derive(Clone)]
 pub enum DeclStmt {
     Use(AstNode<UseDecl>),
+    Opaque(AstNode<Opaque>),
     Struct(AstNode<Struct>),
     Function(AstNode<Function>),
     BuiltinFunction(AstNode<BuiltinFunction>),
@@ -118,6 +119,14 @@ pub struct Function {
 pub struct FnParameter {
     pub name: AstNode<Ident>,
     pub param_type: AstNode<TypeAnnotation>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Opaque {
+    pub name: AstNode<Ident>,
+    pub annotations: Vec<Annotation>,
+    pub type_params: Option<TypeParams>,
+    pub where_clause: Option<WhereClause>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

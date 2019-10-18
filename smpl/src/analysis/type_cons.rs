@@ -38,6 +38,11 @@ pub enum TypeCons {
         field_map: HashMap<Ident, FieldId>,
     },
 
+    Opaque {
+        type_id: TypeId,
+        type_params: TypeParams,
+    },
+
     Int,
     Float,
     String,
@@ -71,7 +76,16 @@ impl TypeCons {
                 ..
             } => Some(type_params),
 
-            _ => None,
+            TypeCons::Opaque {
+                ref type_params,
+                ..
+            } => Some(type_params),
+
+            TypeCons::Int 
+                | TypeCons::Float 
+                | TypeCons::String
+                | TypeCons::Bool
+                | TypeCons::Unit => None,
         }
     }
 }
@@ -106,6 +120,11 @@ pub enum AbstractType {
     },
 
     WidthConstraint(AbstractWidthConstraint),
+
+    Opaque {
+        type_id: TypeId,
+        args: Vec<AbstractType>,
+    },
 
     TypeVar(TypeVarId),
 
@@ -214,6 +233,27 @@ impl AbstractType {
                         fields: subbed_fields,
                         field_map: field_map.clone(),
                     },
+                })
+            }
+
+            TypeCons::Opaque {
+                type_id,
+                ref type_params,
+            } => {
+
+                let ok_args = type_params
+                    .iter()
+                    .map(|(param_id, _)| {
+                        map
+                            .get(&type_params.placeholder_type_var(param_id))
+                            .expect("Missing placeholder type var in map")
+                            .clone()
+                    })
+                .collect();
+
+                Ok(AbstractType::Opaque {
+                    type_id: type_id.clone(),
+                    args: ok_args,
                 })
             }
 
@@ -472,6 +512,32 @@ impl AbstractType {
                     .unwrap_or(AbstractType::TypeVar(type_param_id.clone()));
 
                 Ok(result)
+            }
+
+            AbstractType::Opaque {
+                type_id,
+                ref args,
+            } => {
+                let (ok_args, errors) = args
+                    .iter()
+                    .map(|a| a.substitute_internal(universe, scoped_data, typing_context, map))
+                    .fold((Vec::new(), Vec::new()), |(mut ok, mut err), result| {
+                        match result {
+                            Ok(app) => ok.push(app),
+                            Err(mut e) => err.append(&mut e),
+                        }
+
+                        (ok, err)
+                });
+
+                if (errors.len() != 0) {
+                    return Err(errors);
+                }
+
+                Ok(AbstractType::Opaque {
+                    type_id: type_id.clone(),
+                    args: ok_args
+                })
             }
 
             AbstractType::Int => Ok(AbstractType::Int),
@@ -786,6 +852,7 @@ fn fuse_field_width_constraints(universe: &Universe, scope: &ScopedData,
             | AbstractType::String
             | AbstractType::Bool
             | AbstractType::Unit
+            | AbstractType::Opaque { .. }
             | AbstractType::Any => true,
         
         AbstractType::TypeVar(..) => true,        // TODO: Check the type var in the context?
