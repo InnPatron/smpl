@@ -76,7 +76,16 @@ impl TypeCons {
                 ..
             } => Some(type_params),
 
-            _ => None,
+            TypeCons::Opaque {
+                ref type_params,
+                ..
+            } => Some(type_params),
+
+            TypeCons::Int 
+                | TypeCons::Float 
+                | TypeCons::String
+                | TypeCons::Bool
+                | TypeCons::Unit => None,
         }
     }
 }
