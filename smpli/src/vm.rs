@@ -44,11 +44,11 @@ impl AVM {
             })
             .collect();
 
-        let program = smpl::check_program(modules)?;
+        let program = smpl::Program::create(modules)?;
 
         let mut compiled_fns = HashMap::new();
-        for (fn_id, raw_fn_ref) in program.all_fns() {
-            let compiled = byte_gen::compile_to_byte_code(raw_fn_ref);
+        for (fn_id, raw_fn_ref) in program.compilable_fns() {
+            let compiled = byte_gen::compile_to_byte_code(&raw_fn_ref);
             if compiled_fns.insert(fn_id, Arc::new(compiled)).is_some() {
                 panic!("Multiple functions with ID {}. Should not have passed check_program()", fn_id);
             }
