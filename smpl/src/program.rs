@@ -16,6 +16,10 @@ impl Program {
         })
     }
 
+    pub fn metadata(&self) -> &crate::metadata::Metadata {
+        &self.program.metadata()
+    }
+
     pub fn compilable_fns<'a>(&'a self) 
         -> impl Iterator<Item=(FnId, CompilableFn)> + 'a {
 
