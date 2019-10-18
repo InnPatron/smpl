@@ -2,8 +2,7 @@ mod vec;
 
 use option;
 
-#[opaque]
-struct Vec(type T) { }
+opaque Vec(type T);
 
 builtin fn new(type T)() -> Vec(type T);
 builtin fn len(type T)(v: Vec(type T)) -> int;

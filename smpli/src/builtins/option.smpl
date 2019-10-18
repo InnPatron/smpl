@@ -1,7 +1,6 @@
 mod option;
 
-#[opaque]
-struct Option(type T) { }
+opaque Option(type T);
 
 builtin fn some(type T)(value: T) -> Option(type T);
 builtin fn is_some(type T)(value: Option(type T)) -> bool;
