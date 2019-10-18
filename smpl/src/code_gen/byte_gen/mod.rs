@@ -6,7 +6,7 @@ mod third_pass;
 
 use std::fmt;
 
-use crate::analysis::SMPLFunction;
+use crate::program::CompilableFn;
 
 pub use byte_code::{
     Instruction,
@@ -71,7 +71,7 @@ impl fmt::Display for ByteCodeFunction {
 }
 
 /// Takes a CFG and transforms it into valid and executable bytecode
-pub fn compile_to_byte_code(function: &SMPLFunction) -> ByteCodeFunction {
+pub fn compile_to_byte_code(function: &CompilableFn) -> ByteCodeFunction {
 
     let cfg = function.cfg();
     let cfg = cfg.borrow();
