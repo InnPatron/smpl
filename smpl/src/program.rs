@@ -2,7 +2,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 
 use crate::module::ParsedModule;
-use crate::analysis::{ check_program, Program as AnalyzedProgram, Function, CFG, FnId, AnonymousFunction };
+use crate::analysis::{ check_program, Program as AnalyzedProgram, Function, CFG, FnId, AnonymousFunction, TypingContext };
 use crate::analysis::error::AnalysisError;
 
 pub struct Program {
@@ -36,7 +36,8 @@ impl Program {
                 match f {
                     Function::SMPL(f) => {
                         let c_fn = CompilableFn {
-                            cfg: f.cfg()
+                            cfg: f.cfg(),
+                            typing_context: f.analysis_context().typing_context(),
                         };
                         (f_id, c_fn)
                     },
@@ -47,10 +48,12 @@ impl Program {
 
                     Function::Anonymous(AnonymousFunction::Resolved {
                         ref cfg,
+                        ref analysis_context,
                         ..
                     }) => {
                         let c_fn = CompilableFn {
-                            cfg: cfg.clone()
+                            cfg: cfg.clone(),
+                            typing_context: analysis_context.typing_context()
                         };
 
                         (f_id, c_fn)
@@ -62,12 +65,17 @@ impl Program {
     }
 }
 
-pub struct CompilableFn {
-    cfg: Rc<RefCell<CFG>>
+pub struct CompilableFn<'a> {
+    cfg: Rc<RefCell<CFG>>,
+    typing_context: &'a TypingContext,
 }
 
-impl CompilableFn {
+impl<'a> CompilableFn<'a> {
     pub(crate) fn cfg(&self) -> &Rc<RefCell<CFG>> {
         &self.cfg
+    }
+
+    pub(crate) fn typing_context(&self) -> &TypingContext {
+        self.typing_context
     }
 }
