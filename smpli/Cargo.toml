@@ -10,7 +10,7 @@ license="MIT"
 repository="https://github.com/InnPatron/smpl"
 
 [dependencies]
-smpl = "0.15.2"
+smpl = "0.16.0"
 irmatch = "0.2.0"
 failure = "0.1.2"
 failure_derive = "0.1.2"
