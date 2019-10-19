@@ -1,0 +1,13 @@
+mod embedded_ifs_analysis;
+
+fn test() {
+    if true {
+        if false {
+
+        } else {
+            let a: int = 100;
+        }
+
+        let b: int = a;
+    }
+}

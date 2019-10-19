@@ -1,0 +1,17 @@
+mod basic_test_semantic_analysis;
+
+struct Test {
+    field_1: int,
+    field_2: float,
+    field_3: String,
+    field_4: bool
+}
+
+fn main() {
+    let truthy: bool = true;
+    if true {
+        truthy = false;
+    } else {
+        truthy = true;
+    }
+}

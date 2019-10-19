@@ -1,0 +1,7 @@
+mod missing_return_2;
+
+fn test() -> int {
+    if true {
+        return 0;
+    }
+}

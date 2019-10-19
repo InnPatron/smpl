@@ -64,27 +64,15 @@ mod tests {
         }}
     }
 
+    macro_rules! include_test {
+        ($file_name: expr) => {{
+            include_str!(concat!("../../../standalone-tests/", $file_name))
+        }}
+    }
+
     #[test]
     fn basic_test_semantic_analysis() {
-        let program =
-"mod basic_test_semantic_analysis;
-
-struct Test {
-    field_1: int,
-    field_2: float,
-    field_3: String,
-    field_4: bool
-}
-
-fn main() {
-    let truthy: bool = true;
-    if true {
-        truthy = false;
-    } else {
-        truthy = true;
-    }
-}
-";
+        let program = include_test!("basic_test_semantic_analysis.smpl");
 
         let program = parse_module(wrap_input!(program)).unwrap();
         let program = check_program(vec![program]).unwrap();
@@ -95,17 +83,7 @@ fn main() {
         use super::super::typed_ast::*;
         use crate::analysis::*;
 
-        let input = 
-"mod call_fn_success;
-
-fn arg_usage(a1: int, a2: bool) {
-	let b1: int = a1;
-	let b2: bool = a2;
-}
-
-fn main() {
-	arg_usage(5, false);
-}";
+        let input = include_test!("call_fn_success.smpl");
         
         let program = parse_module(wrap_input!(input)).unwrap();
         let program = check_program(vec![program]).unwrap();
@@ -167,20 +145,7 @@ fn main() {
 
     #[test]
     fn embedded_ifs_analysis() {
-        let input =
-"mod embedded_ifs_analysis;
-
-fn test() {
-    if true {
-        if false {
-
-        } else {
-            let a: int = 100;
-        }
-
-        let b: int = a;
-    }
-}";
+        let input = include_test!("embedded_ifs_analysis.smpl");
 
         let program = parse_module(wrap_input!(input)).unwrap();
         match check_program(vec![program]) {
@@ -199,82 +164,13 @@ fn test() {
 
     #[test]
     fn missing_return() {
-        let input_0 =
-"mod missing_return_0;
-
-fn test() -> int {
-    
-}";
-
-        let input_1 = 
-"mod missing_return_1;
-
-fn test() -> int {
-    let a: int = 5;
-}";
-
-        let input_2 = 
-"mod missing_return_2;
-
-fn test() -> int {
-    if true {
-        return 0;
-    }
-}";
-
-        let input_3 =
-"mod missing_return_3;
-
-fn test() -> int {
-    if true {
-
-
-    } else {
-        return 0;
-    }
-}";
-
-        let input_4 =
-"mod missing_return_4;
-
-fn test() -> int {
-    if true {
-        return 0;
-    } else {
-    
-    }
-}";
-
-        let input_5 =
-"mod missing_return_5;
-        
-fn test() -> int {
-    if true {
-        if true {
-
-        } else {
-            return 0;
-        }
-    } else {
-        return 0;
-    }
-}";
-
-        let input_6 =
-
-"mod missing_return_6;
-
-fn test() -> int {
-    if true {
-        return 0;
-    } else {
-        if true {
-            return 0;
-        } else {
-            
-        }
-    }
-}";
+        let input_0 = include_test!("missing_return_0.smpl");
+        let input_1 = include_test!("missing_return_1.smpl");
+        let input_2 = include_test!("missing_return_2.smpl");
+        let input_3 = include_test!("missing_return_3.smpl");
+        let input_4 = include_test!("missing_return_4.smpl");
+        let input_5 = include_test!("missing_return_5.smpl");
+        let input_6 = include_test!("missing_return_6.smpl");
 
         let input = vec![input_0, input_1, input_2, input_3, input_4, input_5, input_6];
 

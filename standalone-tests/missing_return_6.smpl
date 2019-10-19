@@ -1,0 +1,13 @@
+mod missing_return_6;
+
+fn test() -> int {
+    if true {
+        return 0;
+    } else {
+        if true {
+            return 0;
+        } else {
+            
+        }
+    }
+}
