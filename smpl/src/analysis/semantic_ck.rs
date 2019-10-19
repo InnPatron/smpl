@@ -70,13 +70,21 @@ mod tests {
         }}
     }
 
-    #[test]
-    fn basic_test_semantic_analysis() {
-        let program = include_test!("basic_test_semantic_analysis.smpl");
+    macro_rules! test_pass_analysis {
+        ($name: ident) => {
+            #[test]
+            fn $name() {
+                let mod1 = include_test!(concat!(stringify!($name), ".smpl"));
 
-        let program = parse_module(wrap_input!(program)).unwrap();
-        let program = check_program(vec![program]).unwrap();
+                let mod1 = parse_module(wrap_input!(mod1))
+                    .expect("Module did not parse correctly");
+
+                let _program = check_program(vec![mod1]).unwrap();
+            }
+        }
     }
+
+    test_pass_analysis!(basic_test_semantic_analysis);
 
     #[test]
     fn call_fn_success() {
@@ -213,21 +221,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn fn_out_of_order() {
-        let input = include_test!("fn_out_of_order.smpl");
-
-        let program = parse_module(wrap_input!(input)).unwrap();
-        check_program(vec![program]).unwrap();
-    }
-
-    #[test]
-    fn struct_out_of_order() {
-        let input = include_test!("struct_out_of_order.smpl");
-
-        let program = parse_module(wrap_input!(input)).unwrap();
-        check_program(vec![program]).unwrap();
-    }
+    test_pass_analysis!(fn_out_of_order);
+    test_pass_analysis!(struct_out_of_order);
 
     #[test]
     fn mods_out_of_order() {
@@ -288,29 +283,9 @@ mod tests {
         }
     }
 
-    #[test]
-    fn array_indexing() {
-        let mod1 = include_test!("array_indexing.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn assign_array_index() {
-        let mod1 = include_test!("assign_array_index.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn function_value() {
-        let mod1 = include_test!("function_value.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        check_program(vec![mod1]).unwrap();
-    }
+    test_pass_analysis!(array_indexing);
+    test_pass_analysis!(assign_array_index);
+    test_pass_analysis!(function_value);
 
     #[test]
     fn mod_function_value() {
@@ -322,29 +297,9 @@ mod tests {
         check_program(vec![mod1, mod2]).unwrap();
     }
 
-    #[test]
-    fn function_field() {
-        let mod1 = include_test!("function_field.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn builtin_function() {
-        let mod1 = include_test!("builtin_function.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn unchecked_params_builtin_function() {
-        let mod1 = include_test!("unchecked_params_builtin_function.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        check_program(vec![mod1]).unwrap();
-    }
+    test_pass_analysis!(function_field);
+    test_pass_analysis!(builtin_function);
+    test_pass_analysis!(unchecked_params_builtin_function);
 
 /*
     #[test]
@@ -388,29 +343,9 @@ fn main() {
         }
     }
 
-    #[test]
-    fn optional_local_type_annotation() {
-        let mod1 = include_test!("optional_local_type_annotation.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn recursive_check() {
-        let mod1 = include_test!("recursive_check.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn mutually_recursive_check() {
-        let mod1 = include_test!("mutually_recursive_check.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        check_program(vec![mod1]).unwrap();
-    }
+    test_pass_analysis!(optional_local_type_annotation);
+    test_pass_analysis!(recursive_check);
+    test_pass_analysis!(mutually_recursive_check);
 
     #[test]
     fn anonymous_fn_invalid() {
@@ -428,30 +363,10 @@ fn main() {
         }
     }
     
-    #[test]
-    fn anonymous_fn_call() {
-        let mod1 = include_test!("anonymous_fn_call.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn anonymous_fn_arg() {
-        let mod1 = include_test!("anonymous_fn_arg.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn fn_piping() {
-        let mod1 = include_test!("fn_piping.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        check_program(vec![mod1]).unwrap();
-    }
-
+    test_pass_analysis!(anonymous_fn_call);
+    test_pass_analysis!(anonymous_fn_arg);
+    test_pass_analysis!(fn_piping);
+    
     #[test]
     fn annotate_struct() {
         let input = include_test!("annotate_struct.smpl");
@@ -504,13 +419,9 @@ fn main() {
         }
     }
 
-    #[test]
-    fn opaque_type_param() {
-        let mod1 = include_test!("opaque_type_param.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _program = check_program(vec![mod1]).unwrap();
-    }
+    test_pass_analysis!(opaque_type_param);
+    test_pass_analysis!(opaque_type_assignment);
+    test_pass_analysis!(opaque_type_field);
 
     #[test]
     fn opaque_type_invariance() {
@@ -521,22 +432,6 @@ fn main() {
     }
 
     #[test]
-    fn opaque_type_assignment() {
-        let mod1 = include_test!("opaque_type_assignment.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _program = check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn opaque_type_field() {
-        let mod1 = include_test!("opaque_type_field.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _program = check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
     fn opaque_type_field_invariance() {
         let mod1 = include_test!("opaque_type_field_invariance.smpl");
 
@@ -544,37 +439,16 @@ fn main() {
         error_variant!(check_program(vec![mod1]), AnalysisError::TypeError(_));
     }
 
-    #[test]
-    fn builtin_bind() {
-        let mod1 = include_test!("builtin_bind.smpl");
+    test_pass_analysis!(builtin_bind);
 
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _err = check_program(vec![mod1]).unwrap();
-    }
+    test_pass_analysis!(generic_struct_decl);
+    test_pass_analysis!(generic_struct_init);
+    test_pass_analysis!(generic_function);
+    test_pass_analysis!(generic_fn_binding);
+    test_pass_analysis!(generic_builtin_fn_binding);
 
-    #[test]
-    fn generic_struct_decl() {
-        let mod1 = include_test!("generic_struct_decl.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _err = check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn generic_struct_init() {
-        let mod1 = include_test!("generic_struct_init.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _err = check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn generic_function() {
-        let mod1 = include_test!("generic_function.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _err = check_program(vec![mod1]).unwrap();
-    }
+    test_pass_analysis!(instantiate_fn_binding);
+    test_pass_analysis!(instantiate_builtin_fn_binding);
 
     #[test]
     fn generic_struct_init_type_arg_error() {
@@ -582,40 +456,8 @@ fn main() {
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err());
-    }
-
-    #[test]
-    fn generic_fn_binding() {
-        let mod1 = include_test!("generic_fn_binding.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _err = check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn generic_builtin_fn_binding() {
-        let mod1 = include_test!("generic_builtin_fn_binding.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _err = check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn instantiate_fn_binding() {
-        let mod1 = include_test!("instantiate_fn_binding.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _err = check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn instantiate_builtin_fn_binding() {
-        let mod1 = include_test!("instantiate_builtin_fn_binding.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _err = check_program(vec![mod1]).unwrap();
-    }
-
+    } 
+        
     #[test]
     fn generic_fn_binding_invalid_type() {
         let mod1 = include_test!("generic_fn_binding_invalid_type.smpl");
@@ -624,37 +466,11 @@ fn main() {
         assert!(check_program(vec![mod1]).is_err());
     }
 
-    #[test]
-    fn generic_fn_param() {
-        let mod1 = include_test!("generic_fn_param.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _err = check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn width_constraint_call() {
-        let mod1 = include_test!("width_constraint_call.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _err = check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn width_constraint_nested() {
-        let mod1 = include_test!("width_constraint_nested.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _err = check_program(vec![mod1]).unwrap();
-    }
-
-    #[test]
-    fn generic_width_constraint() {
-        let mod1 = include_test!("generic_width_constraint.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _err = check_program(vec![mod1]).unwrap();
-    }
+    test_pass_analysis!(generic_fn_param);
+    test_pass_analysis!(width_constraint_call);
+    test_pass_analysis!(width_constraint_nested);
+    test_pass_analysis!(generic_width_constraint);
+    test_pass_analysis!(generic_transitive_width_constraint);
 
     #[test]
     fn generic_width_constraint_invalid_bind() {
@@ -681,14 +497,6 @@ fn main() {
     }
 
     #[test]
-    fn generic_transitive_width_constraint() {
-        let mod1 = include_test!("generic_transitive_width_constraint.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        assert!(check_program(vec![mod1]).is_ok())
-    }
-
-    #[test]
     fn generic_invalid_transitive_width_constraint() {
         let mod1 = include_test!("generic_invalid_transitive_width_constraint.smpl");
 
@@ -696,14 +504,7 @@ fn main() {
         assert!(check_program(vec![mod1]).is_err())
     }
 
-    #[test]
-    fn width_constraint_multi_base() {
-        let mod1 = include_test!("width_constraint_multi_base.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _result = check_program(vec![mod1]).unwrap();
-
-    }
+    test_pass_analysis!(width_constraint_multi_base);
 
     #[test]
     fn width_constraint_conflicting() {
@@ -721,32 +522,10 @@ fn main() {
         assert!(check_program(vec![mod1]).is_err());
     }
 
-    #[test]
-    fn generic_struct_init_type_arg() {
-        let mod1 = include_test!("generic_struct_init_type_arg.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _result = check_program(vec![mod1]).unwrap();
-
-    }
-
-    #[test]
-    fn generic_struct_init_width_constraint() {
-        let mod1 = include_test!("generic_struct_init_width_constraint.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _result = check_program(vec![mod1]).unwrap();
-
-    }
-
-    #[test]
-    fn anonymous_struct_init() {
-        let mod1 = include_test!("anonymous_struct_init.smpl");
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _result = check_program(vec![mod1]).unwrap();
-    }
-
+    test_pass_analysis!(generic_struct_init_type_arg);
+    test_pass_analysis!(generic_struct_init_width_constraint);
+    test_pass_analysis!(anonymous_struct_init);
+    
     #[test]
     fn anonymous_struct_init_invalid_type() {
         let mod1 = include_test!("anonymous_struct_init_invalid_type.smpl");
@@ -755,13 +534,8 @@ fn main() {
         assert!(check_program(vec![mod1]).is_err());
     }
 
-    #[test]
-    fn valid_fn_subtyping() {
-        let mod1 = include_test!("valid_fn_subtyping.smpl");
 
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let _program = check_program(vec![mod1]).unwrap();
-    }
+    test_pass_analysis!(valid_fn_subtyping);
 
     #[test]
     fn invalid_fn_subtyping_wider() {
@@ -779,14 +553,7 @@ fn main() {
         assert!(check_program(vec![mod1]).is_err());
     }
 
-    #[test]
-    fn bind_fn_type_app() {
-        let mod1 = include_test!("bind_fn_type_app.smpl");
-"";
-
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        check_program(vec![mod1]).unwrap();
-    }
+    test_pass_analysis!(bind_fn_type_app);
 
     #[test]
     fn bind_fn_type_app_mod_access() {
