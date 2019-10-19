@@ -1,0 +1,6 @@
+mod mod1;
+
+fn foo() -> bool {
+    let bar = !false;
+    return bar;
+}

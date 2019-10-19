@@ -1,0 +1,17 @@
+mod mod1;
+
+fn recurse_a(i: int) -> int {
+    if (i == 0) {
+        return 5;
+    } else {
+        return recurse_b(i - 1);
+    }
+}
+
+fn recurse_b(i: int) -> int {
+    if (i == 0) {
+        return -5;
+    } else {
+        return recurse_a(i - 1);
+    }
+}

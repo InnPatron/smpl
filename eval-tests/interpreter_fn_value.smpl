@@ -1,0 +1,11 @@
+mod mod1;
+
+fn test2(a: int) -> int {
+    return a * 2;
+}
+
+fn test() -> int {
+    let func: fn(int) -> int = test2;
+
+    return func(210);
+}

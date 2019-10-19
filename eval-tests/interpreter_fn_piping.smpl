@@ -1,0 +1,9 @@
+mod mod1;
+
+fn add(i: int, a: int) -> int {
+    return i + a;
+}
+
+fn test() -> int {
+    return add(0, 1) |> add(1) |> add(1) |> add(2);
+}

@@ -1,0 +1,7 @@
+mod mod1;
+
+fn test() -> int {
+    let t: [int; 5] = [1, 2, 3, 4, 5];
+
+    return t[0] + t[1] + t[2] + t[3] + t[4];
+}
