@@ -66,7 +66,7 @@ mod tests {
 
     macro_rules! include_test {
         ($file_name: expr) => {{
-            include_str!(concat!("../../../standalone-tests/", $file_name))
+            include_str!(concat!("../../../semantic-tests/", $file_name))
         }}
     }
 
