@@ -1117,7 +1117,9 @@ fn resolve_indexing(universe: &Universe, scope: &ScopedData, context: &TypingCon
             AbstractType::Array {
                 ref element_type,
                 ..
-            } => *(element_type.clone()),
+            } => {
+                element_type.substitute(universe, scope, context)?
+            },
 
             _ => {
                 return Err(TypeError::NotAnArray {
