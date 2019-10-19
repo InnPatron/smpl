@@ -1,0 +1,3 @@
+mod mod1;
+#[test, foo = "bar"]
+struct Foo { }

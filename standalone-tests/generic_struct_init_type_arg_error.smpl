@@ -1,0 +1,13 @@
+mod mod1;
+
+struct Foo(type T) {
+    f: T,
+}
+
+fn foo(type T)(v: T) -> Foo(type T) {
+    let f = init Foo {
+        f: v,
+    };
+
+    return f;
+}

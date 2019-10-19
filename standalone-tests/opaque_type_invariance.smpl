@@ -1,0 +1,16 @@
+mod mod1;
+
+opaque Foo(type P);
+
+struct Bar {
+   x: int 
+}
+
+builtin fn baz(type T)() -> Foo(type T);
+
+fn qux() {
+    let a: Foo(type Bar) = baz(type Bar)();
+    let b: Foo(type {x: int}) = baz(type {x: int, y: int})();
+
+    b = a;
+}

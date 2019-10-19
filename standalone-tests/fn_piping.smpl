@@ -1,0 +1,9 @@
+mod mod1;
+
+fn inc(i: int) -> int {
+    return i + 1;
+}
+
+fn test() -> int {
+    return inc(0) |> inc() |> inc() |> inc();
+}

@@ -1,0 +1,8 @@
+mod mod1;
+
+builtin fn add(a: int, b: int) -> int;
+
+fn bar() -> int {
+    let f = add;
+    return f(3, 5);
+}

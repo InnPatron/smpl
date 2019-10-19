@@ -1,0 +1,9 @@
+mod mod1;
+
+fn test() -> int {
+    let func = fn (foo: int) -> int {
+        return foo + 5;
+    };
+
+    return func(10);
+}

@@ -1,0 +1,4 @@
+mod mod1;
+#[test, foo = "bar"]
+
+fn foo() { }

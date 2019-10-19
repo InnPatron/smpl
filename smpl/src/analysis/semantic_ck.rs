@@ -414,14 +414,7 @@ fn main() {
 
     #[test]
     fn anonymous_fn_invalid() {
-        let mod1 =
-"mod mod1;
-
-fn test() {
-    let func = fn (foo: int) -> int {
-        return true;
-    };
-}";
+        let mod1 = include_test!("anonymous_fn_invalid.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let result = check_program(vec![mod1]);
@@ -437,17 +430,7 @@ fn test() {
     
     #[test]
     fn anonymous_fn_call() {
-        let mod1 =
-"
-mod mod1;
-
-fn test() -> int {
-    let func = fn (foo: int) -> int {
-        return foo + 5;
-    };
-
-    return func(10);
-}";
+        let mod1 = include_test!("anonymous_fn_call.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
@@ -455,21 +438,7 @@ fn test() -> int {
 
     #[test]
     fn anonymous_fn_arg() {
-        let mod1 =
-"
-mod mod1;
-
-fn test2(func: fn(int) -> int) -> int {
-    return func(10);
-}
-
-fn test() -> int {
-    let func = fn (foo: int) -> int {
-        return foo + 5;
-    };
-
-    return test2(func);
-}";
+        let mod1 = include_test!("anonymous_fn_arg.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
@@ -477,17 +446,7 @@ fn test() -> int {
 
     #[test]
     fn fn_piping() {
-        let mod1 =
-"
-mod mod1;
-
-fn inc(i: int) -> int {
-    return i + 1;
-}
-
-fn test() -> int {
-    return inc(0) |> inc() |> inc() |> inc();
-}";
+        let mod1 = include_test!("fn_piping.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
@@ -495,10 +454,7 @@ fn test() -> int {
 
     #[test]
     fn annotate_struct() {
-        let input =
-"mod mod1;
-#[test, foo = \"bar\"]
-struct Foo { }";
+        let input = include_test!("annotate_struct.smpl");
 
         let mod1 = parse_module(wrap_input!(input)).unwrap();
         let program = check_program(vec![mod1]).unwrap();
@@ -512,11 +468,7 @@ struct Foo { }";
 
     #[test]
     fn annotate_fn() {
-        let input =
-"mod mod1;
-#[test, foo = \"bar\"]
-
-fn foo() { }";
+        let input = include_test!("annotate_fn.smpl");
 
         let mod1 = parse_module(wrap_input!(input)).unwrap();
         let program = check_program(vec![mod1]).unwrap();
@@ -530,15 +482,7 @@ fn foo() { }";
 
     #[test]
     fn opaque_struct() {
-        let input =
-"mod mod1;
-opaque Foo;
-
-fn test() {
-    init Foo {
-        bla: 5
-    };
-}";
+        let input = include_test!("opaque_struct.smpl");
         
         let mod1 = parse_module(wrap_input!(input)).unwrap();
         let err = check_program(vec![mod1]);
@@ -562,18 +506,7 @@ fn test() {
 
     #[test]
     fn opaque_type_param() {
-        let mod1 =
-"mod mod1;
-
-opaque Foo(type P);
-
-struct Bar { }
-
-builtin fn baz() -> Foo(type Bar);
-
-fn qux() {
-    let q: Foo(type Bar) = baz();
-}";
+        let mod1 = include_test!("opaque_type_param.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _program = check_program(vec![mod1]).unwrap();
@@ -581,23 +514,7 @@ fn qux() {
 
     #[test]
     fn opaque_type_invariance() {
-        let mod1 =
-"mod mod1;
-
-opaque Foo(type P);
-
-struct Bar {
-   x: int 
-}
-
-builtin fn baz(type T)() -> Foo(type T);
-
-fn qux() {
-    let a: Foo(type Bar) = baz(type Bar)();
-    let b: Foo(type {x: int}) = baz(type {x: int, y: int})();
-
-    b = a;
-}";
+        let mod1 = include_test!("opaque_type_invariance.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         error_variant!(check_program(vec![mod1]), AnalysisError::TypeError(_));
@@ -605,23 +522,7 @@ fn qux() {
 
     #[test]
     fn opaque_type_assignment() {
-        let mod1 =
-"mod mod1;
-
-opaque Foo(type P);
-
-struct Bar {
-   x: int 
-}
-
-builtin fn baz(type T)() -> Foo(type T);
-
-fn qux() {
-    let a: Foo(type Bar) = baz(type Bar)();
-    let b: Foo(type Bar) = baz(type Bar)();
-
-    b = a;
-}";
+        let mod1 = include_test!("opaque_type_assignment.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _program = check_program(vec![mod1]).unwrap();
@@ -629,35 +530,7 @@ fn qux() {
 
     #[test]
     fn opaque_type_field() {
-        let mod1 =
-"mod mod1;
-
-opaque Foo(type P);
-
-struct Bar {
-   x: int 
-}
-
-struct Container(type T) {
-    f: Foo(type T)
-}
-
-builtin fn baz(type T)() -> Foo(type T);
-
-fn qux() {
-    let a: Foo(type Bar) = baz(type Bar)();
-    let b: Foo(type Bar) = baz(type Bar)();
-
-    let c1 = init Container(type Bar) {
-        f: a
-    };
-
-    let c2 = init Container(type Bar) {
-        f: a
-    };
-
-    c2 = c1;
-}";
+        let mod1 = include_test!("opaque_type_field.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _program = check_program(vec![mod1]).unwrap();
@@ -665,35 +538,7 @@ fn qux() {
 
     #[test]
     fn opaque_type_field_invariance() {
-        let mod1 =
-"mod mod1;
-
-opaque Foo(type P);
-
-struct Bar {
-   x: int 
-}
-
-struct Container(type T) {
-    f: Foo(type T)
-}
-
-builtin fn baz(type T)() -> Foo(type T);
-
-fn qux() {
-    let a: Foo(type Bar) = baz(type Bar)();
-    let b: Foo(type {x: int}) = baz(type {x: int, y: int})();
-
-    let c1 = init Container(type Bar) {
-        f: a
-    };
-
-    let c2 = init Container(type {x: int, y: int}) {
-        f: a
-    };
-
-    c2 = c1;
-}";
+        let mod1 = include_test!("opaque_type_field_invariance.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         error_variant!(check_program(vec![mod1]), AnalysisError::TypeError(_));
@@ -701,15 +546,7 @@ fn qux() {
 
     #[test]
     fn builtin_bind() {
-        let mod1 = 
-"mod mod1;
-
-builtin fn add(a: int, b: int) -> int;
-
-fn bar() -> int {
-    let f = add;
-    return f(3, 5);
-}";
+        let mod1 = include_test!("builtin_bind.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _err = check_program(vec![mod1]).unwrap();
@@ -717,32 +554,15 @@ fn bar() -> int {
 
     #[test]
     fn generic_struct_decl() {
-        let mod1 =
-"mod mod1;
+        let mod1 = include_test!("generic_struct_decl.smpl");
 
-struct Foo(type T) {
-    f: T,
-}";
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _err = check_program(vec![mod1]).unwrap();
     }
 
     #[test]
     fn generic_struct_init() {
-        let mod1 =
-"mod mod1;
-
-struct Foo(type T) {
-    f: T,
-}
-
-fn foo(type T)(v: T) -> Foo(type T) {
-    let f = init Foo(type T) {
-        f: v,
-    };
-
-    return f;
-}";
+        let mod1 = include_test!("generic_struct_init.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _err = check_program(vec![mod1]).unwrap();
@@ -750,15 +570,7 @@ fn foo(type T)(v: T) -> Foo(type T) {
 
     #[test]
     fn generic_function() {
-        let mod1 = 
-"mod mod1;
-
-fn foo(type T)(t: T) -> T {
-    let v: T = t;
-
-    return v;
-}
-";
+        let mod1 = include_test!("generic_function.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _err = check_program(vec![mod1]).unwrap();
@@ -766,20 +578,7 @@ fn foo(type T)(t: T) -> T {
 
     #[test]
     fn generic_struct_init_type_arg_error() {
-        let mod1 =
-"mod mod1;
-
-struct Foo(type T) {
-    f: T,
-}
-
-fn foo(type T)(v: T) -> Foo(type T) {
-    let f = init Foo {
-        f: v,
-    };
-
-    return f;
-}";
+        let mod1 = include_test!("generic_struct_init_type_arg_error.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err());
@@ -787,19 +586,8 @@ fn foo(type T)(v: T) -> Foo(type T) {
 
     #[test]
     fn generic_fn_binding() {
-        let mod1 =
-"mod mod1;
+        let mod1 = include_test!("generic_fn_binding.smpl");
 
-fn bar(type T)(v: T) -> T {
-    return v;
-}
-
-fn foo(type A)(v: A) -> A {
-    let b: fn(A) -> A = bar(type A);
-    let result: A = b(v);
-
-    return result;
-}";
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _err = check_program(vec![mod1]).unwrap();
     }
