@@ -1,0 +1,9 @@
+mod all_required_returns_2;
+
+fn test() -> int {
+    if true {
+        return 0;
+    }
+
+    return 0;
+}

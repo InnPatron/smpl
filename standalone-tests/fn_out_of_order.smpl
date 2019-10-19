@@ -1,0 +1,9 @@
+mod fn_out_of_order;
+
+fn A() {
+    B();
+}
+
+fn B() {
+
+}

@@ -197,84 +197,13 @@ mod tests {
 
     #[test]
     fn all_required_returns() {
-        let input_0 =
-"mod all_required_returns_0;
-
-fn test() -> int {
-    return 0;
-}";
-
-        let input_1 = 
-"mod all_required_returns_1;
-        
-fn test() -> int {
-    let a: int = 5;
-
-    return 0;
-}";
-
-        let input_2 = 
-"mod all_required_returns_2;
-
-fn test() -> int {
-    if true {
-        return 0;
-    }
-
-    return 0;
-}";
-
-        let input_3 =
-"mod all_required_returns_3;
-
-fn test() -> int {
-    if true {
-        return 0;
-    } else {
-        return 0;
-    }
-}";
-
-        let input_4 =
-"mod all_required_returns_4;
-
-fn test() -> int {
-    if true {
-        return 0;
-    } else {
-        return 0;
-    }
-}";
-
-        let input_5 =
-"mod all_required_returns_5;
-
-fn test() -> int {
-    if true {
-        if true {
-            return 0;
-        } else {
-            return 0;
-        }
-    } else {
-        return 0;
-    }
-}";
-
-        let input_6 =
-"mod all_required_returns_6;
-
-fn test() -> int {
-    if true {
-        return 0;
-    } else {
-        if true {
-            return 0;
-        } else {
-            return 0;
-        }
-    }
-}";
+        let input_0 = include_test!("all_required_returns_0.smpl");
+        let input_1 = include_test!("all_required_returns_1.smpl");
+        let input_2 = include_test!("all_required_returns_2.smpl");
+        let input_3 = include_test!("all_required_returns_3.smpl");
+        let input_4 = include_test!("all_required_returns_4.smpl");
+        let input_5 = include_test!("all_required_returns_5.smpl");
+        let input_6 = include_test!("all_required_returns_6.smpl");
 
         let input = vec![input_0, input_1, input_2, input_3, input_4, input_5, input_6];
 
@@ -286,16 +215,7 @@ fn test() -> int {
 
     #[test]
     fn fn_out_of_order() {
-        let input =
-"mod fn_out_of_order;
-
-fn A() {
-    B();
-}
-
-fn B() {
-
-}";
+        let input = include_test!("fn_out_of_order.smpl");
 
         let program = parse_module(wrap_input!(input)).unwrap();
         check_program(vec![program]).unwrap();
@@ -303,16 +223,7 @@ fn B() {
 
     #[test]
     fn struct_out_of_order() {
-        let input =
-"mod struct_out_of_order;
-
-struct A {
-    field: B,
-}
-
-struct B{
-    field: int,
-}";
+        let input = include_test!("struct_out_of_order.smpl");
 
         let program = parse_module(wrap_input!(input)).unwrap();
         check_program(vec![program]).unwrap();
@@ -320,30 +231,8 @@ struct B{
 
     #[test]
     fn mods_out_of_order() {
-        let mod1 =
-"mod mod1;
-
-use mod2;
-
-struct A {
-    field: mod2::B,
-}
-
-fn test() {
-    mod2::test();
-}";
-
-        let mod2 =
-"mod mod2;
-
-struct B {
-    field: int,
-}
-
-fn test() {
-    
-}
-";
+        let mod1 = include_test!("mods_out_of_order_1.smpl");
+        let mod2 = include_test!("mods_out_of_order_2.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let mod2 = parse_module(wrap_input!(mod2)).unwrap();

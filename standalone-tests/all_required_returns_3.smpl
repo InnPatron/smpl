@@ -1,0 +1,9 @@
+mod all_required_returns_3;
+
+fn test() -> int {
+    if true {
+        return 0;
+    } else {
+        return 0;
+    }
+}

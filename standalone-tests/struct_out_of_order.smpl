@@ -1,0 +1,9 @@
+mod struct_out_of_order;
+
+struct A {
+    field: B,
+}
+
+struct B{
+    field: int,
+}
