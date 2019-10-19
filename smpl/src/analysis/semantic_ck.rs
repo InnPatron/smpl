@@ -241,16 +241,7 @@ mod tests {
 
     #[test]
     fn correct_array_initialization() {
-        let mod1 =
-"mod mod1;
-
-
-fn test() {
-    let a: [int; 100] = [ 10; 100 ];
-    let b: [int; 3] = [ 1, 2, 3 ];
-}
-
-";
+        let mod1 = include_test!("correct_array_initialization.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
@@ -258,13 +249,7 @@ fn test() {
 
     #[test]
     fn heterogenous_array_initialization() {
-        let mod1 =
-"mod mod1;
-
-fn test() {
-    let a: [int; 2] = [100, false];
-}
-";
+        let mod1 = include_test!("heterogenous_array_initialization.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {
@@ -286,13 +271,7 @@ fn test() {
 
     #[test]
     fn mismatch_array_assignment() {
-        let mod1 =
-"mod mod1;
-
-fn test() {
-    let a: [int; 3] = [100, 100];
-}
-";
+        let mod1 = include_test!("mismatch_array_assignment.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {
@@ -311,19 +290,7 @@ fn test() {
 
     #[test]
     fn array_indexing() {
-        let mod1 =
-"
-mod mod1;
-
-fn test() {
-    let a: [int; 4] = [0, 1, 2, 3];
-
-    let i1: int = a[0];
-    let i2: int = a[1];
-    let i3: int = a[2];
-    let i4: int = a[3];
-}
-";
+        let mod1 = include_test!("array_indexing.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
@@ -331,22 +298,7 @@ fn test() {
 
     #[test]
     fn assign_array_index() {
-        let mod1= 
-"
-mod mod1;
-
-struct T {
-    t: [int; 4]
-}
-
-
-fn test() {
-    let a: T = init T {
-        t: [1, 2, 3, 4]
-    };
-
-    a.t[3] = 10;
-}";
+        let mod1 = include_test!("assign_array_index.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
@@ -354,22 +306,7 @@ fn test() {
 
     #[test]
     fn function_value() {
-        let mod1 =
-"
-mod mod1;
-
-fn bar(a: int) -> int {
-    return a + 5;
-}
-
-fn apply(f: fn(int) -> int, in: int) -> int {
-    return f(in);
-}
-
-fn foo() {
-    apply(bar, 10);
-}
-";
+        let mod1 = include_test!("function_value.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
@@ -377,28 +314,8 @@ fn foo() {
 
     #[test]
     fn mod_function_value() {
-        let mod2 =
-"
-mod mod2;
-
-fn foo() -> int {
-    return 5;
-}
-";
-        let mod1 =
-"
-mod mod1;
-
-use mod2;
-
-fn b() {
-    let i: int = mod2::foo();
-}
-
-fn main() {
-    let a: fn() -> int = mod2::foo;
-}
-";
+        let mod1 = include_test!("mod_function_value_1.smpl");
+        let mod2 = include_test!("mod_function_value_2.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let mod2 = parse_module(wrap_input!(mod2)).unwrap();
@@ -407,24 +324,7 @@ fn main() {
 
     #[test]
     fn function_field() {
-        let mod1 =
-"
-mod mod1;
-
-struct T {
-    f: fn(int),
-}
-
-fn b(a: int) {
-
-}
-
-fn main() {
-    let t: T = init T {f: b};
-    let f: fn(int) = t.f;
-    f(5);
-}
-";
+        let mod1 = include_test!("function_field.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
@@ -432,20 +332,7 @@ fn main() {
 
     #[test]
     fn builtin_function() {
-        let mod1 =
-"
-mod mod1;
-
-struct T {
-    i: int
-}
-
-builtin fn test_function(t: T) -> bool;
-
-fn main() {
-    let t: T = init T {i: 1337};
-    test_function(t);
-}";
+        let mod1 = include_test!("builtin_function.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
@@ -453,20 +340,7 @@ fn main() {
 
     #[test]
     fn unchecked_params_builtin_function() {
-        let mod1 =
-"
-mod mod1;
-
-struct T {
-    i: int
-}
-
-builtin fn test_function(UNCHECKED) -> bool;
-
-fn main() {
-    let t: T = init T {i: 1337};
-    test_function(1, 2, 3);
-}";
+        let mod1 = include_test!("unchecked_params_builtin_function.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
@@ -500,19 +374,7 @@ fn main() {
 
     #[test]
     fn deny_unchecked_params_builtin_function_struct() {
-        let mod1 =
-"
-mod mod1;
-
-struct T {
-    i: fn() -> bool,
-}
-
-builtin fn test_function(UNCHECKED) -> bool;
-
-fn main() {
-    let t = init T { i: test_function };
-}";
+        let mod1 = include_test!("deny_unchecked_params_builtin_function_struct.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {
@@ -528,22 +390,7 @@ fn main() {
 
     #[test]
     fn optional_local_type_annotation() {
-        let mod1 =
-"
-mod mod1;
-
-struct T {
-    i: int
-}
-
-fn test_function(t: T) -> int {
-    return t.i;
-}
-
-fn main() {
-    let t = init T {i: 1337};
-    test_function(t);
-}";
+        let mod1 = include_test!("optional_local_type_annotation.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
@@ -551,18 +398,7 @@ fn main() {
 
     #[test]
     fn recursive_check() {
-        let mod1 =
-"
-mod mod1;
-
-fn recurse(i: int) -> int {
-    if (i == 0) {
-        return 0;
-    } else {
-        return recurse(i - 1);
-    }
-}
-";
+        let mod1 = include_test!("recursive_check.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
@@ -570,26 +406,7 @@ fn recurse(i: int) -> int {
 
     #[test]
     fn mutually_recursive_check() {
-        let mod1 =
-"
-mod mod1;
-
-fn recurse_a(i: int) -> int {
-    if (i == 0) {
-        return 5;
-    } else {
-        return recurse_b(i - 1);
-    }
-}
-
-fn recurse_b(i: int) -> int {
-    if (i == 0) {
-        return -5;
-    } else {
-        return recurse_a(i - 1);
-    }
-}
-";
+        let mod1 = include_test!("mutually_recursive_check.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();

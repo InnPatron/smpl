@@ -1,0 +1,11 @@
+mod mod1;
+
+use mod2;
+
+fn b() {
+    let i: int = mod2::foo();
+}
+
+fn main() {
+    let a: fn() -> int = mod2::foo;
+}

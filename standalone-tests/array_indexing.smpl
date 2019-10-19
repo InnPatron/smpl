@@ -1,0 +1,10 @@
+mod mod1;
+
+fn test() {
+    let a: [int; 4] = [0, 1, 2, 3];
+
+    let i1: int = a[0];
+    let i2: int = a[1];
+    let i3: int = a[2];
+    let i4: int = a[3];
+}

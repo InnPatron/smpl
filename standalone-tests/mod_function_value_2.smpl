@@ -1,0 +1,5 @@
+mod mod2;
+
+fn foo() -> int {
+    return 5;
+}

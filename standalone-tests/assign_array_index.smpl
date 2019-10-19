@@ -1,0 +1,14 @@
+mod mod1;
+
+struct T {
+    t: [int; 4]
+}
+
+
+fn test() {
+    let a: T = init T {
+        t: [1, 2, 3, 4]
+    };
+
+    a.t[3] = 10;
+}

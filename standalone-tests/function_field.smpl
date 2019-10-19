@@ -1,0 +1,15 @@
+mod mod1;
+
+struct T {
+    f: fn(int),
+}
+
+fn b(a: int) {
+
+}
+
+fn main() {
+    let t: T = init T {f: b};
+    let f: fn(int) = t.f;
+    f(5);
+}
