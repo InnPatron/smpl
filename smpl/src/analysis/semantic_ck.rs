@@ -707,12 +707,7 @@ fn main() {
 
     #[test]
     fn width_constraint_conflicting() {
-        let mod1 =
-"mod mod1;
-
-fn foo(x: { i: String} + { i: int }) {
-
-}";
+        let mod1 = include_test!("width_constraint_conflicting.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err());
@@ -720,13 +715,7 @@ fn foo(x: { i: String} + { i: int }) {
 
     #[test]
     fn generic_unknown_type_parameter() {
-        let mod1 =
-"mod mod1;
-
-fn foo(type T)(t: T) 
-    where U: { x: int } {
-    
-}";
+        let mod1 = include_test!("generic_unknown_type_parameter.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err());
@@ -734,18 +723,7 @@ fn foo(type T)(t: T)
 
     #[test]
     fn generic_struct_init_type_arg() {
-        let mod1 =
-"mod mod1;
-
-struct Foo(type T) {
-    x: T
-}
-
-fn foo() {
-    let f: Foo(type int) = init Foo(type int) {
-        x: 5,
-    };
-}";
+        let mod1 = include_test!("generic_struct_init_type_arg.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _result = check_program(vec![mod1]).unwrap();
@@ -754,27 +732,7 @@ fn foo() {
 
     #[test]
     fn generic_struct_init_width_constraint() {
-        let mod1 =
-"mod mod1;
-
-struct Bar {
-    y: bool,
-}
-
-struct Foo(type T) 
-    where T: { y: bool } {
-    x: T
-}
-
-fn foo() {
-    let b = init Bar {
-        y: false,
-    };
-
-    let f: Foo(type Bar) = init Foo(type Bar) {
-        x: b,
-    };
-}";
+        let mod1 = include_test!("generic_struct_init_width_constraint.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _result = check_program(vec![mod1]).unwrap();
@@ -783,58 +741,23 @@ fn foo() {
 
     #[test]
     fn anonymous_struct_init() {
-        let mod1 =
-"mod mod1;
+        let mod1 = include_test!("anonymous_struct_init.smpl");
 
-fn foo() {
-    let f: { x: int, y: bool } = init {
-        y: true,
-        x: 15,
-        z: \"bla\",
-    };
-}
-";
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _result = check_program(vec![mod1]).unwrap();
     }
 
     #[test]
     fn anonymous_struct_init_invalid_type() {
-        let mod1 =
-"mod mod1;
+        let mod1 = include_test!("anonymous_struct_init_invalid_type.smpl");
 
-fn foo() {
-    let f: { x: int, y: bool, z: String } = init {
-        y: true,
-        x: 15,
-    };
-}
-";
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err());
     }
 
     #[test]
     fn valid_fn_subtyping() {
-        let mod1 =
-"mod mod1;
-struct Point {
-  x: int,
-  y: int,
-  z: int,
-}
-
-fn foo(p: {x: int}) -> int { return 0; }
-fn bar(p: Point) -> int { return 0; }
-fn qux(p: {x: int, y: int}) -> int { return 0; }
-
-fn test() {
-    let allowed1: fn(Point) -> int = foo; // Nominal parameter expected, narrower provided
-    let allowed2: fn(Point) -> int = qux; // Nominal parameter expected, narrower provided
-    let allowed3: fn({x: int, y: int}) -> int = foo; // Width constraint parameter expected, narrower provided
-    let allowed4: fn({x: int, y: int}) -> int = qux; // Width constraint parameter expected, exact provided
-    let allowed5: fn(Point) -> int = bar; // Nominal parameter expected, exact provided
-}";
+        let mod1 = include_test!("valid_fn_subtyping.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let _program = check_program(vec![mod1]).unwrap();
@@ -842,19 +765,7 @@ fn test() {
 
     #[test]
     fn invalid_fn_subtyping_wider() {
-        let mod1 =
-"mod mod1;
-struct Point {
-  x: int,
-  y: int,
-  z: int,
-}
-
-fn qux(p: {x: int, y: int}) -> int { return 0; }
-
-fn test() {
-    let disallowed1: fn({x: int}) -> int = qux; // Width constraint parameter expected, wider provided
-}";
+        let mod1 = include_test!("invalid_fn_subtyping_wider.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err());
@@ -862,20 +773,7 @@ fn test() {
 
     #[test]
     fn invalid_fn_subtyping_nominal() {
-        let mod1 =
-"mod mod1;
-struct Point {
-  x: int,
-  y: int,
-  z: int,
-}
-
-fn bar(p: Point) -> int { return 0; }
-
-fn test() {
-    let disallowed2: fn({x: int, y: int, z: int}) -> int = bar; // Width constraint parameter expected, nominal provided
-
-}";
+        let mod1 = include_test!("invalid_fn_subtyping_nominal.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err());
@@ -883,17 +781,8 @@ fn test() {
 
     #[test]
     fn bind_fn_type_app() {
-        let mod1 =
-"mod mod1;
-
-fn ident(type T)(t: T) -> T {
-    return t;
-}
-
-fn test() {
-    let my_ident: fn(int) -> int = ident(type int);
-    let result: int = my_ident(5);
-}";
+        let mod1 = include_test!("bind_fn_type_app.smpl");
+"";
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
@@ -901,22 +790,8 @@ fn test() {
 
     #[test]
     fn bind_fn_type_app_mod_access() {
-        let mod1 =
-"mod mod1;
-
-fn ident(type T)(t: T) -> T {
-    return t;
-}";
-
-        let mod2 =
-"mod mod2;
-
-use mod1;
-
-fn test() {
-    let my_ident: fn(int) -> int = mod1::ident(type int);
-    let result: int = my_ident(5);
-}";
+        let mod1 = include_test!("bind_fn_type_app_mod_access_1.smpl");
+        let mod2 = include_test!("bind_fn_type_app_mod_access_2.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let mod2 = parse_module(wrap_input!(mod2)).unwrap();
@@ -925,21 +800,8 @@ fn test() {
 
     #[test]
     fn bind_fn_type_app_mod_access_stmt() {
-        let mod1 =
-"mod mod1;
-
-fn ident(type T)(t: T) -> T {
-    return t;
-}";
-
-        let mod2 =
-"mod mod2;
-
-use mod1;
-
-fn test() {
-    mod1::ident(type int);
-}";
+        let mod1 = include_test!("bind_fn_type_app_mod_access_stmt_1.smpl");
+        let mod2 = include_test!("bind_fn_type_app_mod_access_stmt_2.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let mod2 = parse_module(wrap_input!(mod2)).unwrap();
@@ -948,13 +810,7 @@ fn test() {
 
     #[test]
     fn fn_multi_type_param() {
-        let mod1 =
-"mod mod1;
-
-fn foo(type A, B)(a: A, b: B) {
-    let a2: A = a;
-    let b2: B = b;
-}";
+        let mod1 = include_test!("fn_multi_type_param.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         check_program(vec![mod1]).unwrap();
@@ -962,12 +818,7 @@ fn foo(type A, B)(a: A, b: B) {
 
     #[test]
     fn fn_multi_type_param_err() {
-        let mod1 =
-"mod mod1;
-
-fn foo(type A, B)(a: A, b: B) {
-    let a2: A = b;
-}";
+        let mod1 = include_test!("fn_multi_type_param_err.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {
@@ -985,25 +836,7 @@ fn foo(type A, B)(a: A, b: B) {
 
     #[test]
     fn invalid_type_arg() {
-        let mod1 =
-"mod mod1;
-
-struct Baz {
-    x: bool,
-}
-
-fn foo(type A)(a: A) -> A
-    where A: { x: int } {
-
-
-    return a;
-}
-
-fn bar() {
-   foo(type Baz)(init Baz {
-        x: true
-   });
-}";
+        let mod1 = include_test!("invalid_type_arg.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {
@@ -1037,12 +870,7 @@ fn bar() {
 
     #[test]
     fn top_level_name_collision_struct() {
-        let mod1 =
-"mod mod1;
-
-struct Foo { }
-
-struct Foo { }";
+        let mod1 = include_test!("top_level_name_collision_struct.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {
@@ -1060,12 +888,7 @@ struct Foo { }";
 
     #[test]
     fn top_level_name_collision_struct_opaque() {
-        let mod1 =
-"mod mod1;
-
-struct Foo { }
-
-opaque Foo;";
+        let mod1 = include_test!("top_level_name_collision_struct_opaque.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {
@@ -1083,12 +906,7 @@ opaque Foo;";
 
     #[test]
     fn top_level_name_collision_opaque() {
-        let mod1 =
-"mod mod1;
-
-opaque Foo;
-
-opaque Foo;";
+        let mod1 = include_test!("top_level_name_collision_opaque.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {
@@ -1106,12 +924,7 @@ opaque Foo;";
 
     #[test]
     fn top_level_name_collision_fn() {
-        let mod1 =
-"mod mod1;
-
-fn Foo() { }
-
-fn Foo() { }";
+        let mod1 = include_test!("top_level_name_collision_fn.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {
@@ -1129,12 +942,7 @@ fn Foo() { }";
 
     #[test]
     fn top_level_name_collision_fn_builtin() {
-        let mod1 =
-"mod mod1;
-
-fn Foo() { }
-
-builtin fn Foo();";
+        let mod1 = include_test!("top_level_name_collision_fn_builtin.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {
@@ -1152,12 +960,7 @@ builtin fn Foo();";
 
     #[test]
     fn top_level_name_collision_builtin_fn() {
-        let mod1 =
-"mod mod1;
-
-builtin fn Foo();
-
-builtin fn Foo();";
+        let mod1 = include_test!("top_level_name_collision_builtin_fn.smpl");
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         match check_program(vec![mod1]) {

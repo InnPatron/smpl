@@ -1,0 +1,7 @@
+mod mod2;
+
+use mod1;
+
+fn test() {
+    mod1::ident(type int);
+}

@@ -1,0 +1,5 @@
+mod mod1;
+
+fn foo(x: { i: String} + { i: int }) {
+
+}

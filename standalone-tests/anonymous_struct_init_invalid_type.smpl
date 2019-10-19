@@ -1,0 +1,8 @@
+mod mod1;
+
+fn foo() {
+    let f: { x: int, y: bool, z: String } = init {
+        y: true,
+        x: 15,
+    };
+}

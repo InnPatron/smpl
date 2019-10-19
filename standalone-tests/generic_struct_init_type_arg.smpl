@@ -1,0 +1,11 @@
+mod mod1;
+
+struct Foo(type T) {
+    x: T
+}
+
+fn foo() {
+    let f: Foo(type int) = init Foo(type int) {
+        x: 5,
+    };
+}

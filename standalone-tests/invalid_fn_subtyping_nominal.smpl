@@ -1,0 +1,14 @@
+mod mod1;
+
+struct Point {
+  x: int,
+  y: int,
+  z: int,
+}
+
+fn bar(p: Point) -> int { return 0; }
+
+fn test() {
+    let disallowed2: fn({x: int, y: int, z: int}) -> int = bar; // Width constraint parameter expected, nominal provided
+
+}

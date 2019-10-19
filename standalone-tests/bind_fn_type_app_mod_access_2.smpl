@@ -1,0 +1,8 @@
+mod mod2;
+
+use mod1;
+
+fn test() {
+    let my_ident: fn(int) -> int = mod1::ident(type int);
+    let result: int = my_ident(5);
+}

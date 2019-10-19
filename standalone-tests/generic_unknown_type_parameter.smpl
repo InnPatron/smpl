@@ -1,0 +1,6 @@
+mod mod1;
+
+fn foo(type T)(t: T) 
+    where U: { x: int } {
+    
+}
