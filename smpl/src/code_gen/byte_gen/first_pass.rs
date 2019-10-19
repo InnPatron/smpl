@@ -367,6 +367,12 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
 
         // Create location to store rhs value
         let internal_path = assignee.path();
+
+        // Generate temporaries for root indexing expr
+        let mut access_tmps = internal_path.root_indexing_expr()
+            .map(|index_expr| byte_expr::translate_expr(index_expr, self.typing_context))
+            .unwrap_or(Vec::new());
+
         let assign_root_var = 
             internal_path.root_name().data().as_str().to_owned();
         let assign_root_indexing_expr = internal_path.root_indexing_expr()
@@ -381,6 +387,11 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
                     }
 
                     PathSegment::Indexing(ref field, ref index_expr) => {
+                        // Generate temporaries for indexing expr
+                        access_tmps.extend(
+                            byte_expr::translate_expr(index_expr, self.typing_context)
+                        );
+
                         super::byte_code::FieldAccess::FieldIndex {
                             field: field.name().to_string(),
                             index_tmp: byte_expr::tmp_id(index_expr.last()),
@@ -403,6 +414,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         // Emit access expressions before evaluating the assignment
         // Emit storage instruction last
         self.extend_current_frame(value_tmps.into_iter());
+        self.extend_current_frame(access_tmps.into_iter());
         self.push_to_current_frame(Instruction::Store(assign_location, value));
         Ok(())
     }
