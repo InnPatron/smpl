@@ -1,0 +1,7 @@
+mod all_required_returns_1;
+        
+fn test() -> int {
+    let a: int = 5;
+
+    return 0;
+}

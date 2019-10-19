@@ -1,0 +1,14 @@
+mod mod1;
+
+fn foo() -> int {
+
+    let accu = 0;
+
+    while accu < 100 {
+        accu = accu + 1;
+    }
+
+    let bar = 37;
+
+    return accu + bar;
+}

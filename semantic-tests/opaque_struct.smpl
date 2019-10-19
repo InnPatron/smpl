@@ -1,0 +1,8 @@
+mod mod1;
+opaque Foo;
+
+fn test() {
+    init Foo {
+        bla: 5
+    };
+}

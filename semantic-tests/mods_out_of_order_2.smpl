@@ -1,0 +1,9 @@
+mod mod2;
+
+struct B {
+    field: int,
+}
+
+fn test() {
+    
+}

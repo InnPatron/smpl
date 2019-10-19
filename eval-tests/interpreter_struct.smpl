@@ -1,0 +1,9 @@
+mod mod1;
+
+struct T {
+    f: int
+}
+
+fn test(a: int, b: int) -> T {
+    return init T { f: a + b };
+}

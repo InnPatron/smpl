@@ -1,0 +1,5 @@
+mod mod1;
+
+builtin fn Foo();
+
+builtin fn Foo();

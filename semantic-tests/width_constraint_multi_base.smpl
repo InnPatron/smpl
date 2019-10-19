@@ -1,0 +1,21 @@
+mod mod1;
+
+struct Foo {
+    x: int
+}
+
+struct Bar {
+    y: int
+}
+
+struct Baz {
+    x: int,
+    y: int,
+}
+
+fn qux() {
+    let f: base Foo + base Bar = init Baz {
+        x: 5,
+        y: 5,
+    };
+}

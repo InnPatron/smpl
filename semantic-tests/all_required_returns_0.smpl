@@ -1,0 +1,5 @@
+mod all_required_returns_0;
+
+fn test() -> int {
+    return 0;
+}

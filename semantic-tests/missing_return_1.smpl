@@ -1,0 +1,5 @@
+mod missing_return_1;
+
+fn test() -> int {
+    let a: int = 5;
+}

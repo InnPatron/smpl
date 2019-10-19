@@ -1,0 +1,14 @@
+mod mod1;
+
+struct T {
+    i: int
+}
+
+fn test_function(t: T) -> int {
+    return t.i;
+}
+
+fn main() {
+    let t = init T {i: 1337};
+    test_function(t);
+}

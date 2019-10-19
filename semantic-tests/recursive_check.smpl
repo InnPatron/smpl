@@ -1,0 +1,9 @@
+mod mod1;
+
+fn recurse(i: int) -> int {
+    if (i == 0) {
+        return 0;
+    } else {
+        return recurse(i - 1);
+    }
+}

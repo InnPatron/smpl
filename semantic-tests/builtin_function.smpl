@@ -1,0 +1,12 @@
+mod mod1;
+
+struct T {
+    i: int
+}
+
+builtin fn test_function(t: T) -> bool;
+
+fn main() {
+    let t: T = init T {i: 1337};
+    test_function(t);
+}

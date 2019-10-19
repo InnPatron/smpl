@@ -1,0 +1,12 @@
+mod mod1;
+
+fn bar(type T)(v: T) -> T {
+    return v;
+}
+
+fn foo(v: int) -> int {
+    let b: fn(int) -> int = bar(type int);
+    let result: int = b(v);
+
+    return result;
+}

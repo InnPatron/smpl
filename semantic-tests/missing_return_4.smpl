@@ -1,0 +1,9 @@
+mod missing_return_4;
+
+fn test() -> int {
+    if true {
+        return 0;
+    } else {
+    
+    }
+}

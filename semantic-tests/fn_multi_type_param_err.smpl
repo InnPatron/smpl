@@ -1,0 +1,5 @@
+mod mod1;
+
+fn foo(type A, B)(a: A, b: B) {
+    let a2: A = b;
+}

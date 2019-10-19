@@ -1,0 +1,5 @@
+mod missing_return_0;
+
+fn test() -> int {
+    
+}

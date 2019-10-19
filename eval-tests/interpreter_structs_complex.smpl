@@ -1,0 +1,13 @@
+mod mod1;
+
+struct Bar {
+    i: int,
+}
+
+fn foo() -> int {
+    let b1 = init Bar { i: 0 };
+    let b2 = b1;
+    b2.i = 5;
+
+    return b1.i;
+}

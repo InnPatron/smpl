@@ -1,0 +1,13 @@
+mod mod1;
+
+struct T {
+    f: int
+}
+
+fn test() -> int {
+    let t: T = init T { f: 1335 };
+
+    t.f = t.f + 1;
+
+    return t.f + 1;
+}

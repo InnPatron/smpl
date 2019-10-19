@@ -1,0 +1,7 @@
+mod mod1;
+
+fn foo(type T)(t: T) -> T {
+    let v: T = t;
+
+    return v;
+}

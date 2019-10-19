@@ -1,0 +1,13 @@
+mod mod1;
+
+fn test2(func: fn(int) -> int) -> int {
+    return func(10);
+}
+
+fn test() -> int {
+    let func = fn (foo: int) -> int {
+        return foo + 5;
+    };
+
+    return test2(func);
+}

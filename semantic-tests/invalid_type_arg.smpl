@@ -1,0 +1,18 @@
+mod mod1;
+
+struct Baz {
+    x: bool,
+}
+
+fn foo(type A)(a: A) -> A
+    where A: { x: int } {
+
+
+    return a;
+}
+
+fn bar() {
+   foo(type Baz)(init Baz {
+        x: true
+   });
+}

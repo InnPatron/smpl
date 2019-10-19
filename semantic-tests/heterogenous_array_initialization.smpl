@@ -1,0 +1,5 @@
+mod mod1;
+
+fn test() {
+    let a: [int; 2] = [100, false];
+}

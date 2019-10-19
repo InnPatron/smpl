@@ -1,0 +1,7 @@
+mod mod1;
+
+builtin fn sum(UNCHECKED) -> int;
+
+fn test(a: int, b: int) -> int {
+    return sum(a, b, 100, 2);
+}

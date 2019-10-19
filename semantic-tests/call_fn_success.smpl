@@ -1,0 +1,10 @@
+mod call_fn_success;
+
+fn arg_usage(a1: int, a2: bool) {
+	let b1: int = a1;
+	let b2: bool = a2;
+}
+
+fn main() {
+	arg_usage(5, false);
+}

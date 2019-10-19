@@ -1,0 +1,7 @@
+mod mod1;
+use math;
+
+fn test_floor() -> float {
+    let f = math::floor(1.5);
+    return f;
+}

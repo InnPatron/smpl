@@ -1,0 +1,7 @@
+mod mod1;
+
+fn test() {
+    let func = fn (foo: int) -> int {
+        return true;
+    };
+}

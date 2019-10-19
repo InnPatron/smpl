@@ -1,0 +1,13 @@
+mod mod1;
+
+struct Point {
+  x: int,
+  y: int,
+  z: int,
+}
+
+fn qux(p: {x: int, y: int}) -> int { return 0; }
+
+fn test() {
+    let disallowed1: fn({x: int}) -> int = qux; // Width constraint parameter expected, wider provided
+}

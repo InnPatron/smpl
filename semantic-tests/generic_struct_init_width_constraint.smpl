@@ -1,0 +1,20 @@
+mod mod1;
+
+struct Bar {
+    y: bool,
+}
+
+struct Foo(type T) 
+    where T: { y: bool } {
+    x: T
+}
+
+fn foo() {
+    let b = init Bar {
+        y: false,
+    };
+
+    let f: Foo(type Bar) = init Foo(type Bar) {
+        x: b,
+    };
+}

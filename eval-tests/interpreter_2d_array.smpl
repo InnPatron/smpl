@@ -1,0 +1,18 @@
+mod mod1;
+
+fn foo() -> int {
+    let array = [[0,0,0]; 3];
+
+    let curRow = array[0];
+    curRow[0] = 5;
+
+    let total = 0;
+
+    let curRow = array[2];
+    total = total + curRow[0];
+
+    let curRow = array[1];
+    total = total + curRow[0];
+
+    return total;
+}

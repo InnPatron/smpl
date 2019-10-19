@@ -1,0 +1,19 @@
+mod mod1;
+
+struct Point {
+  x: int,
+  y: int,
+  z: int,
+}
+
+fn foo(p: {x: int}) -> int { return 0; }
+fn bar(p: Point) -> int { return 0; }
+fn qux(p: {x: int, y: int}) -> int { return 0; }
+
+fn test() {
+    let allowed1: fn(Point) -> int = foo; // Nominal parameter expected, narrower provided
+    let allowed2: fn(Point) -> int = qux; // Nominal parameter expected, narrower provided
+    let allowed3: fn({x: int, y: int}) -> int = foo; // Width constraint parameter expected, narrower provided
+    let allowed4: fn({x: int, y: int}) -> int = qux; // Width constraint parameter expected, exact provided
+    let allowed5: fn(Point) -> int = bar; // Nominal parameter expected, exact provided
+}

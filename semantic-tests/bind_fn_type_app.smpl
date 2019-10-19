@@ -1,0 +1,10 @@
+mod mod1;
+
+fn ident(type T)(t: T) -> T {
+    return t;
+}
+
+fn test() {
+    let my_ident: fn(int) -> int = ident(type int);
+    let result: int = my_ident(5);
+}
