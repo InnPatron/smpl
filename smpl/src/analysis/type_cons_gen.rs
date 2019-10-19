@@ -72,6 +72,7 @@ pub fn generate_struct_type_cons(
 }
 
 pub fn generate_fn_type_cons(universe: &Universe,
+    metadata: &mut Metadata,
     outer_scope: &ScopedData,
     outer_context: &TypingContext,
     fn_id: FnId,
@@ -95,6 +96,7 @@ pub fn generate_fn_type_cons(universe: &Universe,
         None => AbstractType::Unit,
     };
 
+    let mut param_metadata = Vec::new();
     let typed_formal_params = match fn_def.params {
         Some(ref params) => {
             let mut typed_formal_params = Vec::new();
@@ -107,13 +109,21 @@ pub fn generate_fn_type_cons(universe: &Universe,
                     type_from_ann(universe, &type_param_scope, &type_param_typing_context, param_ann)?;
 
                 typed_formal_params.push(param_type);
+
+                param_metadata.push(FunctionParameter::new(
+                        param.name.data().clone(),
+                        universe.new_var_id(),
+                    ));
             }
+
 
             typed_formal_params
         },
 
         None => Vec::new(),
     };
+
+    metadata.insert_function_param_ids(fn_id, param_metadata);
 
     Ok(TypeCons::Function {
         type_params: type_params,
@@ -213,6 +223,7 @@ pub fn generate_builtin_fn_type(
 
 pub fn generate_anonymous_fn_type(
     universe: &Universe,
+    metadata: &mut Metadata,
     outer_scope: &ScopedData,
     outer_context: &TypingContext,
     fn_id: FnId,
@@ -236,6 +247,7 @@ pub fn generate_anonymous_fn_type(
         None => AbstractType::Unit,
     };
 
+    let mut param_metadata = Vec::new();
     let typed_formal_params = match fn_def.params {
         Some(ref params) => {
             let mut typed_formal_params = Vec::new();
@@ -248,6 +260,11 @@ pub fn generate_anonymous_fn_type(
                     type_from_ann(universe, &type_param_scope, &type_param_typing_context, param_ann)?;
 
                 typed_formal_params.push(param_type);
+
+                param_metadata.push(FunctionParameter::new(
+                        param.name.data().clone(),
+                        universe.new_var_id(),
+                    ));
             }
 
             typed_formal_params
@@ -255,6 +272,8 @@ pub fn generate_anonymous_fn_type(
 
         None => Vec::new(),
     };
+
+    metadata.insert_function_param_ids(fn_id, param_metadata);
 
     Ok(TypeCons::Function {
         type_params: type_params,

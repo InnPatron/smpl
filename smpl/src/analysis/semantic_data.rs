@@ -52,6 +52,23 @@ impl Program {
         self.universe.all_fns()
     }
 
+    pub fn smpl_fns(&self) -> impl Iterator<Item=(FnId, &SMPLFunction)> {
+        self.universe
+            .all_fns()
+            .filter(|(_, f)| {
+                match f {
+                    Function::SMPL(_) => true,
+                    _ => false
+                }
+            })
+            .map(|(f_id, f)| {
+                match f {
+                    Function::SMPL(f) => (f_id, f),
+                    _ => unreachable!(),
+                }
+            })
+    }
+
     pub fn metadata(&self) -> &Metadata {
         &self.metadata
     }
@@ -397,6 +414,10 @@ impl AnalysisContext {
         &self.typing_context
     }
 
+    pub fn set_typing_context(&mut self, tc: TypingContext) {
+        self.typing_context = tc;
+    }
+
     pub fn existential_type_vars(&self) -> &[TypeVarId] {
         &self.existential_type_vars
     }
@@ -492,8 +513,12 @@ impl SMPLFunction {
         self.cfg.clone()
     }
 
-    pub(super) fn analysis_context(&self) -> &AnalysisContext {
+    pub(crate) fn analysis_context(&self) -> &AnalysisContext {
         &self.analysis_context
+    }
+
+    pub(super) fn analysis_context_mut(&mut self) -> &mut AnalysisContext {
+        &mut self.analysis_context
     }
 }
 

@@ -10,6 +10,7 @@ use super::control_data::*;
 use super::control_flow::CFG;
 use super::semantic_data::*;
 use super::semantic_data::Function;
+use super::metadata::Metadata;
 use super::error::*;
 use super::typed_ast::*;
 use super::type_cons::*;
@@ -17,7 +18,9 @@ use super::type_resolver;
 use super::resolve_scope::ScopedData;
 use super::analysis_helpers;
 
-pub fn type_check(universe: &mut Universe, fn_id: FnId) -> Result<(), AnalysisError> {
+pub fn type_check(universe: &mut Universe, metadata: &mut Metadata, fn_id: FnId) 
+    -> Result<(), AnalysisError> {
+
     use super::semantic_data::Function;
 
     let cfg = {
@@ -41,14 +44,44 @@ pub fn type_check(universe: &mut Universe, fn_id: FnId) -> Result<(), AnalysisEr
         }
     };
 
-    let mut type_checker = TypeChecker::new(universe, fn_id)?;
+    let mut type_checker = TypeChecker::new(universe, metadata, fn_id)?;
     let cfg = cfg.borrow();
     let mut traverser = Traverser::new(&*cfg, &mut type_checker);
-    traverser.traverse()
+    traverser.traverse()?;
+
+    // Update the typing context
+    let typing_context = type_checker.typing_context;
+    {
+        let resolved_fn = universe.get_fn_mut(fn_id);
+        match resolved_fn {
+            Function::SMPL(ref mut smpl_fn) => {
+                smpl_fn
+                    .analysis_context_mut()
+                    .set_typing_context(typing_context);
+            }
+            Function::Anonymous(ref mut afn) => {
+                match afn {
+                    AnonymousFunction::Reserved(_) => unreachable!(),
+
+                    AnonymousFunction::Resolved {
+                        ref mut analysis_context,
+                        ..
+                    } => {
+                        analysis_context.set_typing_context(typing_context);
+                    }
+                }
+            }
+
+            _ => unreachable!(),
+        }
+    };
+
+    Ok(())
 }
 
 struct TypeChecker<'a> {
     universe: &'a mut Universe,
+    metadata: &'a mut Metadata,
     scopes: Vec<ScopedData>,
     typing_context: TypingContext,
     return_type: AbstractType,
@@ -59,7 +92,8 @@ impl<'a> TypeChecker<'a> {
     // TODO: Store function (return) type somwhere
     // TODO: Add function parameters somewhere
     // TODO: Put formal parameters into function scope within Universe
-    pub fn new(universe: &mut Universe, fn_id: FnId) -> Result<TypeChecker, AnalysisError> {
+    pub fn new<'b>(universe: &'b mut Universe, metadata: &'b mut Metadata, fn_id: FnId) 
+        -> Result<TypeChecker<'b>, AnalysisError> {
 
         use super::semantic_data::Function;
 
@@ -106,9 +140,10 @@ impl<'a> TypeChecker<'a> {
                         };
                         
                         Ok(TypeChecker {
+                            universe: universe,
+                            metadata: metadata, 
                             scopes: vec![fn_scope],
                             typing_context: typing_context,
-                            universe: universe,
                             return_type: return_type,
                         })
                     }
@@ -148,6 +183,7 @@ impl<'a> TypeChecker<'a> {
                     scopes: vec![fn_scope],
                     typing_context: typing_context,
                     universe: universe,
+                    metadata: metadata,
                     return_type: return_type,
                 })
             }
@@ -181,6 +217,7 @@ impl<'a> TypeChecker<'a> {
 macro_rules! expr_type {
     ($self: expr, $expr: expr) => {{
         resolve_expr($self.universe, 
+            $self.metadata,
             $self.scopes
                 .last()
                 .expect("Should always have a scope"),
@@ -300,6 +337,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
 
         let assignee_type = resolve_field_access(
             self.universe,
+            self.metadata,
             self.scopes
                 .last()
                 .expect("Should always have a scope"),
@@ -393,20 +431,27 @@ impl TypingContext {
             tmp_type_map: HashMap::new(),
         }
     }
+
     pub fn get_type_var(&self, id: TypeVarId) -> Option<&AbstractType> {
         self.type_vars
             .get(&id)
     }
+
+    pub fn tmp_type(&self, tmp_id: TmpId) -> &AbstractType  {
+        self.tmp_type_map
+            .get(&tmp_id)
+            .expect("Missing type for tmp")
+    }
 }
 
-fn resolve_expr(universe: &mut Universe, scope: &ScopedData, context: &mut TypingContext, expr: &Expr) 
+fn resolve_expr(universe: &mut Universe, metadata: &mut Metadata, scope: &ScopedData, context: &mut TypingContext, expr: &Expr) 
     -> Result<AbstractType, AnalysisError> {
 
     let mut expr_type = None;
     for tmp_id in expr.execution_order() {
         let tmp = expr.get_tmp(tmp_id);
 
-        let tmp_type = resolve_tmp(universe, scope, context, expr, tmp)?;
+        let tmp_type = resolve_tmp(universe, metadata, scope, context, expr, tmp)?;
         expr_type = Some(tmp_type.clone());
 
         if context.tmp_type_map
@@ -419,7 +464,7 @@ fn resolve_expr(universe: &mut Universe, scope: &ScopedData, context: &mut Typin
     Ok(expr_type.unwrap())
 }
 
-fn resolve_tmp(universe: &mut Universe, scope: &ScopedData, 
+fn resolve_tmp(universe: &mut Universe, metadata: &mut Metadata, scope: &ScopedData, 
     context: &mut TypingContext, expr: &Expr, tmp: &Tmp) 
     -> Result<AbstractType, AnalysisError> {
 
@@ -503,11 +548,12 @@ fn resolve_tmp(universe: &mut Universe, scope: &ScopedData,
         }
 
         Value::AnonymousFn(ref a_fn) => {
-            resolve_anonymous_fn(universe, scope, context, a_fn, tmp.span())?
+            resolve_anonymous_fn(universe, metadata, scope, context, a_fn, tmp.span())?
         }
 
         Value::FieldAccess(ref field_access) => {
             resolve_field_access(universe, 
+                metadata,
                 scope, 
                 context, 
                 field_access, 
@@ -1071,7 +1117,9 @@ fn resolve_indexing(universe: &Universe, scope: &ScopedData, context: &TypingCon
             AbstractType::Array {
                 ref element_type,
                 ..
-            } => *(element_type.clone()),
+            } => {
+                element_type.substitute(universe, scope, context)?
+            },
 
             _ => {
                 return Err(TypeError::NotAnArray {
@@ -1141,8 +1189,8 @@ fn resolve_type_inst(universe: &Universe, scope: &ScopedData, context: &TypingCo
     Ok(inst_type)
 }
 
-fn resolve_anonymous_fn(universe: &mut Universe, scope: &ScopedData, context: &TypingContext,
-    a_fn: &AnonymousFn, span: Span)
+fn resolve_anonymous_fn(universe: &mut Universe, metadata: &mut Metadata, 
+    scope: &ScopedData, context: &TypingContext, a_fn: &AnonymousFn, span: Span)
     -> Result<AbstractType, AnalysisError> {
 
     use std::rc::Rc;
@@ -1156,7 +1204,7 @@ fn resolve_anonymous_fn(universe: &mut Universe, scope: &ScopedData, context: &T
         if let AnonymousFunction::Reserved(ref ast_anonymous_fn) = afn {
             let fn_type_cons =
                 super::type_cons_gen::generate_anonymous_fn_type(
-                    universe, scope, context, fn_id, ast_anonymous_fn)?; 
+                    universe, metadata, scope, context, fn_id, ast_anonymous_fn)?; 
 
             let analysis_context = 
                 analysis_helpers::generate_fn_analysis_data(
@@ -1184,7 +1232,7 @@ fn resolve_anonymous_fn(universe: &mut Universe, scope: &ScopedData, context: &T
 
     if let Some(resolved) = resolved {
         *universe.get_fn_mut(fn_id) = Function::Anonymous(resolved);
-        analysis_helpers::analyze_fn(universe, fn_id)?;
+        analysis_helpers::analyze_fn(universe, metadata, fn_id)?;
     }
 
     let fn_type = if let Function::Anonymous(ref afn) = universe.get_fn(fn_id) {
@@ -1214,6 +1262,7 @@ fn resolve_anonymous_fn(universe: &mut Universe, scope: &ScopedData, context: &T
 /// Assumes that all previous temporaries in Expr are already typed
 fn resolve_field_access(
     universe: &mut Universe,
+    metadata: &mut Metadata,
     scope: &ScopedData,
     context: &mut TypingContext,
     field_access: &FieldAccess,
@@ -1309,7 +1358,7 @@ fn resolve_field_access(
     let mut current_type: AbstractType = root_var_type.clone();
 
     if let Some(expr) = path.root_indexing_expr() {
-        let indexing_type = resolve_expr(universe, scope, context,expr)?;
+        let indexing_type = resolve_expr(universe, metadata, scope, context,expr)?;
 
         match indexing_type.substitute(universe, scope, context)? {
             AbstractType::Int => (),
@@ -1356,7 +1405,8 @@ fn resolve_field_access(
 
                 let field_type = field_type_retriever(field.name())?;
 
-                let indexing_type = resolve_expr(universe, scope, context, indexing)?;
+                let indexing_type = 
+                    resolve_expr(universe, metadata, scope, context, indexing)?;
 
                 // TODO: Application?
                 match indexing_type {

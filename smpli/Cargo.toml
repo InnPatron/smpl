@@ -1,6 +1,6 @@
 [package]
 name = "smpli"
-version = "0.1.4"
+version = "0.2.0"
 authors = ["Alexander Vo <randomcivvy0121@gmail.com>"]
 edition = "2018"
 
@@ -10,7 +10,7 @@ license="MIT"
 repository="https://github.com/InnPatron/smpl"
 
 [dependencies]
-smpl = "0.15.2"
+smpl = "0.16.0"
 irmatch = "0.2.0"
 failure = "0.1.2"
 failure_derive = "0.1.2"

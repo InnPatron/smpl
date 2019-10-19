@@ -14,13 +14,14 @@ use super::expr_flow;
 use super::semantic_data::*;
 use super::type_cons::*;
 
+// TODO(alex): Remove Typed<T>
+// Types are stored within type_checker::TypingContext instead
 #[derive(Debug, Clone)]
 pub struct Typed<T>
 where
     T: ::std::fmt::Debug + Clone,
 {
     data: T,
-    data_type: Option<AbstractType>,
 }
 
 impl<T> Typed<T>
@@ -38,28 +39,7 @@ where
     pub fn untyped(data: T) -> Typed<T> {
         Typed {
             data: data,
-            data_type: None,
         }
-    }
-
-    pub fn typed(data: T, t: AbstractType) -> Typed<T> {
-        Typed {
-            data: data,
-            data_type: Some(t),
-        }
-    }
-
-    pub fn set_type(&mut self, t: AbstractType) {
-        // TODO: Handle type override
-        if self.data_type.is_some() {
-            panic!("Attempting to overwrite the type of this node ({:?})", self);
-        } else {
-            self.data_type = Some(t);
-        }
-    }
-
-    pub fn get_type(&self) -> Option<AbstractType> {
-        self.data_type.clone()
     }
 }
 
@@ -227,7 +207,6 @@ impl Expr {
             id: universe.new_tmp_id(),
             value: Typed {
                 data: val,
-                data_type: None,
             },
             span: span,
         };
@@ -630,26 +609,12 @@ impl self::Path {
         }
     }
 
-    pub fn root_var_type(&self) -> AbstractType {
-        match self.root_var {
-            Some(ref typed_var_id) => typed_var_id.get_type().unwrap().clone(),
-            None => panic!("No root var"),
-        }
-    }
-
     pub fn set_root_var(&mut self, id: VarId) {
         if self.root_var.is_some() {
             panic!("Attempting to overwrite root VarId");
         }
 
         self.root_var = Some(Typed::untyped(id));
-    }
-
-    pub fn set_root_var_type(&mut self, ty: AbstractType) {
-        match self.root_var {
-            Some(ref mut t) => t.set_type(ty),
-            None => panic!("No root var"),
-        }
     }
 
     pub fn path(&self) -> &[self::PathSegment] {
@@ -688,26 +653,12 @@ impl Field {
         }
     }
 
-    pub fn field_type(&self) -> AbstractType {
-        match self.field_id {
-            Some(ref typed_field_id) => typed_field_id.get_type().unwrap().clone(),
-            None => panic!("No field"),
-        }
-    }
-
     pub fn set_field_id(&mut self, id: FieldId) {
         if self.field_id.is_some() {
             panic!("Attempting to override field id.");
         }
 
         self.field_id = Some(Typed::untyped(id));
-    }
-
-    pub fn set_field_type(&mut self, app: AbstractType) {
-        match self.field_id {
-            Some(ref mut t) => t.set_type(app),
-            None => panic!("No field"),
-        }
     }
 }
 
