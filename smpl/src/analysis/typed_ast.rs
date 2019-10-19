@@ -87,7 +87,6 @@ pub struct LocalVarDecl {
     type_ann: Option<ast::AstNode<ast::TypeAnnotation>>,
     var_name: ast::AstNode<ast::Ident>,
     var_init: self::Expr,
-    var_type: Option<AbstractType>,
     var_id: VarId,
     span: Span,
 }
@@ -98,7 +97,6 @@ impl LocalVarDecl {
             type_ann: decl.var_type,
             var_name: decl.var_name,
             var_init: expr_flow::flatten(universe, decl.var_init),
-            var_type: None,
             var_id: universe.new_var_id(),
             span: stmt_span,
         }
@@ -114,18 +112,6 @@ impl LocalVarDecl {
 
     pub fn var_name(&self) -> &ast::Ident {
         self.var_name.data()
-    }
-
-    pub fn set_type(&mut self, app: AbstractType) {
-        if self.var_type.is_some() {
-            panic!("Attempting to override type for local variable declarration");
-        } else {
-            self.var_type = Some(app);
-        }
-    }
-
-    pub fn var_type(&self) -> Option<AbstractType> {
-        self.var_type.clone()
     }
 
     pub fn var_id(&self) -> VarId {
@@ -352,7 +338,6 @@ pub enum ArrayInit {
 pub struct StructInit {
     struct_type_name: ast::TypedPath,
     field_init: Vec<(ast::Ident, Typed<TmpId>)>,
-    struct_type: Option<AbstractType>,
     mapped_field_init: Option<Vec<(FieldId, Typed<TmpId>)>>,
 }
 
@@ -363,7 +348,6 @@ impl StructInit {
     ) -> StructInit {
         StructInit {
             struct_type_name: struct_type_name,
-            struct_type: None,
             field_init: field_init,
             mapped_field_init: None,
         }
@@ -375,14 +359,6 @@ impl StructInit {
 
     pub fn type_args(&self) -> Option<&[ast::TypeAnnotation]> {
         self.struct_type_name.annotations()
-    }
-
-    pub fn set_struct_type(&mut self, app: AbstractType) {
-        if self.struct_type.is_some() {
-            panic!("Attempting to overwrite struct type of struct init",);
-        } else {
-            self.struct_type = Some(app);
-        }
     }
 
     pub fn raw_field_init(&self) -> &[(ast::Ident, Typed<TmpId>)] {
@@ -398,16 +374,11 @@ impl StructInit {
             .iter()
             .map(|(ref ident, _)| ident)
     } 
-
-    pub fn struct_type(&self) -> Option<AbstractType> {
-        self.struct_type.as_ref().map(|t| t.clone())
-    }
 }
 
 #[derive(Debug, Clone)]
 pub struct AnonStructInit {
     field_init: Vec<(ast::Ident, TmpId)>,
-    struct_type: Option<AbstractType>,
     mapped_field_init: Option<Vec<(FieldId, Typed<TmpId>)>>,
 }
 
@@ -416,17 +387,8 @@ impl AnonStructInit {
         field_init: Vec<(ast::Ident, TmpId)>,
     ) -> AnonStructInit {
         AnonStructInit {
-            struct_type: None,
             field_init: field_init,
             mapped_field_init: None,
-        }
-    }
-
-    fn set_struct_type(&mut self, app: AbstractType) {
-        if self.struct_type.is_some() {
-            panic!("Attempting to overwrite struct type of struct init",);
-        } else {
-            self.struct_type = Some(app);
         }
     }
 
@@ -443,17 +405,12 @@ impl AnonStructInit {
             .iter()
             .map(|(ref ident, _)| ident)
     }
-
-    pub fn struct_type(&self) -> Option<AbstractType> {
-        self.struct_type.as_ref().map(|t| t.clone())
-    }
 }
 
 #[derive(Debug, Clone)]
 pub struct FieldAccess {
     raw_path: ast::Path,
     path: self::Path,
-    field_type: Option<AbstractType>,
 }
 
 impl FieldAccess {
@@ -461,7 +418,6 @@ impl FieldAccess {
         FieldAccess {
             raw_path: path.clone(),
             path: self::Path::new(universe, path),
-            field_type: None,
         }
     }
 
@@ -475,18 +431,6 @@ impl FieldAccess {
 
     pub fn path_mut(&mut self) -> &mut self::Path {
         &mut self.path
-    }
-
-    pub fn set_field_type(&mut self, app: AbstractType) {
-        if self.field_type.is_some() {
-            panic!("Attempting to override type of a field access",);
-        } else {
-            self.field_type = Some(app);
-        }
-    }
-
-    pub fn field_type(&self) -> Option<AbstractType> {
-        self.field_type.clone()
     }
 }
 
