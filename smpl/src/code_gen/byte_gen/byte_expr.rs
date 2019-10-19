@@ -109,7 +109,7 @@ fn translate_tmp(tmp: &Tmp, typing_context: &TypingContext) -> Vec<Instruction> 
             }
 
             let ty = typing_context
-                .tmp_type(tmp.id());
+                .tmp_type(*lhs.data());
             let lhs = Arg::Location(Location::Tmp(tmp_id(*lhs.data())));
             let rhs = Arg::Location(Location::Tmp(tmp_id(*rhs.data())));
             match op {
