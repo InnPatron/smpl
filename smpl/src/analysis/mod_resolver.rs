@@ -193,10 +193,11 @@ pub fn check_modules(
     }
 
     for (mod_id, raw_mod) in raw_data.iter() {
+        let (universe, metadata, _) = program.analysis_context();
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;
 
-            analysis_helpers::analyze_fn(program.universe_mut(), fn_id)?;
+            analysis_helpers::analyze_fn(universe, metadata, fn_id)?;
         }
     }
 
