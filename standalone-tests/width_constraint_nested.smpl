@@ -1,0 +1,39 @@
+mod mod1;
+
+struct Baz {
+    f: float,
+    i: int,
+    n: Baq,
+}
+
+struct Baq {
+    s: String,
+    d: String,
+    x: int,
+}
+
+fn foo(a: {i: int, f: float, n: base Baq }) -> String {
+    let n: {s: String} = a.n;
+    return n.s;
+}
+
+fn qux(a: {i: int, f: float, n: {s: String} }) -> String {
+    let n: {s: String} = a.n;
+    return n.s;
+}
+
+fn bar() {
+    let baq = init Baq {
+        s: "FOO",
+        d: "BAR",
+        x: 5
+    };
+    let baz = init Baz {
+        f: 1.0,
+        i: 5,
+        n: baq,
+    };
+
+    let result = foo(baz);
+    let result = qux(baz);
+}

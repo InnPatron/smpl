@@ -1,0 +1,7 @@
+mod mod1;
+
+fn foo(type A)(a1: A, a2: A, a3: A, f: fn (A, A, A) -> A) -> A {
+    let result: A = f(a1, a2, a3);
+
+    return result;
+}

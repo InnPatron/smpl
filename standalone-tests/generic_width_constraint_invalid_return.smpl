@@ -1,0 +1,7 @@
+mod mod1;
+
+fn foo(type T)(t: T) -> bool
+    where T: {a: int, b: int, c: { d: bool }} {
+
+    return t.a + t.b;
+}

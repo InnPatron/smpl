@@ -1,0 +1,10 @@
+mod mod1;
+
+builtin fn bar(type T)(v: T) -> T;
+
+fn foo(type A)(v: A) -> A {
+    let b: fn(A) -> A = bar(type A);
+    let result: A = b(v);
+
+    return result;
+}

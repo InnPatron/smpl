@@ -1,0 +1,24 @@
+mod mod1;
+
+struct Bar {
+    x: int,
+    y: int,
+    z: int,
+}
+
+fn baz() -> int {
+    let _bar = init Bar {
+        x: 5,
+        y: 6,
+        z: 7,
+    };
+
+    let result: int = foo(type Bar)(_bar);
+
+    return result;
+}
+
+fn foo(type T)(t: T) -> T
+    where T: {x: int, y: int} {
+    return t;
+}
