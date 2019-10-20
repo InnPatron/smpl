@@ -1,0 +1,13 @@
+mod mod1;
+
+fn test() -> [int; 4] {
+    let array: [int; 4] = [0, 1, 2, 3];
+
+    let index = 0;
+
+    let v: int = array[index];
+
+    array[index] = v + 1;
+
+    return array;
+}

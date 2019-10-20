@@ -365,3 +365,19 @@ fn test() -> int {
 
     assert_eq!(result, Value::Int(1337));
 }
+
+expect_value!(interpreter_array_path_assignment,
+    module :: "mod1",
+    eval :: "test",
+    args :: None,
+    expect :: {
+        let array = Array::new_init(vec![
+            Value::Int(1),
+            Value::Int(1),
+            Value::Int(2),
+            Value::Int(3),
+        ]);
+
+        Value::Array(array)
+    }
+);
