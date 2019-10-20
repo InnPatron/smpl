@@ -598,6 +598,10 @@ impl self::Path {
         &self.root_name
     }
 
+    pub fn root_indexing_expr_mut(&mut self) -> Option<&mut Expr> {
+        self.root_indexing.as_mut()
+    }
+
     pub fn root_indexing_expr(&self) -> Option<&Expr> {
         self.root_indexing.as_ref()
     }
@@ -619,6 +623,10 @@ impl self::Path {
 
     pub fn path(&self) -> &[self::PathSegment] {
         &self.path
+    }
+
+    pub fn path_mut(&mut self) -> &mut [self::PathSegment] {
+        &mut self.path
     }
 }
 
