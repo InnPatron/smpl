@@ -322,7 +322,12 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
                 // Default to the RHS type
                 expr_type
             }
-        };
+        }.substitute(
+            self.universe, 
+            self.scopes
+                .last()
+                .expect("Should always have a scope"), 
+            &self.typing_context)?;
 
         self.typing_context.var_type_map
             .insert(var_decl.var_id(), var_type);
