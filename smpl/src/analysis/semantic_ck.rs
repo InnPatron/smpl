@@ -137,6 +137,8 @@ mod tests {
     test_pass_analysis!(valid_fn_subtyping);
     test_pass_analysis!(bind_fn_type_app); 
 
+    test_pass_analysis!(array_path_assignment); 
+
     #[test]
     fn call_fn_success() {
         use super::super::typed_ast::*;
