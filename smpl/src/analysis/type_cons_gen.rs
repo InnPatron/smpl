@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::{
-    AnonymousFn, BuiltinFnParams, BuiltinFunction, Function, Ident, Struct, TypeParams as AstTypeParams, WhereClause, Opaque
+    AnonymousFn, BuiltinFnParams, BuiltinFunction, Function, Struct, TypeParams as AstTypeParams, WhereClause, Opaque
 };
 use crate::feature::*;
 
@@ -141,8 +141,8 @@ pub fn generate_builtin_fn_type(
 ) -> Result<TypeCons, AnalysisError> {
     let (universe, metadata, features) = program.analysis_context();
 
-    let mut fn_scope = outer_scope.clone();
-    let mut fn_typing_context = outer_typing_context.clone();
+    let _fn_scope = outer_scope.clone();
+    let _fn_typing_context = outer_typing_context.clone();
 
     // Check no parameter naming conflicts
     let (type_params, type_param_scope, type_param_typing_context) = 
@@ -405,7 +405,7 @@ pub fn generate_opaque_type_cons(
     let (universe, _metadata, _features) = program.analysis_context();
 
     // Check no parameter naming conflicts
-    let (type_params, type_param_scope, type_param_typing_context) = 
+    let (type_params, _type_param_scope, _type_param_typing_context) = 
         type_param_map(universe, 
                    opaque_def.type_params.as_ref(), 
                    opaque_def.where_clause.as_ref(),

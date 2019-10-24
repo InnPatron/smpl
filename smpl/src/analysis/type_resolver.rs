@@ -1,11 +1,11 @@
-use std::collections::HashMap;
 
-use crate::ast;
+
+
 use crate::span::Span;
 
 use super::type_cons::*;
 use super::error::*;
-use super::semantic_data::{TypeVarId, Universe };
+use super::semantic_data::{Universe };
 use super::resolve_scope::ScopedData;
 use super::type_checker::TypingContext;
 

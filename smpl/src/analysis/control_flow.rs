@@ -8,10 +8,10 @@ use crate::span::Span;
 
 use super::error::{AnalysisError, ControlFlowError};
 use super::expr_flow;
-use super::resolve_scope::ScopedData;
+
 use super::semantic_data::{LoopId, Universe, AnalysisContext};
 use super::type_cons::*;
-use super::type_resolver::resolve_types;
+
 use super::type_checker::TypingContext;
 use super::typed_ast;
 
@@ -308,7 +308,7 @@ impl CFG {
         universe: &mut Universe,
         body: ast::AstNode<ast::Block>,
         fn_type: &TypeCons,
-        analysis_context: &AnalysisContext,
+        _analysis_context: &AnalysisContext,
     ) -> Result<Self, AnalysisError> {
         let mut cfg = {
             let mut graph = graph::Graph::new();
@@ -932,7 +932,7 @@ if (test) {
             let condition_node = cfg.graph.node_weight(condition).unwrap();
             {
                 if let Node::BranchSplit(..) = *condition_node {
-                    let mut edges = cfg.graph.edges_directed(condition, Direction::Outgoing);
+                    let edges = cfg.graph.edges_directed(condition, Direction::Outgoing);
                     assert_eq!(edges.clone().count(), 2);
 
                     let mut found_true_edge = false;
@@ -1092,7 +1092,7 @@ if (test) {
             }
 
             let branch_split_A = enter_neighbors.next().unwrap();
-            let mut branch_split_neighbors_A = neighbors!(cfg, branch_split_A);
+            let _branch_split_neighbors_A = neighbors!(cfg, branch_split_A);
             match *node_w!(cfg, branch_split_A) {
                 Node::BranchSplit(..) => (), // Success
 
@@ -1295,7 +1295,7 @@ if (test) {
             ref n @ _ => panic!("Expected to find Node::LoopHead. Found {:?}", n),
         }
 
-        let mut head_neighbors = neighbors!(cfg, loop_head);
+        let head_neighbors = neighbors!(cfg, loop_head);
         assert_eq!(head_neighbors.clone().count(), 2);
         
         let head_edges = edges!(cfg, loop_head);

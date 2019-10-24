@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use crate::feature::*;
-use crate::ast::Function;
+
+
 use crate::ast;
 
-use super::error::{AnalysisError, TypeError};
+use super::error::{AnalysisError};
 use super::metadata::*;
 use super::semantic_data::{FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId, Universe, AnalysisContext};
 use super::resolve_scope::ScopedData;

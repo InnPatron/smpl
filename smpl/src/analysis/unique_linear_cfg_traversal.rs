@@ -2,7 +2,7 @@ use petgraph::graph::NodeIndex;
 
 use super::control_data::*;
 use super::control_flow::*;
-use super::semantic_data::{FnId, Program};
+
 
 pub trait UniquePassenger<E> {
     fn start(&mut self, id: NodeIndex) -> Result<(), E>;
@@ -129,7 +129,7 @@ fn visit_node<E>(graph: &mut CFG, current: NodeIndex, passenger: &mut dyn Unique
             Ok(Some(graph.next(merge.unwrap())))
         }
 
-        Node::BranchMerge(ref mut branch_data) => {
+        Node::BranchMerge(ref mut _branch_data) => {
             unreachable!();
         }
 

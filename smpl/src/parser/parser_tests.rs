@@ -740,8 +740,8 @@ fn test() {
     let result: int = my_ident(5);
 }";
 
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let mod2 = parse_module(wrap_input!(mod2)).unwrap();
+        let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _mod2 = parse_module(wrap_input!(mod2)).unwrap();
     }
 
     #[test]
@@ -762,8 +762,8 @@ fn test() {
     mod1::ident(type int);
 }";
 
-        let mod1 = parse_module(wrap_input!(mod1)).unwrap();
-        let mod2 = parse_module(wrap_input!(mod2)).unwrap();
+        let _mod1 = parse_module(wrap_input!(mod1)).unwrap();
+        let _mod2 = parse_module(wrap_input!(mod2)).unwrap();
     }
 
     #[test]

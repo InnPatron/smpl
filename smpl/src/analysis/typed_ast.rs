@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::iter::Iterator;
-use std::slice::Iter;
+
 
 use crate::span::Span;
 
@@ -12,7 +12,7 @@ pub use crate::ast::UniOp;
 
 use super::expr_flow;
 use super::semantic_data::*;
-use super::type_cons::*;
+
 
 // TODO(alex): Remove Typed<T>
 // Types are stored within type_checker::TypingContext instead

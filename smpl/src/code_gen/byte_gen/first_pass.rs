@@ -507,7 +507,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn branch_end_true_path(&mut self, _id: NodeIndex, b: &BranchingData) -> Result<(), FirstPassError> {
+    fn branch_end_true_path(&mut self, _id: NodeIndex, _b: &BranchingData) -> Result<(), FirstPassError> {
         // Pop the current frame as the body of the true path
         let true_instructions = self.pop_current_frame();
 
@@ -515,7 +515,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         let branch_id = match state {
             State::Branching(id) => id,
 
-            state => panic!("branch_end_true_path() encountered invalid state: {:?}", self.states),
+            _state => panic!("branch_end_true_path() encountered invalid state: {:?}", self.states),
         };
         // Set the true path in the frame
         let frame = self.get_branch_frame_mut(branch_id);
@@ -524,7 +524,7 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn branch_end_false_path(&mut self, _id: NodeIndex, b: &BranchingData) -> Result<(), FirstPassError> {
+    fn branch_end_false_path(&mut self, _id: NodeIndex, _b: &BranchingData) -> Result<(), FirstPassError> {
         // Pop the current frame as the body of the false path
         let false_instructions = self.pop_current_frame();
 

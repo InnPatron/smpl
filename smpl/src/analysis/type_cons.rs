@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::ast::{Ident, TypeAnnotationRef, WidthConstraint, AstNode};
 
 use super::error::{AnalysisError, ApplicationError, TypeError as ATypeError};
-use super::semantic_data::{FieldId, TypeId, TypeParamId, TypeVarId, Universe, AnalysisContext};
+use super::semantic_data::{FieldId, TypeId, TypeParamId, TypeVarId, Universe};
 use super::resolve_scope::ScopedData;
 use super::type_resolver::resolve_types_static;
 use super::type_checker::TypingContext;
@@ -162,8 +162,8 @@ impl AbstractType {
         match self {
 
             AbstractType::App {
-                ref type_cons,
-                ref args,
+                type_cons: _,
+                args: _,
             } => {
                 let no_sub_map = HashMap::new();
                 self.substitute_internal(universe, 
@@ -214,7 +214,7 @@ impl AbstractType {
 
             TypeCons::Record {
                 ref type_id,
-                ref type_params,
+                type_params: _,
                 ref fields,
                 ref field_map,
                 ..
@@ -530,7 +530,7 @@ impl AbstractType {
                         (ok, err)
                 });
 
-                if (errors.len() != 0) {
+                if errors.len() != 0 {
                     return Err(errors);
                 }
 
@@ -641,8 +641,8 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
         }
 
         TypeAnnotationRef::FnType(tp, params, return_type) => {
-            let (local_type_params, new_scope) = match tp {
-                Some(local_type_params) => {
+            let (_local_type_params, new_scope) = match tp {
+                Some(_local_type_params) => {
                     return Err(ATypeError::FnAnnLocalTypeParameter.into());     
                 },
 
@@ -897,7 +897,7 @@ fn fuse_field_width_constraints(universe: &Universe, scope: &ScopedData,
                 // TODO: Pass span info
                 resolve_types_static(universe, scope, typing_context,
                     constraint, first_constraint, crate::span::Span::dummy())
-                    .map_err(|e| {
+                    .map_err(|_e| {
                         TypeError::ConflictingConstraints {
                             constraints: constraints.iter().map(|c| c.clone()).collect()   
                         }

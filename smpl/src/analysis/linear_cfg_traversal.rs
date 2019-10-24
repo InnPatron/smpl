@@ -138,7 +138,7 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 Ok(Some(self.graph.next(merge.unwrap())))
             }
 
-            Node::BranchMerge(ref branch_data) => {
+            Node::BranchMerge(ref _branch_data) => {
                 unreachable!();
             }
 

@@ -160,7 +160,7 @@ mod tests {
         }
 
         let main = program.universe().get_fn(main);
-        let called_fn = called_fn.unwrap();
+        let _called_fn = called_fn.unwrap();
         
         let cfg = if let Function::SMPL(main) = main {
             main.cfg()
@@ -180,13 +180,13 @@ mod tests {
                 match next {
                     BlockNode::Expr(ref edata) => {
                         let e = &edata.expr;
-                        let mut iter = e.execution_order();
+                        let iter = e.execution_order();
                         let tmp = e.get_tmp(iter.last().unwrap());
                         match *tmp.value().data() {
                             Value::FnCall(ref call) => {
                                 let fn_value = call.fn_value();
                                 let tmp = e.get_tmp(fn_value);
-                                if let Value::Binding(ref binding) = tmp.value().data() {
+                                if let Value::Binding(ref _binding) = tmp.value().data() {
                                     ()
                                 } else {
                                     panic!("Function call not on binding");
@@ -323,7 +323,7 @@ mod tests {
             Ok(_) => panic!("Expected TypeError::LhsRhsInEq. Passed checks."),
             Err(e) => {
                 match e {
-                    AnalysisError::TypeError(e) => {
+                    AnalysisError::TypeError(_e) => {
                         ()
                     }
 
@@ -391,7 +391,7 @@ fn main() {
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let result = check_program(vec![mod1]);
-        if let Err(AnalysisError::TypeError(t)) = result {
+        if let Err(AnalysisError::TypeError(_t)) = result {
             ();
         } else {
             match result {

@@ -13,7 +13,7 @@ use crate::feature::PresentFeatures;
 use super::resolve_scope::ScopedData;
 use super::type_checker::TypingContext;
 use super::control_flow::CFG;
-use super::error::AnalysisError;
+
 use super::metadata::Metadata;
 use super::type_cons::*;
 

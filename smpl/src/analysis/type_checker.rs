@@ -7,7 +7,7 @@ use crate::span::Span;
 
 use super::linear_cfg_traversal::*;
 use super::control_data::*;
-use super::control_flow::CFG;
+
 use super::semantic_data::*;
 use super::semantic_data::Function;
 use super::metadata::Metadata;
@@ -46,7 +46,7 @@ pub fn type_check(universe: &mut Universe, metadata: &mut Metadata, fn_id: FnId)
 
     let mut type_checker = TypeChecker::new(universe, metadata, fn_id)?;
     let cfg = cfg.borrow();
-    let mut traverser = Traverser::new(&*cfg, &mut type_checker);
+    let traverser = Traverser::new(&*cfg, &mut type_checker);
     traverser.traverse()?;
 
     // Update the typing context
@@ -256,15 +256,15 @@ macro_rules! ann_to_type {
 
 type E = AnalysisError;
 impl<'a> Passenger<E> for TypeChecker<'a> {
-    fn start(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn start(&mut self, _id: NodeIndex) -> Result<(), E> {
         Ok(())
     }
 
-    fn end(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn end(&mut self, _id: NodeIndex) -> Result<(), E> {
         Ok(())
     }
 
-    fn loop_head(&mut self, id: NodeIndex, ld: &LoopData, expr: &ExprData) 
+    fn loop_head(&mut self, _id: NodeIndex, _ld: &LoopData, expr: &ExprData) 
         -> Result<(), E> {
        
         let expr_type = expr_type!(self, &expr.expr)?;
@@ -273,29 +273,29 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         Ok(())
     }
 
-    fn loop_foot(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E> {
+    fn loop_foot(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), E> {
         Ok(())
     }
 
-    fn cont(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E> {
+    fn cont(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), E> {
         Ok(())
     }
 
-    fn br(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E> {
+    fn br(&mut self, _id: NodeIndex, _ld: &LoopData) -> Result<(), E> {
         Ok(())
     }
 
-    fn enter_scope(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn enter_scope(&mut self, _id: NodeIndex) -> Result<(), E> {
         self.fork_current();
         Ok(())
     }
 
-    fn exit_scope(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn exit_scope(&mut self, _id: NodeIndex) -> Result<(), E> {
         let _old_scope = self.pop_current();
         Ok(())
     }
 
-    fn local_var_decl(&mut self, id: NodeIndex, decl: &LocalVarDeclData) -> Result<(), E> {
+    fn local_var_decl(&mut self, _id: NodeIndex, decl: &LocalVarDeclData) -> Result<(), E> {
         let var_decl = &decl.decl;
 
         let expr_type = expr_type!(self, var_decl.init_expr())?;
@@ -335,7 +335,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         Ok(())
     }
 
-    fn assignment(&mut self, id: NodeIndex, assign: &AssignmentData) -> Result<(), E> {
+    fn assignment(&mut self, _id: NodeIndex, assign: &AssignmentData) -> Result<(), E> {
         let assignment = &assign.assignment;
 
         let value_type = expr_type!(self, assignment.value())?;
@@ -356,13 +356,13 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         Ok(())
     }
 
-    fn expr(&mut self, id: NodeIndex, expr: &ExprData) -> Result<(), E> {
+    fn expr(&mut self, _id: NodeIndex, expr: &ExprData) -> Result<(), E> {
         let _expr_type = expr_type!(self, &expr.expr)?;
 
         Ok(())
     }
 
-    fn ret(&mut self, id: NodeIndex, rdata: &ReturnData) -> Result<(), E> {
+    fn ret(&mut self, _id: NodeIndex, rdata: &ReturnData) -> Result<(), E> {
         // TODO: Resolve types of expression
         // TODO: Check if return type compatible
 
@@ -380,15 +380,15 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         }
     }
 
-    fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn loop_start_true_path(&mut self, _id: NodeIndex) -> Result<(), E> {
         Ok(())
     }
 
-    fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn loop_end_true_path(&mut self, _id: NodeIndex) -> Result<(), E> {
         Ok(())
     }
 
-    fn branch_split(&mut self, id: NodeIndex, b: &BranchingData, e: &ExprData) 
+    fn branch_split(&mut self, _id: NodeIndex, _b: &BranchingData, e: &ExprData) 
         -> Result<(), E> {
 
         let expr_type = expr_type!(self, &e.expr)?;
@@ -397,23 +397,23 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         Ok(())
     }
 
-    fn branch_merge(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E> {
+    fn branch_merge(&mut self, _id: NodeIndex, _b: &BranchingData) -> Result<(), E> {
         Ok(())
     }
 
-    fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn branch_start_true_path(&mut self, _id: NodeIndex) -> Result<(), E> {
         Ok(())
     }
 
-    fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn branch_start_false_path(&mut self, _id: NodeIndex) -> Result<(), E> {
         Ok(())
     }
 
-    fn branch_end_true_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E> {
+    fn branch_end_true_path(&mut self, _id: NodeIndex, _b: &BranchingData) -> Result<(), E> {
         Ok(())
     }
 
-    fn branch_end_false_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E> {
+    fn branch_end_false_path(&mut self, _id: NodeIndex, _b: &BranchingData) -> Result<(), E> {
         Ok(())
     }
 }
@@ -470,7 +470,7 @@ fn resolve_expr(universe: &mut Universe, metadata: &mut Metadata, scope: &Scoped
 }
 
 fn resolve_tmp(universe: &mut Universe, metadata: &mut Metadata, scope: &ScopedData, 
-    context: &mut TypingContext, expr: &Expr, tmp: &Tmp) 
+    context: &mut TypingContext, _expr: &Expr, tmp: &Tmp) 
     -> Result<AbstractType, AnalysisError> {
 
     let tmp_span = tmp.span();
@@ -651,8 +651,8 @@ fn resolve_bin_op(
 
 /// Assume types are already applied
 fn resolve_uni_op(
-    scope: &ScopedData,
-    context: &TypingContext,
+    _scope: &ScopedData,
+    _context: &TypingContext,
     op: &ast::UniOp,
     tmp_type: &AbstractType,
     span: Span,
@@ -728,7 +728,7 @@ fn resolve_struct_init(universe: &Universe, scope: &ScopedData,
 
     // Check if type is a struct.
     // Opaque types are represented using AbstractType::Opaque
-    let (struct_type_id, fields, field_map) = match struct_type {
+    let (_struct_type_id, fields, field_map) = match struct_type {
         AbstractType::Record {
             type_id: struct_type_id,
             ref abstract_field_map,
@@ -822,7 +822,7 @@ fn resolve_struct_init(universe: &Universe, scope: &ScopedData,
 }
 
 /// Generates a WidthConstraint based on the types of its initializer expressions
-fn resolve_anon_struct_init(universe: &Universe, scope: &ScopedData, 
+fn resolve_anon_struct_init(_universe: &Universe, _scope: &ScopedData, 
     context: &TypingContext, init: &AnonStructInit, span: Span) 
     -> Result<AbstractType, AnalysisError> {
 
@@ -857,7 +857,7 @@ fn resolve_anon_struct_init(universe: &Universe, scope: &ScopedData,
 }
 
 fn resolve_binding(universe: &Universe, scope: &ScopedData,
-    context: &TypingContext, binding: &Binding, span: Span)
+    context: &TypingContext, binding: &Binding, _span: Span)
     -> Result<AbstractType, AnalysisError> {
 
     match binding.get_id().unwrap() {
@@ -912,7 +912,7 @@ fn resolve_binding(universe: &Universe, scope: &ScopedData,
 }
 
 fn resolve_mod_access(universe: &Universe, scope: &ScopedData,
-    context: &TypingContext, mod_access: &ModAccess, span: Span)
+    context: &TypingContext, mod_access: &ModAccess, _span: Span)
     -> Result<AbstractType, AnalysisError> {
 
     let fn_id = mod_access.fn_id()
@@ -943,7 +943,7 @@ fn resolve_mod_access(universe: &Universe, scope: &ScopedData,
     Ok(fn_type)
 }
 
-fn resolve_fn_call(universe: &Universe, scope: &ScopedData, context: &TypingContext,
+fn resolve_fn_call(_universe: &Universe, _scope: &ScopedData, context: &TypingContext,
     fn_call: &FnCall, span: Span)
     -> Result<AbstractType, AnalysisError> {
 
@@ -983,11 +983,11 @@ fn resolve_fn_call(universe: &Universe, scope: &ScopedData, context: &TypingCont
 
                     let fn_param_types = params.iter();
 
-                    for (index, (arg_type, param_type)) in
+                    for (_index, (arg_type, param_type)) in
                         arg_types.iter().zip(fn_param_types).enumerate()
                     {
-                        let arg_type: &AbstractType = arg_type;
-                        let param_type: &AbstractType = param_type;
+                        let _arg_type: &AbstractType = arg_type;
+                        let _param_type: &AbstractType = param_type;
                         // TODO: Check if types can resolve
                         /*
                         if !resolve_types(&arg_type, &param_type) {
@@ -1160,7 +1160,7 @@ fn resolve_indexing(universe: &Universe, scope: &ScopedData, context: &TypingCon
 }
 
 fn resolve_type_inst(universe: &Universe, scope: &ScopedData, context: &TypingContext,
-    type_inst: &TypeInst, span: Span) 
+    type_inst: &TypeInst, _span: Span) 
     -> Result<AbstractType, AnalysisError> {
 
     let fn_id = type_inst
@@ -1195,7 +1195,7 @@ fn resolve_type_inst(universe: &Universe, scope: &ScopedData, context: &TypingCo
 }
 
 fn resolve_anonymous_fn(universe: &mut Universe, metadata: &mut Metadata, 
-    scope: &ScopedData, context: &TypingContext, a_fn: &AnonymousFn, span: Span)
+    scope: &ScopedData, context: &TypingContext, a_fn: &AnonymousFn, _span: Span)
     -> Result<AbstractType, AnalysisError> {
 
     use std::rc::Rc;
@@ -1246,7 +1246,7 @@ fn resolve_anonymous_fn(universe: &mut Universe, metadata: &mut Metadata,
             ..
         } = afn {
 
-            let fn_type_cons = universe.get_type_cons(fn_type.clone());
+            let _fn_type_cons = universe.get_type_cons(fn_type.clone());
             
             // TODO: Anonymous functions are not allowed to have type parameters
             AbstractType::App {

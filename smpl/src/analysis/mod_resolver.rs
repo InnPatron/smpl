@@ -192,7 +192,7 @@ pub fn check_modules(
         }
     }
 
-    for (mod_id, raw_mod) in raw_data.iter() {
+    for (_mod_id, raw_mod) in raw_data.iter() {
         let (universe, metadata, _) = program.analysis_context();
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;

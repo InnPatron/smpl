@@ -6,11 +6,11 @@ use crate::ast::{ AstNode, Ident, ModulePath as AstModulePath };
 
 use super::unique_linear_cfg_traversal::*;
 use super::control_data::*;
-use super::control_flow::CFG;
+
 use super::semantic_data::{FnId, VarId, TypeVarId, TypeId, Universe, ModulePath, AnonymousFunction};
 use super::error::AnalysisError;
 use super::typed_ast::*;
-use super::metadata::Metadata;
+
 
 pub fn resolve(universe: &mut Universe, fn_id: FnId) -> Result<(), AnalysisError> {
 
@@ -112,44 +112,44 @@ impl ScopeResolver {
 type E = AnalysisError;
 
 impl UniquePassenger<E> for ScopeResolver {
-    fn start(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn start(&mut self, _id: NodeIndex) -> Result<(), E> {
         Ok(())
     }
 
-    fn end(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn end(&mut self, _id: NodeIndex) -> Result<(), E> {
         Ok(())
     }
 
-    fn loop_head(&mut self, id: NodeIndex, ld: &mut LoopData, expr: &mut ExprData) 
+    fn loop_head(&mut self, _id: NodeIndex, _ld: &mut LoopData, expr: &mut ExprData) 
         -> Result<(), E> {
 
         resolve_expr_scope(&mut expr.expr, self.current())?;
         Ok(())
     }
 
-    fn loop_foot(&mut self, id: NodeIndex, ld: &mut LoopData) -> Result<(), E> {
+    fn loop_foot(&mut self, _id: NodeIndex, _ld: &mut LoopData) -> Result<(), E> {
         Ok(())
     }
 
-    fn cont(&mut self, id: NodeIndex, ld: &mut LoopData) -> Result<(), E> {
+    fn cont(&mut self, _id: NodeIndex, _ld: &mut LoopData) -> Result<(), E> {
         Ok(())
     }
 
-    fn br(&mut self, id: NodeIndex, ld: &mut LoopData) -> Result<(), E> {
+    fn br(&mut self, _id: NodeIndex, _ld: &mut LoopData) -> Result<(), E> {
         Ok(())
     }
 
-    fn enter_scope(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn enter_scope(&mut self, _id: NodeIndex) -> Result<(), E> {
         self.fork_current();
         Ok(())
     }
 
-    fn exit_scope(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn exit_scope(&mut self, _id: NodeIndex) -> Result<(), E> {
         let _old_scope = self.pop_current();
         Ok(())
     }
 
-    fn local_var_decl(&mut self, id: NodeIndex, decl: &mut LocalVarDeclData) -> Result<(), E> {
+    fn local_var_decl(&mut self, _id: NodeIndex, decl: &mut LocalVarDeclData) -> Result<(), E> {
         let var_decl = &mut decl.decl;
 
         resolve_expr_scope(var_decl.init_expr_mut(), self.current())?;
@@ -162,7 +162,7 @@ impl UniquePassenger<E> for ScopeResolver {
         Ok(())
     }
 
-    fn assignment(&mut self, id: NodeIndex, assign: &mut AssignmentData) -> Result<(), E> {
+    fn assignment(&mut self, _id: NodeIndex, assign: &mut AssignmentData) -> Result<(), E> {
         let assignment = &mut assign.assignment;
 
         let path = assignment.assignee_mut().path_mut();
@@ -186,12 +186,12 @@ impl UniquePassenger<E> for ScopeResolver {
         Ok(())
     }
 
-    fn expr(&mut self, id: NodeIndex, expr: &mut ExprData) -> Result<(), E> {
+    fn expr(&mut self, _id: NodeIndex, expr: &mut ExprData) -> Result<(), E> {
         resolve_expr_scope(&mut expr.expr, self.current())?;
         Ok(())
     }
 
-    fn ret(&mut self, id: NodeIndex, rdata: &mut ReturnData) -> Result<(), E> {
+    fn ret(&mut self, _id: NodeIndex, rdata: &mut ReturnData) -> Result<(), E> {
 
         if let Some(ref mut return_data) = rdata.expr {
             resolve_expr_scope(return_data, self.current())?;
@@ -199,37 +199,37 @@ impl UniquePassenger<E> for ScopeResolver {
         Ok(())
     }
 
-    fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn loop_start_true_path(&mut self, _id: NodeIndex) -> Result<(), E> {
         Ok(())
     }
 
-    fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn loop_end_true_path(&mut self, _id: NodeIndex) -> Result<(), E> {
         Ok(())
     }
 
-    fn branch_split(&mut self, id: NodeIndex, b: &mut BranchingData, e: &mut ExprData) 
+    fn branch_split(&mut self, _id: NodeIndex, _b: &mut BranchingData, e: &mut ExprData) 
         -> Result<(), E> {
         resolve_expr_scope(&mut e.expr, self.current())?;
         Ok(())
     }
 
-    fn branch_merge(&mut self, id: NodeIndex, b: &mut BranchingData) -> Result<(), E> {
+    fn branch_merge(&mut self, _id: NodeIndex, _b: &mut BranchingData) -> Result<(), E> {
         Ok(())
     }
 
-    fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn branch_start_true_path(&mut self, _id: NodeIndex) -> Result<(), E> {
         Ok(())
     }
 
-    fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), E> {
+    fn branch_start_false_path(&mut self, _id: NodeIndex) -> Result<(), E> {
         Ok(())
     }
 
-    fn branch_end_true_path(&mut self, id: NodeIndex, b: &mut BranchingData) -> Result<(), E> {
+    fn branch_end_true_path(&mut self, _id: NodeIndex, _b: &mut BranchingData) -> Result<(), E> {
         Ok(())
     }
 
-    fn branch_end_false_path(&mut self, id: NodeIndex, b: &mut BranchingData) -> Result<(), E> {
+    fn branch_end_false_path(&mut self, _id: NodeIndex, _b: &mut BranchingData) -> Result<(), E> {
         Ok(())
     }
 }
@@ -239,11 +239,11 @@ fn resolve_expr_scope(expr: &mut Expr, current_scope: &ScopedData) -> Result<(),
         let tmp = expr.get_tmp_mut(tmp_id);
         match tmp.value_mut().data_mut() {
 
-            Value::Literal(ref mut literal) => (),
+            Value::Literal(ref mut _literal) => (),
 
-            Value::StructInit(ref mut init) => (),
+            Value::StructInit(ref mut _init) => (),
 
-            Value::AnonStructInit(ref mut init) => (),
+            Value::AnonStructInit(ref mut _init) => (),
 
             Value::Binding(ref mut var) => match current_scope.binding_info(var.ident())? {
                 BindingInfo::Var(var_id) => {

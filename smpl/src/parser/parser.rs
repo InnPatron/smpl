@@ -261,7 +261,7 @@ fn where_clause(tokens: &mut BufferedTokenizer)
             tokens,
             Token::Identifier(ident) => Ident(ident),
             parser_state!("where-clause-constraints", "param"));
-        let colon = consume_token!(
+        let _colon = consume_token!(
             tokens,
             Token::Colon,
             parser_state!("where-clause-constraints", "colon"));
