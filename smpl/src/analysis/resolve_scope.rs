@@ -170,6 +170,18 @@ impl UniquePassenger<E> for ScopeResolver {
         let var_id = self.current().var_id(path.root_name())?;
         path.set_root_var(var_id);
 
+        // Resolve expression scopes for root indexing expressions
+        if let Some(root_index) = path.root_indexing_expr_mut() {
+            resolve_expr_scope(root_index, self.current())?;
+        }
+
+        // Resolve expression scopes for inner indexing expressions
+        for segment in path.path_mut() {
+            if let PathSegment::Indexing(_, ref mut index_expr) = segment {
+                resolve_expr_scope(index_expr, self.current())?;
+            }
+        }
+
         resolve_expr_scope(assignment.value_mut(), self.current())?;
         Ok(())
     }

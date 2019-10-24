@@ -295,6 +295,7 @@ impl Executor {
                         let index_value: Value = env.get(index_name).unwrap();
                         let index = match index_value {
                             Value::Int(i) => {
+                                // TODO: Integer range check here error
                                 i as usize
                             }
 
@@ -306,7 +307,8 @@ impl Executor {
                             Value::Array(ref v) => {
                                 v
                                     .get(index)
-                                    .unwrap()
+                                    // TODO: Array bounds error here
+                                    .expect(&format!("Invalid index: {}", index))   
                                     .ref_clone()
                             }
 
