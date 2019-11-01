@@ -9,6 +9,16 @@ pub enum ModuleSource {
     File(PathBuf),
 }
 
+impl std::fmt::Display for ModuleSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            ModuleSource::Anonymous(Some(ref a)) => write!(f, "{}", a),
+            ModuleSource::Anonymous(None) => write!(f, "{}", "anonymous"),
+            ModuleSource::File(ref buff) => write!(f, "{}", buff.display()),
+        }
+    }
+}
+
 pub struct UnparsedModule<'a> {
     pub source: ModuleSource,
     pub module: &'a str,
