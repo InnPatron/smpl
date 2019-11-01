@@ -4,6 +4,7 @@ use std::iter::{Enumerate, Iterator, Peekable};
 use std::str::CharIndices;
 
 use crate::span::*;
+use crate::module::ModuleSource;
 
 #[derive(Debug)]
 pub struct SpannedToken {
@@ -221,7 +222,8 @@ pub enum TokenizerError {
 }
 
 #[derive(Debug)]
-struct CharInput<'input> {
+struct CharInput<'src_str, 'input> {
+    source: &'src_str ModuleSource,
     chars: Peekable<Enumerate<CharIndices<'input>>>,
     lookahead: Option<(Location, char)>,
     line: usize,
@@ -229,8 +231,10 @@ struct CharInput<'input> {
     end_of_input: Location,
 }
 
-impl<'input> CharInput<'input> {
-    fn new(input: &str) -> CharInput {
+impl<'src_str, 'input> CharInput<'src_str, 'input> {
+    fn new(source: &'src_str ModuleSource, input: &'input str) 
+        -> CharInput<'src_str, 'input> {
+
         let last = if input.len() == 0 {
             0
         } else {
@@ -239,16 +243,25 @@ impl<'input> CharInput<'input> {
         let mut chars = input.char_indices().enumerate().peekable();
         let lookahead = chars.peek().map(|(char_index, (byte_index, c))| {
             (
-                Location::new(byte_index.clone(), char_index.clone(), 1, 2),
+                Location::new(
+                    source.to_string(),
+                    byte_index.clone(), 
+                    char_index.clone(), 1, 2),
                 c.clone(),
             )
         });
         CharInput {
+            source: source,
             chars: chars,
             line: 1,
             column: 0,
             lookahead: lookahead,
-            end_of_input: Location::new(last + 1, last, 1, 0),
+            end_of_input: Location::new(
+                source.to_string(),
+                last + 1,
+                last,
+                1,
+                0),
         }
     }
 
@@ -261,7 +274,7 @@ impl<'input> CharInput<'input> {
     }
 }
 
-impl<'input> Iterator for CharInput<'input> {
+impl<'src_str, 'input> Iterator for CharInput<'input, 'src_str> {
     type Item = (Location, char);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -277,7 +290,12 @@ impl<'input> Iterator for CharInput<'input> {
                 self.end_of_input.column += 1;
             }
             (
-                Location::new(byte_index, char_index, self.line, self.column),
+                Location::new(
+                    self.source.to_string(),
+                    byte_index,
+                    char_index,
+                    self.line,
+                    self.column),
                 c.clone(),
             )
         });
@@ -288,6 +306,7 @@ impl<'input> Iterator for CharInput<'input> {
             self.chars.peek().map(|(char_index, (byte_index, c))| {
                 (
                     Location::new(
+                        self.source.to_string(),
                         byte_index.clone(),
                         char_index.clone(),
                         line,
@@ -302,16 +321,18 @@ impl<'input> Iterator for CharInput<'input> {
 }
 
 #[derive(Debug)]
-pub struct Tokenizer<'input> {
+pub struct Tokenizer<'src_str, 'input> {
+    source: &'src_str ModuleSource,
     input: &'input str,
-    chars: CharInput<'input>,
+    chars: CharInput<'src_str, 'input>,
 }
 
-impl<'input> Tokenizer<'input> {
-    pub fn new(input: &str) -> Tokenizer {
+impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
+    pub fn new<'a, 'b>(source: &'a ModuleSource, input: &'b str) -> Tokenizer<'a, 'b> {
         Tokenizer {
+            source: source,
             input: input,
-            chars: CharInput::new(input),
+            chars: CharInput::new(source, input),
         }
     }
 
@@ -378,7 +399,7 @@ impl<'input> Tokenizer<'input> {
     }
 }
 
-impl<'input> Tokenizer<'input> {
+impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
     fn line_comment(&mut self, start: Location) -> (Location, &'input str) {
         self.take_until(start, |c| c == '\n')
     }
@@ -629,7 +650,7 @@ impl<'input> Tokenizer<'input> {
     }
 }
 
-impl<'input> Iterator for Tokenizer<'input> {
+impl<'src_str, 'input> Iterator for Tokenizer<'src_str, 'input> {
     type Item = Result<SpannedToken, SpannedError>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -732,13 +753,13 @@ impl<'input> Iterator for Tokenizer<'input> {
 }
 
 #[derive(Debug)]
-pub struct BufferedTokenizer<'a> {
-    tokenizer: Tokenizer<'a>,
+pub struct BufferedTokenizer<'a, 'b> {
+    tokenizer: Tokenizer<'a, 'b>,
     next: Option<Result<SpannedToken, SpannedError>>,
 }
 
-impl<'a> BufferedTokenizer<'a> {
-    pub fn new(mut tokenizer: Tokenizer) -> BufferedTokenizer {
+impl<'a, 'b> BufferedTokenizer<'a, 'b> {
+    pub fn new(mut tokenizer: Tokenizer<'a, 'b>) -> BufferedTokenizer<'a, 'b> {
         let next = tokenizer.next();
 
         BufferedTokenizer {

@@ -22,7 +22,7 @@ mod parser_tests;
 
 pub fn parse_module(input: UnparsedModule) -> Result<ParsedModule, Error> {
     let (module, source) = (input.module, input.source);
-    let tokenizer = tokens::Tokenizer::new(&module);
+    let tokenizer = tokens::Tokenizer::new(&source, &module);
     let mut tokenizer = tokens::BufferedTokenizer::new(tokenizer);
 
     let module = parser::module(&mut tokenizer)
