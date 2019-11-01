@@ -1,5 +1,6 @@
 #[cfg(test)]
 #[allow(non_snake_case)]
+#[rustfmt::skip]
 mod parser_tests {
     use crate::ast::*;
     use crate::module::*;

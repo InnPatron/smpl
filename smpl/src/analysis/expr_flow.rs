@@ -231,6 +231,7 @@ pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (T
 }
 
 #[cfg(test)]
+#[rustfmt::skip]
 mod tests {
     use super::super::semantic_data::*;
     use super::*;
