@@ -1,0 +1,6 @@
+edition = "2018"
+max_width = 80
+black_lines_lower_bound = 1
+imports_layout = "Vertical"
+indent_style = "Visual"
+struct_lit_single_line = false
