@@ -1,18 +1,18 @@
 use std::cell::{Cell, RefCell};
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::rc::Rc;
 use std::slice::Iter;
 
 use uuid::Uuid;
 
-use crate::ast::{ AnonymousFn as AstAnonymousFn, ModulePath as AstModulePath };
 use crate::ast::*;
+use crate::ast::{AnonymousFn as AstAnonymousFn, ModulePath as AstModulePath};
 use crate::feature::PresentFeatures;
 
+use super::control_flow::CFG;
 use super::resolve_scope::ScopedData;
 use super::type_checker::TypingContext;
-use super::control_flow::CFG;
 
 use super::metadata::Metadata;
 use super::type_cons::*;
@@ -30,7 +30,11 @@ pub struct Program {
 }
 
 impl Program {
-    pub(super) fn new(universe: Universe, metadata: Metadata, features: PresentFeatures) -> Program {
+    pub(super) fn new(
+        universe: Universe,
+        metadata: Metadata,
+        features: PresentFeatures,
+    ) -> Program {
         Program {
             universe: universe,
             metadata: metadata,
@@ -48,24 +52,20 @@ impl Program {
         &self.universe
     }
 
-    pub fn all_fns(&self) -> impl Iterator<Item=(FnId, &Function)> {
+    pub fn all_fns(&self) -> impl Iterator<Item = (FnId, &Function)> {
         self.universe.all_fns()
     }
 
-    pub fn smpl_fns(&self) -> impl Iterator<Item=(FnId, &SMPLFunction)> {
+    pub fn smpl_fns(&self) -> impl Iterator<Item = (FnId, &SMPLFunction)> {
         self.universe
             .all_fns()
-            .filter(|(_, f)| {
-                match f {
-                    Function::SMPL(_) => true,
-                    _ => false
-                }
+            .filter(|(_, f)| match f {
+                Function::SMPL(_) => true,
+                _ => false,
             })
-            .map(|(f_id, f)| {
-                match f {
-                    Function::SMPL(f) => (f_id, f),
-                    _ => unreachable!(),
-                }
+            .map(|(f_id, f)| match f {
+                Function::SMPL(f) => (f_id, f),
+                _ => unreachable!(),
             })
     }
 
@@ -108,7 +108,8 @@ pub struct Universe {
 
 impl Universe {
     pub fn std() -> Universe {
-        let unit = (TypeId(0), internal_module_path!(UNIT_TYPE), TypeCons::Unit);
+        let unit =
+            (TypeId(0), internal_module_path!(UNIT_TYPE), TypeCons::Unit);
         let int = (TypeId(1), internal_module_path!(INT_TYPE), TypeCons::Int);
         let float = (
             TypeId(2),
@@ -120,7 +121,8 @@ impl Universe {
             internal_module_path!(STRING_TYPE),
             TypeCons::String,
         );
-        let boolean = (TypeId(4), internal_module_path!(BOOL_TYPE), TypeCons::Bool);
+        let boolean =
+            (TypeId(4), internal_module_path!(BOOL_TYPE), TypeCons::Bool);
 
         let type_map = vec![
             unit.clone(),
@@ -141,11 +143,13 @@ impl Universe {
             module_map: HashMap::new(),
             module_name: HashMap::new(),
             id_counter: Cell::new(5),
-            std_scope: ScopedData::new(type_map
+            std_scope: ScopedData::new(
+                type_map
                     .clone()
                     .into_iter()
                     .map(|(id, path, _)| (path, id))
-                    .collect()),
+                    .collect(),
+            ),
             unit: unit.0,
             int: int.0,
             float: float.0,
@@ -178,7 +182,12 @@ impl Universe {
         self.boolean
     }
 
-    pub fn map_module(&mut self, mod_id: ModuleId, name: Ident, module: Module) {
+    pub fn map_module(
+        &mut self,
+        mod_id: ModuleId,
+        name: Ident,
+        module: Module,
+    ) {
         if self.module_name.insert(name, mod_id).is_some() {
             unimplemented!("Overriding module with the same name.");
         }
@@ -200,8 +209,14 @@ impl Universe {
         self.fn_map.remove(&fn_id);
     }
 
-    pub fn insert_fn(&mut self, fn_id: FnId, name: Ident,
-        type_id: TypeId, analysis_context: AnalysisContext, cfg: CFG) {
+    pub fn insert_fn(
+        &mut self,
+        fn_id: FnId,
+        name: Ident,
+        type_id: TypeId,
+        analysis_context: AnalysisContext,
+        cfg: CFG,
+    ) {
         let function = SMPLFunction {
             name: name,
             fn_type: type_id,
@@ -209,7 +224,11 @@ impl Universe {
             analysis_context: analysis_context,
         };
 
-        if self.fn_map.insert(fn_id, Function::SMPL(function)).is_some() {
+        if self
+            .fn_map
+            .insert(fn_id, Function::SMPL(function))
+            .is_some()
+        {
             panic!(
                 "Attempting to override Function with FnId {} in the Universe",
                 fn_id.0
@@ -217,15 +236,24 @@ impl Universe {
         }
     }
 
-    pub fn insert_builtin_fn(&mut self, fn_id: FnId, name: Ident, fn_type: TypeId) {
-        let builtin = BuiltinFunction { 
+    pub fn insert_builtin_fn(
+        &mut self,
+        fn_id: FnId,
+        name: Ident,
+        fn_type: TypeId,
+    ) {
+        let builtin = BuiltinFunction {
             name: name,
             fn_type: fn_type,
         };
 
         self.builtin_fn_set.insert(fn_id);
 
-        if self.fn_map.insert(fn_id, Function::Builtin(builtin)).is_some() {
+        if self
+            .fn_map
+            .insert(fn_id, Function::Builtin(builtin))
+            .is_some()
+        {
             panic!(
                 "Attempting to override builtin function with FnId {} in the Universe",
                 fn_id.0
@@ -233,10 +261,18 @@ impl Universe {
         }
     }
 
-    pub fn reserve_anonymous_fn(&mut self, fn_id: FnId, ast_fn: AstAnonymousFn) {
+    pub fn reserve_anonymous_fn(
+        &mut self,
+        fn_id: FnId,
+        ast_fn: AstAnonymousFn,
+    ) {
         let anon_fn = AnonymousFunction::Reserved(ast_fn);
 
-        if self.fn_map.insert(fn_id, Function::Anonymous(anon_fn)).is_some() {
+        if self
+            .fn_map
+            .insert(fn_id, Function::Anonymous(anon_fn))
+            .is_some()
+        {
             panic!(
                 "Attempting to override function with FnId {} in the Universe",
                 fn_id.0
@@ -325,10 +361,8 @@ impl Universe {
             .collect()
     }
 
-    pub fn all_fns(&self) -> impl Iterator<Item=(FnId, &Function)> {
-        self.fn_map
-            .iter()
-            .map(|(id, f)| (id.clone(), f))
+    pub fn all_fns(&self) -> impl Iterator<Item = (FnId, &Function)> {
+        self.fn_map.iter().map(|(id, f)| (id.clone(), f))
     }
 
     pub fn all_modules(&self) -> Vec<(&Ident, &ModuleId)> {
@@ -396,13 +430,15 @@ pub struct AnalysisContext {
 }
 
 impl AnalysisContext {
-    pub fn new(fn_scope: ScopedData, typing_context: TypingContext, 
-        existential_type_vars: Vec<TypeVarId>) -> AnalysisContext {
-
+    pub fn new(
+        fn_scope: ScopedData,
+        typing_context: TypingContext,
+        existential_type_vars: Vec<TypeVarId>,
+    ) -> AnalysisContext {
         AnalysisContext {
             fn_scope: fn_scope,
             typing_context: typing_context,
-            existential_type_vars: existential_type_vars
+            existential_type_vars: existential_type_vars,
         }
     }
 
@@ -455,24 +491,23 @@ pub enum AnonymousFunction {
         fn_type: TypeId,
         cfg: Rc<RefCell<CFG>>,
         analysis_context: AnalysisContext,
-    }
+    },
 }
 
 impl AnonymousFunction {
-
     pub fn name(&self) -> Option<&Ident> {
         None
     }
 
     pub fn fn_type(&self) -> Option<TypeId> {
-
         match self {
             AnonymousFunction::Reserved(_) => None,
-            AnonymousFunction::Resolved { fn_type, .. } => Some(fn_type.clone()),
+            AnonymousFunction::Resolved { fn_type, .. } => {
+                Some(fn_type.clone())
+            }
         }
     }
 }
-
 
 #[derive(Clone, Debug)]
 pub struct BuiltinFunction {
@@ -481,7 +516,6 @@ pub struct BuiltinFunction {
 }
 
 impl BuiltinFunction {
-
     pub fn name(&self) -> &Ident {
         &self.name
     }
@@ -496,11 +530,10 @@ pub struct SMPLFunction {
     name: Ident,
     fn_type: TypeId,
     cfg: Rc<RefCell<CFG>>,
-    analysis_context: AnalysisContext
+    analysis_context: AnalysisContext,
 }
 
 impl SMPLFunction {
-
     pub fn name(&self) -> &Ident {
         &self.name
     }
@@ -723,17 +756,20 @@ impl ModulePath {
 
 impl fmt::Display for ModulePath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let buffer = self.0.iter().fold(String::new(), |mut buffer, ref item| {
-            buffer.push_str(&item.0);
-            buffer
-        });
+        let buffer =
+            self.0.iter().fold(String::new(), |mut buffer, ref item| {
+                buffer.push_str(&item.0);
+                buffer
+            });
         write!(f, "{}", buffer)
     }
 }
 
 impl From<AstModulePath> for ModulePath {
     fn from(p: AstModulePath) -> ModulePath {
-        ModulePath::new(p.0.into_iter().map(|node| node.data().clone()).collect())
+        ModulePath::new(
+            p.0.into_iter().map(|node| node.data().clone()).collect(),
+        )
     }
 }
 

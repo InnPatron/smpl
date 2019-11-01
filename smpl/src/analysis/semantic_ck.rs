@@ -6,7 +6,9 @@ use super::metadata::*;
 use super::mod_resolver;
 use super::semantic_data::*;
 
-pub fn check_program(modules: Vec<ParsedModule>) -> Result<Program, AnalysisError> {
+pub fn check_program(
+    modules: Vec<ParsedModule>,
+) -> Result<Program, AnalysisError> {
     let metadata = Metadata::new();
     let universe = Universe::std();
     let features = PresentFeatures::new();

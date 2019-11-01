@@ -42,7 +42,7 @@ impl LoopFrame {
         LoopFrame {
             result_location: None,
             condition: None,
-            body: None
+            body: None,
         }
     }
 
@@ -54,18 +54,21 @@ impl LoopFrame {
         self.result_location = Some(loc);
     }
 
-    fn set_condition<I: Iterator<Item=PartialInstruction>>(&mut self, condition: I) {
+    fn set_condition<I: Iterator<Item = PartialInstruction>>(
+        &mut self,
+        condition: I,
+    ) {
         if self.condition.is_some() {
             panic!("Attempting to double set the loop condition.");
-        } 
+        }
 
         self.condition = Some(condition.collect());
     }
 
-    fn set_body<I: Iterator<Item=PartialInstruction>>(&mut self, body: I) {
+    fn set_body<I: Iterator<Item = PartialInstruction>>(&mut self, body: I) {
         if self.body.is_some() {
             panic!("Attempting to double set the loop body.");
-        } 
+        }
 
         self.body = Some(body.collect());
     }
@@ -108,26 +111,35 @@ impl BranchFrame {
         self.result_location = Some(loc);
     }
 
-    fn set_condition<I: Iterator<Item=PartialInstruction>>(&mut self, condition: I) {
+    fn set_condition<I: Iterator<Item = PartialInstruction>>(
+        &mut self,
+        condition: I,
+    ) {
         if self.condition.is_some() {
             panic!("Attempting to double set the condition.");
-        } 
+        }
 
         self.condition = Some(condition.collect());
     }
 
-    fn set_true_branch<I: Iterator<Item=PartialInstruction>>(&mut self, body: I) {
+    fn set_true_branch<I: Iterator<Item = PartialInstruction>>(
+        &mut self,
+        body: I,
+    ) {
         if self.true_branch.is_some() {
             panic!("Attempting to double set the true body.");
-        } 
+        }
 
         self.true_branch = Some(body.collect());
     }
 
-    fn set_false_branch<I: Iterator<Item=PartialInstruction>>(&mut self, body: I) {
+    fn set_false_branch<I: Iterator<Item = PartialInstruction>>(
+        &mut self,
+        body: I,
+    ) {
         if self.false_branch.is_some() {
             panic!("Attempting to double set the false body.");
-        } 
+        }
 
         self.false_branch = Some(body.collect());
     }
@@ -161,15 +173,15 @@ pub(super) struct FirstPass<'a> {
 impl<'a> From<FirstPass<'a>> for super::second_pass::SecondPass {
     fn from(fp: FirstPass) -> super::second_pass::SecondPass {
         super::second_pass::SecondPass::new(
-            fp.instructions.expect("FirstPass.instructions should be set to some"),
+            fp.instructions
+                .expect("FirstPass.instructions should be set to some"),
             fp.loops,
-            fp.branches
+            fp.branches,
         )
     }
 }
 
 impl<'a> FirstPass<'a> {
-
     pub(super) fn new(typing_context: &TypingContext) -> FirstPass {
         FirstPass {
             typing_context: typing_context,
@@ -182,13 +194,16 @@ impl<'a> FirstPass<'a> {
     }
 
     fn current_frame_mut(&mut self) -> &mut Vec<PartialInstruction> {
-        self.frames.last_mut().expect("Expected a frame. Found none.")
+        self.frames
+            .last_mut()
+            .expect("Expected a frame. Found none.")
     }
 
     fn extend_current_frame<I, Item>(&mut self, i: I)
-    where I: Iterator<Item=Item>,
-          Item: Into<PartialInstruction> {
-
+    where
+        I: Iterator<Item = Item>,
+        Item: Into<PartialInstruction>,
+    {
         self.current_frame_mut().extend(i.map(|item| item.into()));
     }
 
@@ -199,14 +214,12 @@ impl<'a> FirstPass<'a> {
             .expect("Expected a state. Found none.")
     }
 
-    fn push_state(&mut self, state: State) { 
+    fn push_state(&mut self, state: State) {
         self.states.push(state);
     }
 
     fn peek_state(&self) -> State {
-        self.states.last()
-            .map(|s| s.clone())
-            .unwrap()
+        self.states.last().map(|s| s.clone()).unwrap()
     }
 
     fn pop_state(&mut self) -> State {
@@ -226,16 +239,25 @@ impl<'a> FirstPass<'a> {
     }
 
     fn get_branch_frame_mut(&mut self, id: BranchingId) -> &mut BranchFrame {
-        self.branches.get_mut(&id).expect("Expected a branch frame. Found none.")
+        self.branches
+            .get_mut(&id)
+            .expect("Expected a branch frame. Found none.")
     }
 
     fn get_loop_frame_mut(&mut self, id: LoopId) -> &mut LoopFrame {
-        self.loops.get_mut(&id).expect("Expected a loop frame. Found none.")
+        self.loops
+            .get_mut(&id)
+            .expect("Expected a loop frame. Found none.")
     }
 
-    fn push_to_current_frame<T>(&mut self, instr: T) 
-    where T: Into<PartialInstruction> {
-        let current_frame = self.frames.last_mut().expect("Expected a frame. Found none.");
+    fn push_to_current_frame<T>(&mut self, instr: T)
+    where
+        T: Into<PartialInstruction>,
+    {
+        let current_frame = self
+            .frames
+            .last_mut()
+            .expect("Expected a frame. Found none.");
         current_frame.push(instr.into());
     }
 
@@ -244,7 +266,8 @@ impl<'a> FirstPass<'a> {
     }
 
     fn pop_current_frame(&mut self) -> Vec<PartialInstruction> {
-        let current_frame = self.frames.pop().expect("Expected a frame. Found none.");
+        let current_frame =
+            self.frames.pop().expect("Expected a frame. Found none.");
 
         current_frame
     }
@@ -261,7 +284,6 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
     }
 
     fn end(&mut self, _id: NodeIndex) -> Result<(), FirstPassError> {
-        
         // Sanity check. Should always end on the "Start" state
         let old_state = self.pop_state();
         assert_eq!(old_state, State::Start);
@@ -279,7 +301,12 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn loop_head(&mut self, _id: NodeIndex, ld: &LoopData, condition: &ExprData) -> Result<(), FirstPassError> {
+    fn loop_head(
+        &mut self,
+        _id: NodeIndex,
+        ld: &LoopData,
+        condition: &ExprData,
+    ) -> Result<(), FirstPassError> {
         // Mark in the current frame that there should be a loop with LoopId(#) inserted here
         self.push_to_current_frame(PartialInstruction::Loop(ld.loop_id));
 
@@ -289,17 +316,18 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         // Setup loop frame
         self.new_loop_frame(ld.loop_id);
 
-        let condition_instructions = 
+        let condition_instructions =
             byte_expr::translate_expr(&condition.expr, self.typing_context)
-            .into_iter()
-            .map(|instr| PartialInstruction::Instruction(instr));
+                .into_iter()
+                .map(|instr| PartialInstruction::Instruction(instr));
 
         let frame = self.get_loop_frame_mut(ld.loop_id);
         frame.set_condition(condition_instructions);
 
-        let result_location = Arg::Location(Location::Tmp(byte_expr::tmp_id(condition.expr.last())));
+        let result_location = Arg::Location(Location::Tmp(byte_expr::tmp_id(
+            condition.expr.last(),
+        )));
         frame.set_result_location(result_location);
-        
 
         // Change the current state
         self.push_state(State::Loop(ld.loop_id));
@@ -307,7 +335,11 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn loop_foot(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), FirstPassError> {
+    fn loop_foot(
+        &mut self,
+        _id: NodeIndex,
+        ld: &LoopData,
+    ) -> Result<(), FirstPassError> {
         // Exiting the loop
 
         // Change the state to old state
@@ -324,12 +356,20 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn cont(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), FirstPassError> {
+    fn cont(
+        &mut self,
+        _id: NodeIndex,
+        ld: &LoopData,
+    ) -> Result<(), FirstPassError> {
         self.push_to_current_frame(PartialInstruction::Continue(ld.loop_id));
         Ok(())
     }
 
-    fn br(&mut self, _id: NodeIndex, ld: &LoopData) -> Result<(), FirstPassError> {
+    fn br(
+        &mut self,
+        _id: NodeIndex,
+        ld: &LoopData,
+    ) -> Result<(), FirstPassError> {
         self.push_to_current_frame(PartialInstruction::Break(ld.loop_id));
         Ok(())
     }
@@ -342,40 +382,57 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn local_var_decl(&mut self, _id: NodeIndex, decl: &LocalVarDeclData) -> Result<(), FirstPassError> {
-
-        let init_instructions = 
-            byte_expr::translate_expr(decl.decl.init_expr(), self.typing_context);
+    fn local_var_decl(
+        &mut self,
+        _id: NodeIndex,
+        decl: &LocalVarDeclData,
+    ) -> Result<(), FirstPassError> {
+        let init_instructions = byte_expr::translate_expr(
+            decl.decl.init_expr(),
+            self.typing_context,
+        );
         self.extend_current_frame(init_instructions.into_iter());
 
         let key = decl.decl.var_name().as_str().to_owned();
         let store_location = Location::Namespace(key);
-        let value = Arg::Location(Location::Tmp(byte_expr::tmp_id(decl.decl.init_expr().last())));
+        let value = Arg::Location(Location::Tmp(byte_expr::tmp_id(
+            decl.decl.init_expr().last(),
+        )));
         self.push_to_current_frame(Instruction::Store(store_location, value));
 
         Ok(())
     }
 
-    fn assignment(&mut self, _id: NodeIndex, assign: &AssignmentData) -> Result<(), FirstPassError> {
+    fn assignment(
+        &mut self,
+        _id: NodeIndex,
+        assign: &AssignmentData,
+    ) -> Result<(), FirstPassError> {
         let assignment = &assign.assignment;
         let assignee = assignment.assignee();
 
         // Generate rhs tmps
-        let value_tmps = 
+        let value_tmps =
             byte_expr::translate_expr(assignment.value(), self.typing_context);
-        let value = Arg::Location(Location::Tmp(byte_expr::tmp_id(assignment.value().last())));
+        let value = Arg::Location(Location::Tmp(byte_expr::tmp_id(
+            assignment.value().last(),
+        )));
 
         // Create location to store rhs value
         let internal_path = assignee.path();
 
         // Generate temporaries for root indexing expr
-        let mut access_tmps = internal_path.root_indexing_expr()
-            .map(|index_expr| byte_expr::translate_expr(index_expr, self.typing_context))
+        let mut access_tmps = internal_path
+            .root_indexing_expr()
+            .map(|index_expr| {
+                byte_expr::translate_expr(index_expr, self.typing_context)
+            })
             .unwrap_or(Vec::new());
 
-        let assign_root_var = 
+        let assign_root_var =
             internal_path.root_name().data().as_str().to_owned();
-        let assign_root_indexing_expr = internal_path.root_indexing_expr()
+        let assign_root_indexing_expr = internal_path
+            .root_indexing_expr()
             .map(|index_expr| byte_expr::tmp_id(index_expr.last()));
         let path: Vec<_> = internal_path
             .path()
@@ -383,14 +440,17 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
             .map(|path_segment| {
                 match path_segment {
                     PathSegment::Ident(ref field) => {
-                        super::byte_code::FieldAccess::Field(field.name().to_string())
+                        super::byte_code::FieldAccess::Field(
+                            field.name().to_string(),
+                        )
                     }
 
                     PathSegment::Indexing(ref field, ref index_expr) => {
                         // Generate temporaries for indexing expr
-                        access_tmps.extend(
-                            byte_expr::translate_expr(index_expr, self.typing_context)
-                        );
+                        access_tmps.extend(byte_expr::translate_expr(
+                            index_expr,
+                            self.typing_context,
+                        ));
 
                         super::byte_code::FieldAccess::FieldIndex {
                             field: field.name().to_string(),
@@ -398,18 +458,20 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
                         }
                     }
                 }
-            }).collect();
+            })
+            .collect();
 
         // If assignment has field accesses or indexing, location is Location::Compound
-        let assign_location = if path.len() > 0 || assign_root_indexing_expr.is_some() {
-            Location::Compound {
-                root: assign_root_var,
-                root_index: assign_root_indexing_expr,
-                path: path,
-            }
-        } else {
-            Location::Namespace(assign_root_var)
-        };
+        let assign_location =
+            if path.len() > 0 || assign_root_indexing_expr.is_some() {
+                Location::Compound {
+                    root: assign_root_var,
+                    root_index: assign_root_indexing_expr,
+                    path: path,
+                }
+            } else {
+                Location::Namespace(assign_root_var)
+            };
 
         // Emit access expressions before evaluating the assignment
         // Emit storage instruction last
@@ -419,27 +481,37 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn expr(&mut self, _id: NodeIndex, expr: &ExprData) -> Result<(), FirstPassError> {
-        let expr_instructions = 
+    fn expr(
+        &mut self,
+        _id: NodeIndex,
+        expr: &ExprData,
+    ) -> Result<(), FirstPassError> {
+        let expr_instructions =
             byte_expr::translate_expr(&expr.expr, self.typing_context);
         self.extend_current_frame(expr_instructions.into_iter());
         Ok(())
     }
 
-    fn ret(&mut self, _id: NodeIndex, rdata: &ReturnData) -> Result<(), FirstPassError> {
+    fn ret(
+        &mut self,
+        _id: NodeIndex,
+        rdata: &ReturnData,
+    ) -> Result<(), FirstPassError> {
         if let Some(ref return_expr) = rdata.expr {
             // Return expression
 
             // Append return expression instructions to current frame
-            let return_instructions = 
+            let return_instructions =
                 byte_expr::translate_expr(return_expr, self.typing_context);
             self.extend_current_frame(return_instructions.into_iter());
 
             // Append return instruction
             let return_value = byte_expr::tmp_id(return_expr.last());
-            let return_value_location = Arg::Location(Location::Tmp(return_value));
-            self.push_to_current_frame(Instruction::Return(Some(return_value_location)));
-
+            let return_value_location =
+                Arg::Location(Location::Tmp(return_value));
+            self.push_to_current_frame(Instruction::Return(Some(
+                return_value_location,
+            )));
         } else {
             // No return expression
             self.push_to_current_frame(Instruction::Return(None));
@@ -447,32 +519,43 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn loop_start_true_path(&mut self, _id: NodeIndex) -> Result<(), FirstPassError> {
+    fn loop_start_true_path(
+        &mut self,
+        _id: NodeIndex,
+    ) -> Result<(), FirstPassError> {
         Ok(())
     }
 
-    fn loop_end_true_path(&mut self, _id: NodeIndex) -> Result<(), FirstPassError> {
+    fn loop_end_true_path(
+        &mut self,
+        _id: NodeIndex,
+    ) -> Result<(), FirstPassError> {
         Ok(())
     }
 
-    fn branch_split(&mut self, _id: NodeIndex, b: &BranchingData, condition: &ExprData) 
-        -> Result<(), FirstPassError> {
+    fn branch_split(
+        &mut self,
+        _id: NodeIndex,
+        b: &BranchingData,
+        condition: &ExprData,
+    ) -> Result<(), FirstPassError> {
         // Mark in the current frame that there should be a branch with Branch(#) inserted here
         self.push_to_current_frame(PartialInstruction::Branch(b.branch_id));
 
         // Setup branch frame
         self.new_branch_frame(b.branch_id);
 
-        let condition_instructions = 
+        let condition_instructions =
             byte_expr::translate_expr(&condition.expr, self.typing_context)
-            .into_iter()
-            .map(|instr| PartialInstruction::Instruction(instr));
+                .into_iter()
+                .map(|instr| PartialInstruction::Instruction(instr));
 
         let frame = self.get_branch_frame_mut(b.branch_id);
         frame.set_condition(condition_instructions);
-        let result_location = Arg::Location(Location::Tmp(byte_expr::tmp_id(condition.expr.last())));
+        let result_location = Arg::Location(Location::Tmp(byte_expr::tmp_id(
+            condition.expr.last(),
+        )));
         frame.set_result_location(result_location);
-
 
         // Change the current state
         self.push_state(State::Branching(b.branch_id));
@@ -480,7 +563,11 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn branch_merge(&mut self, _id: NodeIndex, b: &BranchingData) -> Result<(), FirstPassError> {
+    fn branch_merge(
+        &mut self,
+        _id: NodeIndex,
+        b: &BranchingData,
+    ) -> Result<(), FirstPassError> {
         // Exiting a branch
 
         // Change the state to old state
@@ -493,21 +580,31 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn branch_start_true_path(&mut self, _id: NodeIndex) -> Result<(), FirstPassError> {
+    fn branch_start_true_path(
+        &mut self,
+        _id: NodeIndex,
+    ) -> Result<(), FirstPassError> {
         // Make a new frame for the true body
         self.new_frame();
 
         Ok(())
     }
 
-    fn branch_start_false_path(&mut self, _id: NodeIndex) -> Result<(), FirstPassError> {
+    fn branch_start_false_path(
+        &mut self,
+        _id: NodeIndex,
+    ) -> Result<(), FirstPassError> {
         // Make a new frame for the false body
         self.new_frame();
-        
+
         Ok(())
     }
 
-    fn branch_end_true_path(&mut self, _id: NodeIndex, _b: &BranchingData) -> Result<(), FirstPassError> {
+    fn branch_end_true_path(
+        &mut self,
+        _id: NodeIndex,
+        _b: &BranchingData,
+    ) -> Result<(), FirstPassError> {
         // Pop the current frame as the body of the true path
         let true_instructions = self.pop_current_frame();
 
@@ -515,7 +612,10 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         let branch_id = match state {
             State::Branching(id) => id,
 
-            _state => panic!("branch_end_true_path() encountered invalid state: {:?}", self.states),
+            _state => panic!(
+                "branch_end_true_path() encountered invalid state: {:?}",
+                self.states
+            ),
         };
         // Set the true path in the frame
         let frame = self.get_branch_frame_mut(branch_id);
@@ -524,7 +624,11 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         Ok(())
     }
 
-    fn branch_end_false_path(&mut self, _id: NodeIndex, _b: &BranchingData) -> Result<(), FirstPassError> {
+    fn branch_end_false_path(
+        &mut self,
+        _id: NodeIndex,
+        _b: &BranchingData,
+    ) -> Result<(), FirstPassError> {
         // Pop the current frame as the body of the false path
         let false_instructions = self.pop_current_frame();
 
@@ -532,7 +636,10 @@ impl<'a> Passenger<FirstPassError> for FirstPass<'a> {
         let branch_id = match state {
             State::Branching(id) => id,
 
-            _state => panic!("branch_end_true_path() encountered invalid state: {:?}", self.states),
+            _state => panic!(
+                "branch_end_true_path() encountered invalid state: {:?}",
+                self.states
+            ),
         };
 
         // Set the false path in the frame

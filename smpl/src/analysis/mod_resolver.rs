@@ -1,18 +1,20 @@
 use std::collections::HashMap;
 
-use crate::ast::{AstNode, BuiltinFunction as AstBuiltinFunction, Ident, UseDecl};
-use crate::ast::{DeclStmt, Function as AstFunction, Struct, Opaque};
+use crate::ast::{
+    AstNode, BuiltinFunction as AstBuiltinFunction, Ident, UseDecl,
+};
+use crate::ast::{DeclStmt, Function as AstFunction, Opaque, Struct};
 use crate::module::{ModuleSource, ParsedModule};
 
+use super::analysis_helpers;
 use super::control_flow::CFG;
 use super::error::AnalysisError;
 use super::metadata::*;
+use super::resolve_scope::ScopedData;
 use super::semantic_data::Module;
 use super::semantic_data::*;
-use super::resolve_scope::ScopedData;
 use super::type_checker::TypingContext;
 use super::type_cons_gen;
-use super::analysis_helpers;
 
 use crate::feature::*;
 
@@ -76,13 +78,14 @@ pub fn check_modules(
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_struct) in raw_mod.reserved_structs.iter() {
             let type_id = reserved_struct.0;
-            let (struct_type, field_ordering) = type_cons_gen::generate_struct_type_cons(
-                program,
-                type_id,
-                raw_program.scopes.get(mod_id).unwrap(),
-                &TypingContext::empty(),
-                reserved_struct.1.data(),
-            )?;
+            let (struct_type, field_ordering) =
+                type_cons_gen::generate_struct_type_cons(
+                    program,
+                    type_id,
+                    raw_program.scopes.get(mod_id).unwrap(),
+                    &TypingContext::empty(),
+                    reserved_struct.1.data(),
+                )?;
 
             program
                 .universe_mut()
@@ -92,9 +95,10 @@ pub fn check_modules(
             program
                 .metadata_mut()
                 .insert_field_ordering(type_id, field_ordering);
-            program
-                .metadata_mut()
-                .set_struct_annotations(type_id, &reserved_struct.1.data().annotations);
+            program.metadata_mut().set_struct_annotations(
+                type_id,
+                &reserved_struct.1.data().annotations,
+            );
         }
 
         for (_, reserved_opaque) in raw_mod.reserved_opaque.iter() {
@@ -119,7 +123,7 @@ pub fn check_modules(
             let fn_decl = reserved_fn.1.data();
             let fn_name = fn_decl.name.data();
             // TODO: Store new function scope storing the type parameters
-            
+
             let (universe, metadata, _) = program.analysis_context();
 
             let fn_type_cons = type_cons_gen::generate_fn_type_cons(
@@ -136,7 +140,8 @@ pub fn check_modules(
                 raw_program.scopes.get(mod_id).unwrap(),
                 &TypingContext::empty(),
                 &fn_type_cons,
-                reserved_fn.1.data())?;
+                reserved_fn.1.data(),
+            )?;
 
             let cfg = CFG::generate(
                 program.universe_mut(),
@@ -146,11 +151,16 @@ pub fn check_modules(
             )?;
 
             // TODO: Insert fn typing context
-            let fn_type_id = program.universe_mut().insert_type_cons(fn_type_cons);
+            let fn_type_id =
+                program.universe_mut().insert_type_cons(fn_type_cons);
 
-            program
-                .universe_mut()
-                .insert_fn(fn_id, fn_name.clone(), fn_type_id, analysis_context, cfg);
+            program.universe_mut().insert_fn(
+                fn_id,
+                fn_name.clone(),
+                fn_type_id,
+                analysis_context,
+                cfg,
+            );
             program.metadata_mut().insert_module_fn(
                 mod_id.clone(),
                 fn_name.clone(),
@@ -178,7 +188,11 @@ pub fn check_modules(
 
             program.features_mut().add_feature(BUILTIN_FN);
 
-            program.universe_mut().insert_builtin_fn(fn_id, fn_name.clone(), fn_type_id);
+            program.universe_mut().insert_builtin_fn(
+                fn_id,
+                fn_name.clone(),
+                fn_type_id,
+            );
 
             program.metadata_mut().insert_builtin(fn_id);
             program.metadata_mut().insert_module_fn(
@@ -186,9 +200,10 @@ pub fn check_modules(
                 fn_name.clone(),
                 fn_id,
             );
-            program
-                .metadata_mut()
-                .set_fn_annotations(fn_id, &reserved_builtin.1.data().annotations);
+            program.metadata_mut().set_fn_annotations(
+                fn_id,
+                &reserved_builtin.1.data().annotations,
+            );
         }
     }
 
@@ -221,19 +236,27 @@ pub fn check_modules(
 
         // Insert module scope metadata
         let module_scope_meta = super::metadata::ModuleScope {
-            funcs: module_scope.all_fns().map(|(_, fn_id)| fn_id.clone()).collect(),
+            funcs: module_scope
+                .all_fns()
+                .map(|(_, fn_id)| fn_id.clone())
+                .collect(),
         };
         program
             .metadata_mut()
             .mod_metadata_mut()
-            .insert_module_scope(mod_id,module_scope_meta);
+            .insert_module_scope(mod_id, module_scope_meta);
 
         let dependencies = raw_program.dependencies.remove(&mod_id).unwrap();
 
-        let module = Module::new(module_scope, owned_structs, owned_fns, dependencies, mod_id);
+        let module = Module::new(
+            module_scope,
+            owned_structs,
+            owned_fns,
+            dependencies,
+            mod_id,
+        );
 
         program.universe_mut().map_module(mod_id, name, module);
-
     }
 
     Ok(())
@@ -307,12 +330,18 @@ fn map_usings(
 fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
     // TODO: Perform name collision check here?
     for (_ident, r) in raw.reserved_structs.iter() {
-        scope.insert_type_cons(r.1.data().name.data().clone().into(), r.0.clone());
+        scope.insert_type_cons(
+            r.1.data().name.data().clone().into(),
+            r.0.clone(),
+        );
     }
 
     // TODO: Perform name collision check here?
     for (_ident, r) in raw.reserved_opaque.iter() {
-        scope.insert_type_cons(r.1.data().name.data().clone().into(), r.0.clone());
+        scope.insert_type_cons(
+            r.1.data().name.data().clone().into(),
+            r.0.clone(),
+        );
     }
 
     for (_ident, r) in raw.reserved_fns.iter() {
@@ -327,14 +356,16 @@ fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
 fn raw_mod_data(
     program: &mut Program,
     modules: Vec<ParsedModule>,
-) -> Result<(HashMap<ModuleId, RawModData>, Vec<(ModuleId, ModuleSource)>), AnalysisError> {
+) -> Result<
+    (HashMap<ModuleId, RawModData>, Vec<(ModuleId, ModuleSource)>),
+    AnalysisError,
+> {
     use super::error::TopLevelError;
 
     let mut mod_map = HashMap::new();
     let mut source_map = Vec::new();
 
-    for module in modules { 
-
+    for module in modules {
         let mut opaque_reserve = HashMap::new();
         let mut struct_reserve = HashMap::new();
         let mut fn_reserve = HashMap::new();
@@ -346,31 +377,48 @@ fn raw_mod_data(
             match decl_stmt {
                 DeclStmt::Struct(d) => {
                     let name = d.data().name.data().clone();
-                    if struct_reserve.insert(
-                        name.clone(),
-                        ReservedStruct(program.universe_mut().new_type_id(), d),
-                    ).is_some() || opaque_reserve.contains_key(&name) {
+                    if struct_reserve
+                        .insert(
+                            name.clone(),
+                            ReservedStruct(
+                                program.universe_mut().new_type_id(),
+                                d,
+                            ),
+                        )
+                        .is_some()
+                        || opaque_reserve.contains_key(&name)
+                    {
                         return Err(TopLevelError::DuplicateTypes(name).into());
                     }
-
                 }
 
                 DeclStmt::Function(d) => {
                     let name = d.data().name.data().clone();
-                    if fn_reserve.insert(
-                        name.clone(),
-                        ReservedFn(program.universe_mut().new_fn_id(), d),
-                    ).is_some() || builtin_fn_reserve.contains_key(&name) {
+                    if fn_reserve
+                        .insert(
+                            name.clone(),
+                            ReservedFn(program.universe_mut().new_fn_id(), d),
+                        )
+                        .is_some()
+                        || builtin_fn_reserve.contains_key(&name)
+                    {
                         return Err(TopLevelError::DuplicateFns(name).into());
                     }
                 }
 
                 DeclStmt::BuiltinFunction(d) => {
                     let name = d.data().name.data().clone();
-                    if builtin_fn_reserve.insert(
-                        name.clone(),
-                        ReservedBuiltinFn(program.universe_mut().new_fn_id(), d),
-                    ).is_some() || fn_reserve.contains_key(&name) {
+                    if builtin_fn_reserve
+                        .insert(
+                            name.clone(),
+                            ReservedBuiltinFn(
+                                program.universe_mut().new_fn_id(),
+                                d,
+                            ),
+                        )
+                        .is_some()
+                        || fn_reserve.contains_key(&name)
+                    {
                         return Err(TopLevelError::DuplicateFns(name).into());
                     }
                 }
@@ -381,10 +429,17 @@ fn raw_mod_data(
 
                 DeclStmt::Opaque(o) => {
                     let name = o.data().name.data().clone();
-                    if opaque_reserve.insert(
-                        name.clone(),
-                        ReservedOpaque(program.universe_mut().new_type_id(), o)
-                    ).is_some() || struct_reserve.contains_key(&name) {
+                    if opaque_reserve
+                        .insert(
+                            name.clone(),
+                            ReservedOpaque(
+                                program.universe_mut().new_type_id(),
+                                o,
+                            ),
+                        )
+                        .is_some()
+                        || struct_reserve.contains_key(&name)
+                    {
                         return Err(TopLevelError::DuplicateTypes(name).into());
                     }
                 }

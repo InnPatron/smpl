@@ -6,26 +6,56 @@ use super::control_flow::*;
 pub trait Passenger<E> {
     fn start(&mut self, id: NodeIndex) -> Result<(), E>;
     fn end(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn loop_head(&mut self, id: NodeIndex, ld: &LoopData, expr: &ExprData) -> Result<(), E>;
+    fn loop_head(
+        &mut self,
+        id: NodeIndex,
+        ld: &LoopData,
+        expr: &ExprData,
+    ) -> Result<(), E>;
     fn loop_foot(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
     fn cont(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
     fn br(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
     fn enter_scope(&mut self, id: NodeIndex) -> Result<(), E>;
     fn exit_scope(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn local_var_decl(&mut self, id: NodeIndex, decl: &LocalVarDeclData) -> Result<(), E>;
-    fn assignment(&mut self, id: NodeIndex, assign: &AssignmentData) -> Result<(), E>;
+    fn local_var_decl(
+        &mut self,
+        id: NodeIndex,
+        decl: &LocalVarDeclData,
+    ) -> Result<(), E>;
+    fn assignment(
+        &mut self,
+        id: NodeIndex,
+        assign: &AssignmentData,
+    ) -> Result<(), E>;
     fn expr(&mut self, id: NodeIndex, expr: &ExprData) -> Result<(), E>;
     fn ret(&mut self, id: NodeIndex, rdata: &ReturnData) -> Result<(), E>;
 
     fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
 
-    fn branch_split(&mut self, id: NodeIndex, b: &BranchingData, e: &ExprData) -> Result<(), E>;
-    fn branch_merge(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E>;
+    fn branch_split(
+        &mut self,
+        id: NodeIndex,
+        b: &BranchingData,
+        e: &ExprData,
+    ) -> Result<(), E>;
+    fn branch_merge(
+        &mut self,
+        id: NodeIndex,
+        b: &BranchingData,
+    ) -> Result<(), E>;
     fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn branch_end_true_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E>;
-    fn branch_end_false_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E>;
+    fn branch_end_true_path(
+        &mut self,
+        id: NodeIndex,
+        b: &BranchingData,
+    ) -> Result<(), E>;
+    fn branch_end_false_path(
+        &mut self,
+        id: NodeIndex,
+        b: &BranchingData,
+    ) -> Result<(), E>;
 }
 
 pub struct Traverser<'a, 'b, E: 'b> {
@@ -35,7 +65,10 @@ pub struct Traverser<'a, 'b, E: 'b> {
 }
 
 impl<'a, 'b, E> Traverser<'a, 'b, E> {
-    pub fn new(graph: &'a CFG, passenger: &'b mut dyn Passenger<E>) -> Traverser<'a, 'b, E> {
+    pub fn new(
+        graph: &'a CFG,
+        passenger: &'b mut dyn Passenger<E>,
+    ) -> Traverser<'a, 'b, E> {
         Traverser {
             graph: graph,
             passenger: passenger,
@@ -61,7 +94,10 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
         Ok(())
     }
 
-    fn visit_node(&mut self, current: NodeIndex) -> Result<Option<NodeIndex>, E> {
+    fn visit_node(
+        &mut self,
+        current: NodeIndex,
+    ) -> Result<Option<NodeIndex>, E> {
         match *self.graph.node_weight(current) {
             Node::End => {
                 self.passenger.end(current)?;
@@ -74,9 +110,11 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
             }
 
             Node::BranchSplit(ref branch_data, ref expr_data) => {
-                self.passenger.branch_split(current, branch_data, expr_data)?;
+                self.passenger
+                    .branch_split(current, branch_data, expr_data)?;
 
-                let (true_path, false_path) = self.graph.after_conditional(current);
+                let (true_path, false_path) =
+                    self.graph.after_conditional(current);
 
                 self.passenger.branch_start_true_path(true_path)?;
 
@@ -87,8 +125,10 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 for _ in 0..self.node_count {
                     match *self.graph.node_weight(current_node) {
                         Node::BranchMerge(ref branch_data) => {
-                            self.passenger
-                                .branch_end_true_path(current_node, branch_data)?;
+                            self.passenger.branch_end_true_path(
+                                current_node,
+                                branch_data,
+                            )?;
                             merge = Some(current_node);
                             break;
                         }
@@ -114,9 +154,12 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                 for _ in 0..self.node_count {
                     match *self.graph.node_weight(current_node) {
                         Node::BranchMerge(ref branch_data) => {
+                            self.passenger.branch_end_false_path(
+                                current_node,
+                                branch_data,
+                            )?;
                             self.passenger
-                                .branch_end_false_path(current_node, branch_data)?;
-                            self.passenger.branch_merge(current_node, branch_data)?;
+                                .branch_merge(current_node, branch_data)?;
                             merge = Some(current_node);
                             break;
                         }
@@ -129,7 +172,6 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                         None => panic!(),
                     }
                 }
-
 
                 if merge.is_none() {
                     panic!("Traversed entire graph and did not find Condition::BranchMerge");
@@ -144,7 +186,8 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
 
             Node::LoopHead(ref branch_data, ref expr_data) => {
                 self.passenger.loop_head(current, branch_data, expr_data)?;
-                let (true_path, false_path) = self.graph.after_conditional(current);
+                let (true_path, false_path) =
+                    self.graph.after_conditional(current);
                 self.passenger.loop_start_true_path(true_path)?;
 
                 let mut current_node = true_path;
@@ -153,7 +196,8 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     match *self.graph.node_weight(current_node) {
                         Node::LoopFoot(ref loop_data) => {
                             self.passenger.loop_end_true_path(current_node)?;
-                            self.passenger.loop_foot(current_node, loop_data)?;
+                            self.passenger
+                                .loop_foot(current_node, loop_data)?;
                             found_foot = true;
                             break;
                         }
@@ -210,11 +254,11 @@ impl<'a, 'b, E> Traverser<'a, 'b, E> {
                     match *n {
                         BlockNode::LocalVarDecl(ref decl) => {
                             self.passenger.local_var_decl(current, decl)?;
-                        },
+                        }
 
                         BlockNode::Assignment(ref assign) => {
                             self.passenger.assignment(current, assign)?;
-                        },
+                        }
 
                         BlockNode::Expr(ref expr) => {
                             self.passenger.expr(current, expr)?;

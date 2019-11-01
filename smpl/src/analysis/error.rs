@@ -20,16 +20,13 @@ pub enum AnalysisError {
     Errors(Vec<AnalysisError>),
 }
 
-impl<T, I> From<T> for AnalysisError 
-    where T: std::iter::IntoIterator<Item=I>,
-          I: Into<AnalysisError> {
-    
+impl<T, I> From<T> for AnalysisError
+where
+    T: std::iter::IntoIterator<Item = I>,
+    I: Into<AnalysisError>,
+{
     fn from(t: T) -> AnalysisError {
-        AnalysisError::Errors(t
-            .into_iter()
-            .map(|i| i.into())
-            .collect()
-        )
+        AnalysisError::Errors(t.into_iter().map(|i| i.into()).collect())
     }
 }
 

@@ -2,20 +2,23 @@ use std::collections::HashMap;
 
 use petgraph::graph::NodeIndex;
 
-use crate::ast::{ AstNode, Ident, ModulePath as AstModulePath };
+use crate::ast::{AstNode, Ident, ModulePath as AstModulePath};
 
-use super::unique_linear_cfg_traversal::*;
 use super::control_data::*;
+use super::unique_linear_cfg_traversal::*;
 
-use super::semantic_data::{FnId, VarId, TypeVarId, TypeId, Universe, ModulePath, AnonymousFunction};
 use super::error::AnalysisError;
+use super::semantic_data::{
+    AnonymousFunction, FnId, ModulePath, TypeId, TypeVarId, Universe, VarId,
+};
 use super::typed_ast::*;
 
-
-pub fn resolve(universe: &mut Universe, fn_id: FnId) -> Result<(), AnalysisError> {
-
+pub fn resolve(
+    universe: &mut Universe,
+    fn_id: FnId,
+) -> Result<(), AnalysisError> {
     use super::semantic_data::Function;
-    
+
     let mut scope_resolver = ScopeResolver::new(universe, fn_id);
 
     let fn_to_resolve = universe.get_fn_mut(fn_id);
@@ -27,21 +30,19 @@ pub fn resolve(universe: &mut Universe, fn_id: FnId) -> Result<(), AnalysisError
             traverse(&mut *cfg_mut, &mut scope_resolver)
         }
 
-        Function::Anonymous(ref mut anon_fn) => {
-            match anon_fn {
-                AnonymousFunction::Reserved(..) => panic!("Anonymous function should be resolved"),
-                AnonymousFunction::Resolved {
-                    ref cfg, 
-                    ..
-                } => {
-                    let mut cfg_mut = cfg.borrow_mut();
-                    traverse(&mut *cfg_mut, &mut scope_resolver)
-                }
+        Function::Anonymous(ref mut anon_fn) => match anon_fn {
+            AnonymousFunction::Reserved(..) => {
+                panic!("Anonymous function should be resolved")
             }
+            AnonymousFunction::Resolved { ref cfg, .. } => {
+                let mut cfg_mut = cfg.borrow_mut();
+                traverse(&mut *cfg_mut, &mut scope_resolver)
+            }
+        },
 
+        Function::Builtin(..) => {
+            panic!("Unable to resolve scope of builtin functions")
         }
-
-        Function::Builtin(..) => panic!("Unable to resolve scope of builtin functions"),
     }
 }
 
@@ -50,15 +51,12 @@ struct ScopeResolver {
 }
 
 impl ScopeResolver {
-
-    // Formal parameters should already be in the function scope 
+    // Formal parameters should already be in the function scope
     //  (in generate_fn_type())
     pub fn new(universe: &Universe, fn_id: FnId) -> ScopeResolver {
-
         use super::semantic_data::Function;
 
         match universe.get_fn(fn_id) {
-
             Function::Builtin(_) => unimplemented!(),
             Function::Anonymous(anonymous_fn) => {
                 let fn_scope = match anonymous_fn {
@@ -69,9 +67,7 @@ impl ScopeResolver {
                     AnonymousFunction::Resolved {
                         ref analysis_context,
                         ..
-                    } => {
-                        analysis_context.fn_scope().clone()
-                    }
+                    } => analysis_context.fn_scope().clone(),
                 };
 
                 ScopeResolver {
@@ -80,21 +76,20 @@ impl ScopeResolver {
             }
 
             Function::SMPL(smpl_function) => ScopeResolver {
-                scopes: vec![smpl_function.analysis_context().fn_scope().clone()],
-            }
+                scopes: vec![smpl_function
+                    .analysis_context()
+                    .fn_scope()
+                    .clone()],
+            },
         }
     }
 
     fn current(&self) -> &ScopedData {
-        self.scopes
-            .last()
-            .expect("Should always have a scope")
+        self.scopes.last().expect("Should always have a scope")
     }
 
     fn current_mut(&mut self) -> &mut ScopedData {
-        self.scopes
-            .last_mut()
-            .expect("Should always have a scope")
+        self.scopes.last_mut().expect("Should always have a scope")
     }
 
     fn fork_current(&mut self) {
@@ -103,9 +98,7 @@ impl ScopeResolver {
     }
 
     fn pop_current(&mut self) -> ScopedData {
-        self.scopes
-            .pop()
-            .expect("Should always have a scope")
+        self.scopes.pop().expect("Should always have a scope")
     }
 }
 
@@ -120,14 +113,21 @@ impl UniquePassenger<E> for ScopeResolver {
         Ok(())
     }
 
-    fn loop_head(&mut self, _id: NodeIndex, _ld: &mut LoopData, expr: &mut ExprData) 
-        -> Result<(), E> {
-
+    fn loop_head(
+        &mut self,
+        _id: NodeIndex,
+        _ld: &mut LoopData,
+        expr: &mut ExprData,
+    ) -> Result<(), E> {
         resolve_expr_scope(&mut expr.expr, self.current())?;
         Ok(())
     }
 
-    fn loop_foot(&mut self, _id: NodeIndex, _ld: &mut LoopData) -> Result<(), E> {
+    fn loop_foot(
+        &mut self,
+        _id: NodeIndex,
+        _ld: &mut LoopData,
+    ) -> Result<(), E> {
         Ok(())
     }
 
@@ -149,20 +149,27 @@ impl UniquePassenger<E> for ScopeResolver {
         Ok(())
     }
 
-    fn local_var_decl(&mut self, _id: NodeIndex, decl: &mut LocalVarDeclData) -> Result<(), E> {
+    fn local_var_decl(
+        &mut self,
+        _id: NodeIndex,
+        decl: &mut LocalVarDeclData,
+    ) -> Result<(), E> {
         let var_decl = &mut decl.decl;
 
         resolve_expr_scope(var_decl.init_expr_mut(), self.current())?;
 
         let name = var_decl.var_name().clone();
         let var_id = var_decl.var_id();
-        self.current_mut()
-            .insert_var(name, var_id);
+        self.current_mut().insert_var(name, var_id);
 
         Ok(())
     }
 
-    fn assignment(&mut self, _id: NodeIndex, assign: &mut AssignmentData) -> Result<(), E> {
+    fn assignment(
+        &mut self,
+        _id: NodeIndex,
+        assign: &mut AssignmentData,
+    ) -> Result<(), E> {
         let assignment = &mut assign.assignment;
 
         let path = assignment.assignee_mut().path_mut();
@@ -192,7 +199,6 @@ impl UniquePassenger<E> for ScopeResolver {
     }
 
     fn ret(&mut self, _id: NodeIndex, rdata: &mut ReturnData) -> Result<(), E> {
-
         if let Some(ref mut return_data) = rdata.expr {
             resolve_expr_scope(return_data, self.current())?;
         }
@@ -207,13 +213,21 @@ impl UniquePassenger<E> for ScopeResolver {
         Ok(())
     }
 
-    fn branch_split(&mut self, _id: NodeIndex, _b: &mut BranchingData, e: &mut ExprData) 
-        -> Result<(), E> {
+    fn branch_split(
+        &mut self,
+        _id: NodeIndex,
+        _b: &mut BranchingData,
+        e: &mut ExprData,
+    ) -> Result<(), E> {
         resolve_expr_scope(&mut e.expr, self.current())?;
         Ok(())
     }
 
-    fn branch_merge(&mut self, _id: NodeIndex, _b: &mut BranchingData) -> Result<(), E> {
+    fn branch_merge(
+        &mut self,
+        _id: NodeIndex,
+        _b: &mut BranchingData,
+    ) -> Result<(), E> {
         Ok(())
     }
 
@@ -225,35 +239,47 @@ impl UniquePassenger<E> for ScopeResolver {
         Ok(())
     }
 
-    fn branch_end_true_path(&mut self, _id: NodeIndex, _b: &mut BranchingData) -> Result<(), E> {
+    fn branch_end_true_path(
+        &mut self,
+        _id: NodeIndex,
+        _b: &mut BranchingData,
+    ) -> Result<(), E> {
         Ok(())
     }
 
-    fn branch_end_false_path(&mut self, _id: NodeIndex, _b: &mut BranchingData) -> Result<(), E> {
+    fn branch_end_false_path(
+        &mut self,
+        _id: NodeIndex,
+        _b: &mut BranchingData,
+    ) -> Result<(), E> {
         Ok(())
     }
 }
 
-fn resolve_expr_scope(expr: &mut Expr, current_scope: &ScopedData) -> Result<(), AnalysisError> {
+fn resolve_expr_scope(
+    expr: &mut Expr,
+    current_scope: &ScopedData,
+) -> Result<(), AnalysisError> {
     for tmp_id in expr.execution_order() {
         let tmp = expr.get_tmp_mut(tmp_id);
         match tmp.value_mut().data_mut() {
-
             Value::Literal(ref mut _literal) => (),
 
             Value::StructInit(ref mut _init) => (),
 
             Value::AnonStructInit(ref mut _init) => (),
 
-            Value::Binding(ref mut var) => match current_scope.binding_info(var.ident())? {
-                BindingInfo::Var(var_id) => {
-                    var.set_id(var_id);
-                }
+            Value::Binding(ref mut var) => {
+                match current_scope.binding_info(var.ident())? {
+                    BindingInfo::Var(var_id) => {
+                        var.set_id(var_id);
+                    }
 
-                BindingInfo::Fn(fn_id) => {
-                    var.set_id(fn_id);
+                    BindingInfo::Fn(fn_id) => {
+                        var.set_id(fn_id);
+                    }
                 }
-            },
+            }
 
             // TODO: FieldID resolution depends on types
             Value::FieldAccess(ref mut field_access) => {
@@ -261,7 +287,7 @@ fn resolve_expr_scope(expr: &mut Expr, current_scope: &ScopedData) -> Result<(),
 
                 let var_id = current_scope.var_id(path.root_name())?;
                 path.set_root_var(var_id);
-            },
+            }
 
             Value::BinExpr(..) => (),
 
@@ -303,7 +329,6 @@ pub struct ScopedData {
 }
 
 impl ScopedData {
-
     pub fn new(type_cons_map: HashMap<ModulePath, TypeId>) -> ScopedData {
         ScopedData {
             type_cons_map: type_cons_map,
@@ -334,38 +359,52 @@ impl ScopedData {
         self.type_cons_map.get(path).map(|id| id.clone())
     }
 
-    pub fn insert_type_cons(&mut self, path: ModulePath, id: TypeId) -> Option<TypeId> {
+    pub fn insert_type_cons(
+        &mut self,
+        path: ModulePath,
+        id: TypeId,
+    ) -> Option<TypeId> {
         self.type_cons_map.insert(path, id)
     }
 
-    pub fn binding_info(&self, name: &AstNode<Ident>) -> Result<BindingInfo, AnalysisError> {
+    pub fn binding_info(
+        &self,
+        name: &AstNode<Ident>,
+    ) -> Result<BindingInfo, AnalysisError> {
         match self.var_map.get(name.data()) {
-            Some(v_id) => Ok(BindingInfo::Var(
-                v_id.clone(),
-            )),
+            Some(v_id) => Ok(BindingInfo::Var(v_id.clone())),
 
             None => {
                 let p = ModulePath(vec![name.data().clone()]);
                 self.fn_map
                     .get(&p)
                     .map(|f| BindingInfo::Fn(f.clone()))
-                    .ok_or(AnalysisError::UnknownBinding(name.data().clone(), name.span()))
+                    .ok_or(AnalysisError::UnknownBinding(
+                        name.data().clone(),
+                        name.span(),
+                    ))
             }
         }
     }
 
-    pub fn var_id(&self, name: &AstNode<Ident>) -> Result<VarId, AnalysisError> {
+    pub fn var_id(
+        &self,
+        name: &AstNode<Ident>,
+    ) -> Result<VarId, AnalysisError> {
         let var_id = self
             .var_map
             .get(name.data())
-            .ok_or(AnalysisError::UnknownBinding(name.data().clone(), name.span()))?
+            .ok_or(AnalysisError::UnknownBinding(
+                name.data().clone(),
+                name.span(),
+            ))?
             .clone();
 
         Ok(var_id)
     }
 
     pub fn insert_var(&mut self, name: Ident, id: VarId) -> Option<VarId> {
-        self.var_map.insert(name, id) 
+        self.var_map.insert(name, id)
     }
 
     pub fn get_fn(&self, path: &AstModulePath) -> Result<FnId, AnalysisError> {
@@ -375,35 +414,26 @@ impl ScopedData {
             .ok_or(AnalysisError::UnknownFn(path.clone()))
     }
 
-    pub fn insert_type_var(&mut self, 
-                             ident: Ident, 
-                             id: TypeVarId) -> bool {
+    pub fn insert_type_var(&mut self, ident: Ident, id: TypeVarId) -> bool {
         self.type_param_map.insert(ident, id).is_some()
     }
 
     pub fn type_var<'a, 'b>(&'a self, ident: &'b Ident) -> Option<TypeVarId> {
-        self.type_param_map
-            .get(ident)
-            .map(|id| id.clone())
+        self.type_param_map.get(ident).map(|id| id.clone())
     }
 
-    pub fn type_vars<'a>(&'a self) 
-        -> impl Iterator<Item = TypeVarId> + 'a {
-        self.type_param_map
-            .values()
-            .map(|id| id.clone())
+    pub fn type_vars<'a>(&'a self) -> impl Iterator<Item = TypeVarId> + 'a {
+        self.type_param_map.values().map(|id| id.clone())
     }
 
-    pub fn all_types(&self) -> impl Iterator<Item=(&ModulePath, TypeId)> {
+    pub fn all_types(&self) -> impl Iterator<Item = (&ModulePath, TypeId)> {
         self.type_cons_map
             .iter()
             .map(|(path, id)| (path, id.clone()))
     }
 
-    pub fn all_fns(&self) -> impl Iterator<Item=(&ModulePath, FnId)> {
-        self.fn_map
-            .iter()
-            .map(|(path, id)| (path, id.clone()))
+    pub fn all_fns(&self) -> impl Iterator<Item = (&ModulePath, FnId)> {
+        self.fn_map.iter().map(|(path, id)| (path, id.clone()))
     }
 }
 
@@ -411,5 +441,3 @@ pub enum BindingInfo {
     Var(VarId),
     Fn(FnId),
 }
-
-

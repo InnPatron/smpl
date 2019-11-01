@@ -9,37 +9,33 @@ use std::fmt;
 use crate::program::CompilableFn;
 
 pub use byte_code::{
-    Instruction,
-    JumpTarget,
-    RelJumpTarget,
-    Location,
-    FieldAccess,
-    Arg,
-    InstructionPointerType,
+    Arg, FieldAccess, Instruction, InstructionPointerType, JumpTarget,
+    Location, RelJumpTarget,
 };
 
-pub use byte_expr::{
-    fn_id as to_fn_id,
-};
+pub use byte_expr::fn_id as to_fn_id;
 
 use crate::analysis::Traverser;
 
-#[derive(Debug, Clone)] 
+#[derive(Debug, Clone)]
 pub struct ByteCodeFunction {
     instructions: Vec<Instruction>,
     validated_flag: bool,
 }
 
 impl ByteCodeFunction {
-
-    pub fn new_not_validated(instructions: Vec<Instruction>) -> ByteCodeFunction {
+    pub fn new_not_validated(
+        instructions: Vec<Instruction>,
+    ) -> ByteCodeFunction {
         ByteCodeFunction {
             instructions: instructions,
             validated_flag: false,
         }
     }
 
-    pub fn new_pre_validated(instructions: Vec<Instruction>) -> ByteCodeFunction {
+    pub fn new_pre_validated(
+        instructions: Vec<Instruction>,
+    ) -> ByteCodeFunction {
         ByteCodeFunction {
             instructions: instructions,
             validated_flag: true,
@@ -72,7 +68,6 @@ impl fmt::Display for ByteCodeFunction {
 
 /// Takes a CFG and transforms it into valid and executable bytecode
 pub fn compile_to_byte_code(function: &CompilableFn) -> ByteCodeFunction {
-
     let cfg = function.cfg();
     let cfg = cfg.borrow();
     let typing_context = function.typing_context();
@@ -93,9 +88,7 @@ pub fn compile_to_byte_code(function: &CompilableFn) -> ByteCodeFunction {
 
     // Takes the data from the second pass and resolves break/continue statements
     //   to jump to the correct index
-    let third_pass = third_pass::ThirdPass::new(
-        second_pass.pass()
-    );
+    let third_pass = third_pass::ThirdPass::new(second_pass.pass());
 
     ByteCodeFunction::new_pre_validated(third_pass.pass())
 }

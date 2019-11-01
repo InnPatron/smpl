@@ -9,7 +9,12 @@ use super::control_flow::*;
 pub trait BlockyPassenger<E> {
     fn start(&mut self, id: NodeIndex) -> Result<(), E>;
     fn end(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn loop_head(&mut self, id: NodeIndex, ld: &LoopData, expr: &ExprData) -> Result<(), E>;
+    fn loop_head(
+        &mut self,
+        id: NodeIndex,
+        ld: &LoopData,
+        expr: &ExprData,
+    ) -> Result<(), E>;
     fn loop_foot(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
     fn cont(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
     fn br(&mut self, id: NodeIndex, ld: &LoopData) -> Result<(), E>;
@@ -17,18 +22,35 @@ pub trait BlockyPassenger<E> {
     fn exit_scope(&mut self, id: NodeIndex) -> Result<(), E>;
 
     fn block(&mut self, id: NodeIndex) -> Result<(), E>;
-    
+
     fn ret(&mut self, id: NodeIndex, rdata: &ReturnData) -> Result<(), E>;
 
     fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
 
-    fn branch_split(&mut self, id: NodeIndex, b: &BranchingData, e: &ExprData) -> Result<(), E>;
-    fn branch_merge(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E>;
+    fn branch_split(
+        &mut self,
+        id: NodeIndex,
+        b: &BranchingData,
+        e: &ExprData,
+    ) -> Result<(), E>;
+    fn branch_merge(
+        &mut self,
+        id: NodeIndex,
+        b: &BranchingData,
+    ) -> Result<(), E>;
     fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn branch_end_true_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E>;
-    fn branch_end_false_path(&mut self, id: NodeIndex, b: &BranchingData) -> Result<(), E>;
+    fn branch_end_true_path(
+        &mut self,
+        id: NodeIndex,
+        b: &BranchingData,
+    ) -> Result<(), E>;
+    fn branch_end_false_path(
+        &mut self,
+        id: NodeIndex,
+        b: &BranchingData,
+    ) -> Result<(), E>;
 }
 
 pub struct BlockyTraverser<'a, 'b, E: 'b> {
@@ -38,7 +60,10 @@ pub struct BlockyTraverser<'a, 'b, E: 'b> {
 }
 
 impl<'a, 'b, E> BlockyTraverser<'a, 'b, E> {
-    pub fn new(graph: &'a CFG, passenger: &'b mut dyn BlockyPassenger<E>) -> BlockyTraverser<'a, 'b, E> {
+    pub fn new(
+        graph: &'a CFG,
+        passenger: &'b mut dyn BlockyPassenger<E>,
+    ) -> BlockyTraverser<'a, 'b, E> {
         BlockyTraverser {
             graph: graph,
             passenger: passenger,
@@ -64,7 +89,10 @@ impl<'a, 'b, E> BlockyTraverser<'a, 'b, E> {
         Ok(())
     }
 
-    fn visit_node(&mut self, current: NodeIndex) -> Result<Option<NodeIndex>, E> {
+    fn visit_node(
+        &mut self,
+        current: NodeIndex,
+    ) -> Result<Option<NodeIndex>, E> {
         match *self.graph.node_weight(current) {
             Node::End => {
                 self.passenger.end(current)?;
@@ -77,9 +105,11 @@ impl<'a, 'b, E> BlockyTraverser<'a, 'b, E> {
             }
 
             Node::BranchSplit(ref branch_data, ref expr_data) => {
-                self.passenger.branch_split(current, branch_data, expr_data)?;
+                self.passenger
+                    .branch_split(current, branch_data, expr_data)?;
 
-                let (true_path, false_path) = self.graph.after_conditional(current);
+                let (true_path, false_path) =
+                    self.graph.after_conditional(current);
 
                 self.passenger.branch_start_true_path(true_path)?;
 
@@ -90,8 +120,10 @@ impl<'a, 'b, E> BlockyTraverser<'a, 'b, E> {
                 for _ in 0..self.node_count {
                     match *self.graph.node_weight(current_node) {
                         Node::BranchMerge(ref branch_data) => {
-                            self.passenger
-                                .branch_end_true_path(current_node, branch_data)?;
+                            self.passenger.branch_end_true_path(
+                                current_node,
+                                branch_data,
+                            )?;
                             merge = Some(current_node);
                             break;
                         }
@@ -117,8 +149,10 @@ impl<'a, 'b, E> BlockyTraverser<'a, 'b, E> {
                 for _ in 0..self.node_count {
                     match *self.graph.node_weight(current_node) {
                         Node::BranchMerge(ref branch_data) => {
-                            self.passenger
-                                .branch_end_false_path(current_node, branch_data)?;
+                            self.passenger.branch_end_false_path(
+                                current_node,
+                                branch_data,
+                            )?;
                             merge = Some(current_node);
                             break;
                         }
@@ -147,7 +181,8 @@ impl<'a, 'b, E> BlockyTraverser<'a, 'b, E> {
             Node::LoopHead(ref branch_data, ref expr_data) => {
                 self.passenger.loop_head(current, branch_data, expr_data)?;
 
-                let (true_path, false_path) = self.graph.after_conditional(current);
+                let (true_path, false_path) =
+                    self.graph.after_conditional(current);
                 self.passenger.loop_start_true_path(true_path)?;
 
                 let mut current_node = true_path;

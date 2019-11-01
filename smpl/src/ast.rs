@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
+use std::collections::HashMap;
 use std::fmt;
 use std::slice::Iter;
-use std::collections::HashMap;
 
 use crate::span::Span;
 
@@ -427,7 +427,9 @@ impl<'a> From<&'a TypedPath> for TypedPathRef<'a> {
     fn from(f: &'a TypedPath) -> TypedPathRef<'a> {
         match *f {
             TypedPath::NillArity(ref mp) => TypedPathRef::NillArity(mp),
-            TypedPath::Parameterized(ref mp, ref anno) => TypedPathRef::Parameterized(mp, anno),
+            TypedPath::Parameterized(ref mp, ref anno) => {
+                TypedPathRef::Parameterized(mp, anno)
+            }
         }
     }
 }
@@ -436,9 +438,10 @@ impl<'a> From<TypedPathRef<'a>> for TypedPath {
     fn from(f: TypedPathRef<'a>) -> TypedPath {
         match f {
             TypedPathRef::NillArity(mp) => TypedPath::NillArity(mp.clone()),
-            TypedPathRef::Parameterized(mp, anno) => {
-                TypedPath::Parameterized(mp.clone(), anno.iter().map(|a| a.clone()).collect())
-            }
+            TypedPathRef::Parameterized(mp, anno) => TypedPath::Parameterized(
+                mp.clone(),
+                anno.iter().map(|a| a.clone()).collect(),
+            ),
         }
     }
 }
@@ -459,13 +462,19 @@ impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
     fn from(t: &TypeAnnotation) -> TypeAnnotationRef {
         match t {
             &TypeAnnotation::Path(ref p) => TypeAnnotationRef::Path(p.into()),
-            &TypeAnnotation::Array(ref t, ref s) => TypeAnnotationRef::Array(t, s),
-            &TypeAnnotation::FnType(ref tp, ref p, ref r) => TypeAnnotationRef::FnType(
-                tp.as_ref(),
-                p.as_ref().map(|v| v.as_slice()),
-                r.as_ref().map(|r| r.borrow()),
-            ),
-            &TypeAnnotation::WidthConstraint(ref w) => TypeAnnotationRef::WidthConstraint(w.as_slice()),
+            &TypeAnnotation::Array(ref t, ref s) => {
+                TypeAnnotationRef::Array(t, s)
+            }
+            &TypeAnnotation::FnType(ref tp, ref p, ref r) => {
+                TypeAnnotationRef::FnType(
+                    tp.as_ref(),
+                    p.as_ref().map(|v| v.as_slice()),
+                    r.as_ref().map(|r| r.borrow()),
+                )
+            }
+            &TypeAnnotation::WidthConstraint(ref w) => {
+                TypeAnnotationRef::WidthConstraint(w.as_slice())
+            }
         }
     }
 }
@@ -504,13 +513,19 @@ impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
     fn from(tr: TypeAnnotationRef) -> TypeAnnotation {
         match tr {
             TypeAnnotationRef::Path(p) => TypeAnnotation::Path(p.into()),
-            TypeAnnotationRef::Array(t, s) => TypeAnnotation::Array(Box::new(t.clone()), s.clone()),
+            TypeAnnotationRef::Array(t, s) => {
+                TypeAnnotation::Array(Box::new(t.clone()), s.clone())
+            }
             TypeAnnotationRef::FnType(tp, p, r) => TypeAnnotation::FnType(
                 tp.map(|tp| tp.clone()),
-                p.map(|params| params.iter().map(|param| param.clone()).collect()),
+                p.map(|params| {
+                    params.iter().map(|param| param.clone()).collect()
+                }),
                 r.map(|r| Box::new(r.clone())),
             ),
-            TypeAnnotationRef::WidthConstraint(w) => TypeAnnotation::WidthConstraint(w.to_vec()),
+            TypeAnnotationRef::WidthConstraint(w) => {
+                TypeAnnotation::WidthConstraint(w.to_vec())
+            }
         }
     }
 }
@@ -526,10 +541,11 @@ impl ModulePath {
 
 impl fmt::Display for ModulePath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let buffer = self.0.iter().fold(String::new(), |mut buffer, ref item| {
-            buffer.push_str(&item.data().0);
-            buffer
-        });
+        let buffer =
+            self.0.iter().fold(String::new(), |mut buffer, ref item| {
+                buffer.push_str(&item.data().0);
+                buffer
+            });
         write!(f, "{}", buffer)
     }
 }

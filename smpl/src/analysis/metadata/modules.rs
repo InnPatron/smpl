@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-use crate::analysis::semantic_data::{ FnId, ModuleId };
+use crate::analysis::semantic_data::{FnId, ModuleId};
 use crate::ast::Ident;
 use crate::module::ModuleSource;
+use std::collections::HashMap;
 
 #[derive(Clone, Debug)]
 pub struct ModuleMetadata {
@@ -21,10 +21,15 @@ impl ModuleMetadata {
         }
     }
 
-    pub(crate) fn insert_mod_source(&mut self, id: ModuleId, source: ModuleSource) {
-        map_unique_set!(self.module_sources, 
-            id, 
-            source, 
+    pub(crate) fn insert_mod_source(
+        &mut self,
+        id: ModuleId,
+        source: ModuleSource,
+    ) {
+        map_unique_set!(
+            self.module_sources,
+            id,
+            source,
             format!("Modules should only have one source")
         );
     }
@@ -36,21 +41,23 @@ impl ModuleMetadata {
     }
 
     pub(crate) fn map_module(&mut self, name: Ident, mod_id: ModuleId) {
-        map_unique_set!(self.module_map, 
-            name.clone(), 
-            mod_id, 
+        map_unique_set!(
+            self.module_map,
+            name.clone(),
+            mod_id,
             format!("Overriding {:?}", mod_id)
         );
 
-        map_unique_set!(self.module_reverse_map, 
-            mod_id, 
-            name.to_string(), 
+        map_unique_set!(
+            self.module_reverse_map,
+            mod_id,
+            name.to_string(),
             format!("Overriding {:?}", mod_id)
         );
     }
 
     pub fn get_module<T: Into<Ident>>(&self, name: T) -> Option<ModuleId> {
-       self.module_map.get(&name.into()).map(|id| id.clone())
+        self.module_map.get(&name.into()).map(|id| id.clone())
     }
 
     pub fn get_module_by_id(&self, id: ModuleId) -> Option<String> {
@@ -58,12 +65,17 @@ impl ModuleMetadata {
             .get(&id)
             .clone()
             .map(|name| name.to_string())
-    } 
+    }
 
-    pub(crate) fn insert_module_scope(&mut self, id: ModuleId, scope: ModuleScope) {
-        map_unique_set!(self.module_scopes, 
-            id, 
-            scope, 
+    pub(crate) fn insert_module_scope(
+        &mut self,
+        id: ModuleId,
+        scope: ModuleScope,
+    ) {
+        map_unique_set!(
+            self.module_scopes,
+            id,
+            scope,
             format!("Overriding module scope for {:?}", id)
         );
     }

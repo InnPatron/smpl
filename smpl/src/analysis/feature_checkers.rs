@@ -19,7 +19,11 @@ pub fn var_type_scanner(_u: &Universe, _f: &mut PresentFeatures, _t: TypeId) {
     */
 }
 
-pub fn fn_sig_type_scanner(_u: &Universe, _f: &mut PresentFeatures, _t: TypeId) {
+pub fn fn_sig_type_scanner(
+    _u: &Universe,
+    _f: &mut PresentFeatures,
+    _t: TypeId,
+) {
     // TODO: fn_sig_type_scanner
     unimplemented!();
     /*

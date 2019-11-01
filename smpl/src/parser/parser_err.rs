@@ -51,7 +51,10 @@ impl Fail for ParserError {
 }
 
 impl ParserError {
-    pub fn new(kind: ParserErrorKind, location: Option<LocationSpan>) -> ParserError {
+    pub fn new(
+        kind: ParserErrorKind,
+        location: Option<LocationSpan>,
+    ) -> ParserError {
         ParserError {
             kind: kind,
             location: location,

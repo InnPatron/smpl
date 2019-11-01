@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::analysis::*;
-use super::second_pass::PartialInstruction as PartialInstructionSP;
 use super::byte_code::*;
+use super::second_pass::PartialInstruction as PartialInstructionSP;
+use crate::analysis::*;
 
 pub(super) struct ThirdPass {
     main_body: Vec<PartialInstructionSP>,
@@ -32,9 +32,11 @@ impl ThirdPass {
                 }
 
                 PartialInstructionSP::Continue(loop_id) => {
-                    let loop_begin_index = self.loop_begin_indexes
-                        .get(&loop_id)
-                        .expect(&format!("Could not find start index for loop id: {:?}", loop_id));
+                    let loop_begin_index =
+                        self.loop_begin_indexes.get(&loop_id).expect(&format!(
+                            "Could not find start index for loop id: {:?}",
+                            loop_id
+                        ));
 
                     if *loop_begin_index > index {
                         panic!("Attempting to continue to a loop start {} after the continue instruction {}",
@@ -44,14 +46,18 @@ impl ThirdPass {
                     }
 
                     let rel_jump_target = (index - loop_begin_index) as i64;
-                    let instr = Instruction::RelJump(RelJumpTarget::new(rel_jump_target));
+                    let instr = Instruction::RelJump(RelJumpTarget::new(
+                        rel_jump_target,
+                    ));
                     instructions.push(instr);
                 }
 
                 PartialInstructionSP::Break(loop_id) => {
-                    let loop_end_index = self.loop_begin_indexes
-                        .get(&loop_id)
-                        .expect(&format!("Could not find end index for loop id: {:?}", loop_id));
+                    let loop_end_index =
+                        self.loop_begin_indexes.get(&loop_id).expect(&format!(
+                            "Could not find end index for loop id: {:?}",
+                            loop_id
+                        ));
 
                     if *loop_end_index < index {
                         panic!("Attempting to break to a loop end {} before the continue instruction {}",
@@ -61,11 +67,14 @@ impl ThirdPass {
                     }
 
                     let rel_jump_target = (loop_end_index - index) as i64;
-                    let instr = Instruction::RelJump(RelJumpTarget::new(rel_jump_target));
+                    let instr = Instruction::RelJump(RelJumpTarget::new(
+                        rel_jump_target,
+                    ));
                     instructions.push(instr);
                 }
 
-                PartialInstructionSP::LoopBegin(..) | PartialInstructionSP::LoopEnd(..) => (),
+                PartialInstructionSP::LoopBegin(..)
+                | PartialInstructionSP::LoopEnd(..) => (),
             }
         }
 
@@ -78,30 +87,33 @@ impl ThirdPass {
                 PartialInstructionSP::Instruction(..) => (),
 
                 PartialInstructionSP::LoopBegin(loop_id) => {
-                    if self.loop_begin_indexes
+                    if self
+                        .loop_begin_indexes
                         .insert(loop_id.clone(), index)
-                        .is_some() {
-                    
-                        panic!("Found duplicate of loop id begin ({:?}) at {}",
-                            loop_id,
-                            index
+                        .is_some()
+                    {
+                        panic!(
+                            "Found duplicate of loop id begin ({:?}) at {}",
+                            loop_id, index
                         );
                     }
                 }
 
                 PartialInstructionSP::LoopEnd(loop_id) => {
-                    if self.loop_end_indexes
+                    if self
+                        .loop_end_indexes
                         .insert(loop_id.clone(), index)
-                        .is_some() {
-                    
-                        panic!("Found duplicate of loop id end ({:?}) at {}",
-                            loop_id,
-                            index
+                        .is_some()
+                    {
+                        panic!(
+                            "Found duplicate of loop id end ({:?}) at {}",
+                            loop_id, index
                         );
                     }
                 }
 
-                PartialInstructionSP::Continue(..) | PartialInstructionSP::Break(..) => (),
+                PartialInstructionSP::Continue(..)
+                | PartialInstructionSP::Break(..) => (),
             }
         }
     }

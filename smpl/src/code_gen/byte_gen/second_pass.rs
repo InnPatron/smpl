@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 
-use crate::analysis::*;
-use super::first_pass::*;
-use super::first_pass::PartialInstruction as PartialInstructionFP;
 use super::byte_code::*;
+use super::first_pass::PartialInstruction as PartialInstructionFP;
+use super::first_pass::*;
+use crate::analysis::*;
 
 #[derive(Debug, Clone)]
 pub(super) enum PartialInstruction {
     Instruction(Instruction),
-    LoopBegin(LoopId),              // Marker instruction, points to before loop condition
-    LoopEnd(LoopId),                // Marker instruction, points to after looper instruction
+    LoopBegin(LoopId), // Marker instruction, points to before loop condition
+    LoopEnd(LoopId),   // Marker instruction, points to after looper instruction
     Continue(LoopId),
     Break(LoopId),
 }
@@ -27,10 +27,11 @@ pub(super) struct SecondPass {
 }
 
 impl SecondPass {
-    pub(super) fn new(main_body: Vec<PartialInstructionFP>,
-                loops: HashMap<LoopId, LoopFrame>,
-                branches: HashMap<BranchingId, BranchFrame>) -> SecondPass {
-
+    pub(super) fn new(
+        main_body: Vec<PartialInstructionFP>,
+        loops: HashMap<LoopId, LoopFrame>,
+        branches: HashMap<BranchingId, BranchFrame>,
+    ) -> SecondPass {
         SecondPass {
             main_body: main_body,
             loops: loops,
@@ -47,26 +48,29 @@ impl SecondPass {
         let mut instructions: Flattened = Flattened::new();
 
         for instr in partial_instrs {
-            match instr  {
+            match instr {
                 PartialInstructionFP::Instruction(ref instr) => {
                     instructions.push((*instr).clone().into());
                 }
 
                 PartialInstructionFP::Loop(ref loop_id) => {
-                    let loop_frame = self.loops
+                    let loop_frame = self
+                        .loops
                         .get(loop_id)
                         .expect(&format!("Could not find: {:?}", loop_id));
 
                     let result_arg = loop_frame.get_result_location();
 
-                    let mut condition = self.flatten(loop_frame.get_condition());
+                    let mut condition =
+                        self.flatten(loop_frame.get_condition());
                     let condition_len = condition.len();
 
                     let mut body = self.flatten(loop_frame.get_body());
                     let body_len = body.len();
 
                     // Append marker instruction for start of loop
-                    instructions.push(PartialInstruction::LoopBegin(loop_id.clone()));
+                    instructions
+                        .push(PartialInstruction::LoopBegin(loop_id.clone()));
 
                     // Append the condition instructions
                     instructions.append(&mut condition);
@@ -81,29 +85,31 @@ impl SecondPass {
                     // body-size + 2 to skip over the looper jump
                     let skip_loop_instr = Instruction::RelJumpNegateCondition(
                         RelJumpTarget::new(skip_loop_rel_target),
-                        result_arg.clone()
+                        result_arg.clone(),
                     );
                     instructions.push(skip_loop_instr.into());
 
                     // Append the body instructions
                     instructions.append(&mut body);
-                    
+
                     // Append the looper instruction
                     // Unconditionally jumps to start of condition instructions
                     // Loop skip instruction should jump to directly AFTER this instruction
-                    let looper_rel_target: i64 = 
+                    let looper_rel_target: i64 =
                         -((body_len as i64) + (condition_len as i64)) - 1;
-                    let loop_instr = Instruction::RelJump(
-                        RelJumpTarget::new(looper_rel_target)
-                    );
+                    let loop_instr = Instruction::RelJump(RelJumpTarget::new(
+                        looper_rel_target,
+                    ));
                     instructions.push(loop_instr.into());
 
                     // Append marker instruction for end of loop
-                    instructions.push(PartialInstruction::LoopEnd(loop_id.clone()));
+                    instructions
+                        .push(PartialInstruction::LoopEnd(loop_id.clone()));
                 }
 
                 PartialInstructionFP::Branch(branch_id) => {
-                    let branch_frame = self.branches
+                    let branch_frame = self
+                        .branches
                         .get(branch_id)
                         .expect(&format!("Missing: {:?}", branch_id));
 
@@ -127,13 +133,13 @@ impl SecondPass {
                         (false_branch_len as i64) + after_false_branch;
 
                     // Append instruction to jump to the succeed branch
-                    // Emit false branch first in order to chain any conditions 
+                    // Emit false branch first in order to chain any conditions
                     //   while minimizing the number of jump instructions
                     // +2 to go after false branch and true branch skip
                     let true_rel_jump_target: i64 = true_rel_jump_amount;
                     let true_rel_jump_instr = Instruction::RelJumpCondition(
                         RelJumpTarget::new(true_rel_jump_target),
-                        result_arg.clone()
+                        result_arg.clone(),
                     );
                     instructions.push(true_rel_jump_instr.into());
 
@@ -144,9 +150,9 @@ impl SecondPass {
                     // +1 to go to instruction just after the true branch
                     let after_true_branch = 1;
                     let true_skip_rel_jump_target: i64 =
-                        (true_branch_len as i64)  + after_true_branch;
+                        (true_branch_len as i64) + after_true_branch;
                     let true_skip_rel_jump_instr = Instruction::RelJump(
-                        RelJumpTarget::new(true_skip_rel_jump_target)
+                        RelJumpTarget::new(true_skip_rel_jump_target),
                     );
                     instructions.push(true_skip_rel_jump_instr.into());
 
@@ -155,11 +161,13 @@ impl SecondPass {
                 }
 
                 PartialInstructionFP::Continue(loop_id) => {
-                    instructions.push(PartialInstruction::Continue(loop_id.clone()));
+                    instructions
+                        .push(PartialInstruction::Continue(loop_id.clone()));
                 }
-                
+
                 PartialInstructionFP::Break(loop_id) => {
-                    instructions.push(PartialInstruction::Break(loop_id.clone()));
+                    instructions
+                        .push(PartialInstruction::Break(loop_id.clone()));
                 }
             }
         }
@@ -171,7 +179,6 @@ impl SecondPass {
 struct Flattened(Vec<PartialInstruction>);
 
 impl Flattened {
-
     fn new() -> Flattened {
         Flattened(Vec::new())
     }
@@ -183,10 +190,10 @@ impl Flattened {
 
         for i in self.0.iter() {
             match *i {
-                PartialInstruction::LoopBegin(..) | PartialInstruction::LoopEnd(..) => (),
+                PartialInstruction::LoopBegin(..)
+                | PartialInstruction::LoopEnd(..) => (),
 
                 _ => size += 1,
-
             }
         }
 

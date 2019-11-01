@@ -1,8 +1,8 @@
 use std::iter::Iterator;
 
 use super::parser::{
-    block, fn_param_list, module_binding as full_module_binding, type_annotation, type_arg_list,
-    type_arg_list_post_lparen, ParseErr,
+    block, fn_param_list, module_binding as full_module_binding,
+    type_annotation, type_arg_list, type_arg_list_post_lparen, ParseErr,
 };
 use super::parser_err::*;
 use super::tokens::*;
@@ -23,7 +23,8 @@ pub fn piped_expr(
     tokens: &mut BufferedTokenizer,
     delim_tokens: &[Delimiter],
 ) -> ParseErr<AstNode<Expr>> {
-    let primary_base = production!(parse_primary(tokens), parser_state!("piped-expr", "base"));
+    let primary_base =
+        production!(parse_primary(tokens), parser_state!("piped-expr", "base"));
     let expr_base = expr(tokens, primary_base, &delim_tokens, 0)?;
 
     prebase_piped_expr(tokens, expr_base, delim_tokens)
@@ -49,7 +50,11 @@ pub fn prebase_piped_expr(
             parser_state!("piped-expr", "|>?")
         )
     {
-        let _pipe = consume_token!(tokens, Token::Pipe, parser_state!("piped-expr", "|>"));
+        let _pipe = consume_token!(
+            tokens,
+            Token::Pipe,
+            parser_state!("piped-expr", "|>")
+        );
 
         let primary = production!(
             parse_primary(tokens),
@@ -151,7 +156,10 @@ fn expr(
         let main_op = get_op(&next).unwrap();
         let main_prec = bin_op_precedence(&main_op);
 
-        let mut rhs = production!(parse_primary(tokens), parser_state!("expr", "primary"));
+        let mut rhs = production!(
+            parse_primary(tokens),
+            parser_state!("expr", "primary")
+        );
 
         loop {
             if tokens.has_next() == false {
@@ -258,7 +266,8 @@ fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         )),
 
         PrimaryDec::UniExpr => {
-            let (uspan, uop) = consume_token!(tokens, parser_state!("uni-expr", "uni-op"));
+            let (uspan, uop) =
+                consume_token!(tokens, parser_state!("uni-expr", "uni-op"));
 
             let uop = match uop {
                 Token::Plus => {
@@ -275,7 +284,10 @@ fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
                 _ => unreachable!(),
             };
 
-            let base = production!(parse_primary(tokens), parser_state!("uni-expr", "primary"));
+            let base = production!(
+                parse_primary(tokens),
+                parser_state!("uni-expr", "primary")
+            );
             let (base, sbase) = base.to_data();
 
             let span = Span::combine(uspan, sbase);
@@ -313,16 +325,22 @@ fn parse_primary(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         }
 
         PrimaryDec::LParen => {
-            let (lspan, _) =
-                consume_token!(tokens, Token::LParen, parser_state!("paren-expr", "lparen"));
+            let (lspan, _) = consume_token!(
+                tokens,
+                Token::LParen,
+                parser_state!("paren-expr", "lparen")
+            );
 
             let inner = production!(
                 piped_expr(tokens, &[Delimiter::RParen]),
                 parser_state!("paren-expr", "inner-expr")
             );
 
-            let (rspan, _) =
-                consume_token!(tokens, Token::RParen, parser_state!("paren-expr", "rparen"));
+            let (rspan, _) = consume_token!(
+                tokens,
+                Token::RParen,
+                parser_state!("paren-expr", "rparen")
+            );
 
             let span = LocationSpan::new(lspan.start(), rspan.end());
             let _span = span;
@@ -387,8 +405,11 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         )),
 
         IdentLeafDec::FnCallOrTypeArgFnCall => {
-            let (lspan, _lparen) =
-                consume_token!(tokens, Token::LParen, parser_state!("fn-call", "lparen"));
+            let (lspan, _lparen) = consume_token!(
+                tokens,
+                Token::LParen,
+                parser_state!("fn-call", "lparen")
+            );
 
             let type_args = if peek_token!(
                 tokens,
@@ -423,13 +444,20 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
                         parser_state!("fn-call", "fn-args")
                     )
                 } else {
-                    production!(fn_args(tokens), parser_state!("fn-call", "fn-args"))
+                    production!(
+                        fn_args(tokens),
+                        parser_state!("fn-call", "fn-args")
+                    )
                 };
 
                 let (args, arg_span) = args.to_data();
-                let args = args.map(|v| v.into_iter().map(|a| a.to_data().0).collect());
+                let args = args
+                    .map(|v| v.into_iter().map(|a| a.to_data().0).collect());
 
-                let fn_path = ModulePath(vec![AstNode::new(base_ident, base_span.clone())]);
+                let fn_path = ModulePath(vec![AstNode::new(
+                    base_ident,
+                    base_span.clone(),
+                )]);
                 let fn_path = match type_args {
                     Some(args) => TypedPath::Parameterized(fn_path, args),
                     None => TypedPath::NillArity(fn_path),
@@ -447,7 +475,10 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
                 ))
             } else {
                 // Definitely a type instantiation
-                let path = ModulePath(vec![AstNode::new(base_ident, base_span.clone())]);
+                let path = ModulePath(vec![AstNode::new(
+                    base_ident,
+                    base_span.clone(),
+                )]);
                 let path = TypedPath::Parameterized(path, type_args.unwrap());
 
                 Ok(AstNode::new(
@@ -484,14 +515,18 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
             ) {
                 // Access path with indexing as root
                 let span = base_span;
-                let root = PathSegment::Indexing(AstNode::new(base_ident, span), Box::new(indexer));
+                let root = PathSegment::Indexing(
+                    AstNode::new(base_ident, span),
+                    Box::new(indexer),
+                );
                 Ok(production!(
                     access_path(tokens, root),
                     parser_state!("access-path")
                 ))
             } else {
                 // Single indexing
-                let binding = Expr::Binding(AstNode::new(base_ident, base_span));
+                let binding =
+                    Expr::Binding(AstNode::new(base_ident, base_span));
                 let indexing = Indexing {
                     array: Box::new(binding),
                     indexer: Box::new(indexer),
@@ -514,7 +549,10 @@ fn parse_ident_leaf(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
     }
 }
 
-pub fn access_path(tokens: &mut BufferedTokenizer, root: PathSegment) -> ParseErr<AstNode<Expr>> {
+pub fn access_path(
+    tokens: &mut BufferedTokenizer,
+    root: PathSegment,
+) -> ParseErr<AstNode<Expr>> {
     let start = match root {
         PathSegment::Ident(ref i) => i.span(),
         PathSegment::Indexing(ref i, _) => i.span(),
@@ -532,7 +570,11 @@ pub fn access_path(tokens: &mut BufferedTokenizer, root: PathSegment) -> ParseEr
             parser_state!("access-path", "dot?")
         )
     {
-        let _dot = consume_token!(tokens, Token::Dot, parser_state!("access-path", "dot"));
+        let _dot = consume_token!(
+            tokens,
+            Token::Dot,
+            parser_state!("access-path", "dot")
+        );
         let path_segment = production!(
             path_segment(tokens),
             parser_state!("access-path", "path-segment")
@@ -610,8 +652,14 @@ fn path_segment(tokens: &mut BufferedTokenizer) -> ParseErr<PathSegment> {
     Ok(PathSegment::Ident(AstNode::new(ident, span)))
 }
 
-pub fn fn_args(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Option<Vec<AstNode<Expr>>>>> {
-    let (lspan, _) = consume_token!(tokens, Token::LParen, parser_state!("fn-args", "lparen"));
+pub fn fn_args(
+    tokens: &mut BufferedTokenizer,
+) -> ParseErr<AstNode<Option<Vec<AstNode<Expr>>>>> {
+    let (lspan, _) = consume_token!(
+        tokens,
+        Token::LParen,
+        parser_state!("fn-args", "lparen")
+    );
 
     fn_args_post_lparen(tokens, lspan)
 }
@@ -660,7 +708,11 @@ pub fn fn_args_post_lparen(
         }
     }
 
-    let (rspan, _) = consume_token!(tokens, Token::RParen, parser_state!("fn-args", "rparen"));
+    let (rspan, _) = consume_token!(
+        tokens,
+        Token::RParen,
+        parser_state!("fn-args", "rparen")
+    );
 
     let span = LocationSpan::new(lspan.start(), rspan.end());
 
@@ -733,7 +785,8 @@ pub fn expr_module_path(
                 parser_state!("expr-module-path", "type-args")
             );
 
-            let typed_path = TypedPath::Parameterized(ModulePath(path), type_args);
+            let typed_path =
+                TypedPath::Parameterized(ModulePath(path), type_args);
 
             // Checks if function call or just a typed path
             if peek_token!(
@@ -741,9 +794,10 @@ pub fn expr_module_path(
                 |tok| match tok {
                     Token::LParen => false,
 
-                    _ => true
+                    _ => true,
                 },
-                parser_state!("expr-fn-call-or-type-app?", "fn-call-lparen")) {
+                parser_state!("expr-fn-call-or-type-app?", "fn-call-lparen")
+            ) {
                 // A type-app, NOT a function call
                 let path_span = Span::combine(base_span, end);
                 let path_expr = Expr::Path(AstNode::new(typed_path, path_span));
@@ -756,11 +810,7 @@ pub fn expr_module_path(
             )
             .to_data();
 
-            (
-                typed_path,
-                args,
-                args_span,
-            )
+            (typed_path, args, args_span)
         } else {
             let (args, args_span) = production!(
                 fn_args_post_lparen(tokens, lspan),
@@ -777,7 +827,9 @@ pub fn expr_module_path(
 
         let fn_call = FnCall {
             path: AstNode::new(path, Span::combine(start, end)),
-            args: args.map(|v| v.into_iter().map(|e| e.to_data().0).collect::<Vec<_>>()),
+            args: args.map(|v| {
+                v.into_iter().map(|e| e.to_data().0).collect::<Vec<_>>()
+            }),
         };
 
         // TODO: FnCall chain check
@@ -797,19 +849,21 @@ pub fn expr_module_path(
 }
 
 fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
-    let (linit, _) = consume_token!(tokens, Token::Init, parser_state!("struct-init", "init"));
-    
-    
+    let (linit, _) = consume_token!(
+        tokens,
+        Token::Init,
+        parser_state!("struct-init", "init")
+    );
+
     let (path, type_args) = if peek_token!(
         tokens,
         |tok| match tok {
             Token::LBrace => false,
 
-            _ => true
+            _ => true,
         },
         parser_state!("struct-init", "anonymous?")
     ) {
-
         // Named struct init
         let (path, _) = production!(
             full_module_binding(tokens),
@@ -883,17 +937,14 @@ fn struct_init(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
 
         let struct_init = AstNode::new(struct_init, span);
 
-        Ok(AstNode::new(Expr::StructInit(struct_init), span)) 
+        Ok(AstNode::new(Expr::StructInit(struct_init), span))
     } else {
         // Anonymous struct init
-        let struct_init = AnonStructInit {
-            field_init: init,
-        };
+        let struct_init = AnonStructInit { field_init: init };
 
         let struct_init = AstNode::new(struct_init, span);
         Ok(AstNode::new(Expr::AnonStructInit(struct_init), span))
     }
-
 }
 
 fn struct_field_init_list(
@@ -940,7 +991,9 @@ fn struct_field_init_list(
     Ok(list)
 }
 
-fn struct_field_init(tokens: &mut BufferedTokenizer) -> ParseErr<(AstNode<Ident>, Box<Expr>)> {
+fn struct_field_init(
+    tokens: &mut BufferedTokenizer,
+) -> ParseErr<(AstNode<Ident>, Box<Expr>)> {
     let (iloc, ident) = consume_token!(tokens, 
                                        Token::Identifier(i) => Ident(i),
                                        parser_state!("struct-field-init", "field name"));
@@ -1088,7 +1141,12 @@ fn array_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Expr>> {
                 );
 
                 let expr = production!(
-                    expr(tokens, data, &[Delimiter::Comma, Delimiter::RBracket], 0),
+                    expr(
+                        tokens,
+                        data,
+                        &[Delimiter::Comma, Delimiter::RBracket],
+                        0
+                    ),
                     parser_state!("array-init-list", "item-expr")
                 )
                 .to_data();
@@ -1105,7 +1163,8 @@ fn array_init_list(tokens: &mut BufferedTokenizer) -> ParseErr<Vec<Expr>> {
 }
 
 fn anonymous_fn(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
-    let (fnloc, _) = consume_token!(tokens, Token::Fn, parser_state!("anonymous-fn", "fn"));
+    let (fnloc, _) =
+        consume_token!(tokens, Token::Fn, parser_state!("anonymous-fn", "fn"));
 
     let _lparen = consume_token!(
         tokens,
@@ -1155,7 +1214,8 @@ fn anonymous_fn(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         ));
     }
 
-    let body = production!(block(tokens), parser_state!("anonymous-fn", "body"));
+    let body =
+        production!(block(tokens), parser_state!("anonymous-fn", "body"));
 
     let span = Span::combine(fnloc, body.span());
 

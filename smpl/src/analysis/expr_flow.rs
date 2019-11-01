@@ -4,7 +4,9 @@ use super::typed_ast::*;
 
 use crate::span::Span;
 
-use crate::ast::{ArrayInit as AstArrayInit, AstNode, Expr as AstExpr, TypedPath};
+use crate::ast::{
+    ArrayInit as AstArrayInit, AstNode, Expr as AstExpr, TypedPath,
+};
 
 pub fn flatten(universe: &mut Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
@@ -15,7 +17,11 @@ pub fn flatten(universe: &mut Universe, e: AstExpr) -> Expr {
     expr
 }
 
-pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (TmpId, Span) {
+pub fn flatten_expr(
+    universe: &mut Universe,
+    scope: &mut Expr,
+    e: AstExpr,
+) -> (TmpId, Span) {
     match e {
         AstExpr::Bin(bin) => {
             let (bin, span) = bin.to_data();
@@ -24,7 +30,11 @@ pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (T
             (
                 scope.map_tmp(
                     universe,
-                    Value::BinExpr(bin.op, Typed::untyped(lhs), Typed::untyped(rhs)),
+                    Value::BinExpr(
+                        bin.op,
+                        Typed::untyped(lhs),
+                        Typed::untyped(rhs),
+                    ),
                     span,
                 ),
                 span,
@@ -35,7 +45,11 @@ pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (T
             let (uni, span) = uni.to_data();
             let expr = flatten_expr(universe, scope, *uni.expr).0;
             (
-                scope.map_tmp(universe, Value::UniExpr(uni.op, Typed::untyped(expr)), span),
+                scope.map_tmp(
+                    universe,
+                    Value::UniExpr(uni.op, Typed::untyped(expr)),
+                    span,
+                ),
                 span,
             )
         }
@@ -48,11 +62,13 @@ pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (T
         AstExpr::StructInit(init) => {
             let (init, span) = init.to_data();
             let struct_name = init.struct_name;
-            let field_init = init.field_init
+            let field_init = init
+                .field_init
                 .into_iter()
                 .map(|(name, expr)| {
-                        let expr = Typed::untyped(flatten_expr(universe, scope, *expr).0);
-                        (name.data().clone(), expr)
+                    let expr =
+                        Typed::untyped(flatten_expr(universe, scope, *expr).0);
+                    (name.data().clone(), expr)
                 })
                 .collect::<Vec<_>>();
             (
@@ -67,7 +83,8 @@ pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (T
 
         AstExpr::AnonStructInit(init) => {
             let (init, span) = init.to_data();
-            let field_init = init.field_init
+            let field_init = init
+                .field_init
                 .into_iter()
                 .map(|(name, expr)| {
                     let expr = flatten_expr(universe, scope, *expr).0;
@@ -87,7 +104,11 @@ pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (T
         AstExpr::Binding(ident) => {
             let span = ident.span();
             (
-                scope.map_tmp(universe, Value::Binding(TypedBinding::new(ident)), span),
+                scope.map_tmp(
+                    universe,
+                    Value::Binding(TypedBinding::new(ident)),
+                    span,
+                ),
                 span,
             )
         }
@@ -104,7 +125,8 @@ pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (T
         AstExpr::FnCall(fn_call) => {
             let (fn_call, span) = fn_call.to_data();
             let path = fn_call.path;
-            let (fn_val, _fn_val_span) = flatten_expr(universe, scope, AstExpr::Path(path));
+            let (fn_val, _fn_val_span) =
+                flatten_expr(universe, scope, AstExpr::Path(path));
             let args = fn_call.args.map(|vec| {
                 vec.into_iter()
                     .map(|e| Typed::untyped(flatten_expr(universe, scope, e).0))
@@ -122,18 +144,29 @@ pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (T
                 AstArrayInit::InitList(vec) => {
                     let list = vec
                         .into_iter()
-                        .map(|element| Typed::untyped(flatten_expr(universe, scope, element).0))
+                        .map(|element| {
+                            Typed::untyped(
+                                flatten_expr(universe, scope, element).0,
+                            )
+                        })
                         .collect();
 
                     let init = ArrayInit::List(list);
 
-                    (scope.map_tmp(universe, Value::ArrayInit(init), span), span)
+                    (
+                        scope.map_tmp(universe, Value::ArrayInit(init), span),
+                        span,
+                    )
                 }
                 AstArrayInit::Value(expr, size) => {
-                    let value = Typed::untyped(flatten_expr(universe, scope, *expr).0);
+                    let value =
+                        Typed::untyped(flatten_expr(universe, scope, *expr).0);
                     let init = ArrayInit::Value(value, size);
 
-                    (scope.map_tmp(universe, Value::ArrayInit(init), span), span)
+                    (
+                        scope.map_tmp(universe, Value::ArrayInit(init), span),
+                        span,
+                    )
                 }
             }
         }
@@ -143,8 +176,10 @@ pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (T
             let array_expr = indexing.array;
             let indexing_expr = indexing.indexer;
 
-            let array = Typed::untyped(flatten_expr(universe, scope, *array_expr).0);
-            let indexer = Typed::untyped(flatten_expr(universe, scope, *indexing_expr).0);
+            let array =
+                Typed::untyped(flatten_expr(universe, scope, *array_expr).0);
+            let indexer =
+                Typed::untyped(flatten_expr(universe, scope, *indexing_expr).0);
 
             let indexing = Indexing {
                 array: array,
@@ -169,7 +204,9 @@ pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (T
                     }
                 }
 
-                TypedPath::Parameterized(path, args) => Value::TypeInst(TypeInst::new(path, args)),
+                TypedPath::Parameterized(path, args) => {
+                    Value::TypeInst(TypeInst::new(path, args))
+                }
             };
 
             (scope.map_tmp(universe, tmp, span), span)
@@ -180,9 +217,11 @@ pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (T
             let fn_id = universe.new_fn_id();
             universe.reserve_anonymous_fn(fn_id, a_fn);
             (
-
-                scope.map_tmp(universe, 
-                    Value::AnonymousFn(AnonymousFn::new(fn_id)), span),
+                scope.map_tmp(
+                    universe,
+                    Value::AnonymousFn(AnonymousFn::new(fn_id)),
+                    span,
+                ),
                 span,
             )
         }
@@ -200,9 +239,11 @@ pub fn flatten_expr(universe: &mut Universe, scope: &mut Expr, e: AstExpr) -> (T
 
             for fn_call in chain.chain.into_iter() {
                 let (call, next_span) = fn_call.to_data();
-                let fn_call_expr = AstExpr::FnCall(AstNode::new(call, next_span));
+                let fn_call_expr =
+                    AstExpr::FnCall(AstNode::new(call, next_span));
 
-                let (fn_call_result, next_span) = flatten_expr(universe, scope, fn_call_expr);
+                let (fn_call_result, next_span) =
+                    flatten_expr(universe, scope, fn_call_expr);
 
                 let fn_call = scope.get_tmp_mut(fn_call_result);
 

@@ -1,18 +1,23 @@
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
-use crate::module::ParsedModule;
-use crate::analysis::{ check_program, Program as AnalyzedProgram, Function, CFG, FnId, AnonymousFunction, TypingContext };
 use crate::analysis::error::AnalysisError;
+use crate::analysis::{
+    check_program, AnonymousFunction, FnId, Function,
+    Program as AnalyzedProgram, TypingContext, CFG,
+};
+use crate::module::ParsedModule;
 
 pub struct Program {
-    program: AnalyzedProgram
+    program: AnalyzedProgram,
 }
 
 impl Program {
-    pub fn create(modules: Vec<ParsedModule>) -> Result<Program, AnalysisError> {
+    pub fn create(
+        modules: Vec<ParsedModule>,
+    ) -> Result<Program, AnalysisError> {
         Ok(Program {
-            program: check_program(modules)?
+            program: check_program(modules)?,
         })
     }
 
@@ -20,9 +25,9 @@ impl Program {
         &self.program.metadata()
     }
 
-    pub fn compilable_fns<'a>(&'a self) 
-        -> impl Iterator<Item=(FnId, CompilableFn)> + 'a {
-
+    pub fn compilable_fns<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = (FnId, CompilableFn)> + 'a {
         self.program
             .all_fns()
             .filter(|(_, f)| {
