@@ -244,9 +244,10 @@ impl<'src_str, 'input> CharInput<'src_str, 'input> {
         let lookahead = chars.peek().map(|(char_index, (byte_index, c))| {
             (
                 Location::new(
-                    source.to_string(),
                     byte_index.clone(), 
-                    char_index.clone(), 1, 2),
+                    char_index.clone(), 
+                    1, 
+                    2),
                 c.clone(),
             )
         });
@@ -257,7 +258,6 @@ impl<'src_str, 'input> CharInput<'src_str, 'input> {
             column: 0,
             lookahead: lookahead,
             end_of_input: Location::new(
-                source.to_string(),
                 last + 1,
                 last,
                 1,
@@ -274,7 +274,7 @@ impl<'src_str, 'input> CharInput<'src_str, 'input> {
     }
 }
 
-impl<'src_str, 'input> Iterator for CharInput<'input, 'src_str> {
+impl<'src_str, 'input> Iterator for CharInput<'src_str, 'input> {
     type Item = (Location, char);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -291,7 +291,6 @@ impl<'src_str, 'input> Iterator for CharInput<'input, 'src_str> {
             }
             (
                 Location::new(
-                    self.source.to_string(),
                     byte_index,
                     char_index,
                     self.line,
@@ -306,7 +305,6 @@ impl<'src_str, 'input> Iterator for CharInput<'input, 'src_str> {
             self.chars.peek().map(|(char_index, (byte_index, c))| {
                 (
                     Location::new(
-                        self.source.to_string(),
                         byte_index.clone(),
                         char_index.clone(),
                         line,
@@ -328,7 +326,9 @@ pub struct Tokenizer<'src_str, 'input> {
 }
 
 impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
-    pub fn new<'a, 'b>(source: &'a ModuleSource, input: &'b str) -> Tokenizer<'a, 'b> {
+    pub fn new(source: &'src_str ModuleSource, input: &'input str) 
+        -> Tokenizer<'src_str, 'input> {
+
         Tokenizer {
             source: source,
             input: input,
@@ -412,27 +412,27 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
         match c {
             '+' => Ok(SpannedToken::new(
                 Token::Plus,
-                LocationSpan::span_1(start, 1),
+                LocationSpan::span_1(self.source.to_string(), start, 1),
             )),
 
             '-' => Ok(SpannedToken::new(
                 Token::Minus,
-                LocationSpan::span_1(start, 1),
+                LocationSpan::span_1(self.source.to_string(), start, 1),
             )),
 
             '*' => Ok(SpannedToken::new(
                 Token::Star,
-                LocationSpan::span_1(start, 1),
+                LocationSpan::span_1(self.source.to_string(), start, 1),
             )),
 
             '/' => Ok(SpannedToken::new(
                 Token::Slash,
-                LocationSpan::span_1(start, 1),
+                LocationSpan::span_1(self.source.to_string(), start, 1),
             )),
 
             '%' => Ok(SpannedToken::new(
                 Token::Percent,
-                LocationSpan::span_1(start, 1),
+                LocationSpan::span_1(self.source.to_string(), start, 1),
             )),
 
             '&' => {
@@ -443,12 +443,12 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
                     })?;
                     Ok(SpannedToken::new(
                         Token::LAnd,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     ))
                 } else {
                     Ok(SpannedToken::new(
                         Token::Ref,
-                        LocationSpan::span_1(start, 1),
+                        LocationSpan::span_1(self.source.to_string(), start, 1),
                     ))
                 }
             }
@@ -461,7 +461,7 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
                     })?;
                     Ok(SpannedToken::new(
                         Token::LOr,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     ))
                 } else if self.test_lookahead(|c| c == '>') {
                     let (end, _) = self.chars.next().ok_or(SpannedError {
@@ -470,7 +470,7 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
                     })?;
                     Ok(SpannedToken::new(
                         Token::Pipe,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     ))
                 } else {
                     Err(SpannedError {
@@ -488,12 +488,12 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
                     })?;
                     Ok(SpannedToken::new(
                         Token::Eq,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     ))
                 } else {
                     Ok(SpannedToken::new(
                         Token::Assign,
-                        LocationSpan::span_1(start, 1),
+                        LocationSpan::span_1(self.source.to_string(), start, 1),
                     ))
                 }
             }
@@ -506,12 +506,12 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
                     })?;
                     Ok(SpannedToken::new(
                         Token::NEq,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     ))
                 } else {
                     Ok(SpannedToken::new(
                         Token::Invert,
-                        LocationSpan::span_1(start, 1),
+                        LocationSpan::span_1(self.source.to_string(), start, 1),
                     ))
                 }
             }
@@ -524,12 +524,12 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
                     })?;
                     Ok(SpannedToken::new(
                         Token::Lte,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     ))
                 } else {
                     Ok(SpannedToken::new(
                         Token::Lt,
-                        LocationSpan::span_1(start, 1),
+                        LocationSpan::span_1(self.source.to_string(), start, 1),
                     ))
                 }
             }
@@ -542,12 +542,12 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
                     })?;
                     Ok(SpannedToken::new(
                         Token::Gte,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     ))
                 } else {
                     Ok(SpannedToken::new(
                         Token::Gt,
-                        LocationSpan::span_1(start, 1),
+                        LocationSpan::span_1(self.source.to_string(), start, 1),
                     ))
                 }
             }
@@ -585,7 +585,7 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
             str => Token::Identifier(str.to_string()),
         };
 
-        SpannedToken::new(token, LocationSpan::new(start, end))
+        SpannedToken::new(token, LocationSpan::new(self.source.to_string(), start, end))
     }
 
     fn numeric_literal(
@@ -612,7 +612,7 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
 
                 return Ok(SpannedToken::new(
                     Token::FloatLiteral(f),
-                    LocationSpan::new(start, end),
+                    LocationSpan::new(self.source.to_string(), start, end),
                 ));
             }
         }
@@ -620,7 +620,7 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
         let i = int.parse::<i64>().unwrap();
         Ok(SpannedToken::new(
             Token::IntLiteral(i),
-            LocationSpan::new(start, end),
+            LocationSpan::new(self.source.to_string(), start, end),
         ))
     }
 
@@ -634,7 +634,7 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
                 '\"' => {
                     return Ok(SpannedToken::new(
                         Token::StringLiteral(literal),
-                        LocationSpan::new(start, e),
+                        LocationSpan::new(self.source.to_string(), start, e),
                     ));
                 }
 
@@ -665,68 +665,68 @@ impl<'src_str, 'input> Iterator for Tokenizer<'src_str, 'input> {
                     let (end, _) = self.chars.next().unwrap();
                     Some(Ok(SpannedToken::new(
                         Token::Arrow,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     )))
                 }
 
                 ',' => Some(Ok(SpannedToken::new(
                     Token::Comma,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
                 '.' => Some(Ok(SpannedToken::new(
                     Token::Dot,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
                 ';' => Some(Ok(SpannedToken::new(
                     Token::Semi,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
 
                 ':' if self.test_lookahead(is_colon) => {
                     let (end, _) = self.chars.next().unwrap();
                     Some(Ok(SpannedToken::new(
                         Token::ColonColon,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     )))
                 }
 
                 ':' if self.test_lookahead(is_colon) == false => {
                     Some(Ok(SpannedToken::new(
                         Token::Colon,
-                        LocationSpan::span_1(start, 1),
+                        LocationSpan::span_1(self.source.to_string(), start, 1),
                     )))
                 }
 
                 '(' => Some(Ok(SpannedToken::new(
                     Token::LParen,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
                 ')' => Some(Ok(SpannedToken::new(
                     Token::RParen,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
 
                 '[' => Some(Ok(SpannedToken::new(
                     Token::LBracket,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
                 ']' => Some(Ok(SpannedToken::new(
                     Token::RBracket,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
 
                 '{' => Some(Ok(SpannedToken::new(
                     Token::LBrace,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
                 '}' => Some(Ok(SpannedToken::new(
                     Token::RBrace,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
 
                 '#' => Some(Ok(SpannedToken::new(
                     Token::Pound,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
 
                 '\"' => Some(self.string_literal(start)),
