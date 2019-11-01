@@ -1,61 +1,70 @@
-use std::collections::HashMap;
-
-use crate::ast;
 use crate::span::Span;
 
-use super::type_cons::*;
 use super::error::*;
-use super::semantic_data::{TypeVarId, Universe };
 use super::resolve_scope::ScopedData;
+use super::semantic_data::Universe;
 use super::type_checker::TypingContext;
+use super::type_cons::*;
 
 /// May or may not alter the typing context for inference purposes
-pub fn resolve_types(universe: &Universe, scoped_data: &ScopedData, 
-    typing_context: &mut TypingContext, synthesis: &AbstractType, 
-    constraint: &AbstractType, span: Span) 
-    -> Result<(), TypeError> {
-
-    resolve_types_static(universe, 
-        scoped_data, 
-        typing_context, 
-        synthesis, 
-        constraint, 
-        span)
+pub fn resolve_types(
+    universe: &Universe,
+    scoped_data: &ScopedData,
+    typing_context: &mut TypingContext,
+    synthesis: &AbstractType,
+    constraint: &AbstractType,
+    span: Span,
+) -> Result<(), TypeError> {
+    resolve_types_static(
+        universe,
+        scoped_data,
+        typing_context,
+        synthesis,
+        constraint,
+        span,
+    )
 }
 
 /// Will NOT perform any inferences
-pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData, 
-    typing_context: &TypingContext, synthesis: &AbstractType, 
-    constraint: &AbstractType, span: Span) 
-    -> Result<(), TypeError> {
-
+pub fn resolve_types_static(
+    universe: &Universe,
+    scoped_data: &ScopedData,
+    typing_context: &TypingContext,
+    synthesis: &AbstractType,
+    constraint: &AbstractType,
+    span: Span,
+) -> Result<(), TypeError> {
     use super::type_cons::AbstractType::*;
 
     match (synthesis, constraint) {
-
         (_, Any) => Ok(()),
 
-        (Record {
-            type_id: synth_type_id,
-            abstract_field_map: AbstractFieldMap {
-                fields: synth_fields,
-                ..
-            }
-        }, Record {
-            type_id: constraint_type_id,
-            abstract_field_map: AbstractFieldMap {
-                fields: constraint_fields,
-                ..
-            }, 
-        }) => {
-
+        (
+            Record {
+                type_id: synth_type_id,
+                abstract_field_map:
+                    AbstractFieldMap {
+                        fields: synth_fields,
+                        ..
+                    },
+            },
+            Record {
+                type_id: constraint_type_id,
+                abstract_field_map:
+                    AbstractFieldMap {
+                        fields: constraint_fields,
+                        ..
+                    },
+            },
+        ) => {
             // Nominal check
             if synth_type_id != constraint_type_id {
                 return Err(TypeError::UnexpectedType {
                     found: synthesis.clone(),
                     expected: constraint.clone(),
                     span: span,
-                }.into());
+                }
+                .into());
             }
 
             for (synth_field_id, synth_type) in synth_fields.iter() {
@@ -63,22 +72,37 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
                     .get(synth_field_id)
                     .expect("Equal type id means identical field IDs");
 
-                resolve_types_static(universe, scoped_data, typing_context,
-                    synth_type, constraint_type, span)?;
+                resolve_types_static(
+                    universe,
+                    scoped_data,
+                    typing_context,
+                    synth_type,
+                    constraint_type,
+                    span,
+                )?;
             }
 
             Ok(())
         }
 
         // Synth width must be wider than constraint width
-        (WidthConstraint(ref synth_awc), 
-         WidthConstraint(ref constraint_awc)) => {
-
-            for (constraint_ident, constraint_type) in constraint_awc.fields.iter() {
+        (
+            WidthConstraint(ref synth_awc),
+            WidthConstraint(ref constraint_awc),
+        ) => {
+            for (constraint_ident, constraint_type) in
+                constraint_awc.fields.iter()
+            {
                 match synth_awc.fields.get(constraint_ident) {
                     Some(synth_type) => {
-                        resolve_types_static(universe, scoped_data, typing_context,
-                            synth_type, constraint_type, span)?;
+                        resolve_types_static(
+                            universe,
+                            scoped_data,
+                            typing_context,
+                            synth_type,
+                            constraint_type,
+                            span,
+                        )?;
                     }
 
                     None => {
@@ -87,7 +111,8 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
                             found: synthesis.clone(),
                             expected: constraint.clone(),
                             span: span,
-                        }.into());
+                        }
+                        .into());
                     }
                 }
             }
@@ -96,16 +121,26 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
         }
 
         // Synth nominal record must be wider than constraint width
-        (Record {
-            abstract_field_map: ref synth_afm,
-            ..
-        }, WidthConstraint(ref constraint_awc)) => {
-
-            for (constraint_ident, constraint_type) in constraint_awc.fields.iter() {
+        (
+            Record {
+                abstract_field_map: ref synth_afm,
+                ..
+            },
+            WidthConstraint(ref constraint_awc),
+        ) => {
+            for (constraint_ident, constraint_type) in
+                constraint_awc.fields.iter()
+            {
                 match synth_afm.get(constraint_ident) {
                     Some(synth_type) => {
-                        resolve_types_static(universe, scoped_data, typing_context,
-                            synth_type, constraint_type, span)?;
+                        resolve_types_static(
+                            universe,
+                            scoped_data,
+                            typing_context,
+                            synth_type,
+                            constraint_type,
+                            span,
+                        )?;
                     }
 
                     None => {
@@ -115,7 +150,8 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
                             found: synthesis.clone(),
                             expected: constraint.clone(),
                             span: span,
-                        }.into());
+                        }
+                        .into());
                     }
                 }
             }
@@ -123,108 +159,150 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
             Ok(())
         }
 
-        (UncheckedFunction {
-            return_type: ref synth_return,
-        }, UncheckedFunction {
-            return_type: ref constraint_return,
-        }) => {
-            resolve_types_static(universe, scoped_data, typing_context, 
-                synth_return, constraint_return, span)
-        }
+        (
+            UncheckedFunction {
+                return_type: ref synth_return,
+            },
+            UncheckedFunction {
+                return_type: ref constraint_return,
+            },
+        ) => resolve_types_static(
+            universe,
+            scoped_data,
+            typing_context,
+            synth_return,
+            constraint_return,
+            span,
+        ),
 
-        (Function {
-            parameters: ref synth_params,
-            return_type: ref synth_return,
-        }, Function {
-            parameters: ref constraint_params,
-            return_type: ref constraint_return,
-        }) => {
-
+        (
+            Function {
+                parameters: ref synth_params,
+                return_type: ref synth_return,
+            },
+            Function {
+                parameters: ref constraint_params,
+                return_type: ref constraint_return,
+            },
+        ) => {
             if synth_params.len() != constraint_params.len() {
                 return Err(TypeError::UnexpectedType {
                     found: synthesis.clone(),
                     expected: constraint.clone(),
                     span: span,
-                }.into());
+                }
+                .into());
             }
 
             // Function parameters must be contravariant
-            for (index, (sp, cp)) in synth_params
-                .iter().zip(constraint_params).enumerate() {
-                resolve_param_static(universe, scoped_data, typing_context,
-                    sp, cp, span)
-                    .map_err(|_| {
-                        TypeError::FunctionTypeMismatch {
-                            fn_found: synthesis.clone(),
-                            fn_expected: constraint.clone(),
-                            param_found: sp.clone(),
-                            param_expected: cp.clone(),
-                            index: index,
-                            span: span
-                        }
-                    })?;
+            for (index, (sp, cp)) in
+                synth_params.iter().zip(constraint_params).enumerate()
+            {
+                resolve_param_static(
+                    universe,
+                    scoped_data,
+                    typing_context,
+                    sp,
+                    cp,
+                    span,
+                )
+                .map_err(|_| {
+                    TypeError::FunctionTypeMismatch {
+                        fn_found: synthesis.clone(),
+                        fn_expected: constraint.clone(),
+                        param_found: sp.clone(),
+                        param_expected: cp.clone(),
+                        index: index,
+                        span: span,
+                    }
+                })?;
             }
 
-            resolve_types_static(universe, scoped_data, typing_context,
-                synth_return, constraint_return, span)
+            resolve_types_static(
+                universe,
+                scoped_data,
+                typing_context,
+                synth_return,
+                constraint_return,
+                span,
+            )
         }
 
-        (Array {
-            element_type: ref synth_element,
-            size: synth_size,
-        }, Array {
-            element_type: ref constraint_element,
-            size: constraint_size,
-        }) => {
-
+        (
+            Array {
+                element_type: ref synth_element,
+                size: synth_size,
+            },
+            Array {
+                element_type: ref constraint_element,
+                size: constraint_size,
+            },
+        ) => {
             // TODO: Allow synth to be larger?
             if synth_size != constraint_size {
                 return Err(TypeError::UnexpectedType {
                     found: synthesis.clone(),
                     expected: constraint.clone(),
                     span: span,
-                }.into());
+                }
+                .into());
             }
 
-            resolve_types_static(universe, scoped_data, typing_context,
-                synth_element, constraint_element, span)
+            resolve_types_static(
+                universe,
+                scoped_data,
+                typing_context,
+                synth_element,
+                constraint_element,
+                span,
+            )
         }
 
         (synth_app @ App { .. }, constraint) => {
             let new_synthesis = synth_app
-                .substitute(universe, scoped_data, typing_context).unwrap();
+                .substitute(universe, scoped_data, typing_context)
+                .unwrap();
 
-            resolve_types_static(universe, scoped_data, typing_context,
-                &new_synthesis, constraint, span)
+            resolve_types_static(
+                universe,
+                scoped_data,
+                typing_context,
+                &new_synthesis,
+                constraint,
+                span,
+            )
         }
 
         (synthesis, constraint_app @ App { .. }) => {
             let new_constraint = constraint_app
-                .substitute(universe, scoped_data, typing_context).unwrap();
+                .substitute(universe, scoped_data, typing_context)
+                .unwrap();
 
-            resolve_types_static(universe, scoped_data, typing_context,
-                synthesis, &new_constraint, span)
+            resolve_types_static(
+                universe,
+                scoped_data,
+                typing_context,
+                synthesis,
+                &new_constraint,
+                span,
+            )
         }
 
         (Int, Int) => Ok(()),
         (Float, Float) => Ok(()),
         (Bool, Bool) => Ok(()),
         (String, String) => Ok(()),
-        (Unit, Unit) => Ok(()), 
+        (Unit, Unit) => Ok(()),
 
-
-        (synthesis @ Opaque {
-            ..
-        }, constraint @ Opaque {
-            ..
-        }) => {
+        (synthesis @ Opaque { .. }, constraint @ Opaque { .. }) => {
             super::type_equality::equal_types_static(
                 universe,
                 scoped_data,
                 typing_context,
                 synthesis,
                 constraint,
-                span)
+                span,
+            )
         }
 
         // Unconstrained type parameters
@@ -233,79 +311,100 @@ pub fn resolve_types_static(universe: &Universe, scoped_data: &ScopedData,
             if synth_id == constraint_id {
                 Ok(())
             } else {
-
                 Err(TypeError::UnexpectedType {
                     found: synthesis.clone(),
                     expected: constraint.clone(),
                     span: span,
-                }.into())
+                }
+                .into())
             }
         }
 
         (TypeVar(synth_id), constraint) => {
-            let synth_var_type = typing_context.get_type_var(synth_id.clone())
-                    .expect("Missing synth var");
+            let synth_var_type = typing_context
+                .get_type_var(synth_id.clone())
+                .expect("Missing synth var");
 
-            resolve_types_static(universe, scoped_data, typing_context,
-                    synth_var_type, constraint, span)
-                    .map_err(|_| {
-                        TypeError::UnexpectedType {
-                            found: synthesis.clone(),
-                            expected: constraint.clone(),
-                            span: span,
-                        }.into()
-                    })
-        }
-
-        (synthesis, TypeVar(constraint_id)) => {
-            let constraint_var_type = typing_context.get_type_var(constraint_id.clone())
-                    .expect("Missing synth var");
-
-            resolve_types_static(universe, scoped_data, typing_context,
-                    synthesis, constraint_var_type, span)
-                    .map_err(|_| {
-                        TypeError::UnexpectedType {
-                            found: synthesis.clone(),
-                            expected: constraint.clone(),
-                            span: span,
-                        }.into()
-                    })
-        }
-
-        _ => Err(TypeError::UnexpectedType {
+            resolve_types_static(
+                universe,
+                scoped_data,
+                typing_context,
+                synth_var_type,
+                constraint,
+                span,
+            )
+            .map_err(|_| {
+                TypeError::UnexpectedType {
                     found: synthesis.clone(),
                     expected: constraint.clone(),
                     span: span,
-                }.into()),
+                }
+                .into()
+            })
+        }
+
+        (synthesis, TypeVar(constraint_id)) => {
+            let constraint_var_type = typing_context
+                .get_type_var(constraint_id.clone())
+                .expect("Missing synth var");
+
+            resolve_types_static(
+                universe,
+                scoped_data,
+                typing_context,
+                synthesis,
+                constraint_var_type,
+                span,
+            )
+            .map_err(|_| {
+                TypeError::UnexpectedType {
+                    found: synthesis.clone(),
+                    expected: constraint.clone(),
+                    span: span,
+                }
+                .into()
+            })
+        }
+
+        _ => Err(TypeError::UnexpectedType {
+            found: synthesis.clone(),
+            expected: constraint.clone(),
+            span: span,
+        }
+        .into()),
     }
 }
 
-fn resolve_param(universe: &Universe, scoped_data: &ScopedData, 
-    typing_context: &mut TypingContext, synth: &AbstractType, 
-    constraint: &AbstractType, span: Span) 
-    -> Result<(), TypeError> {
-
-    resolve_param_static(universe,
+fn resolve_param(
+    universe: &Universe,
+    scoped_data: &ScopedData,
+    typing_context: &mut TypingContext,
+    synth: &AbstractType,
+    constraint: &AbstractType,
+    span: Span,
+) -> Result<(), TypeError> {
+    resolve_param_static(
+        universe,
         scoped_data,
         typing_context,
         synth,
         constraint,
-        span)
+        span,
+    )
 }
 
-fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData, 
-    typing_context: &TypingContext, synth: &AbstractType, 
-    constraint: &AbstractType, span: Span) 
-    -> Result<(), TypeError> {
-
+fn resolve_param_static(
+    universe: &Universe,
+    scoped_data: &ScopedData,
+    typing_context: &TypingContext,
+    synth: &AbstractType,
+    constraint: &AbstractType,
+    span: Span,
+) -> Result<(), TypeError> {
     use super::type_cons::AbstractType::*;
 
     match (synth, constraint) {
-
-
-        (Any, Any) => {
-            Ok(())
-        }
+        (Any, Any) => Ok(()),
 
         // If the synth is Any but a specific type is expected, reject
         // EVAL ORDER
@@ -314,7 +413,8 @@ fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData,
                 found: constraint.clone(),
                 expected: synth.clone(),
                 span: span,
-            }.into());
+            }
+            .into());
         }
 
         // If the constraint is a width constraint, the provided parameter type cannot be a nominal
@@ -329,18 +429,26 @@ fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData,
                 found: constraint.clone(),
                 expected: synth.clone(),
                 span: span,
-            }.into());
+            }
+            .into());
         }
 
         // NOTE(alex): Synth width must be narrower than the constraint width
-        (WidthConstraint(ref synth_awc), 
-         WidthConstraint(ref constraint_awc)) => {
-
+        (
+            WidthConstraint(ref synth_awc),
+            WidthConstraint(ref constraint_awc),
+        ) => {
             for (synth_ident, synth_type) in synth_awc.fields.iter() {
                 match constraint_awc.fields.get(synth_ident) {
                     Some(constraint_type) => {
-                        resolve_types_static(universe, scoped_data, typing_context,
-                            synth_type, constraint_type, span)?;
+                        resolve_types_static(
+                            universe,
+                            scoped_data,
+                            typing_context,
+                            synth_type,
+                            constraint_type,
+                            span,
+                        )?;
                     }
 
                     None => {
@@ -350,27 +458,34 @@ fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData,
                             found: constraint.clone(),
                             expected: synth.clone(),
                             span: span,
-                        }.into());
+                        }
+                        .into());
                     }
                 }
             }
 
             Ok(())
         }
-    
+
         // NOTE(alex): Synth width must be narrower than the nominal record constraint
         // Calling with the nominal record value on the width constraint is allowed
-        (WidthConstraint(ref synth_awc),
-        Record {
-            abstract_field_map: ref afm,
-            ..
-        }) => {
+        (
+            WidthConstraint(ref synth_awc),
+            Record {
+                abstract_field_map: ref afm,
+                ..
+            },
+        ) => {
             for (synth_ident, synth_type) in synth_awc.fields.iter() {
                 match afm.get(synth_ident) {
-                    Some(constraint_type) => {
-                        resolve_types_static(universe, scoped_data, typing_context,
-                            synth_type, constraint_type, span)?
-                    }
+                    Some(constraint_type) => resolve_types_static(
+                        universe,
+                        scoped_data,
+                        typing_context,
+                        synth_type,
+                        constraint_type,
+                        span,
+                    )?,
 
                     None => {
                         // Synth width constraint is not narrower than nominal constraint
@@ -378,7 +493,8 @@ fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData,
                             found: synth.clone(),
                             expected: constraint.clone(),
                             span: span,
-                        }.into());
+                        }
+                        .into());
                     }
                 }
             }
@@ -390,76 +506,115 @@ fn resolve_param_static(universe: &Universe, scoped_data: &ScopedData,
             if synth_id == constraint_id {
                 Ok(())
             } else {
-
-                let synth_type = typing_context.get_type_var(synth_id.clone())
+                let synth_type = typing_context
+                    .get_type_var(synth_id.clone())
                     .expect("Missing synth var");
-                let constraint_type = typing_context.get_type_var(constraint_id.clone())
+                let constraint_type = typing_context
+                    .get_type_var(constraint_id.clone())
                     .expect("Missing synth var");
 
-                resolve_param_static(universe, scoped_data, typing_context,
-                    synth_type, constraint_type, span)
-                    .map_err(|_| {
-                        TypeError::UnexpectedType {
-                            found: synth.clone(),
-                            expected: constraint.clone(),
-                            span: span,
-                        }.into()
-                    })
+                resolve_param_static(
+                    universe,
+                    scoped_data,
+                    typing_context,
+                    synth_type,
+                    constraint_type,
+                    span,
+                )
+                .map_err(|_| {
+                    TypeError::UnexpectedType {
+                        found: synth.clone(),
+                        expected: constraint.clone(),
+                        span: span,
+                    }
+                    .into()
+                })
             }
         }
 
         (TypeVar(synth_id), _) => {
-            let synth_var_type = typing_context.get_type_var(synth_id.clone())
-                    .expect("Missing synth var");
+            let synth_var_type = typing_context
+                .get_type_var(synth_id.clone())
+                .expect("Missing synth var");
 
-            resolve_param_static(universe, scoped_data, typing_context,
-                    synth_var_type, constraint, span)
-                    .map_err(|_| {
-                        TypeError::UnexpectedType {
-                            found: synth.clone(),
-                            expected: constraint.clone(),
-                            span: span,
-                        }.into()
-                    })
+            resolve_param_static(
+                universe,
+                scoped_data,
+                typing_context,
+                synth_var_type,
+                constraint,
+                span,
+            )
+            .map_err(|_| {
+                TypeError::UnexpectedType {
+                    found: synth.clone(),
+                    expected: constraint.clone(),
+                    span: span,
+                }
+                .into()
+            })
         }
 
         (_, TypeVar(constraint_id)) => {
-            let constraint_var_type = typing_context.get_type_var(constraint_id.clone())
-                    .expect("Missing synth var");
+            let constraint_var_type = typing_context
+                .get_type_var(constraint_id.clone())
+                .expect("Missing synth var");
 
-            resolve_param_static(universe, scoped_data, typing_context,
-                    synth, constraint_var_type, span)
-                    .map_err(|_| {
-                        TypeError::UnexpectedType {
-                            found: synth.clone(),
-                            expected: constraint.clone(),
-                            span: span,
-                        }.into()
-                    })
+            resolve_param_static(
+                universe,
+                scoped_data,
+                typing_context,
+                synth,
+                constraint_var_type,
+                span,
+            )
+            .map_err(|_| {
+                TypeError::UnexpectedType {
+                    found: synth.clone(),
+                    expected: constraint.clone(),
+                    span: span,
+                }
+                .into()
+            })
         }
 
         (synth_app @ App { .. }, constraint) => {
             let new_synthesis = synth_app
-                .substitute(universe, scoped_data, typing_context).unwrap();
+                .substitute(universe, scoped_data, typing_context)
+                .unwrap();
 
-            resolve_param_static(universe, scoped_data, typing_context,
-                &new_synthesis, constraint, span)
+            resolve_param_static(
+                universe,
+                scoped_data,
+                typing_context,
+                &new_synthesis,
+                constraint,
+                span,
+            )
         }
 
         (synthesis, constraint_app @ App { .. }) => {
             let new_constraint = constraint_app
-                .substitute(universe, scoped_data, typing_context).unwrap();
+                .substitute(universe, scoped_data, typing_context)
+                .unwrap();
 
-            resolve_param_static(universe, scoped_data, typing_context,
-                synthesis, &new_constraint, span)
+            resolve_param_static(
+                universe,
+                scoped_data,
+                typing_context,
+                synthesis,
+                &new_constraint,
+                span,
+            )
         }
 
         _ => resolve_types_static(
-                universe, 
-                scoped_data, 
-                typing_context, 
-                synth, 
-                constraint, 
-                span),
+            universe,
+            scoped_data,
+            typing_context,
+            synth,
+            constraint,
+            span,
+        ),
     }
 }

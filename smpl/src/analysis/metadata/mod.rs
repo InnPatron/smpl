@@ -3,7 +3,7 @@ macro_rules! map_unique_set {
         if $map.insert($key, $val).is_some() {
             panic!($msg);
         }
-    }}
+    }};
 }
 
 mod attribute_keys;
@@ -11,9 +11,9 @@ mod fn_data;
 mod layout;
 mod modules;
 
-pub use self::modules::*;
 pub use self::fn_data::*;
 pub use self::layout::*;
+pub use self::modules::*;
 
 use std::collections::{HashMap, HashSet};
 
@@ -37,7 +37,6 @@ pub struct Metadata {
 
     struct_annotations: HashMap<TypeId, HashMap<String, Option<String>>>,
     fn_annotations: HashMap<FnId, HashMap<String, Option<String>>>,
-
 }
 
 impl Metadata {
@@ -80,18 +79,32 @@ impl Metadata {
 
     pub fn is_builtin_params_unchecked(&self, id: FnId) -> bool {
         self.unchecked_builtins_params.contains(&id)
-    } 
+    }
 
-    pub(super) fn insert_module_fn(&mut self, mod_id: ModuleId, name: Ident, fn_id: FnId) {
+    pub(super) fn insert_module_fn(
+        &mut self,
+        mod_id: ModuleId,
+        name: Ident,
+        fn_id: FnId,
+    ) {
         self.fn_map.insert((mod_id, name), fn_id);
     }
 
-    pub fn module_fn<T: Into<Ident>>(&self, mod_id: ModuleId, name: T) -> Option<FnId> {
+    pub fn module_fn<T: Into<Ident>>(
+        &self,
+        mod_id: ModuleId,
+        name: T,
+    ) -> Option<FnId> {
         self.fn_map.get(&(mod_id, name.into())).map(|id| id.clone())
     }
 
-    pub(super) fn insert_field_ordering(&mut self, id: TypeId, data: FieldOrdering) {
-        map_unique_set!(self.field_ordering,
+    pub(super) fn insert_field_ordering(
+        &mut self,
+        id: TypeId,
+        data: FieldOrdering,
+    ) {
+        map_unique_set!(
+            self.field_ordering,
             id,
             data,
             format!("Overwriting field ordering for struct {}", id)
@@ -103,7 +116,8 @@ impl Metadata {
     }
 
     pub(super) fn insert_fn_layout(&mut self, id: FnId, data: FnLayout) {
-        map_unique_set!(self.fn_layout,
+        map_unique_set!(
+            self.fn_layout,
             id,
             data,
             format!("Overwriting for fn {}", id)
@@ -114,7 +128,11 @@ impl Metadata {
         self.fn_layout.get(&id).unwrap()
     }
 
-    pub(super) fn insert_array_type(&mut self, mod_id: ModuleId, type_id: TypeId) {
+    pub(super) fn insert_array_type(
+        &mut self,
+        mod_id: ModuleId,
+        type_id: TypeId,
+    ) {
         if self.array_types.contains_key(&mod_id) {
             let v = self.array_types.get_mut(&mod_id).unwrap();
             v.push(type_id);
@@ -127,8 +145,13 @@ impl Metadata {
         self.array_types.get(&id).map(|v| v.as_slice())
     }
 
-    pub(super) fn insert_function_param_ids(&mut self, fn_id: FnId, params: Vec<FunctionParameter>) {
-        map_unique_set!(self.fn_param_ids,
+    pub(super) fn insert_function_param_ids(
+        &mut self,
+        fn_id: FnId,
+        params: Vec<FunctionParameter>,
+    ) {
+        map_unique_set!(
+            self.fn_param_ids,
             fn_id,
             params,
             format!("Overriding function param ids for {:?}", fn_id)
@@ -139,7 +162,9 @@ impl Metadata {
         self.fn_param_ids.get(&fn_id).unwrap().as_slice()
     }
 
-    pub(super) fn find_main(program: &mut Program) -> Result<(), AnalysisError> {
+    pub(super) fn find_main(
+        program: &mut Program,
+    ) -> Result<(), AnalysisError> {
         use crate::ast::{AstNode, ModulePath};
         use crate::span::Span;
 
@@ -148,10 +173,12 @@ impl Metadata {
 
         for (_, mod_id) in universe.all_modules().into_iter() {
             let module = universe.get_module(*mod_id);
-            if let Ok(id) = module.module_scope().get_fn(&ModulePath(vec![AstNode::new(
-                ident!["main"],
-                Span::dummy(),
-            )])) {
+            if let Ok(id) =
+                module.module_scope().get_fn(&ModulePath(vec![AstNode::new(
+                    ident!["main"],
+                    Span::dummy(),
+                )]))
+            {
                 if m.main.is_none() {
                     m.main = Some((id, *mod_id))
                 } else {
@@ -167,7 +194,11 @@ impl Metadata {
         self.main
     }
 
-    pub(super) fn set_struct_annotations(&mut self, type_id: TypeId, annotations: &[Annotation]) {
+    pub(super) fn set_struct_annotations(
+        &mut self,
+        type_id: TypeId,
+        annotations: &[Annotation],
+    ) {
         self.struct_annotations.insert(
             type_id,
             annotations
@@ -189,7 +220,11 @@ impl Metadata {
         self.struct_annotations.get(&type_id)
     }
 
-    pub(super) fn set_fn_annotations(&mut self, fn_id: FnId, annotations: &[Annotation]) {
+    pub(super) fn set_fn_annotations(
+        &mut self,
+        fn_id: FnId,
+        annotations: &[Annotation],
+    ) {
         self.fn_annotations.insert(
             fn_id,
             annotations
@@ -204,12 +239,15 @@ impl Metadata {
         );
     }
 
-    pub fn get_fn_annotations(&self, fn_id: FnId) -> Option<&HashMap<String, Option<String>>> {
+    pub fn get_fn_annotations(
+        &self,
+        fn_id: FnId,
+    ) -> Option<&HashMap<String, Option<String>>> {
         self.fn_annotations.get(&fn_id)
     }
 
     pub fn is_opaque(&self, type_id: TypeId) -> bool {
         self.get_struct_annotations(type_id)
             .map_or(false, |map| map.contains_key(attribute_keys::OPAQUE))
-    } 
+    }
 }

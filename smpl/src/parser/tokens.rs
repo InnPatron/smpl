@@ -284,12 +284,18 @@ impl<'input> Iterator for CharInput<'input> {
 
         let line = self.line;
         let column = self.column;
-        self.lookahead = self.chars.peek().map(|(char_index, (byte_index, c))| {
-            (
-                Location::new(byte_index.clone(), char_index.clone(), line, column),
-                c.clone(),
-            )
-        });
+        self.lookahead =
+            self.chars.peek().map(|(char_index, (byte_index, c))| {
+                (
+                    Location::new(
+                        byte_index.clone(),
+                        char_index.clone(),
+                        line,
+                        column,
+                    ),
+                    c.clone(),
+                )
+            });
 
         result
     }
@@ -323,14 +329,22 @@ impl<'input> Tokenizer<'input> {
         &self.input[start..end]
     }
 
-    fn take_while<F>(&mut self, start: Location, mut acceptor: F) -> (Location, &'input str)
+    fn take_while<F>(
+        &mut self,
+        start: Location,
+        mut acceptor: F,
+    ) -> (Location, &'input str)
     where
         F: FnMut(char) -> bool,
     {
         self.take_until(start, |c| !acceptor(c))
     }
 
-    fn take_until<F>(&mut self, start: Location, mut terminator: F) -> (Location, &'input str)
+    fn take_until<F>(
+        &mut self,
+        start: Location,
+        mut terminator: F,
+    ) -> (Location, &'input str)
     where
         F: FnMut(char) -> bool,
     {
@@ -369,7 +383,11 @@ impl<'input> Tokenizer<'input> {
         self.take_until(start, |c| c == '\n')
     }
 
-    fn op(&mut self, start: Location, c: char) -> Result<SpannedToken, SpannedError> {
+    fn op(
+        &mut self,
+        start: Location,
+        c: char,
+    ) -> Result<SpannedToken, SpannedError> {
         match c {
             '+' => Ok(SpannedToken::new(
                 Token::Plus,
@@ -420,7 +438,10 @@ impl<'input> Tokenizer<'input> {
                         error: TokenizerError::UnexpectedEndOfInput,
                         location: start,
                     })?;
-                    Ok(SpannedToken::new(Token::LOr, LocationSpan::new(start, end)))
+                    Ok(SpannedToken::new(
+                        Token::LOr,
+                        LocationSpan::new(start, end),
+                    ))
                 } else if self.test_lookahead(|c| c == '>') {
                     let (end, _) = self.chars.next().ok_or(SpannedError {
                         error: TokenizerError::UnexpectedEndOfInput,
@@ -444,7 +465,10 @@ impl<'input> Tokenizer<'input> {
                         error: TokenizerError::UnexpectedEndOfInput,
                         location: start,
                     })?;
-                    Ok(SpannedToken::new(Token::Eq, LocationSpan::new(start, end)))
+                    Ok(SpannedToken::new(
+                        Token::Eq,
+                        LocationSpan::new(start, end),
+                    ))
                 } else {
                     Ok(SpannedToken::new(
                         Token::Assign,
@@ -459,7 +483,10 @@ impl<'input> Tokenizer<'input> {
                         error: TokenizerError::UnexpectedEndOfInput,
                         location: start,
                     })?;
-                    Ok(SpannedToken::new(Token::NEq, LocationSpan::new(start, end)))
+                    Ok(SpannedToken::new(
+                        Token::NEq,
+                        LocationSpan::new(start, end),
+                    ))
                 } else {
                     Ok(SpannedToken::new(
                         Token::Invert,
@@ -474,9 +501,15 @@ impl<'input> Tokenizer<'input> {
                         error: TokenizerError::UnexpectedEndOfInput,
                         location: start,
                     })?;
-                    Ok(SpannedToken::new(Token::Lte, LocationSpan::new(start, end)))
+                    Ok(SpannedToken::new(
+                        Token::Lte,
+                        LocationSpan::new(start, end),
+                    ))
                 } else {
-                    Ok(SpannedToken::new(Token::Lt, LocationSpan::span_1(start, 1)))
+                    Ok(SpannedToken::new(
+                        Token::Lt,
+                        LocationSpan::span_1(start, 1),
+                    ))
                 }
             }
 
@@ -486,9 +519,15 @@ impl<'input> Tokenizer<'input> {
                         error: TokenizerError::UnexpectedEndOfInput,
                         location: start,
                     })?;
-                    Ok(SpannedToken::new(Token::Gte, LocationSpan::new(start, end)))
+                    Ok(SpannedToken::new(
+                        Token::Gte,
+                        LocationSpan::new(start, end),
+                    ))
                 } else {
-                    Ok(SpannedToken::new(Token::Gt, LocationSpan::span_1(start, 1)))
+                    Ok(SpannedToken::new(
+                        Token::Gt,
+                        LocationSpan::span_1(start, 1),
+                    ))
                 }
             }
 
@@ -528,7 +567,10 @@ impl<'input> Tokenizer<'input> {
         SpannedToken::new(token, LocationSpan::new(start, end))
     }
 
-    fn numeric_literal(&mut self, start: Location) -> Result<SpannedToken, SpannedError> {
+    fn numeric_literal(
+        &mut self,
+        start: Location,
+    ) -> Result<SpannedToken, SpannedError> {
         let (end, int) = self.take_while(start, is_digit);
 
         if let Some((_loc, ch)) = self.chars.peek() {
@@ -561,7 +603,10 @@ impl<'input> Tokenizer<'input> {
         ))
     }
 
-    fn string_literal(&mut self, start: Location) -> Result<SpannedToken, SpannedError> {
+    fn string_literal(
+        &mut self,
+        start: Location,
+    ) -> Result<SpannedToken, SpannedError> {
         let mut literal = String::new();
         while let Some((e, ch)) = self.chars.next() {
             match ch {
@@ -624,10 +669,12 @@ impl<'input> Iterator for Tokenizer<'input> {
                     )))
                 }
 
-                ':' if self.test_lookahead(is_colon) == false => Some(Ok(SpannedToken::new(
-                    Token::Colon,
-                    LocationSpan::span_1(start, 1),
-                ))),
+                ':' if self.test_lookahead(is_colon) == false => {
+                    Some(Ok(SpannedToken::new(
+                        Token::Colon,
+                        LocationSpan::span_1(start, 1),
+                    )))
+                }
 
                 '(' => Some(Ok(SpannedToken::new(
                     Token::LParen,
@@ -664,7 +711,9 @@ impl<'input> Iterator for Tokenizer<'input> {
                 '\"' => Some(self.string_literal(start)),
 
                 ch if is_ident_start(ch) => Some(Ok(self.identifier(start))),
-                ch if is_digit(ch) || (ch == '-' && self.test_lookahead(is_digit)) => {
+                ch if is_digit(ch)
+                    || (ch == '-' && self.test_lookahead(is_digit)) =>
+                {
                     Some(self.numeric_literal(start))
                 }
 

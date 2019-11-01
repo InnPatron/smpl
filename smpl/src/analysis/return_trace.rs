@@ -4,12 +4,14 @@ use petgraph::graph::NodeIndex;
 
 use super::control_data::Node;
 use super::control_flow::CFG;
+use super::error::{AnalysisError, ControlFlowError};
 use super::semantic_data::Function;
 use super::semantic_data::*;
-use super::error::{ AnalysisError, ControlFlowError };
 
-pub fn return_trace(universe: &Universe, fn_id: FnId) -> Result<(), AnalysisError> {
-
+pub fn return_trace(
+    universe: &Universe,
+    fn_id: FnId,
+) -> Result<(), AnalysisError> {
     let fn_to_resolve = universe.get_fn(fn_id);
 
     match fn_to_resolve {
@@ -19,22 +21,20 @@ pub fn return_trace(universe: &Universe, fn_id: FnId) -> Result<(), AnalysisErro
             check_returns_form(&*cfg)
         }
 
-        Function::Anonymous(ref anon_fn) => {
-            match anon_fn {
-                AnonymousFunction::Reserved(..) => panic!("Anonymous function should be resolved"),
-
-                AnonymousFunction::Resolved {
-                    ref cfg, 
-                    ..
-                } => {
-                    let cfg = cfg.borrow();
-                    check_returns_form(&*cfg)
-                }
+        Function::Anonymous(ref anon_fn) => match anon_fn {
+            AnonymousFunction::Reserved(..) => {
+                panic!("Anonymous function should be resolved")
             }
 
-        }
+            AnonymousFunction::Resolved { ref cfg, .. } => {
+                let cfg = cfg.borrow();
+                check_returns_form(&*cfg)
+            }
+        },
 
-        Function::Builtin(..) => panic!("Unable to return trace builtin functions"),
+        Function::Builtin(..) => {
+            panic!("Unable to return trace builtin functions")
+        }
     }
 }
 
@@ -69,8 +69,10 @@ fn check_returns_form(cfg: &CFG) -> Result<(), AnalysisError> {
     unreachable!();
 }
 
-fn return_check_id(cfg: &CFG, id: NodeIndex) -> Result<Option<Vec<NodeIndex>>, AnalysisError> {
-
+fn return_check_id(
+    cfg: &CFG,
+    id: NodeIndex,
+) -> Result<Option<Vec<NodeIndex>>, AnalysisError> {
     match *cfg.node_weight(id) {
         Node::Return(..) => Ok(None),
 

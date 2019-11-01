@@ -18,17 +18,17 @@ mod parser;
 mod analysis;
 mod code_gen;
 mod module;
-mod span;
 mod program;
+mod span;
 
 pub use self::err::Error;
 pub use self::module::{ParsedModule, UnparsedModule};
 
 pub use self::parser::parse_module;
-pub use crate::analysis::{ TypeId, FnId, ModuleId };
+pub use crate::analysis::{FnId, ModuleId, TypeId};
 
-pub use crate::analysis::{ metadata };
+pub use crate::analysis::metadata;
 
 pub use crate::code_gen::byte_gen;
 
-pub use crate::program::{ CompilableFn, Program };
+pub use crate::program::{CompilableFn, Program};

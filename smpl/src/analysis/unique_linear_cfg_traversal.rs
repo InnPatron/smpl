@@ -2,35 +2,66 @@ use petgraph::graph::NodeIndex;
 
 use super::control_data::*;
 use super::control_flow::*;
-use super::semantic_data::{FnId, Program};
 
 pub trait UniquePassenger<E> {
     fn start(&mut self, id: NodeIndex) -> Result<(), E>;
     fn end(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn loop_head(&mut self, id: NodeIndex, ld: &mut LoopData, expr: &mut ExprData) -> Result<(), E>;
+    fn loop_head(
+        &mut self,
+        id: NodeIndex,
+        ld: &mut LoopData,
+        expr: &mut ExprData,
+    ) -> Result<(), E>;
     fn loop_foot(&mut self, id: NodeIndex, ld: &mut LoopData) -> Result<(), E>;
     fn cont(&mut self, id: NodeIndex, ld: &mut LoopData) -> Result<(), E>;
     fn br(&mut self, id: NodeIndex, ld: &mut LoopData) -> Result<(), E>;
     fn enter_scope(&mut self, id: NodeIndex) -> Result<(), E>;
     fn exit_scope(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn local_var_decl(&mut self, id: NodeIndex, decl: &mut LocalVarDeclData) -> Result<(), E>;
-    fn assignment(&mut self, id: NodeIndex, assign: &mut AssignmentData) -> Result<(), E>;
+    fn local_var_decl(
+        &mut self,
+        id: NodeIndex,
+        decl: &mut LocalVarDeclData,
+    ) -> Result<(), E>;
+    fn assignment(
+        &mut self,
+        id: NodeIndex,
+        assign: &mut AssignmentData,
+    ) -> Result<(), E>;
     fn expr(&mut self, id: NodeIndex, expr: &mut ExprData) -> Result<(), E>;
     fn ret(&mut self, id: NodeIndex, rdata: &mut ReturnData) -> Result<(), E>;
 
     fn loop_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn loop_end_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
 
-    fn branch_split(&mut self, id: NodeIndex, b: &mut BranchingData, e: &mut ExprData) -> Result<(), E>;
-    fn branch_merge(&mut self, id: NodeIndex, b: &mut BranchingData) -> Result<(), E>;
+    fn branch_split(
+        &mut self,
+        id: NodeIndex,
+        b: &mut BranchingData,
+        e: &mut ExprData,
+    ) -> Result<(), E>;
+    fn branch_merge(
+        &mut self,
+        id: NodeIndex,
+        b: &mut BranchingData,
+    ) -> Result<(), E>;
     fn branch_start_true_path(&mut self, id: NodeIndex) -> Result<(), E>;
     fn branch_start_false_path(&mut self, id: NodeIndex) -> Result<(), E>;
-    fn branch_end_true_path(&mut self, id: NodeIndex, b: &mut BranchingData) -> Result<(), E>;
-    fn branch_end_false_path(&mut self, id: NodeIndex, b: &mut BranchingData) -> Result<(), E>;
+    fn branch_end_true_path(
+        &mut self,
+        id: NodeIndex,
+        b: &mut BranchingData,
+    ) -> Result<(), E>;
+    fn branch_end_false_path(
+        &mut self,
+        id: NodeIndex,
+        b: &mut BranchingData,
+    ) -> Result<(), E>;
 }
 
-
-pub fn traverse<E>(graph: &mut CFG, passenger: &mut dyn UniquePassenger<E>) -> Result<(), E> {
+pub fn traverse<E>(
+    graph: &mut CFG,
+    passenger: &mut dyn UniquePassenger<E>,
+) -> Result<(), E> {
     let mut current = Some(graph.start());
     let node_count = graph.graph().node_count();
 
@@ -49,9 +80,11 @@ pub fn traverse<E>(graph: &mut CFG, passenger: &mut dyn UniquePassenger<E>) -> R
     Ok(())
 }
 
-fn visit_node<E>(graph: &mut CFG, current: NodeIndex, passenger: &mut dyn UniquePassenger<E>) 
-    -> Result<Option<NodeIndex>, E> {
-
+fn visit_node<E>(
+    graph: &mut CFG,
+    current: NodeIndex,
+    passenger: &mut dyn UniquePassenger<E>,
+) -> Result<Option<NodeIndex>, E> {
     let node_count = graph.graph().node_count();
     match graph.node_weight_mut(current) {
         Node::End => {
@@ -121,7 +154,6 @@ fn visit_node<E>(graph: &mut CFG, current: NodeIndex, passenger: &mut dyn Unique
                 }
             }
 
-
             if merge.is_none() {
                 panic!("Traversed entire graph and did not find Condition::BranchMerge");
             }
@@ -129,7 +161,7 @@ fn visit_node<E>(graph: &mut CFG, current: NodeIndex, passenger: &mut dyn Unique
             Ok(Some(graph.next(merge.unwrap())))
         }
 
-        Node::BranchMerge(ref mut branch_data) => {
+        Node::BranchMerge(ref mut _branch_data) => {
             unreachable!();
         }
 
@@ -201,11 +233,11 @@ fn visit_node<E>(graph: &mut CFG, current: NodeIndex, passenger: &mut dyn Unique
                 match *n {
                     BlockNode::LocalVarDecl(ref mut decl) => {
                         passenger.local_var_decl(current, decl)?;
-                    },
+                    }
 
                     BlockNode::Assignment(ref mut assign) => {
                         passenger.assignment(current, assign)?;
-                    },
+                    }
 
                     BlockNode::Expr(ref mut expr) => {
                         passenger.expr(current, expr)?;

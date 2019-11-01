@@ -62,7 +62,12 @@ pub struct Location {
 }
 
 impl Location {
-    pub fn new(byte_index: usize, char_index: usize, line: usize, column: usize) -> Location {
+    pub fn new(
+        byte_index: usize,
+        char_index: usize,
+        line: usize,
+        column: usize,
+    ) -> Location {
         Location {
             byte_index: byte_index,
             char_index: char_index,

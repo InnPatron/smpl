@@ -9,11 +9,8 @@ pub struct BasicBlock {
 }
 
 impl BasicBlock {
-
     pub fn new() -> BasicBlock {
-        BasicBlock {
-            graph: Vec::new()
-        }
+        BasicBlock { graph: Vec::new() }
     }
 
     pub fn append(&mut self, node: BlockNode) {
@@ -32,7 +29,7 @@ impl BasicBlock {
         &self.graph
     }
 
-    pub fn graph_mut(&mut self) -> &mut[BlockNode] {
+    pub fn graph_mut(&mut self) -> &mut [BlockNode] {
         &mut self.graph
     }
 
@@ -47,7 +44,6 @@ impl BasicBlock {
 
 #[derive(Clone, Debug)]
 pub enum BlockNode {
-
     Expr(ExprData),
 
     Assignment(AssignmentData),
@@ -60,7 +56,7 @@ pub enum Node {
     End,
 
     EnterScope,
-    ExitScope, 
+    ExitScope,
 
     Return(ReturnData),
     Break(LoopData),

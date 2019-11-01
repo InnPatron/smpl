@@ -45,7 +45,10 @@ pub struct FeatureInfo {
 }
 
 impl FeatureInfo {
-    pub fn new(r: Vec<FeatureReasoning>, d: Vec<FeatureReasoning>) -> FeatureInfo {
+    pub fn new(
+        r: Vec<FeatureReasoning>,
+        d: Vec<FeatureReasoning>,
+    ) -> FeatureInfo {
         FeatureInfo {
             required: r,
             denied: d,

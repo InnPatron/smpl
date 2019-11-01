@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::iter::Iterator;
-use std::slice::Iter;
 
 use crate::span::Span;
 
@@ -12,7 +11,6 @@ pub use crate::ast::UniOp;
 
 use super::expr_flow;
 use super::semantic_data::*;
-use super::type_cons::*;
 
 // TODO(alex): Remove Typed<T>
 // Types are stored within type_checker::TypingContext instead
@@ -37,9 +35,7 @@ where
     }
 
     pub fn untyped(data: T) -> Typed<T> {
-        Typed {
-            data: data,
-        }
+        Typed { data: data }
     }
 }
 
@@ -51,7 +47,10 @@ pub struct Assignment {
 }
 
 impl Assignment {
-    pub fn new(universe: &mut Universe, assignment: ast::Assignment) -> Assignment {
+    pub fn new(
+        universe: &mut Universe,
+        assignment: ast::Assignment,
+    ) -> Assignment {
         let (name, name_span) = assignment.name.to_data();
         let field_access = FieldAccess::new(universe, name);
         Assignment {
@@ -87,18 +86,20 @@ pub struct LocalVarDecl {
     type_ann: Option<ast::AstNode<ast::TypeAnnotation>>,
     var_name: ast::AstNode<ast::Ident>,
     var_init: self::Expr,
-    var_type: Option<AbstractType>,
     var_id: VarId,
     span: Span,
 }
 
 impl LocalVarDecl {
-    pub fn new(universe: &mut Universe, decl: ast::LocalVarDecl, stmt_span: Span) -> LocalVarDecl {
+    pub fn new(
+        universe: &mut Universe,
+        decl: ast::LocalVarDecl,
+        stmt_span: Span,
+    ) -> LocalVarDecl {
         LocalVarDecl {
             type_ann: decl.var_type,
             var_name: decl.var_name,
             var_init: expr_flow::flatten(universe, decl.var_init),
-            var_type: None,
             var_id: universe.new_var_id(),
             span: stmt_span,
         }
@@ -114,18 +115,6 @@ impl LocalVarDecl {
 
     pub fn var_name(&self) -> &ast::Ident {
         self.var_name.data()
-    }
-
-    pub fn set_type(&mut self, app: AbstractType) {
-        if self.var_type.is_some() {
-            panic!("Attempting to override type for local variable declarration");
-        } else {
-            self.var_type = Some(app);
-        }
-    }
-
-    pub fn var_type(&self) -> Option<AbstractType> {
-        self.var_type.clone()
     }
 
     pub fn var_id(&self) -> VarId {
@@ -158,25 +147,23 @@ impl Expr {
     }
 
     pub fn get_tmp(&self, id: TmpId) -> &Tmp {
-        self.map
-            .get(&id)
-            .expect("Given ID should always be valid if taken from the correct Expr")
+        self.map.get(&id).expect(
+            "Given ID should always be valid if taken from the correct Expr",
+        )
     }
 
     pub fn get_tmp_mut(&mut self, id: TmpId) -> &mut Tmp {
-        self.map
-            .get_mut(&id)
-            .expect("Given ID should always be valid if taken from the correct Expr")
+        self.map.get_mut(&id).expect(
+            "Given ID should always be valid if taken from the correct Expr",
+        )
     }
 
     pub fn last(&self) -> TmpId {
         self.execution_order.last().unwrap().clone()
     }
 
-    pub fn execution_order(&self) -> impl Iterator<Item=TmpId> {
-        self.execution_order
-            .clone()
-            .into_iter()
+    pub fn execution_order(&self) -> impl Iterator<Item = TmpId> {
+        self.execution_order.clone().into_iter()
     }
 
     pub fn order_length(&self) -> usize {
@@ -202,12 +189,15 @@ impl Expr {
         self.span.clone().unwrap()
     }
 
-    pub fn map_tmp(&mut self, universe: &Universe, val: Value, span: Span) -> TmpId {
+    pub fn map_tmp(
+        &mut self,
+        universe: &Universe,
+        val: Value,
+        span: Span,
+    ) -> TmpId {
         let tmp = Tmp {
             id: universe.new_tmp_id(),
-            value: Typed {
-                data: val,
-            },
+            value: Typed { data: val },
             span: span,
         };
         let id = tmp.id;
@@ -273,7 +263,10 @@ pub struct TypeInst {
 }
 
 impl TypeInst {
-    pub fn new(path: ast::ModulePath, args: Vec<ast::TypeAnnotation>) -> TypeInst {
+    pub fn new(
+        path: ast::ModulePath,
+        args: Vec<ast::TypeAnnotation>,
+    ) -> TypeInst {
         TypeInst {
             path: path,
             args: args,
@@ -352,7 +345,6 @@ pub enum ArrayInit {
 pub struct StructInit {
     struct_type_name: ast::TypedPath,
     field_init: Vec<(ast::Ident, Typed<TmpId>)>,
-    struct_type: Option<AbstractType>,
     mapped_field_init: Option<Vec<(FieldId, Typed<TmpId>)>>,
 }
 
@@ -363,7 +355,6 @@ impl StructInit {
     ) -> StructInit {
         StructInit {
             struct_type_name: struct_type_name,
-            struct_type: None,
             field_init: field_init,
             mapped_field_init: None,
         }
@@ -377,14 +368,6 @@ impl StructInit {
         self.struct_type_name.annotations()
     }
 
-    pub fn set_struct_type(&mut self, app: AbstractType) {
-        if self.struct_type.is_some() {
-            panic!("Attempting to overwrite struct type of struct init",);
-        } else {
-            self.struct_type = Some(app);
-        }
-    }
-
     pub fn raw_field_init(&self) -> &[(ast::Ident, Typed<TmpId>)] {
         self.field_init.as_slice()
     }
@@ -394,39 +377,21 @@ impl StructInit {
     }
 
     pub fn init_order<'a>(&'a self) -> impl Iterator<Item = &'a ast::Ident> {
-        self.field_init
-            .iter()
-            .map(|(ref ident, _)| ident)
-    } 
-
-    pub fn struct_type(&self) -> Option<AbstractType> {
-        self.struct_type.as_ref().map(|t| t.clone())
+        self.field_init.iter().map(|(ref ident, _)| ident)
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct AnonStructInit {
     field_init: Vec<(ast::Ident, TmpId)>,
-    struct_type: Option<AbstractType>,
     mapped_field_init: Option<Vec<(FieldId, Typed<TmpId>)>>,
 }
 
 impl AnonStructInit {
-    pub fn new(
-        field_init: Vec<(ast::Ident, TmpId)>,
-    ) -> AnonStructInit {
+    pub fn new(field_init: Vec<(ast::Ident, TmpId)>) -> AnonStructInit {
         AnonStructInit {
-            struct_type: None,
             field_init: field_init,
             mapped_field_init: None,
-        }
-    }
-
-    fn set_struct_type(&mut self, app: AbstractType) {
-        if self.struct_type.is_some() {
-            panic!("Attempting to overwrite struct type of struct init",);
-        } else {
-            self.struct_type = Some(app);
         }
     }
 
@@ -439,13 +404,7 @@ impl AnonStructInit {
     }
 
     pub fn init_order<'a>(&'a self) -> impl Iterator<Item = &'a ast::Ident> {
-        self.field_init
-            .iter()
-            .map(|(ref ident, _)| ident)
-    }
-
-    pub fn struct_type(&self) -> Option<AbstractType> {
-        self.struct_type.as_ref().map(|t| t.clone())
+        self.field_init.iter().map(|(ref ident, _)| ident)
     }
 }
 
@@ -453,7 +412,6 @@ impl AnonStructInit {
 pub struct FieldAccess {
     raw_path: ast::Path,
     path: self::Path,
-    field_type: Option<AbstractType>,
 }
 
 impl FieldAccess {
@@ -461,7 +419,6 @@ impl FieldAccess {
         FieldAccess {
             raw_path: path.clone(),
             path: self::Path::new(universe, path),
-            field_type: None,
         }
     }
 
@@ -475,18 +432,6 @@ impl FieldAccess {
 
     pub fn path_mut(&mut self) -> &mut self::Path {
         &mut self.path
-    }
-
-    pub fn set_field_type(&mut self, app: AbstractType) {
-        if self.field_type.is_some() {
-            panic!("Attempting to override type of a field access",);
-        } else {
-            self.field_type = Some(app);
-        }
-    }
-
-    pub fn field_type(&self) -> Option<AbstractType> {
-        self.field_type.clone()
     }
 }
 
@@ -578,11 +523,15 @@ impl self::Path {
 
         let path = path_iter
             .map(|ps| match ps {
-                ast::PathSegment::Ident(i) => self::PathSegment::Ident(Field::new(i)),
-                ast::PathSegment::Indexing(i, e) => self::PathSegment::Indexing(
-                    Field::new(i),
-                    expr_flow::flatten(universe, *e),
-                ),
+                ast::PathSegment::Ident(i) => {
+                    self::PathSegment::Ident(Field::new(i))
+                }
+                ast::PathSegment::Indexing(i, e) => {
+                    self::PathSegment::Indexing(
+                        Field::new(i),
+                        expr_flow::flatten(universe, *e),
+                    )
+                }
             })
             .collect();
 
@@ -677,9 +626,7 @@ pub struct AnonymousFn {
 
 impl AnonymousFn {
     pub fn new(fn_id: FnId) -> AnonymousFn {
-        AnonymousFn {
-            fn_id: fn_id
-        }
+        AnonymousFn { fn_id: fn_id }
     }
 
     pub fn fn_id(&self) -> FnId {
