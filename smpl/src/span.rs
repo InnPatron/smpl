@@ -1,6 +1,6 @@
 pub type Span = LocationSpan;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct LocationSpan {
     start: Location,
     end: Location,
@@ -25,7 +25,15 @@ impl LocationSpan {
     }
 
     pub fn dummy() -> LocationSpan {
-        LocationSpan::new(Location::new(0, 0, 0, 0), Location::new(0, 0, 0, 0))
+        let d_loc = Location::new(
+            "dummy".to_string(),
+            0,
+            0,
+            0,
+            0,
+        );
+
+        LocationSpan::new(d_loc.clone(), d_loc)
     }
 
     pub fn start(&self) -> Location {
@@ -53,8 +61,9 @@ impl LocationSpan {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Location {
+    pub source: String,
     pub byte_index: usize,
     pub char_index: usize,
     pub line: usize,
@@ -63,23 +72,19 @@ pub struct Location {
 
 impl Location {
     pub fn new(
+        source: String,
         byte_index: usize,
         char_index: usize,
         line: usize,
         column: usize,
     ) -> Location {
         Location {
+            source: source,
             byte_index: byte_index,
             char_index: char_index,
             line: line,
             column: column,
         }
-    }
-}
-
-impl Default for Location {
-    fn default() -> Location {
-        Location::new(0, 0, 1, 1)
     }
 }
 
