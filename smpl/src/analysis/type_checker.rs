@@ -266,7 +266,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         expr: &ExprData,
     ) -> Result<(), E> {
         let expr_type = expr_type!(self, &expr.expr)?;
-        resolve!(self, &expr_type, &AbstractType::Bool, expr.span)?;
+        resolve!(self, &expr_type, &AbstractType::Bool, expr.span.clone())?;
 
         Ok(())
     }
@@ -305,14 +305,14 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         let var_type = match var_decl.type_annotation() {
             Some(ann) => {
                 let ann_type = ann_to_type!(self, ann)?;
-                resolve!(self, &expr_type, &ann_type, decl.span).map_err(
+                resolve!(self, &expr_type, &ann_type, decl.span.clone()).map_err(
                     |_| {
                         let name = var_decl.var_name();
                         TypeError::IncompatibleLocal {
                             name: name.clone(),
                             local_type: ann_type.clone(),
                             found_type: expr_type,
-                            span: decl.span,
+                            span: decl.span.clone(),
                         }
                     },
                 )?;
@@ -357,7 +357,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
             assignment.access_span(),
         )?;
 
-        resolve!(self, &value_type, &assignee_type, assign.span)?;
+        resolve!(self, &value_type, &assignee_type, assign.span.clone())?;
 
         Ok(())
     }
@@ -375,7 +375,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         match rdata.expr {
             Some(ref expr) => {
                 let expr_type = expr_type!(self, expr)?;
-                resolve!(self, &expr_type, &self.return_type, rdata.span)
+                resolve!(self, &expr_type, &self.return_type, rdata.span.clone())
                     .map_err(|e| e.into())
             }
 
@@ -383,7 +383,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
                 self,
                 &AbstractType::Unit,
                 &self.return_type,
-                rdata.span
+                rdata.span.clone()
             )
             .map_err(|e| e.into()),
         }
@@ -404,7 +404,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         e: &ExprData,
     ) -> Result<(), E> {
         let expr_type = expr_type!(self, &e.expr)?;
-        resolve!(self, &expr_type, &AbstractType::Bool, e.span)?;
+        resolve!(self, &expr_type, &AbstractType::Bool, e.span.clone())?;
 
         Ok(())
     }
@@ -788,7 +788,7 @@ fn resolve_struct_init(
             field_map.get(field_name).ok_or(TypeError::UnknownField {
                 name: field_name.clone(),
                 struct_type: struct_type.clone(),
-                span: span,
+                span: span.clone(),
             })?;
 
         let tmp_type = context
@@ -838,7 +838,7 @@ fn resolve_struct_init(
             context,
             init_expr_type,
             field_type,
-            span,
+            span.clone(),
         )?;
     }
 
@@ -1091,7 +1091,7 @@ fn resolve_array_init(
                         .get(tmp_id.data())
                         .expect("Missing TMP")
                         .clone();
-                    (tmp_type, span)
+                    (tmp_type, span.clone())
                 })
                 .collect::<Vec<_>>();
 
@@ -1117,7 +1117,7 @@ fn resolve_array_init(
                     context,
                     &current_element_type,
                     expected_element_type,
-                    span,
+                    span.clone(),
                 )
                 .map_err(|_| TypeError::HeterogenousArray {
                     expected: expected_element_type.clone(),
@@ -1346,7 +1346,7 @@ fn resolve_field_access(
                     TypeError::UnknownField {
                         name: name.clone(),
                         struct_type: AbstractType::WidthConstraint(awc.clone()),
-                        span: span,
+                        span: span.clone(),
                     }
                     .into(),
                 )
@@ -1372,7 +1372,7 @@ fn resolve_field_access(
                                     field_map: field_map.clone(),
                                 },
                             },
-                            span: span,
+                            span: span.clone(),
                         })?;
 
                     let field_type =
@@ -1465,7 +1465,7 @@ fn resolve_field_access(
             index,
             field_access,
             &root_var_type,
-            span,
+            span.clone(),
         )?;
 
         match *field {
