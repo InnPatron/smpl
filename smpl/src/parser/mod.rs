@@ -31,7 +31,9 @@ pub fn parse_module(input: UnparsedModule) -> Result<ParsedModule, Error> {
 }
 
 #[cfg(test)]
-pub fn buffer_input(input: &str) -> tokens::BufferedTokenizer {
-    let tokenizer = tokens::Tokenizer::new(input);
+pub fn buffer_input<'a, 'b>(source: &'a crate::module::ModuleSource, input: &'b str) 
+    -> tokens::BufferedTokenizer<'a, 'b> {
+
+    let tokenizer = tokens::Tokenizer::new(source, input);
     tokens::BufferedTokenizer::new(tokenizer)
 }

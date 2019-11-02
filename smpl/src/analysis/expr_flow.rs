@@ -278,11 +278,14 @@ mod tests {
     use super::*;
     use crate::parser::expr_parser::*;
     use crate::parser::*;
+    use crate::module::ModuleSource;
 
     #[test]
     fn expr_exec_order_ck() {
         let input = "5 + 2 / 3";
-        let mut input = buffer_input(input);
+        let source = ModuleSource::Anonymous(None);
+
+        let mut input = buffer_input(&source, input);
         let expr = piped_expr(&mut input, &[]).unwrap().to_data().0;
 
         let mut universe = Universe::std();

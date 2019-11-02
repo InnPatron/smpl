@@ -10,14 +10,16 @@ mod parser_tests {
     use crate::span::Span;
 
     fn parse_expr_quick(input: &str) -> Expr {
-        let mut tokens = buffer_input(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tokens = buffer_input(&source, input);
         let expr = piped_expr(&mut tokens, &[]).unwrap();
 
         expr.to_data().0
     }
 
     fn parse_stmt_quick(input: &str) -> Stmt {
-        let mut tokens = buffer_input(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tokens = buffer_input(&source, input);
         let stmt = teststmt(&mut tokens).unwrap();
 
         stmt
@@ -273,7 +275,8 @@ init {
     fn test_parse_FnDecl() {
         let input = "fn test_fn(arg: i32, test: float, next: String) { }";
 
-        let mut input = buffer_input(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut input = buffer_input(&source, input);
         let func = testfn_decl(&mut input).unwrap();
 
         assert_eq!(func.name, dummy_node!(ident!("test_fn")));
@@ -306,10 +309,11 @@ struct TestStruct {
     field2: Type2,
 }";
 
-        let mut input = buffer_input(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut input = buffer_input(&source, input);
         let _struct = teststruct_decl(&mut input).unwrap();
 
-        let mut input2 = buffer_input(input2);
+        let mut input2 = buffer_input(&source, input2);
         let _struct2 = teststruct_decl(&mut input2).unwrap();
 
         assert_eq!(_struct.name, dummy_node!(ident!("TestStruct")));
@@ -494,35 +498,40 @@ struct TestStruct {
     #[test]
     fn parse_float_expr() {
         let input = "1.5";
-        let mut input = buffer_input(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut input = buffer_input(&source, input);
         piped_expr(&mut input, &[]).unwrap();
     }
 
     #[test]
     fn parse_another_complex_expr() {
         let input = "1 + 10 * 4 / 3 == 5 && false";
-        let mut input = buffer_input(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut input = buffer_input(&source, input);
         piped_expr(&mut input, &[]).unwrap();
     }
 
     #[test]
     fn parse_math_expr() {
         let input = "1 + 10 * 4 / 3";
-        let mut input = buffer_input(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut input = buffer_input(&source, input);
         piped_expr(&mut input, &[]).unwrap();
     }
 
     #[test]
     fn parse_paren_expr() {
         let input = "(1 + 10) * (4 / 3)";
-        let mut input = buffer_input(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut input = buffer_input(&source, input);
         piped_expr(&mut input, &[]).unwrap();
     }
 
     #[test]
     fn parse_nested_paren_expr() {
         let input = "((1 + 10) * (4 / (3)))";
-        let mut input = buffer_input(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut input = buffer_input(&source, input);
         piped_expr(&mut input, &[]).unwrap();
     }
 
