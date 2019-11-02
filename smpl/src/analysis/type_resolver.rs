@@ -78,7 +78,7 @@ pub fn resolve_types_static(
                     typing_context,
                     synth_type,
                     constraint_type,
-                    span,
+                    span.clone(),
                 )?;
             }
 
@@ -101,7 +101,7 @@ pub fn resolve_types_static(
                             typing_context,
                             synth_type,
                             constraint_type,
-                            span,
+                            span.clone(),
                         )?;
                     }
 
@@ -139,7 +139,7 @@ pub fn resolve_types_static(
                             typing_context,
                             synth_type,
                             constraint_type,
-                            span,
+                            span.clone(),
                         )?;
                     }
 
@@ -204,7 +204,7 @@ pub fn resolve_types_static(
                     typing_context,
                     sp,
                     cp,
-                    span,
+                    span.clone(),
                 )
                 .map_err(|_| {
                     TypeError::FunctionTypeMismatch {
@@ -213,7 +213,7 @@ pub fn resolve_types_static(
                         param_found: sp.clone(),
                         param_expected: cp.clone(),
                         index: index,
-                        span: span,
+                        span: span.clone(),
                     }
                 })?;
             }
@@ -331,13 +331,13 @@ pub fn resolve_types_static(
                 typing_context,
                 synth_var_type,
                 constraint,
-                span,
+                span.clone(),
             )
             .map_err(|_| {
                 TypeError::UnexpectedType {
                     found: synthesis.clone(),
                     expected: constraint.clone(),
-                    span: span,
+                    span: span.clone(),
                 }
                 .into()
             })
@@ -354,7 +354,7 @@ pub fn resolve_types_static(
                 typing_context,
                 synthesis,
                 constraint_var_type,
-                span,
+                span.clone(),
             )
             .map_err(|_| {
                 TypeError::UnexpectedType {
@@ -447,7 +447,7 @@ fn resolve_param_static(
                             typing_context,
                             synth_type,
                             constraint_type,
-                            span,
+                            span.clone(),
                         )?;
                     }
 
@@ -484,7 +484,7 @@ fn resolve_param_static(
                         typing_context,
                         synth_type,
                         constraint_type,
-                        span,
+                        span.clone(),
                     )?,
 
                     None => {
@@ -519,7 +519,7 @@ fn resolve_param_static(
                     typing_context,
                     synth_type,
                     constraint_type,
-                    span,
+                    span.clone(),
                 )
                 .map_err(|_| {
                     TypeError::UnexpectedType {
@@ -543,7 +543,7 @@ fn resolve_param_static(
                 typing_context,
                 synth_var_type,
                 constraint,
-                span,
+                span.clone(),
             )
             .map_err(|_| {
                 TypeError::UnexpectedType {
@@ -566,7 +566,7 @@ fn resolve_param_static(
                 typing_context,
                 synth,
                 constraint_var_type,
-                span,
+                span.clone(),
             )
             .map_err(|_| {
                 TypeError::UnexpectedType {
