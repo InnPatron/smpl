@@ -36,7 +36,7 @@ impl SpannedToken {
     }
 
     pub fn location(&self) -> LocationSpan {
-        self.location
+        self.location.clone()
     }
 }
 
@@ -832,6 +832,7 @@ fn is_digit(c: char) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::module::*;
 
     fn unwrap(v: Option<Result<SpannedToken, SpannedError>>) -> Token {
         v.expect("Some").expect("Ok").to_data().1
@@ -840,7 +841,8 @@ mod tests {
     #[test]
     fn tokenize_mod_decl() {
         let input = "mod test;";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Mod, unwrap(tok.next()));
         assert_eq!(Token::Identifier("test".to_string()), unwrap(tok.next()));
@@ -851,7 +853,8 @@ mod tests {
     #[test]
     fn tokenize_struct_decl() {
         let input = "struct Test { field1: i32, field2: f32 }";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Struct, unwrap(tok.next()));
         assert_eq!(Token::Identifier("Test".to_string()), unwrap(tok.next()));
@@ -875,7 +878,8 @@ mod tests {
     fn tokenize_line_comment() {
         let input = "// Test Bla
 mod hello;";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Mod, unwrap(tok.next()));
         assert_eq!(Token::Identifier("hello".to_string()), unwrap(tok.next()));
@@ -896,7 +900,8 @@ false
 -1. 
 -1.0
 ";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::BoolLiteral(true), unwrap(tok.next()));
         assert_eq!(Token::BoolLiteral(false), unwrap(tok.next()));
@@ -919,7 +924,8 @@ false
         let input = "\" this is lit \"
 \" -erally\"
 ";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(
             Token::StringLiteral(" this is lit ".to_string()),
@@ -942,7 +948,8 @@ abcd
 a1b2
 A1b2
 ";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
         assert_eq!(Token::Identifier("_ident".to_string()), unwrap(tok.next()));
         assert_eq!(Token::Identifier("_123".to_string()), unwrap(tok.next()));
         assert_eq!(Token::Identifier("abcd".to_string()), unwrap(tok.next()));
@@ -953,7 +960,8 @@ A1b2
     #[test]
     fn tokenize_math_expr() {
         let input = "2.0 * foo - (bar/3)--100 % 1. + 3";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::FloatLiteral(2.0), unwrap(tok.next()));
         assert_eq!(Token::Star, unwrap(tok.next()));
@@ -979,7 +987,8 @@ A1b2
     #[test]
     fn tokenize_keywords() {
         let input = "if struct while fn mod use else elif let";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::If, unwrap(tok.next()));
         assert_eq!(Token::Struct, unwrap(tok.next()));
@@ -995,7 +1004,8 @@ A1b2
     #[test]
     fn tokenize_end_of_input() {
         let input = "let";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Let, unwrap(tok.next()));
         assert_eq!(None, tok.next());
@@ -1004,7 +1014,8 @@ A1b2
     #[test]
     fn tokenize_module_path() {
         let input = "foo::bar::baz";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Identifier("foo".to_string()), unwrap(tok.next()));
         assert_eq!(Token::ColonColon, unwrap(tok.next()));
@@ -1016,7 +1027,8 @@ A1b2
     #[test]
     fn tokenize_field_access() {
         let input = "foo.bar.baz";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Identifier("foo".to_string()), unwrap(tok.next()));
         assert_eq!(Token::Dot, unwrap(tok.next()));
@@ -1028,7 +1040,8 @@ A1b2
     #[test]
     fn tokenize_comma_list() {
         let input = "foo, bar,baz";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Identifier("foo".to_string()), unwrap(tok.next()));
         assert_eq!(Token::Comma, unwrap(tok.next()));
@@ -1040,7 +1053,8 @@ A1b2
     #[test]
     fn tokenize_assignment() {
         let input = "let foo: bar = baz;";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Let, unwrap(tok.next()));
         assert_eq!(Token::Identifier("foo".to_string()), unwrap(tok.next()));
@@ -1055,7 +1069,8 @@ A1b2
     #[test]
     fn tokenize_single_float() {
         let input = "21.";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::FloatLiteral(21.0), unwrap(tok.next()));
     }
