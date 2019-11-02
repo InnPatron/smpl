@@ -444,7 +444,7 @@ impl CFG {
                             let decl = typed_ast::LocalVarDecl::new(
                                 universe,
                                 decl,
-                                expr_stmt_span,
+                                expr_stmt_span.clone(),
                             );
                             current_block.append(BlockNode::LocalVarDecl(
                                 LocalVarDeclData {
@@ -570,10 +570,7 @@ impl CFG {
 
                             let loop_data = LoopData {
                                 loop_id: loop_id,
-                                span: Span::new(
-                                    expr_stmt_span.start(),
-                                    expr_stmt_span.start(),
-                                ),
+                                span: expr_stmt_span.clone(),
                             };
 
                             let loop_head = self.graph.add_node(
