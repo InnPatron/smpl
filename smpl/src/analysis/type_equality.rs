@@ -58,7 +58,7 @@ pub fn equal_types_static(
                     typing_context,
                     synth_type,
                     constraint_type,
-                    span,
+                    span.clone(),
                 )?;
             }
 
@@ -89,7 +89,7 @@ pub fn equal_types_static(
                             typing_context,
                             synth_type,
                             constraint_type,
-                            span,
+                            span.clone(),
                         )?;
                     }
 
@@ -153,7 +153,7 @@ pub fn equal_types_static(
                     typing_context,
                     sp,
                     cp,
-                    span,
+                    span.clone(),
                 )
                 .map_err(|_| {
                     TypeError::FunctionTypeMismatch {
@@ -162,7 +162,7 @@ pub fn equal_types_static(
                         param_found: sp.clone(),
                         param_expected: cp.clone(),
                         index: index,
-                        span: span,
+                        span: span.clone(),
                     }
                 })?;
             }
@@ -269,7 +269,7 @@ pub fn equal_types_static(
                 typing_context,
                 synth_var_type,
                 constraint,
-                span,
+                span.clone(),
             )
             .map_err(|_| {
                 TypeError::UnexpectedType {
@@ -292,7 +292,7 @@ pub fn equal_types_static(
                 typing_context,
                 synthesis,
                 constraint_var_type,
-                span,
+                span.clone(),
             )
             .map_err(|_| {
                 TypeError::UnexpectedType {
@@ -332,7 +332,7 @@ pub fn equal_types_static(
                     typing_context,
                     synthesis,
                     constraint,
-                    span,
+                    span.clone(),
                 )?;
             }
 
