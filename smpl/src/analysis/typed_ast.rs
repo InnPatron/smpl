@@ -61,7 +61,7 @@ impl Assignment {
     }
 
     pub fn access_span(&self) -> Span {
-        self.access_span
+        self.access_span.clone()
     }
 
     pub fn assignee(&self) -> &FieldAccess {
@@ -106,7 +106,7 @@ impl LocalVarDecl {
     }
 
     pub fn span(&self) -> Span {
-        self.span
+        self.span.clone()
     }
 
     pub fn type_annotation(&self) -> Option<&ast::TypeAnnotation> {
@@ -233,7 +233,7 @@ impl Tmp {
     }
 
     pub fn span(&self) -> Span {
-        self.span
+        self.span.clone()
     }
 }
 
