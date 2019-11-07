@@ -18,3 +18,4 @@ failure_derive = "0.1.2"
 uuid = { version = "0.7", features = ["v4"] }
 derive_builder = "0.7.0"
 paste = "0.1.6"
+futures = "0.3.1"
