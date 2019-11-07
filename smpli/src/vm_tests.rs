@@ -98,7 +98,7 @@ macro_rules! wrap_input {
     }}
 }
 
-fn add(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn add(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let args = args.unwrap();
     let lhs = args.get(0).unwrap();
     let rhs = args.get(1).unwrap();
@@ -109,7 +109,7 @@ fn add(args: Option<Vec<Value>>) -> Result<Value, Error> {
     return Ok(Value::Int(lhs + rhs));
 }
 
-fn var_arg_sum(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn var_arg_sum(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let args = args.unwrap();
 
     let mut sum = 0;
@@ -147,7 +147,7 @@ expect_value!(interpreter_builtin,
     args :: Some(vec![Value::Int(5), Value::Int(7)]), 
     expect :: Value::Int(12),
     builtins :: |vm: VmModule| {
-        vm.add_builtin("add", add)
+        vm.add_builtin("add", erase(add))
     }
 );
 
@@ -157,7 +157,7 @@ expect_value!(interpreter_builtin_unchecked_params,
     args :: Some(vec![Value::Int(5), Value::Int(7)]),
     expect :: Value::Int(114),
     builtins :: |vm: VmModule| {
-        vm.add_builtin("sum", var_arg_sum)
+        vm.add_builtin("sum", erase(var_arg_sum))
     }
 );
 
@@ -186,7 +186,7 @@ return mod1::add(1, 2);
     let m2 = parse_module(wrap_input!(mod2)).unwrap();
 
     let m1 = VmModule::new(m1)
-        .add_builtin("add", add);
+        .add_builtin("add", erase(add));
     let m2 = VmModule::new(m2);
 
     let modules = vec![m1, m2];
@@ -282,7 +282,7 @@ expect_value!(interpreter_builtin_bind,
     args :: None,
     expect :: Value::Int(8),
     builtins :: |vm: VmModule| {
-        vm.add_builtin("add", add)
+        vm.add_builtin("add", erase(add))
     }
 );
 
