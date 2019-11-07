@@ -18,16 +18,22 @@ pub fn vm_module() -> VmModule {
     let parsed = parse_module(input).unwrap();
 
     let module = VmModule::new(parsed)
-        .add_builtin(STRING_LEN, len)
-        .add_builtin(STRING_TO_STRING, to_string)
-        .add_builtin(STRING_APPEND, append)
-        .add_builtin(STRING_TO_LOWER, to_lower)
-        .add_builtin(STRING_TO_UPPER, to_upper);
+        .add_builtin(STRING_LEN,        boxed_len)
+        .add_builtin(STRING_TO_STRING,  boxed_to_string)
+        .add_builtin(STRING_APPEND,     boxed_append)
+        .add_builtin(STRING_TO_LOWER,   boxed_to_lower)
+        .add_builtin(STRING_TO_UPPER,   boxed_to_upper);
 
     module
 }
 
-fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async_box!(len);
+async_box!(to_string);
+async_box!(append);
+async_box!(to_lower);
+async_box!(to_upper);
+
+async fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let string = args.pop().unwrap();
@@ -36,7 +42,7 @@ fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Int(string.len() as i64))
 }
 
-fn to_string(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn to_string(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let args = min_args!(1, args)?;
 
     let mut s = String::new();
@@ -48,7 +54,7 @@ fn to_string(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::String(s))
 }
 
-fn append(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn append(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = min_args!(1, args)?;
 
     let to_append = args.pop().unwrap();
@@ -62,7 +68,7 @@ fn append(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::String(base))
 }
 
-fn to_lower(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn to_lower(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let string = args.pop().unwrap();
@@ -71,7 +77,7 @@ fn to_lower(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::String(string.to_lowercase()))
 }
 
-fn to_upper(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn to_upper(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let string = args.pop().unwrap();

@@ -27,15 +27,15 @@ pub fn vm_module() -> VmModule {
     let parsed = parse_module(input).unwrap();
 
     let module = VmModule::new(parsed)
-        .add_builtin(VEC_NEW, new)
-        .add_builtin(VEC_LEN, len)
-        .add_builtin(VEC_CONTAINS, contains)
-        .add_builtin(VEC_PUSH, push)
-        .add_builtin(VEC_INSERT, insert)
-        .add_builtin(VEC_GET_VALUE, get_value)
-        .add_builtin(VEC_GET, get)
-        .add_builtin(VEC_REMOVE, remove)
-        .add_builtin(VEC_CLEAR, clear);
+        .add_builtin(VEC_NEW,       boxed_new)
+        .add_builtin(VEC_LEN,       boxed_len)
+        .add_builtin(VEC_CONTAINS,  boxed_contains)
+        .add_builtin(VEC_PUSH,      boxed_push)
+        .add_builtin(VEC_INSERT,    boxed_insert)
+        .add_builtin(VEC_GET_VALUE, boxed_get_value)
+        .add_builtin(VEC_GET,       boxed_get)
+        .add_builtin(VEC_REMOVE,    boxed_remove)
+        .add_builtin(VEC_CLEAR,     boxed_clear);
 
     module
 }
@@ -46,7 +46,17 @@ pub enum VecError {
     IndexOutOfRange(i64, usize),
 }
 
-fn new(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async_box!(new);
+async_box!(len);
+async_box!(contains);
+async_box!(push);
+async_box!(insert);
+async_box!(get_value);
+async_box!(get);
+async_box!(remove);
+async_box!(clear);
+
+async fn new(args: Option<Vec<Value>>) -> Result<Value, Error> {
     no_args!(args)?;
 
     let mut vec = Struct::new();
@@ -56,7 +66,7 @@ fn new(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Struct(vec))
 }
 
-fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let vec_struct = args.pop().unwrap();
     let vec_struct = irmatch!(vec_struct; Value::Struct(s) => s);
@@ -66,7 +76,7 @@ fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(length)
 }
 
-fn contains(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn contains(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = exact_args!(2, args)?;
 
     let to_search = args.pop().unwrap();
@@ -89,7 +99,7 @@ fn contains(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Bool(false))
 }
 
-fn insert(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn insert(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = exact_args!(3, args)?;
 
     let to_insert = args.pop().unwrap();
@@ -117,7 +127,7 @@ fn insert(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Struct(vec_struct))
 }
 
-fn push(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn push(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = exact_args!(2, args)?;
 
     let to_insert = args.pop().unwrap();
@@ -143,7 +153,7 @@ fn push(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Struct(vec_struct))
 }
 
-fn get_value(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn get_value(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = exact_args!(2, args)?;
 
     let index = args.pop().unwrap();
@@ -171,7 +181,7 @@ fn get_value(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(item)
 }
 
-fn get(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn get(args: Option<Vec<Value>>) -> Result<Value, Error> {
     use super::option;
 
     let mut args = exact_args!(2, args)?;
@@ -201,7 +211,7 @@ fn get(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(option::make_some(item))
 }
 
-fn remove(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn remove(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = exact_args!(2, args)?;
 
     let index = args.pop().unwrap();
@@ -238,7 +248,7 @@ fn remove(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Struct(vec_struct))
 }
 
-fn clear(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn clear(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let vec_struct = args.pop().unwrap();
     let vec_struct = irmatch!(vec_struct; Value::Struct(s) => s);

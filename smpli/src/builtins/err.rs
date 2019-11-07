@@ -16,9 +16,9 @@ pub fn vm_module() -> VmModule {
     let parsed = parse_module(input).unwrap();
 
     let module = VmModule::new(parsed)
-        .add_builtin(ERR_PANIC, panic)
-        .add_builtin(ERR_PANIC_MSG, panic_msg)
-        .add_builtin(ERR_ASSERT, assert);
+        .add_builtin(ERR_PANIC,     boxed_panic)
+        .add_builtin(ERR_PANIC_MSG, boxed_panic_msg)
+        .add_builtin(ERR_ASSERT,    boxed_assert);
 
     module
 }
@@ -35,11 +35,16 @@ impl std::fmt::Display for RuntimeError {
     }
 }
 
-fn panic(_args: Option<Vec<Value>>) -> Result<Value, Error> {
+
+async_box!(panic);
+async_box!(panic_msg);
+async_box!(assert);
+
+async fn panic(_args: Option<Vec<Value>>) -> Result<Value, Error> {
     Err(RuntimeError(None))?
 }
 
-fn panic_msg(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn panic_msg(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = args.unwrap();
     let a = args.remove(0);
 
@@ -49,7 +54,7 @@ fn panic_msg(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-fn assert(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn assert(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = args.unwrap();
     let a = args.remove(0);
 
