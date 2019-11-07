@@ -1,10 +1,15 @@
+use std::future::Future;
+
 use failure::Error;
 
 use smpl::{FnId, TypeId, ModuleId};
 
 use super::value::Value;
 
-pub type BuiltinFn = fn(args: Option<Vec<Value>>) -> Result<Value, Error>;
+pub type ArgType        = Option<Vec<Value>>;
+pub type BuiltinResult  = Result<Value, Error>;
+pub type NativeReturn   = Box<dyn Future<Output=BuiltinResult>>;
+pub type BuiltinFn      = fn(args: ArgType) -> NativeReturn;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModQuery {
