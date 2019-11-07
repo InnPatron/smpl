@@ -79,11 +79,7 @@ impl Executor {
     }
 
     pub fn execute_sync(mut self) -> Result<Value, Error> {
-        while !self.finished {
-            futures::executor::block_on(self.step())?;
-        }
-
-        Ok(self.return_register.take().unwrap_or(Value::Unit))
+        futures::executor::block_on(self.execute())
     }
 
     pub async fn execute(mut self) -> Result<Value, Error> {
