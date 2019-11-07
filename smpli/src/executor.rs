@@ -86,6 +86,14 @@ impl Executor {
         Ok(self.return_register.take().unwrap_or(Value::Unit))
     }
 
+    pub async fn execute(&mut self) -> Result<Value, Error> {
+        while !self.finished {
+            self.step().await?;
+        }
+
+        Ok(self.return_register.take().unwrap_or(Value::Unit))
+    }
+
     fn create_stack_info(metadata: &Metadata,
                       fn_handle: FnHandle, 
                       compiled: CompiledProgram,
