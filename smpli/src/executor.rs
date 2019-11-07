@@ -86,7 +86,7 @@ impl Executor {
         Ok(self.return_register.take().unwrap_or(Value::Unit))
     }
 
-    pub async fn execute(&mut self) -> Result<Value, Error> {
+    pub async fn execute(mut self) -> Result<Value, Error> {
         while !self.finished {
             self.step().await?;
         }
