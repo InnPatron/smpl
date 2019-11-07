@@ -128,7 +128,7 @@ impl Executor {
         }
     }
 
-    fn step(&mut self) -> Result<(), Error> {
+    async fn step(&mut self) -> Result<(), Error> {
         let exec_action = match self.top {
             StackInfo::BuiltinStack(BuiltinStack {
                 ref current_fn,
@@ -137,7 +137,7 @@ impl Executor {
             }) => {
                 // TODO(alex): If StackInfo is going to be used for inspecting,
                 //   need args.clone() instead of args.take()
-                let result = (*current_fn)(args.take())?;
+                let result = (*current_fn)(args.take()).await?;
 
                 ExecuteAction::PopStack(result)
             }
