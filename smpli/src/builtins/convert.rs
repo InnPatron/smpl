@@ -22,12 +22,12 @@ pub fn vm_module() -> VmModule {
     let parsed = parse_module(input).unwrap();
 
     let module = VmModule::new(parsed)
-        .add_builtin(CONVERT_INT_TO_FLOAT,      boxed_int_to_float)
-        .add_builtin(CONVERT_FLOAT_TO_INT,      boxed_float_to_int)
-        .add_builtin(CONVERT_IS_FLOAT,          boxed_is_float)
-        .add_builtin(CONVERT_IS_INT,            boxed_is_int)
-        .add_builtin(CONVERT_STRING_TO_FLOAT,   boxed_string_to_float)
-        .add_builtin(CONVERT_STRING_TO_INT,     boxed_string_to_int);
+        .add_builtin(CONVERT_INT_TO_FLOAT,      super::erase(int_to_float))
+        .add_builtin(CONVERT_FLOAT_TO_INT,      super::erase(float_to_int))
+        .add_builtin(CONVERT_IS_FLOAT,          super::erase(is_float))
+        .add_builtin(CONVERT_IS_INT,            super::erase(is_int))
+        .add_builtin(CONVERT_STRING_TO_FLOAT,   super::erase(string_to_float))
+        .add_builtin(CONVERT_STRING_TO_INT,     super::erase(string_to_int));
 
     module
 }
@@ -45,13 +45,6 @@ pub enum ConversionTarget {
     #[fail(display = "Float")]
     Float,
 }
-
-async_box!(int_to_float);
-async_box!(float_to_int);
-async_box!(is_float);
-async_box!(is_int);
-async_box!(string_to_float);
-async_box!(string_to_int);
 
 async fn int_to_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;

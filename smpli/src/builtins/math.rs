@@ -33,40 +33,24 @@ pub fn vm_module() -> VmModule {
     let parsed = parse_module(input).unwrap();
 
     let module = VmModule::new(parsed)
-        .add_builtin(MATH_SIN,          boxed_sin)
-        .add_builtin(MATH_COS,          boxed_cos)
-        .add_builtin(MATH_TAN,          boxed_tan)
-        .add_builtin(MATH_ASIN,         boxed_asin)
-        .add_builtin(MATH_ACOS,         boxed_acos)
-        .add_builtin(MATH_ATAN,         boxed_atan)
-        .add_builtin(MATH_ATAN2,        boxed_atan2)
-        .add_builtin(MATH_TO_RADIANS,   boxed_to_radians)
-        .add_builtin(MATH_TO_DEGREES,   boxed_to_degrees)
-        .add_builtin(MATH_FPOWF,        boxed_fpowf)
-        .add_builtin(MATH_FPOWI,        boxed_fpowi)
-        .add_builtin(MATH_IPOW,         boxed_ipow)
-        .add_builtin(MATH_FLOOR,        boxed_floor)
-        .add_builtin(MATH_CEIL,         boxed_ceil)
-        .add_builtin(MATH_ROUND,        boxed_round);
+        .add_builtin(MATH_SIN,          super::erase(sin))
+        .add_builtin(MATH_COS,          super::erase(cos))
+        .add_builtin(MATH_TAN,          super::erase(tan))
+        .add_builtin(MATH_ASIN,         super::erase(asin))
+        .add_builtin(MATH_ACOS,         super::erase(acos))
+        .add_builtin(MATH_ATAN,         super::erase(atan))
+        .add_builtin(MATH_ATAN2,        super::erase(atan2))
+        .add_builtin(MATH_TO_RADIANS,   super::erase(to_radians))
+        .add_builtin(MATH_TO_DEGREES,   super::erase(to_degrees))
+        .add_builtin(MATH_FPOWF,        super::erase(fpowf))
+        .add_builtin(MATH_FPOWI,        super::erase(fpowi))
+        .add_builtin(MATH_IPOW,         super::erase(ipow))
+        .add_builtin(MATH_FLOOR,        super::erase(floor))
+        .add_builtin(MATH_CEIL,         super::erase(ceil))
+        .add_builtin(MATH_ROUND,        super::erase(round));
 
     module
 }
-
-async_box!(sin);
-async_box!(cos);
-async_box!(tan);
-async_box!(asin);
-async_box!(acos);
-async_box!(atan);
-async_box!(atan2);
-async_box!(to_radians);
-async_box!(to_degrees);
-async_box!(fpowf);
-async_box!(fpowi);
-async_box!(ipow);
-async_box!(floor);
-async_box!(ceil);
-async_box!(round);
 
 /// In radians
 async fn sin(args: Option<Vec<Value>>) -> Result<Value, Error> {

@@ -43,12 +43,12 @@ pub fn vm_module() -> VmModule {
     let parsed = parse_module(input).unwrap();
 
     let module = VmModule::new(parsed)
-        .add_builtin(OPTION_SOME,    boxed_builtin_make_some)
-        .add_builtin(OPTION_IS_SOME, boxed_builtin_is_some)
-        .add_builtin(OPTION_UNWRAP,  boxed_builtin_unwrap)
-        .add_builtin(OPTION_EXPECT,  boxed_builtin_expect)
-        .add_builtin(OPTION_NONE,    boxed_builtin_make_none)
-        .add_builtin(OPTION_IS_NONE, boxed_builtin_is_none)
+        .add_builtin(OPTION_SOME,    super::erase(builtin_make_some))
+        .add_builtin(OPTION_IS_SOME, super::erase(builtin_is_some))
+        .add_builtin(OPTION_UNWRAP,  super::erase(builtin_unwrap))
+        .add_builtin(OPTION_EXPECT,  super::erase(builtin_expect))
+        .add_builtin(OPTION_NONE,    super::erase(builtin_make_none))
+        .add_builtin(OPTION_IS_NONE, super::erase(builtin_is_none))
     ;
 
     module
@@ -146,13 +146,6 @@ pub fn expect(value: Value, message: String) -> Result<Value, Error> {
         v => Err(OptionError::NonOption)?,
     }
 }
-
-async_box!(builtin_make_some);
-async_box!(builtin_is_some);
-async_box!(builtin_unwrap);
-async_box!(builtin_expect);
-async_box!(builtin_make_none);
-async_box!(builtin_is_none);
 
 async fn builtin_make_some(args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;

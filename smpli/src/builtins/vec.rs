@@ -27,15 +27,15 @@ pub fn vm_module() -> VmModule {
     let parsed = parse_module(input).unwrap();
 
     let module = VmModule::new(parsed)
-        .add_builtin(VEC_NEW,       boxed_new)
-        .add_builtin(VEC_LEN,       boxed_len)
-        .add_builtin(VEC_CONTAINS,  boxed_contains)
-        .add_builtin(VEC_PUSH,      boxed_push)
-        .add_builtin(VEC_INSERT,    boxed_insert)
-        .add_builtin(VEC_GET_VALUE, boxed_get_value)
-        .add_builtin(VEC_GET,       boxed_get)
-        .add_builtin(VEC_REMOVE,    boxed_remove)
-        .add_builtin(VEC_CLEAR,     boxed_clear);
+        .add_builtin(VEC_NEW,       super::erase(new))
+        .add_builtin(VEC_LEN,       super::erase(len))
+        .add_builtin(VEC_CONTAINS,  super::erase(contains))
+        .add_builtin(VEC_PUSH,      super::erase(push))
+        .add_builtin(VEC_INSERT,    super::erase(insert))
+        .add_builtin(VEC_GET_VALUE, super::erase(get_value))
+        .add_builtin(VEC_GET,       super::erase(get))
+        .add_builtin(VEC_REMOVE,    super::erase(remove))
+        .add_builtin(VEC_CLEAR,     super::erase(clear));
 
     module
 }
@@ -45,16 +45,6 @@ pub enum VecError {
     #[fail(display = "Index '{}' out of range ('{}')", _0, _1)]
     IndexOutOfRange(i64, usize),
 }
-
-async_box!(new);
-async_box!(len);
-async_box!(contains);
-async_box!(push);
-async_box!(insert);
-async_box!(get_value);
-async_box!(get);
-async_box!(remove);
-async_box!(clear);
 
 async fn new(args: Option<Vec<Value>>) -> Result<Value, Error> {
     no_args!(args)?;

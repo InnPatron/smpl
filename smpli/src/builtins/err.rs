@@ -16,9 +16,9 @@ pub fn vm_module() -> VmModule {
     let parsed = parse_module(input).unwrap();
 
     let module = VmModule::new(parsed)
-        .add_builtin(ERR_PANIC,     boxed_panic)
-        .add_builtin(ERR_PANIC_MSG, boxed_panic_msg)
-        .add_builtin(ERR_ASSERT,    boxed_assert);
+        .add_builtin(ERR_PANIC,     super::erase(panic))
+        .add_builtin(ERR_PANIC_MSG, super::erase(panic_msg))
+        .add_builtin(ERR_ASSERT,    super::erase(assert));
 
     module
 }
@@ -34,11 +34,6 @@ impl std::fmt::Display for RuntimeError {
         }
     }
 }
-
-
-async_box!(panic);
-async_box!(panic_msg);
-async_box!(assert);
 
 async fn panic(_args: Option<Vec<Value>>) -> Result<Value, Error> {
     Err(RuntimeError(None))?
