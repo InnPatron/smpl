@@ -1,3 +1,4 @@
+use std::pin::Pin;
 use std::future::Future;
 
 use failure::Error;
@@ -8,7 +9,7 @@ use super::value::Value;
 
 pub type ArgType        = Option<Vec<Value>>;
 pub type BuiltinResult  = Result<Value, Error>;
-pub type NativeReturn   = Box<dyn Future<Output=BuiltinResult>>;
+pub type NativeReturn   = Pin<Box<dyn Future<Output=BuiltinResult>>>;
 pub type BuiltinFn      = fn(args: ArgType) -> NativeReturn;
 
 #[derive(Debug, Clone, PartialEq)]
