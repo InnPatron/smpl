@@ -1,3 +1,15 @@
+#[macro_export]
+macro_rules! async_box {
+    ($name: ident) => {
+        paste::item! {
+            fn [<boxed_ $name>](args: crate::vm_i::ArgType) -> crate::vm_i::NativeReturn {
+                Box::new($name(args))
+            }
+        }
+    }
+}
+
+
 pub mod convert;
 pub mod err;
 pub mod log;
