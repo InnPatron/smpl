@@ -43,3 +43,5 @@ pub use vm::{ SpawnOptions, AVM };
 pub use executor::Executor;
 
 pub use smpl::{ ParsedModule, UnparsedModule, parse_module };
+
+pub use builtins::erase;
