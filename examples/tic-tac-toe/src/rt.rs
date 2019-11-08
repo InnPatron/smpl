@@ -8,10 +8,10 @@ const RT: &'static str = include_str!("rt.smpl");
 
 pub fn vm_module() -> VmModule {
     VmModule::new(parse_module(UnparsedModule::anonymous(RT)).unwrap())
-        .add_builtin("user_key", user_input)
+        .add_builtin("user_key", smpli::erase(user_input))
 }
 
-fn user_input(_args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn user_input(_args: Option<Vec<Value>>) -> Result<Value, Error> {
     let mut input = String::new();
     let size = io::stdin().read_line(&mut input).unwrap();
 
