@@ -37,7 +37,7 @@ pub fn resolve_types_static(
     use super::abstract_type::AbstractType::*;
 
     match (synthesis, constraint) {
-        (_, Any) => Ok(()),
+        (_, Any(_)) => Ok(()),
 
         (
             Record {
@@ -404,11 +404,11 @@ fn resolve_param_static(
     use super::abstract_type::AbstractType::*;
 
     match (synth, constraint) {
-        (Any, Any) => Ok(()),
+        (Any(_), Any(_)) => Ok(()),
 
         // If the synth is Any but a specific type is expected, reject
         // EVAL ORDER
-        (Any, _) => {
+        (Any(_), _) => {
             return Err(TypeError::UnexpectedType {
                 found: constraint.clone(),
                 expected: synth.clone(),

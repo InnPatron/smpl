@@ -5,6 +5,7 @@ use crate::ast::{
     TypeParams as AstTypeParams, WhereClause,
 };
 use crate::feature::*;
+use crate::span::Span;
 
 use super::error::{AnalysisError, TypeError};
 use super::metadata::*;
@@ -352,9 +353,10 @@ fn type_param_map(
 
                 // TODO: What kind of recursion to support? Probably equirecursive
                 // Add type parameters to typing context to allow recursive constraints
+                // TODO: Pass the AST span into the type span
                 typing_context
                     .type_vars
-                    .insert(type_var_id.clone(), AbstractType::Any);
+                    .insert(type_var_id.clone(), AbstractType::Any(Span::dummy()));
                 type_param_order.push(type_param_id);
             }
         }
@@ -428,9 +430,10 @@ fn type_param_map(
     for (ident, (type_param_id, type_var_id)) in internal_type_map.into_iter() {
         // TODO: Also insert into the typing env
         current_scope.insert_type_var(ident.clone(), type_var_id);
+        // TODO: Pass the AST span into the type span
         typing_context
             .type_vars
-            .insert(type_var_id.clone(), AbstractType::Any);
+            .insert(type_var_id.clone(), AbstractType::Any(Span::dummy()));
 
         finished.insert(type_param_id.clone(), (None, type_var_id.clone()));
     }

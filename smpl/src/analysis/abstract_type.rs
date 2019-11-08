@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::{AstNode, Ident, TypeAnnotationRef, WidthConstraint};
+use crate::span::Span;
 
 use super::error::{AnalysisError, ApplicationError, TypeError as ATypeError};
 use super::resolve_scope::ScopedData;
@@ -11,7 +12,7 @@ use super::type_cons::{TypeCons, TypeParams};
 
 #[derive(Debug, Clone)]
 pub enum AbstractType {
-    Any,
+    Any(Span),
 
     Record {
         type_id: TypeId,
@@ -560,7 +561,7 @@ impl AbstractType {
             AbstractType::String => Ok(AbstractType::String),
             AbstractType::Bool => Ok(AbstractType::Bool),
             AbstractType::Unit => Ok(AbstractType::Unit),
-            AbstractType::Any => Ok(AbstractType::Any),
+            AbstractType::Any(ref l) => Ok(AbstractType::Any(l.clone())),
         }
     }
 }
@@ -858,7 +859,7 @@ fn fuse_field_width_constraints(
         | AbstractType::Bool
         | AbstractType::Unit
         | AbstractType::Opaque { .. }
-        | AbstractType::Any => true,
+        | AbstractType::Any(_) => true,
 
         AbstractType::TypeVar(..) => true, // TODO: Check the type var in the context?
 

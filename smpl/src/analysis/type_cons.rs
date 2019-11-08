@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::{AstNode, Ident, TypeAnnotationRef, WidthConstraint};
+use crate::span::Span;
 
 use super::abstract_type::*;
 use super::error::{AnalysisError, ApplicationError, TypeError as ATypeError};
@@ -108,9 +109,10 @@ impl TypeParams {
         constraint: Option<AbstractWidthConstraint>,
         placeholder_var: TypeVarId,
     ) {
+        // TODO: Pass the AST span into the type span
         let constraint = constraint
             .map(|awc| AbstractType::WidthConstraint(awc))
-            .unwrap_or(AbstractType::Any);
+            .unwrap_or(AbstractType::Any(Span::dummy()));
 
         self.params.push((param, constraint));
         self.placeholder_variables.insert(param, placeholder_var);
