@@ -1,0 +1,238 @@
+mod rt;
+
+
+struct State {
+    array: [[int; 3]; 3],
+    player1: bool,
+    turnCount: int,
+}
+
+fn new_state() -> State {
+    return init State {
+        array: [[0, 0, 0]; 3],
+        player1: true,
+        turnCount: 0,
+    };
+}
+
+
+builtin fn print(UNCHECKED);
+builtin fn println(UNCHECKED);
+builtin fn user_key() -> String;
+
+fn run() {
+    let game_state = new_state();
+
+    println();
+    println("Type '?' for help");
+    while true {
+
+        println();
+        print_state(game_state);
+
+        let win_result = check_win(game_state);
+        if win_result > 0 {
+            println();
+            println("Player ", win_result, " wins!");
+            return;
+        }
+
+        if game_state.turnCount == 9 {
+            println();
+            println("TIE!");
+            return;
+        }
+
+        let playerNumber = 1;
+        if !game_state.player1 {
+            playerNumber = 2;
+        }
+
+        println();
+        println("> Player ", playerNumber, "'s turn");
+        println();
+
+        print("> ");
+        let input = user_key();
+        if input == "q" {
+            println("See you soon!");
+            return;
+        } elif input == "?" {
+          println();
+          println("Controls:");
+          println("e||r||t"); 
+          println("=======");
+          println("d||f||g");  
+          println("=======");
+          println("c||v||b");
+          println();
+
+          println("Type '?' to display this message");
+          println("Type 'q' to quit");
+        } elif input == "e" {
+            game_state = change_state(game_state, 0, 0);
+        } elif input == "r" {
+            game_state = change_state(game_state, 0, 1);
+        } elif input == "t" {
+            game_state = change_state(game_state, 0, 2);
+        } elif input == "d" {
+            game_state = change_state(game_state, 1, 0);
+        } elif input == "f" {
+            game_state = change_state(game_state, 1, 1);
+        } elif input == "g" {
+            game_state = change_state(game_state, 1, 2);
+        } elif input == "c" {
+            game_state = change_state(game_state, 2, 0);
+        } elif input == "v" {
+            game_state = change_state(game_state, 2, 1);
+        } elif input == "b" {
+            game_state = change_state(game_state, 2, 2);
+        } else {
+            println("Unknown input");
+            println("Type '?' to display the help message");
+        }
+    }
+}
+
+fn check_win(state: State) -> int {
+    let noWin = 0;
+    let player1Win = 1;
+    let player2Win = 2;
+
+    // Check rows
+    let row = 0;
+
+    let emptySpace = false;
+
+    while row < 3 {
+        let column = 0;
+        let rowTotal = 0;
+        let curRow = state.array[row];
+        while column < 3 {
+
+            if curRow[column] == 0 {
+                emptySpace = true;
+            }
+
+            rowTotal = rowTotal + curRow[column];
+            column = column + 1;
+        }
+
+        if rowTotal == 15 {
+            return player1Win;
+        } elif rowTotal == -15 {
+            return player2Win;
+        }
+
+        row = row + 1;
+    }
+
+    // Check columns
+    let column = 0;
+
+    while column < 3 {
+        let row = 0;
+        let columnTotal = 0;
+        while row < 3 {
+            let curRow = state.array[row];
+
+            if curRow[column] == 0 {
+                emptySpace = true;
+            }
+
+            columnTotal = columnTotal + curRow[column];
+            row = row + 1;
+        }
+
+        if columnTotal == 15 {
+            return player1Win;
+        } elif columnTotal == -15 {
+            return player2Win;
+        }
+
+        column = column + 1;
+    }
+
+    // Check left-right diagonal
+    let diagonalTotal = 0;
+    let currentRow = state.array[0];
+    diagonalTotal = diagonalTotal + currentRow[0];
+    let currentRow = state.array[1];
+    diagonalTotal = diagonalTotal + currentRow[1];
+    let currentRow = state.array[2];
+    diagonalTotal = diagonalTotal + currentRow[2];
+
+    if diagonalTotal == 15 {
+        return player1Win;
+    } elif diagonalTotal == -15 {
+        return player2Win;
+    }
+
+    // Check right-left diagonal
+    let diagonalTotal = 0;
+    let currentRow = state.array[0];
+    diagonalTotal = diagonalTotal + currentRow[2];
+    let currentRow = state.array[1];
+    diagonalTotal = diagonalTotal + currentRow[1];
+    let currentRow = state.array[2];
+    diagonalTotal = diagonalTotal + currentRow[0];
+
+    if diagonalTotal == 15 {
+        return player1Win;
+    } elif diagonalTotal == -15 {
+        return player2Win;
+    }
+
+    return noWin;
+}
+
+fn change_state(state: State, row: int, column: int) -> State {
+    let curRow = state.array[row];
+    
+    if curRow[column] != 0 {
+        println("Cell (", row, ",", column, ") is already occupied");
+        return state;
+    }
+
+    if state.player1 {
+        curRow[column] = 5;
+    } else {
+        curRow[column] = -5;
+    }
+
+    state.array[row] = curRow;
+    state.player1 = !state.player1;
+    state.turnCount = state.turnCount + 1;
+
+    return state;
+}
+
+fn print_state(state: State) {
+    let row = 0;
+    while row < 3 {
+        let column = 0;
+        while column < 3 {
+            let curRow = state.array[row];
+            if curRow[column] > 0 {
+                print("X");
+            } elif curRow[column] < 0 {
+                print("O");
+            } else {
+                print(" ");
+            }
+
+            if column != 2 {
+                print("||");
+            }
+
+            column = column + 1;
+        }
+
+        println("");
+        if row != 2 {
+            println("=======");
+        }
+
+        row = row + 1;
+    }
+}
