@@ -10,7 +10,9 @@ use super::semantic_data::{
     Universe,
 };
 use super::type_checker::TypingContext;
-use super::type_cons::*;
+use super::type_cons::{TypeCons, TypeParams};
+use super::abstract_type::AbstractType;
+
 
 pub fn analyze_fn(
     universe: &mut Universe,

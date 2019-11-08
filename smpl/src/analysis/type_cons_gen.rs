@@ -14,6 +14,7 @@ use super::semantic_data::{
 };
 use super::type_checker::TypingContext;
 use super::type_cons::*;
+use super::abstract_type::*;
 
 // TODO: Store type constructors in Program
 pub fn generate_struct_type_cons(

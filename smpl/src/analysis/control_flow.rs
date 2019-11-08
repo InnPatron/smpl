@@ -10,7 +10,8 @@ use super::error::{AnalysisError, ControlFlowError};
 use super::expr_flow;
 
 use super::semantic_data::{AnalysisContext, LoopId, Universe};
-use super::type_cons::*;
+use super::type_cons::TypeCons;
+use super::abstract_type::AbstractType;
 
 use super::type_checker::TypingContext;
 use super::typed_ast;
@@ -937,6 +938,7 @@ mod tests {
     use petgraph::Direction;
 
     use super::super::semantic_data::{TypeId, Universe};
+    use super::super::type_cons::*;
 
     macro_rules! edges {
         ($CFG: expr, $node: expr) => {

@@ -15,7 +15,8 @@ use super::resolve_scope::ScopedData;
 use super::type_checker::TypingContext;
 
 use super::metadata::Metadata;
-use super::type_cons::*;
+use super::type_cons::TypeCons;
+use super::abstract_type::AbstractType;
 
 pub const UNIT_TYPE: &'static str = "Unit";
 pub const INT_TYPE: &'static str = "int";

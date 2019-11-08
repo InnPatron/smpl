@@ -4,7 +4,7 @@ use super::error::*;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::Universe;
 use super::type_checker::TypingContext;
-use super::type_cons::*;
+use super::abstract_type::*;
 
 /// Used for invariance (i.e. types must match EXACTLY)
 /// Will NOT perform any inferences
@@ -16,7 +16,7 @@ pub fn equal_types_static(
     constraint: &AbstractType,
     span: Span,
 ) -> Result<(), TypeError> {
-    use super::type_cons::AbstractType::*;
+    use super::abstract_type::AbstractType::*;
 
     match (synthesis, constraint) {
         (

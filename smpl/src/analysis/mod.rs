@@ -16,6 +16,7 @@ mod resolve_scope;
 mod return_trace;
 mod type_checker;
 pub mod type_cons;
+pub mod abstract_type;
 mod type_cons_gen;
 mod type_equality;
 mod type_resolver;

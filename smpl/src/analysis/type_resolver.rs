@@ -4,7 +4,7 @@ use super::error::*;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::Universe;
 use super::type_checker::TypingContext;
-use super::type_cons::*;
+use super::abstract_type::*;
 
 /// May or may not alter the typing context for inference purposes
 pub fn resolve_types(
@@ -34,7 +34,7 @@ pub fn resolve_types_static(
     constraint: &AbstractType,
     span: Span,
 ) -> Result<(), TypeError> {
-    use super::type_cons::AbstractType::*;
+    use super::abstract_type::AbstractType::*;
 
     match (synthesis, constraint) {
         (_, Any) => Ok(()),
@@ -401,7 +401,7 @@ fn resolve_param_static(
     constraint: &AbstractType,
     span: Span,
 ) -> Result<(), TypeError> {
-    use super::type_cons::AbstractType::*;
+    use super::abstract_type::AbstractType::*;
 
     match (synth, constraint) {
         (Any, Any) => Ok(()),

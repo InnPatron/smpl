@@ -115,7 +115,7 @@ fn translate_tmp(
         }
 
         Value::BinExpr(ref op, ref lhs, ref rhs) => {
-            use crate::analysis::type_cons::AbstractType;
+            use crate::analysis::abstract_type::AbstractType;
 
             macro_rules! specific_math_op {
                 ($ty: expr, $store: expr, $lhs: expr, $rhs: expr, $integer: path, $float: path) => {

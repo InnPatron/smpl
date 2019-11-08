@@ -1,4 +1,4 @@
-use crate::analysis::type_cons::AbstractType;
+use crate::analysis::abstract_type::AbstractType;
 use crate::ast::*;
 use crate::err::Error;
 use crate::span::Span;

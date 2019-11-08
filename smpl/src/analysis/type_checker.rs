@@ -14,7 +14,7 @@ use super::metadata::Metadata;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::Function;
 use super::semantic_data::*;
-use super::type_cons::*;
+use super::abstract_type::*;
 use super::type_resolver;
 use super::typed_ast::*;
 
@@ -239,8 +239,8 @@ macro_rules! resolve {
 
 macro_rules! ann_to_type {
     ($self: expr, $ann: expr) => {{
-        use super::type_cons;
-        type_cons::type_from_ann(
+        use super::abstract_type;
+        abstract_type::type_from_ann(
             $self.universe,
             $self.scopes.last().expect("Should always have a scope"),
             &$self.typing_context,
