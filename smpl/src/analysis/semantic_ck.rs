@@ -86,6 +86,7 @@ mod tests {
         }
     }
 
+    test_pass_analysis!(tic_tac_toe);
     test_pass_analysis!(basic_test_semantic_analysis);
 
     test_pass_analysis!(fn_out_of_order);
