@@ -285,6 +285,15 @@ fn resolve_expr_scope(
             Value::FieldAccess(ref mut field_access) => {
                 let path = field_access.path_mut();
 
+                for segment in path.path_mut() {
+                    match segment {
+                        PathSegment::Indexing(_, ref mut e) 
+                            => resolve_expr_scope(e, current_scope)?,
+
+                        _ => (),
+                    }
+                }
+
                 let var_id = current_scope.var_id(path.root_name())?;
                 path.set_root_var(var_id);
             }
