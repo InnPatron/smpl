@@ -179,12 +179,15 @@ pub fn equal_types_static(
             )
         }
 
+        // TODO: Use this span?
         (
             Array {
+                span: ref synth_span,
                 element_type: ref synth_element,
                 size: synth_size,
             },
             Array {
+                span: ref constraint_span,
                 element_type: ref constraint_element,
                 size: constraint_size,
             },
@@ -194,7 +197,7 @@ pub fn equal_types_static(
                 return Err(TypeError::UnexpectedType {
                     found: synthesis.clone(),
                     expected: constraint.clone(),
-                    span: span,
+                    span: synth_span.clone(),
                 }
                 .into());
             }
@@ -205,7 +208,7 @@ pub fn equal_types_static(
                 typing_context,
                 synth_element,
                 constraint_element,
-                span,
+                synth_span.clone(),
             )
         }
 

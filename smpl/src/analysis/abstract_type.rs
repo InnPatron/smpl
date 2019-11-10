@@ -27,6 +27,7 @@ pub enum AbstractType {
     },
 
     Array {
+        span: Span,
         element_type: Box<AbstractType>,
         size: u64,
     },
@@ -415,9 +416,11 @@ impl AbstractType {
             }
 
             AbstractType::Array {
+                span: ref array_ty_span,
                 ref element_type,
                 ref size,
             } => Ok(AbstractType::Array {
+                span: array_ty_span.clone(),
                 element_type: Box::new(element_type.substitute_internal(
                     universe,
                     scoped_data,
@@ -672,7 +675,9 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                 element_type.data(),
             )?;
 
+            // TODO: Get this span from annotation span
             Ok(AbstractType::Array {
+                span: Span::dummy(),
                 element_type: Box::new(element_type_app),
                 size: *size,
             })

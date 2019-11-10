@@ -1138,6 +1138,7 @@ fn resolve_array_init(
             }
 
             let array_type = AbstractType::Array {
+                span: span,
                 element_type: Box::new(expected_element_type.unwrap().clone()),
                 size: size,
             };
@@ -1150,6 +1151,7 @@ fn resolve_array_init(
                 context.tmp_type_map.get(val.data()).expect("Missing TMP");
 
             let array_type = AbstractType::Array {
+                span: span,
                 element_type: Box::new(element_type.clone()),
                 size: size,
             };
@@ -1509,8 +1511,10 @@ fn resolve_field_access(
                 };
 
                 // TODO: Application?
+                // TODO: Use this span?
                 match field_type {
                     AbstractType::Array {
+                        span,
                         element_type,
                         size: _,
                     } => {
