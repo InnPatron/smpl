@@ -163,9 +163,11 @@ pub fn resolve_types_static(
 
         (
             UncheckedFunction {
+                span: ref synth_span,
                 return_type: ref synth_return,
             },
             UncheckedFunction {
+                span: ref constraint_span,
                 return_type: ref constraint_return,
             },
         ) => resolve_types_static(
@@ -174,7 +176,7 @@ pub fn resolve_types_static(
             typing_context,
             synth_return,
             constraint_return,
-            span,
+            synth_span.clone(),
         ),
 
         (

@@ -33,6 +33,7 @@ pub enum AbstractType {
     },
 
     UncheckedFunction {
+        span: Span,
         return_type: Box<AbstractType>,
     },
 
@@ -120,9 +121,11 @@ impl AbstractType {
         map: &HashMap<TypeVarId, AbstractType>,
     ) -> Result<AbstractType, Vec<ATypeError>> {
         match type_cons {
+            // TODO: Get span of declaration
             TypeCons::UncheckedFunction {
                 ref return_type, ..
             } => Ok(AbstractType::UncheckedFunction {
+                span: Span::dummy(),
                 return_type: Box::new(return_type.substitute_internal(
                     universe,
                     scoped_data,
@@ -473,7 +476,10 @@ impl AbstractType {
                 })
             }
 
-            AbstractType::UncheckedFunction { ref return_type } => {
+            AbstractType::UncheckedFunction { 
+                ref span,
+                ref return_type, 
+            } => {
                 let new_return = return_type.substitute_internal(
                     universe,
                     scoped_data,
@@ -482,6 +488,7 @@ impl AbstractType {
                 )?;
 
                 Ok(AbstractType::UncheckedFunction {
+                    span: span.clone(),
                     return_type: Box::new(new_return),
                 })
             }
