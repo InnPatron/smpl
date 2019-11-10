@@ -181,10 +181,12 @@ pub fn resolve_types_static(
 
         (
             Function {
+                span: ref synth_span,
                 parameters: ref synth_params,
                 return_type: ref synth_return,
             },
             Function {
+                span: ref constraint_span,
                 parameters: ref constraint_params,
                 return_type: ref constraint_return,
             },
@@ -208,7 +210,7 @@ pub fn resolve_types_static(
                     typing_context,
                     sp,
                     cp,
-                    span.clone(),
+                    synth_span.clone(),
                 )
                 .map_err(|_| {
                     TypeError::FunctionTypeMismatch {
@@ -217,7 +219,7 @@ pub fn resolve_types_static(
                         param_found: sp.clone(),
                         param_expected: cp.clone(),
                         index: index,
-                        span: span.clone(),
+                        span: synth_span.clone(),
                     }
                 })?;
             }
@@ -228,7 +230,7 @@ pub fn resolve_types_static(
                 typing_context,
                 synth_return,
                 constraint_return,
-                span,
+                synth_span.clone(),
             )
         }
 

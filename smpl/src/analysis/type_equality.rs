@@ -130,10 +130,12 @@ pub fn equal_types_static(
 
         (
             Function {
+                span: ref synth_span,
                 parameters: ref synth_params,
                 return_type: ref synth_return,
             },
             Function {
+                span: ref constraint_span,
                 parameters: ref constraint_params,
                 return_type: ref constraint_return,
             },
@@ -177,7 +179,7 @@ pub fn equal_types_static(
                 typing_context,
                 synth_return,
                 constraint_return,
-                span,
+                synth_span.clone(),
             )
         }
 

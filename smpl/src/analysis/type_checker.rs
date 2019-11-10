@@ -1007,6 +1007,7 @@ fn resolve_fn_call(
     // Check args and parameters align
     match fn_value_type {
         AbstractType::Function {
+            span: ref _fn_type_span,
             parameters: ref params,
             ref return_type,
         } => {

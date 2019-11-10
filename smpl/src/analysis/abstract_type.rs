@@ -38,6 +38,7 @@ pub enum AbstractType {
     },
 
     Function {
+        span: Span,
         parameters: Vec<AbstractType>,
         return_type: Box<AbstractType>,
     },
@@ -134,11 +135,13 @@ impl AbstractType {
                 )?),
             }),
 
+            // TODO: Get span of declaration
             TypeCons::Function {
                 ref parameters,
                 ref return_type,
                 ..
             } => Ok(AbstractType::Function {
+                span: Span::dummy(),
                 parameters: parameters
                     .iter()
                     .map(|p| {
@@ -434,6 +437,7 @@ impl AbstractType {
             }),
 
             AbstractType::Function {
+                span: ref fn_ty_span,
                 ref parameters,
                 ref return_type,
             } => {
@@ -471,6 +475,7 @@ impl AbstractType {
                 )?;
 
                 Ok(AbstractType::Function {
+                    span: fn_ty_span.clone(),
                     parameters: ok_parameters,
                     return_type: Box::new(new_return),
                 })
@@ -728,7 +733,9 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                 })
                 .unwrap_or(Ok(AbstractType::Unit))?;
 
+            // TODO: Get this span from annotation span
             Ok(AbstractType::Function {
+                span: Span::dummy(),
                 parameters: param_types,
                 return_type: Box::new(return_type),
             })
