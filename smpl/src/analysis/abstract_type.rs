@@ -49,6 +49,7 @@ pub enum AbstractType {
     },
 
     Opaque {
+        span: Span, 
         type_id: TypeId,
         args: Vec<AbstractType>,
     },
@@ -210,7 +211,9 @@ impl AbstractType {
                     })
                     .collect();
 
+                // TODO: Pass in AST span
                 Ok(AbstractType::Opaque {
+                    span: Span::dummy(),
                     type_id: type_id.clone(),
                     args: ok_args,
                 })
@@ -557,7 +560,11 @@ impl AbstractType {
                 Ok(result)
             }
 
-            AbstractType::Opaque { type_id, ref args } => {
+            AbstractType::Opaque { 
+                ref span,
+                type_id, 
+                ref args 
+            } => {
                 let (ok_args, errors) = args
                     .iter()
                     .map(|a| {
@@ -585,6 +592,7 @@ impl AbstractType {
                 }
 
                 Ok(AbstractType::Opaque {
+                    span: span.clone(),
                     type_id: type_id.clone(),
                     args: ok_args,
                 })

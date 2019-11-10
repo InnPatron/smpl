@@ -321,10 +321,12 @@ pub fn equal_types_static(
 
         (
             Opaque {
+                span: ref synth_span,
                 type_id: synth_id,
                 args: ref synth_args,
             },
             Opaque {
+                span: ref constraint_span,
                 type_id: constraint_id,
                 args: ref constraint_args,
             },
