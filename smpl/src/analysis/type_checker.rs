@@ -1353,6 +1353,7 @@ fn resolve_field_access(
             })),
 
             AbstractType::Record {
+                span: record_span,
                 type_id,
                 abstract_field_map: afm,
             } => {
@@ -1366,6 +1367,7 @@ fn resolve_field_access(
                         .ok_or(TypeError::UnknownField {
                             name: name.clone(),
                             struct_type: AbstractType::Record {
+                                span: record_span.clone(),
                                 type_id: type_id,
                                 abstract_field_map: AbstractFieldMap {
                                     fields: fields.clone(),

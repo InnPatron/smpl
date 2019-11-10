@@ -15,6 +15,7 @@ pub enum AbstractType {
     Any(Span),
 
     Record {
+        span: Span,
         type_id: TypeId,
         abstract_field_map: AbstractFieldMap,
     },
@@ -172,7 +173,9 @@ impl AbstractType {
                     );
                 }
 
+                // TODO: Pass in AST span
                 Ok(AbstractType::Record {
+                    span: Span::dummy(),
                     type_id: type_id.clone(),
                     abstract_field_map: AbstractFieldMap {
                         fields: subbed_fields,
@@ -360,6 +363,7 @@ impl AbstractType {
             }
 
             AbstractType::Record {
+                span: ref record_span,
                 ref type_id,
                 ref abstract_field_map,
             } => {
@@ -396,6 +400,7 @@ impl AbstractType {
                 }
 
                 Ok(AbstractType::Record {
+                    span: record_span.clone(),
                     type_id: *type_id,
                     abstract_field_map: AbstractFieldMap {
                         fields: ok_fields,

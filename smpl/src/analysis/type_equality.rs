@@ -21,6 +21,7 @@ pub fn equal_types_static(
     match (synthesis, constraint) {
         (
             Record {
+                span: ref synth_span,
                 type_id: synth_type_id,
                 abstract_field_map:
                     AbstractFieldMap {
@@ -29,6 +30,7 @@ pub fn equal_types_static(
                     },
             },
             Record {
+                span: ref constraint_span,
                 type_id: constraint_type_id,
                 abstract_field_map:
                     AbstractFieldMap {
