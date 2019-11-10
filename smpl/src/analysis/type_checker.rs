@@ -114,7 +114,9 @@ impl<'a> TypeChecker<'a> {
                         let return_type: AbstractType = {
                             let type_id = fn_type.clone();
 
+                            // TODO: Get span from fn_type
                             let fn_type = AbstractType::App {
+                                span: Span::dummy(),
                                 type_cons: type_id,
                                 args: analysis_context
                                     .existential_type_vars()
@@ -155,7 +157,9 @@ impl<'a> TypeChecker<'a> {
                 let return_type: AbstractType = {
                     let type_id = smpl_function.fn_type();
 
+                    // TODO: Get span from function declaration
                     let fn_type = AbstractType::App {
+                        span: Span::dummy(),
                         type_cons: type_id,
                         args: smpl_function
                             .analysis_context()
@@ -743,7 +747,9 @@ fn resolve_struct_init(
         .unwrap_or(Ok(Vec::new()))?;
 
     // TODO: Take into account type arguments
+    // TODO: Is this span right?
     let struct_type = AbstractType::App {
+        span: span.clone(),
         type_cons: struct_type_id,
         args: type_args,
     }
@@ -936,7 +942,9 @@ fn resolve_binding(
             };
             */
 
+            // TODO: Is this span right?
             let fn_type = AbstractType::App {
+                span: _span,
                 type_cons: fn_type_id,
                 args: Vec::new(),
             }
@@ -952,7 +960,7 @@ fn resolve_mod_access(
     scope: &ScopedData,
     context: &TypingContext,
     mod_access: &ModAccess,
-    _span: Span,
+    span: Span,
 ) -> Result<AbstractType, AnalysisError> {
     let fn_id = mod_access
         .fn_id()
@@ -974,7 +982,9 @@ fn resolve_mod_access(
         .fn_type()
         .expect("Expect anonymous functions to already be resolved");
 
+    // TODO: Is this span right?
     let fn_type = AbstractType::App {
+        span: span,
         type_cons: fn_type_id,
         args: Vec::new(),
     }
@@ -1214,7 +1224,7 @@ fn resolve_type_inst(
     scope: &ScopedData,
     context: &TypingContext,
     type_inst: &TypeInst,
-    _span: Span,
+    span: Span,
 ) -> Result<AbstractType, AnalysisError> {
     let fn_id = type_inst
         .get_id()
@@ -1231,7 +1241,9 @@ fn resolve_type_inst(
         .map(|ann| type_from_ann(universe, scope, context, ann))
         .collect::<Result<Vec<_>, _>>()?;
 
+    // TODO: Is this span right?
     let inst_type = AbstractType::App {
+        span: span,
         type_cons: fn_type_id,
         args: type_args,
     }
@@ -1246,7 +1258,7 @@ fn resolve_anonymous_fn(
     scope: &ScopedData,
     context: &TypingContext,
     a_fn: &AnonymousFn,
-    _span: Span,
+    span: Span,
 ) -> Result<AbstractType, AnalysisError> {
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -1303,7 +1315,9 @@ fn resolve_anonymous_fn(
             let _fn_type_cons = universe.get_type_cons(fn_type.clone());
 
             // TODO: Anonymous functions are not allowed to have type parameters
+            // TODO: Is this span right?
             AbstractType::App {
+                span: span,
                 type_cons: fn_type.clone(),
                 args: Vec::new(),
             }

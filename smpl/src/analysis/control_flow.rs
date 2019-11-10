@@ -934,6 +934,7 @@ mod tests {
     use crate::parser::*;
     use crate::parser::parser::*;
     use crate::module::ModuleSource;
+    use crate::span::Span;
     use petgraph::dot::{Config, Dot};
     use petgraph::Direction;
 
@@ -954,6 +955,7 @@ mod tests {
 
     fn expected_app(tc: TypeId) -> AbstractType {
         AbstractType::App {
+            span: Span::dummy(),
             type_cons: tc,
             args: Vec::new(),
         }

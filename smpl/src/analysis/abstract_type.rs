@@ -21,6 +21,7 @@ pub enum AbstractType {
     },
 
     App {
+        span: Span,
         type_cons: TypeId,
         args: Vec<AbstractType>,
     },
@@ -83,7 +84,9 @@ impl AbstractType {
         typing_context: &TypingContext,
     ) -> Result<AbstractType, Vec<ATypeError>> {
         match self {
+            // TODO: Need to pass this span somewhere?
             AbstractType::App {
+                span: ref _span,
                 type_cons: _,
                 args: _,
             } => {
@@ -232,7 +235,9 @@ impl AbstractType {
         map: &HashMap<TypeVarId, AbstractType>,
     ) -> Result<AbstractType, Vec<ATypeError>> {
         match *self {
+            // TODO: Use this span somewhere
             AbstractType::App {
+                span: ref _span,
                 type_cons: ref type_cons_id,
                 args: ref type_args,
             } => {
@@ -651,7 +656,9 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                 None => Vec::new(),
             };
 
+            // TODO: Get this span from annotation span
             Ok(AbstractType::App {
+                span: Span::dummy(),
                 type_cons: type_cons,
                 args: type_args,
             })
