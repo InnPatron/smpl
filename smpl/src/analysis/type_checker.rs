@@ -121,7 +121,7 @@ impl<'a> TypeChecker<'a> {
                                 args: analysis_context
                                     .existential_type_vars()
                                     .iter()
-                                    .map(|id| AbstractType::TypeVar(id.clone()))
+                                    .map(|id| AbstractType::TypeVar(Span::dummy(), id.clone()))
                                     .collect::<Vec<_>>(),
                             }
                             .substitute(universe, &fn_scope, &typing_context)?;
@@ -165,7 +165,7 @@ impl<'a> TypeChecker<'a> {
                             .analysis_context()
                             .existential_type_vars()
                             .iter()
-                            .map(|id| AbstractType::TypeVar(id.clone()))
+                            .map(|id| AbstractType::TypeVar(Span::dummy(), id.clone()))
                             .collect::<Vec<_>>(),
                     }
                     .substitute(
@@ -1410,7 +1410,7 @@ fn resolve_field_access(
                 }))
             }
 
-            AbstractType::TypeVar(ref type_var) => {
+            AbstractType::TypeVar(ref span, ref type_var) => {
                 let type_var_value = context
                     .get_type_var(*type_var)
                     .expect(&format!("Missing type variable: {}", type_var));
@@ -1423,7 +1423,7 @@ fn resolve_field_access(
                     index,
                     field_access,
                     root_var_type,
-                    span,
+                    span.clone(),
                 )
             }
 

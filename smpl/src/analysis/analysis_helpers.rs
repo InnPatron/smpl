@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast;
+use crate::span::Span;
 
 use super::error::AnalysisError;
 use super::metadata::*;
@@ -97,9 +98,10 @@ where
                         existential_type_var,
                     );
 
+                    // TODO: Get span from declaration
                     existential_map.insert(
                         placeholder_variable,
-                        AbstractType::TypeVar(existential_type_var),
+                        AbstractType::TypeVar(Span::dummy(), existential_type_var),
                     );
 
                     existential_type_vars.push(existential_type_var);

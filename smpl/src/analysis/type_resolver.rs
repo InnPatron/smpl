@@ -325,7 +325,7 @@ pub fn resolve_types_static(
 
         // Unconstrained type parameters
         // Check if type parameters are equal
-        (TypeVar(synth_id), TypeVar(constraint_id)) => {
+        (TypeVar(ref synth_span, synth_id), TypeVar(ref constraint_span, constraint_id)) => {
             if synth_id == constraint_id {
                 Ok(())
             } else {
@@ -338,7 +338,7 @@ pub fn resolve_types_static(
             }
         }
 
-        (TypeVar(synth_id), constraint) => {
+        (TypeVar(ref synth_span, synth_id), constraint) => {
             let synth_var_type = typing_context
                 .get_type_var(synth_id.clone())
                 .expect("Missing synth var");
@@ -361,7 +361,7 @@ pub fn resolve_types_static(
             })
         }
 
-        (synthesis, TypeVar(constraint_id)) => {
+        (synthesis, TypeVar(ref constraint_span, constraint_id)) => {
             let constraint_var_type = typing_context
                 .get_type_var(constraint_id.clone())
                 .expect("Missing synth var");
@@ -529,7 +529,7 @@ fn resolve_param_static(
             Ok(())
         }
 
-        (TypeVar(synth_id), TypeVar(constraint_id)) => {
+        (TypeVar(ref synth_span, synth_id), TypeVar(ref constraint_span, constraint_id)) => {
             if synth_id == constraint_id {
                 Ok(())
             } else {
@@ -559,7 +559,7 @@ fn resolve_param_static(
             }
         }
 
-        (TypeVar(synth_id), _) => {
+        (TypeVar(ref synth_span, synth_id), _) => {
             let synth_var_type = typing_context
                 .get_type_var(synth_id.clone())
                 .expect("Missing synth var");
@@ -582,7 +582,7 @@ fn resolve_param_static(
             })
         }
 
-        (_, TypeVar(constraint_id)) => {
+        (_, TypeVar(ref constraint_span, constraint_id)) => {
             let constraint_var_type = typing_context
                 .get_type_var(constraint_id.clone())
                 .expect("Missing synth var");

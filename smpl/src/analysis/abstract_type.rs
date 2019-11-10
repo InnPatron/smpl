@@ -54,7 +54,7 @@ pub enum AbstractType {
         args: Vec<AbstractType>,
     },
 
-    TypeVar(TypeVarId),
+    TypeVar(Span, TypeVarId),
 
     Int,
     Float,
@@ -548,14 +548,14 @@ impl AbstractType {
                 })
             }
 
-            AbstractType::TypeVar(ref type_param_id) => {
+            AbstractType::TypeVar(ref span, ref type_param_id) => {
                 // Map not guaranteed to contain the type var b/c
                 //   type var may not necessarily be something to substitute
                 //   (e.g. may be a top-level type arg)
                 let result = map
                     .get(type_param_id)
                     .map(|t| t.clone())
-                    .unwrap_or(AbstractType::TypeVar(type_param_id.clone()));
+                    .unwrap_or(AbstractType::TypeVar(span.clone(), type_param_id.clone()));
 
                 Ok(result)
             }
@@ -656,7 +656,8 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                     }
 
                     assert!(typing_context.type_vars.contains_key(&tv_id));
-                    return Ok(AbstractType::TypeVar(tv_id.clone()));
+                    // TODO: Get span from declaration
+                    return Ok(AbstractType::TypeVar(Span::dummy(), tv_id.clone()));
                 }
             }
 

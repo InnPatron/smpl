@@ -260,7 +260,7 @@ pub fn equal_types_static(
 
         // Unconstrained type parameters
         // Check if type parameters are equal
-        (TypeVar(synth_id), TypeVar(constraint_id)) => {
+        (TypeVar(ref synth_span, synth_id), TypeVar(ref constraint_span, constraint_id)) => {
             if synth_id == constraint_id {
                 Ok(())
             } else {
@@ -273,7 +273,7 @@ pub fn equal_types_static(
             }
         }
 
-        (TypeVar(synth_id), constraint) => {
+        (TypeVar(ref synth_span, synth_id), constraint) => {
             let synth_var_type = typing_context
                 .get_type_var(synth_id.clone())
                 .expect("Missing synth var");
@@ -284,7 +284,7 @@ pub fn equal_types_static(
                 typing_context,
                 synth_var_type,
                 constraint,
-                span.clone(),
+                synth_span.clone(),
             )
             .map_err(|_| {
                 TypeError::UnexpectedType {
@@ -296,7 +296,7 @@ pub fn equal_types_static(
             })
         }
 
-        (synthesis, TypeVar(constraint_id)) => {
+        (synthesis, TypeVar(ref constraint_span, constraint_id)) => {
             let constraint_var_type = typing_context
                 .get_type_var(constraint_id.clone())
                 .expect("Missing synth var");
@@ -307,13 +307,13 @@ pub fn equal_types_static(
                 typing_context,
                 synthesis,
                 constraint_var_type,
-                span.clone(),
+                constraint_span.clone(),
             )
             .map_err(|_| {
                 TypeError::UnexpectedType {
                     found: synthesis.clone(),
                     expected: constraint.clone(),
-                    span: span,
+                    span: constraint_span.clone(),
                 }
                 .into()
             })
