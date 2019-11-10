@@ -89,8 +89,14 @@ pub fn resolve_types_static(
 
         // Synth width must be wider than constraint width
         (
-            WidthConstraint(ref synth_awc),
-            WidthConstraint(ref constraint_awc),
+            WidthConstraint {
+                span: ref synth_span,
+                width: ref synth_awc
+            },
+            WidthConstraint {
+                span: ref constraint_span,
+                width: ref constraint_awc,
+            },
         ) => {
             for (constraint_ident, constraint_type) in
                 constraint_awc.fields.iter()
@@ -128,7 +134,10 @@ pub fn resolve_types_static(
                 abstract_field_map: ref synth_afm,
                 ..
             },
-            WidthConstraint(ref constraint_awc),
+            WidthConstraint {
+                span: ref constraint_span,
+                width: ref constraint_awc
+            },
         ) => {
             for (constraint_ident, constraint_type) in
                 constraint_awc.fields.iter()
@@ -444,8 +453,14 @@ fn resolve_param_static(
 
         // NOTE(alex): Synth width must be narrower than the constraint width
         (
-            WidthConstraint(ref synth_awc),
-            WidthConstraint(ref constraint_awc),
+            WidthConstraint {
+                span: ref synth_span,
+                width: ref synth_awc
+            },
+            WidthConstraint {
+                span: ref constraint_span,
+                width: ref constraint_awc,
+            },
         ) => {
             for (synth_ident, synth_type) in synth_awc.fields.iter() {
                 match constraint_awc.fields.get(synth_ident) {
@@ -479,7 +494,10 @@ fn resolve_param_static(
         // NOTE(alex): Synth width must be narrower than the nominal record constraint
         // Calling with the nominal record value on the width constraint is allowed
         (
-            WidthConstraint(ref synth_awc),
+            WidthConstraint {
+                span: ref synth_span,
+                width: ref synth_awc
+            },
             Record {
                 abstract_field_map: ref afm,
                 ..

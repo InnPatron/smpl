@@ -43,7 +43,10 @@ pub enum AbstractType {
         return_type: Box<AbstractType>,
     },
 
-    WidthConstraint(AbstractWidthConstraint),
+    WidthConstraint {
+        span: Span, 
+        width: AbstractWidthConstraint
+    },
 
     Opaque {
         type_id: TypeId,
@@ -498,7 +501,10 @@ impl AbstractType {
                 })
             }
 
-            AbstractType::WidthConstraint(ref width_constraint) => {
+            AbstractType::WidthConstraint {
+                ref span,
+                width: ref width_constraint
+            } => {
                 let (ok_field_types, errors) = width_constraint
                     .fields
                     .iter()
@@ -533,7 +539,10 @@ impl AbstractType {
                     fields: ok_field_types,
                 };
 
-                Ok(AbstractType::WidthConstraint(new_width))
+                Ok(AbstractType::WidthConstraint {
+                    span: span.clone(),
+                    width: new_width,
+                })
             }
 
             AbstractType::TypeVar(ref type_param_id) => {
@@ -795,9 +804,10 @@ fn fuse_width_constraints(
                         }
                     }
 
-                    AbstractType::WidthConstraint(
-                        AbstractWidthConstraint { ref fields },
-                    ) => {
+                    AbstractType::WidthConstraint {
+                        ref span,
+                        width: AbstractWidthConstraint { ref fields },
+                    } => {
                         for (field_name, field_type) in fields {
                             field_constraints
                                 .entry(field_name.clone())
@@ -859,9 +869,13 @@ fn fuse_width_constraints(
         return Err(errors.into());
     }
 
-    Ok(AbstractType::WidthConstraint(AbstractWidthConstraint {
-        fields: ok_constraints,
-    }))
+    // TODO: Get span from declarations
+    Ok(AbstractType::WidthConstraint {
+        span: Span::dummy(),
+        width: AbstractWidthConstraint {
+            fields: ok_constraints,
+        }
+    })
 }
 
 /// Ensures that there are no conflicting constraints on a field
@@ -894,18 +908,23 @@ fn fuse_field_width_constraints(
 
         AbstractType::TypeVar(..) => true, // TODO: Check the type var in the context?
 
-        AbstractType::WidthConstraint(..) => false,
+        AbstractType::WidthConstraint {..} => false,
     };
 
     let found_non_width_constraint = is_first_non_width_constraint;
 
     let mut internal_field_constraints: HashMap<Ident, Vec<AbstractType>> =
         HashMap::new();
+
+    // TODO: Get span for constraints
     for constraint in constraint_iter {
         match constraint {
-            AbstractType::WidthConstraint(AbstractWidthConstraint {
-                ref fields,
-            }) => {
+            AbstractType::WidthConstraint {
+                ref span,
+                width: AbstractWidthConstraint {
+                    ref fields,
+                }
+            } => {
                 if found_non_width_constraint {
                     // Error: found { foo: int } + { foo: { ... } }
                     // TODO: Make this collect only conflicting constraints
@@ -984,8 +1003,12 @@ fn fuse_field_width_constraints(
             }
         }
 
-        Ok(AbstractType::WidthConstraint(AbstractWidthConstraint {
-            fields: final_internal_map,
-        }))
+        // TODO: Get span of total width constraint
+        Ok(AbstractType::WidthConstraint {
+            span: Span::dummy(),
+            width: AbstractWidthConstraint {
+                fields: final_internal_map,
+            }
+        })
     }
 }

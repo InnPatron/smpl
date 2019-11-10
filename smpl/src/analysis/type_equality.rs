@@ -68,8 +68,14 @@ pub fn equal_types_static(
         }
 
         (
-            WidthConstraint(ref synth_awc),
-            WidthConstraint(ref constraint_awc),
+            WidthConstraint {
+                span: ref synth_span,
+                width: ref synth_awc,
+            },
+            WidthConstraint {
+                span: ref constraint_span,
+                width: ref constraint_awc,
+            },
         ) => {
             if constraint_awc.fields.len() != synth_awc.fields.len() {
                 return Err(TypeError::UnexpectedType {

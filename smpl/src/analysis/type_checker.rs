@@ -891,7 +891,10 @@ fn resolve_anon_struct_init(
         .into());
     }
 
-    let width_type = AbstractType::WidthConstraint(width_constraint);
+    let width_type = AbstractType::WidthConstraint {
+        span: span,
+        width: width_constraint
+    };
     Ok(width_type)
 }
 
@@ -1358,11 +1361,17 @@ fn resolve_field_access(
         AnalysisError,
     > {
         match current_type.substitute(universe, scope, context)? {
-            AbstractType::WidthConstraint(awc) => Ok(Box::new(move |name| {
+            AbstractType::WidthConstraint {
+                span: width_span,
+                width: awc,
+            } => Ok(Box::new(move |name| {
                 awc.fields.get(name).map(|t| t.clone()).ok_or(
                     TypeError::UnknownField {
                         name: name.clone(),
-                        struct_type: AbstractType::WidthConstraint(awc.clone()),
+                        struct_type: AbstractType::WidthConstraint {
+                            span: width_span.clone(),
+                            width: awc.clone(),
+                        },
                         span: span.clone(),
                     }
                     .into(),

@@ -392,11 +392,15 @@ fn type_param_map(
                     current_scope
                         .insert_type_var(ident.clone(), type_var_id.clone());
 
-                    if let AbstractType::WidthConstraint(constraint) =
-                        abstract_type
-                    {
+                    if let AbstractType::WidthConstraint {
+                        span, 
+                        width: constraint
+                    } = abstract_type {
                         let abstract_type =
-                            AbstractType::WidthConstraint(constraint.clone());
+                            AbstractType::WidthConstraint {
+                                span: span,
+                                width: constraint.clone(),
+                            };
 
                         // Insert type var into scope
                         typing_context
