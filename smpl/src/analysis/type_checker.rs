@@ -511,7 +511,7 @@ fn resolve_tmp(
     let tmp_type = match tmp_value.data() {
         Value::Literal(ref literal) => match *literal {
             Literal::Int(_) => AbstractType::Int(tmp_span.clone()),
-            Literal::Float(_) => AbstractType::Float,
+            Literal::Float(_) => AbstractType::Float(tmp_span.clone()),
             Literal::String(_) => AbstractType::String,
             Literal::Bool(_) => AbstractType::Bool,
         },
@@ -617,13 +617,13 @@ fn resolve_bin_op(
     use crate::ast::BinOp::*;
 
     let expected_int = AbstractType::Int(span.clone());
-    let expected_float = AbstractType::Float;
+    let expected_float = AbstractType::Float(span.clone());
     let expected_bool = AbstractType::Bool;
 
     let resolve_type = match *op {
         Add | Sub | Mul | Div | Mod => match (&lhs, &rhs) {
-            (&AbstractType::Int(s), &AbstractType::Int(_)) => AbstractType::Int(span.clone()),
-            (&AbstractType::Float, &AbstractType::Float) => AbstractType::Float,
+            (&AbstractType::Int(_), &AbstractType::Int(_)) => AbstractType::Int(span.clone()),
+            (&AbstractType::Float(_), &AbstractType::Float(_)) => AbstractType::Float(span.clone()),
 
             _ => {
                 return Err(TypeError::BinOp {
@@ -653,7 +653,7 @@ fn resolve_bin_op(
 
         GreaterEq | LesserEq | Greater | Lesser => match (&lhs, &rhs) {
             (&AbstractType::Int(_), &AbstractType::Int(_)) => AbstractType::Bool,
-            (&AbstractType::Float, &AbstractType::Float) => AbstractType::Bool,
+            (&AbstractType::Float(_), &AbstractType::Float(_)) => AbstractType::Bool,
 
             _ => {
                 return Err(TypeError::BinOp {
@@ -692,13 +692,13 @@ fn resolve_uni_op(
 
     let expected_int = AbstractType::Int(span.clone());
 
-    let expected_float = AbstractType::Float;
+    let expected_float = AbstractType::Float(span.clone());
 
     let expected_bool = AbstractType::Bool;
 
     match *op {
         Negate => match tmp_type {
-            AbstractType::Int(_) | AbstractType::Float => Ok(tmp_type.clone()),
+            AbstractType::Int(_) | AbstractType::Float(_) => Ok(tmp_type.clone()),
             _ => Err(TypeError::UniOp {
                 op: op.clone(),
                 expected: vec![expected_int, expected_float],

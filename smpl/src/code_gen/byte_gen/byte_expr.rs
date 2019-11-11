@@ -121,7 +121,7 @@ fn translate_tmp(
                 ($ty: expr, $store: expr, $lhs: expr, $rhs: expr, $integer: path, $float: path) => {
                     match $ty {
                         AbstractType::Int(_) => $integer($store, $lhs, $rhs),
-                        AbstractType::Float => $float($store, $lhs, $rhs),
+                        AbstractType::Float(_) => $float($store, $lhs, $rhs),
 
                         _ => unreachable!(),
                     }
