@@ -56,7 +56,7 @@ pub enum AbstractType {
 
     TypeVar(Span, TypeVarId),
 
-    Int,
+    Int(Span),
     Float,
     String,
     Bool,
@@ -219,7 +219,8 @@ impl AbstractType {
                 })
             }
 
-            TypeCons::Int => Ok(AbstractType::Int),
+            // TODO: Pass in AST span
+            TypeCons::Int => Ok(AbstractType::Int(Span::dummy())),
             TypeCons::Float => Ok(AbstractType::Float),
             TypeCons::Bool => Ok(AbstractType::Bool),
             TypeCons::String => Ok(AbstractType::String),
@@ -598,7 +599,7 @@ impl AbstractType {
                 })
             }
 
-            AbstractType::Int => Ok(AbstractType::Int),
+            AbstractType::Int(ref s) => Ok(AbstractType::Int(s.clone())),
             AbstractType::Float => Ok(AbstractType::Float),
             AbstractType::String => Ok(AbstractType::String),
             AbstractType::Bool => Ok(AbstractType::Bool),
@@ -907,7 +908,7 @@ fn fuse_field_width_constraints(
         | AbstractType::Array { .. }
         | AbstractType::Function { .. }
         | AbstractType::UncheckedFunction { .. }
-        | AbstractType::Int
+        | AbstractType::Int(_)
         | AbstractType::Float
         | AbstractType::String
         | AbstractType::Bool

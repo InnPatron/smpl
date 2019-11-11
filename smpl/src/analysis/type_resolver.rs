@@ -306,7 +306,7 @@ pub fn resolve_types_static(
             )
         }
 
-        (Int, Int) => Ok(()),
+        (Int(_), Int(_)) => Ok(()),
         (Float, Float) => Ok(()),
         (Bool, Bool) => Ok(()),
         (String, String) => Ok(()),

@@ -510,7 +510,7 @@ fn resolve_tmp(
     let tmp_value = tmp.value();
     let tmp_type = match tmp_value.data() {
         Value::Literal(ref literal) => match *literal {
-            Literal::Int(_) => AbstractType::Int,
+            Literal::Int(_) => AbstractType::Int(tmp_span.clone()),
             Literal::Float(_) => AbstractType::Float,
             Literal::String(_) => AbstractType::String,
             Literal::Bool(_) => AbstractType::Bool,
@@ -616,13 +616,13 @@ fn resolve_bin_op(
 ) -> Result<AbstractType, AnalysisError> {
     use crate::ast::BinOp::*;
 
-    let expected_int = AbstractType::Int;
+    let expected_int = AbstractType::Int(span.clone());
     let expected_float = AbstractType::Float;
     let expected_bool = AbstractType::Bool;
 
     let resolve_type = match *op {
         Add | Sub | Mul | Div | Mod => match (&lhs, &rhs) {
-            (&AbstractType::Int, &AbstractType::Int) => AbstractType::Int,
+            (&AbstractType::Int(s), &AbstractType::Int(_)) => AbstractType::Int(span.clone()),
             (&AbstractType::Float, &AbstractType::Float) => AbstractType::Float,
 
             _ => {
@@ -652,7 +652,7 @@ fn resolve_bin_op(
         },
 
         GreaterEq | LesserEq | Greater | Lesser => match (&lhs, &rhs) {
-            (&AbstractType::Int, &AbstractType::Int) => AbstractType::Bool,
+            (&AbstractType::Int(_), &AbstractType::Int(_)) => AbstractType::Bool,
             (&AbstractType::Float, &AbstractType::Float) => AbstractType::Bool,
 
             _ => {
@@ -690,7 +690,7 @@ fn resolve_uni_op(
 ) -> Result<AbstractType, AnalysisError> {
     use crate::ast::UniOp::*;
 
-    let expected_int = AbstractType::Int;
+    let expected_int = AbstractType::Int(span.clone());
 
     let expected_float = AbstractType::Float;
 
@@ -698,7 +698,7 @@ fn resolve_uni_op(
 
     match *op {
         Negate => match tmp_type {
-            AbstractType::Int | AbstractType::Float => Ok(tmp_type.clone()),
+            AbstractType::Int(_) | AbstractType::Float => Ok(tmp_type.clone()),
             _ => Err(TypeError::UniOp {
                 op: op.clone(),
                 expected: vec![expected_int, expected_float],
@@ -1210,7 +1210,7 @@ fn resolve_indexing(
 
         // TODO: Already applied?
         match &tmp_type {
-            AbstractType::Int => (),
+            AbstractType::Int(_) => (),
 
             _ => {
                 return Err(TypeError::InvalidIndex {
@@ -1457,7 +1457,7 @@ fn resolve_field_access(
             resolve_expr(universe, metadata, scope, context, expr)?;
 
         match indexing_type.substitute(universe, scope, context)? {
-            AbstractType::Int => (),
+            AbstractType::Int(_) => (),
             _ => {
                 return Err(TypeError::InvalidIndex {
                     found: indexing_type.clone(),
@@ -1509,7 +1509,7 @@ fn resolve_field_access(
 
                 // TODO: Application?
                 match indexing_type {
-                    AbstractType::Int => (),
+                    AbstractType::Int(_) => (),
 
                     _ => {
                         return Err(TypeError::InvalidIndex {

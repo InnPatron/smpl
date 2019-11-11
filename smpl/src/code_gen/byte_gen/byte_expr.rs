@@ -120,7 +120,7 @@ fn translate_tmp(
             macro_rules! specific_math_op {
                 ($ty: expr, $store: expr, $lhs: expr, $rhs: expr, $integer: path, $float: path) => {
                     match $ty {
-                        AbstractType::Int => $integer($store, $lhs, $rhs),
+                        AbstractType::Int(_) => $integer($store, $lhs, $rhs),
                         AbstractType::Float => $float($store, $lhs, $rhs),
 
                         _ => unreachable!(),
