@@ -397,12 +397,12 @@ fn type_param_map(
                         .insert_type_var(ident.clone(), type_var_id.clone());
 
                     if let AbstractType::WidthConstraint {
-                        span, 
+                        data: span, 
                         width: constraint
                     } = abstract_type {
                         let abstract_type =
                             AbstractType::WidthConstraint {
-                                span: span,
+                                data: span,
                                 width: constraint.clone(),
                             };
 

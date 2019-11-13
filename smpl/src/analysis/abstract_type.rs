@@ -19,41 +19,41 @@ pub enum AbstractTypeX<X> {
     Any(X),
 
     Record {
-        span: X,
+        data: X,
         type_id: TypeId,
         abstract_field_map: AbstractFieldMapX<X>,
     },
 
     App {
-        span: X,
+        data: X,
         type_cons: TypeId,
         args: Vec<AbstractType>,
     },
 
     Array {
-        span: X,
+        data: X,
         element_type: Box<AbstractType>,
         size: u64,
     },
 
     UncheckedFunction {
-        span: X,
+        data: X,
         return_type: Box<AbstractType>,
     },
 
     Function {
-        span: X,
+        data: X,
         parameters: Vec<AbstractType>,
         return_type: Box<AbstractType>,
     },
 
     WidthConstraint {
-        span: X, 
+        data: X, 
         width: AbstractWidthConstraintX<X>
     },
 
     Opaque {
-        span: X, 
+        data: X, 
         type_id: TypeId,
         args: Vec<AbstractType>,
     },
@@ -97,7 +97,7 @@ impl AbstractTypeX<Span> {
         match self {
             // TODO: Need to pass this span somewhere?
             AbstractType::App {
-                span: ref _span,
+                data: ref _span,
                 type_cons: _,
                 args: _,
             } => {
@@ -134,7 +134,7 @@ impl AbstractTypeX<Span> {
             TypeCons::UncheckedFunction {
                 ref return_type, ..
             } => Ok(AbstractType::UncheckedFunction {
-                span: Span::dummy(),
+                data: Span::dummy(),
                 return_type: Box::new(return_type.substitute_internal(
                     universe,
                     scoped_data,
@@ -149,7 +149,7 @@ impl AbstractTypeX<Span> {
                 ref return_type,
                 ..
             } => Ok(AbstractType::Function {
-                span: Span::dummy(),
+                data: Span::dummy(),
                 parameters: parameters
                     .iter()
                     .map(|p| {
@@ -193,7 +193,7 @@ impl AbstractTypeX<Span> {
 
                 // TODO: Pass in AST span
                 Ok(AbstractType::Record {
-                    span: Span::dummy(),
+                    data: Span::dummy(),
                     type_id: type_id.clone(),
                     abstract_field_map: AbstractFieldMap {
                         fields: subbed_fields,
@@ -217,7 +217,7 @@ impl AbstractTypeX<Span> {
 
                 // TODO: Pass in AST span
                 Ok(AbstractType::Opaque {
-                    span: Span::dummy(),
+                    data: Span::dummy(),
                     type_id: type_id.clone(),
                     args: ok_args,
                 })
@@ -255,7 +255,7 @@ impl AbstractTypeX<Span> {
         match *self {
             // TODO: Use this span somewhere
             AbstractType::App {
-                span: ref _span,
+                data: ref _span,
                 type_cons: ref type_cons_id,
                 args: ref type_args,
             } => {
@@ -386,7 +386,7 @@ impl AbstractTypeX<Span> {
             }
 
             AbstractType::Record {
-                span: ref record_span,
+                data: ref record_span,
                 ref type_id,
                 ref abstract_field_map,
             } => {
@@ -423,7 +423,7 @@ impl AbstractTypeX<Span> {
                 }
 
                 Ok(AbstractType::Record {
-                    span: record_span.clone(),
+                    data: record_span.clone(),
                     type_id: *type_id,
                     abstract_field_map: AbstractFieldMap {
                         fields: ok_fields,
@@ -433,11 +433,11 @@ impl AbstractTypeX<Span> {
             }
 
             AbstractType::Array {
-                span: ref array_ty_span,
+                data: ref array_ty_span,
                 ref element_type,
                 ref size,
             } => Ok(AbstractType::Array {
-                span: array_ty_span.clone(),
+                data: array_ty_span.clone(),
                 element_type: Box::new(element_type.substitute_internal(
                     universe,
                     scoped_data,
@@ -448,7 +448,7 @@ impl AbstractTypeX<Span> {
             }),
 
             AbstractType::Function {
-                span: ref fn_ty_span,
+                data: ref fn_ty_span,
                 ref parameters,
                 ref return_type,
             } => {
@@ -486,14 +486,14 @@ impl AbstractTypeX<Span> {
                 )?;
 
                 Ok(AbstractType::Function {
-                    span: fn_ty_span.clone(),
+                    data: fn_ty_span.clone(),
                     parameters: ok_parameters,
                     return_type: Box::new(new_return),
                 })
             }
 
             AbstractType::UncheckedFunction { 
-                ref span,
+                data: ref span,
                 ref return_type, 
             } => {
                 let new_return = return_type.substitute_internal(
@@ -504,13 +504,13 @@ impl AbstractTypeX<Span> {
                 )?;
 
                 Ok(AbstractType::UncheckedFunction {
-                    span: span.clone(),
+                    data: span.clone(),
                     return_type: Box::new(new_return),
                 })
             }
 
             AbstractType::WidthConstraint {
-                ref span,
+                data: ref span,
                 width: ref width_constraint
             } => {
                 let (ok_field_types, errors) = width_constraint
@@ -548,7 +548,7 @@ impl AbstractTypeX<Span> {
                 };
 
                 Ok(AbstractType::WidthConstraint {
-                    span: span.clone(),
+                    data: span.clone(),
                     width: new_width,
                 })
             }
@@ -566,7 +566,7 @@ impl AbstractTypeX<Span> {
             }
 
             AbstractType::Opaque { 
-                ref span,
+                data: ref span,
                 type_id, 
                 ref args 
             } => {
@@ -597,7 +597,7 @@ impl AbstractTypeX<Span> {
                 }
 
                 Ok(AbstractType::Opaque {
-                    span: span.clone(),
+                    data: span.clone(),
                     type_id: type_id.clone(),
                     args: ok_args,
                 })
@@ -696,7 +696,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
             // TODO: Get this span from annotation span
             Ok(AbstractType::App {
-                span: Span::dummy(),
+                data: Span::dummy(),
                 type_cons: type_cons,
                 args: type_args,
             })
@@ -712,7 +712,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
             // TODO: Get this span from annotation span
             Ok(AbstractType::Array {
-                span: Span::dummy(),
+                data: Span::dummy(),
                 element_type: Box::new(element_type_app),
                 size: *size,
             })
@@ -759,7 +759,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
 
             // TODO: Get this span from annotation span
             Ok(AbstractType::Function {
-                span: Span::dummy(),
+                data: Span::dummy(),
                 parameters: param_types,
                 return_type: Box::new(return_type),
             })
@@ -820,7 +820,7 @@ fn fuse_width_constraints(
                     }
 
                     AbstractType::WidthConstraint {
-                        ref span,
+                        data: ref span,
                         width: AbstractWidthConstraint { ref fields },
                     } => {
                         for (field_name, field_type) in fields {
@@ -886,7 +886,7 @@ fn fuse_width_constraints(
 
     // TODO: Get span from declarations
     Ok(AbstractType::WidthConstraint {
-        span: Span::dummy(),
+        data: Span::dummy(),
         width: AbstractWidthConstraint {
             fields: ok_constraints,
         }
@@ -935,7 +935,7 @@ fn fuse_field_width_constraints(
     for constraint in constraint_iter {
         match constraint {
             AbstractType::WidthConstraint {
-                ref span,
+                data: ref span,
                 width: AbstractWidthConstraint {
                     ref fields,
                 }
@@ -1020,7 +1020,7 @@ fn fuse_field_width_constraints(
 
         // TODO: Get span of total width constraint
         Ok(AbstractType::WidthConstraint {
-            span: Span::dummy(),
+            data: Span::dummy(),
             width: AbstractWidthConstraint {
                 fields: final_internal_map,
             }

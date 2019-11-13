@@ -41,7 +41,7 @@ pub fn resolve_types_static(
 
         (
             Record {
-                span: ref synth_span,
+                data: ref synth_span,
                 type_id: synth_type_id,
                 abstract_field_map:
                     AbstractFieldMap {
@@ -50,7 +50,7 @@ pub fn resolve_types_static(
                     },
             },
             Record {
-                span: ref constraint_span,
+                data: ref constraint_span,
                 type_id: constraint_type_id,
                 abstract_field_map:
                     AbstractFieldMap {
@@ -90,11 +90,11 @@ pub fn resolve_types_static(
         // Synth width must be wider than constraint width
         (
             WidthConstraint {
-                span: ref synth_span,
+                data: ref synth_span,
                 width: ref synth_awc
             },
             WidthConstraint {
-                span: ref constraint_span,
+                data: ref constraint_span,
                 width: ref constraint_awc,
             },
         ) => {
@@ -135,7 +135,7 @@ pub fn resolve_types_static(
                 ..
             },
             WidthConstraint {
-                span: ref constraint_span,
+                data: ref constraint_span,
                 width: ref constraint_awc
             },
         ) => {
@@ -172,11 +172,11 @@ pub fn resolve_types_static(
 
         (
             UncheckedFunction {
-                span: ref synth_span,
+                data: ref synth_span,
                 return_type: ref synth_return,
             },
             UncheckedFunction {
-                span: ref constraint_span,
+                data: ref constraint_span,
                 return_type: ref constraint_return,
             },
         ) => resolve_types_static(
@@ -190,12 +190,12 @@ pub fn resolve_types_static(
 
         (
             Function {
-                span: ref synth_span,
+                data: ref synth_span,
                 parameters: ref synth_params,
                 return_type: ref synth_return,
             },
             Function {
-                span: ref constraint_span,
+                data: ref constraint_span,
                 parameters: ref constraint_params,
                 return_type: ref constraint_return,
             },
@@ -246,12 +246,12 @@ pub fn resolve_types_static(
         // TODO: Use this span?
         (
             Array {
-                span: ref synth_span,
+                data: ref synth_span,
                 element_type: ref synth_element,
                 size: synth_size,
             },
             Array {
-                span: ref constraint_span,
+                data: ref constraint_span,
                 element_type: ref constraint_element,
                 size: constraint_size,
             },
@@ -454,11 +454,11 @@ fn resolve_param_static(
         // NOTE(alex): Synth width must be narrower than the constraint width
         (
             WidthConstraint {
-                span: ref synth_span,
+                data: ref synth_span,
                 width: ref synth_awc
             },
             WidthConstraint {
-                span: ref constraint_span,
+                data: ref constraint_span,
                 width: ref constraint_awc,
             },
         ) => {
@@ -495,7 +495,7 @@ fn resolve_param_static(
         // Calling with the nominal record value on the width constraint is allowed
         (
             WidthConstraint {
-                span: ref synth_span,
+                data: ref synth_span,
                 width: ref synth_awc
             },
             Record {

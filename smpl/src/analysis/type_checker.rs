@@ -116,7 +116,7 @@ impl<'a> TypeChecker<'a> {
 
                             // TODO: Get span from fn_type
                             let fn_type = AbstractType::App {
-                                span: Span::dummy(),
+                                data: Span::dummy(),
                                 type_cons: type_id,
                                 args: analysis_context
                                     .existential_type_vars()
@@ -159,7 +159,7 @@ impl<'a> TypeChecker<'a> {
 
                     // TODO: Get span from function declaration
                     let fn_type = AbstractType::App {
-                        span: Span::dummy(),
+                        data: Span::dummy(),
                         type_cons: type_id,
                         args: smpl_function
                             .analysis_context()
@@ -749,7 +749,7 @@ fn resolve_struct_init(
     // TODO: Take into account type arguments
     // TODO: Is this span right?
     let struct_type = AbstractType::App {
-        span: span.clone(),
+        data: span.clone(),
         type_cons: struct_type_id,
         args: type_args,
     }
@@ -892,7 +892,7 @@ fn resolve_anon_struct_init(
     }
 
     let width_type = AbstractType::WidthConstraint {
-        span: span,
+        data: span,
         width: width_constraint
     };
     Ok(width_type)
@@ -947,7 +947,7 @@ fn resolve_binding(
 
             // TODO: Is this span right?
             let fn_type = AbstractType::App {
-                span: _span,
+                data: _span,
                 type_cons: fn_type_id,
                 args: Vec::new(),
             }
@@ -987,7 +987,7 @@ fn resolve_mod_access(
 
     // TODO: Is this span right?
     let fn_type = AbstractType::App {
-        span: span,
+        data: span,
         type_cons: fn_type_id,
         args: Vec::new(),
     }
@@ -1010,7 +1010,7 @@ fn resolve_fn_call(
     // Check args and parameters align
     match fn_value_type {
         AbstractType::Function {
-            span: ref _fn_type_span,
+            data: ref _fn_type_span,
             parameters: ref params,
             ref return_type,
         } => {
@@ -1142,7 +1142,7 @@ fn resolve_array_init(
             }
 
             let array_type = AbstractType::Array {
-                span: span,
+                data: span,
                 element_type: Box::new(expected_element_type.unwrap().clone()),
                 size: size,
             };
@@ -1155,7 +1155,7 @@ fn resolve_array_init(
                 context.tmp_type_map.get(val.data()).expect("Missing TMP");
 
             let array_type = AbstractType::Array {
-                span: span,
+                data: span,
                 element_type: Box::new(element_type.clone()),
                 size: size,
             };
@@ -1249,7 +1249,7 @@ fn resolve_type_inst(
 
     // TODO: Is this span right?
     let inst_type = AbstractType::App {
-        span: span,
+        data: span,
         type_cons: fn_type_id,
         args: type_args,
     }
@@ -1323,7 +1323,7 @@ fn resolve_anonymous_fn(
             // TODO: Anonymous functions are not allowed to have type parameters
             // TODO: Is this span right?
             AbstractType::App {
-                span: span,
+                data: span,
                 type_cons: fn_type.clone(),
                 args: Vec::new(),
             }
@@ -1362,14 +1362,14 @@ fn resolve_field_access(
     > {
         match current_type.substitute(universe, scope, context)? {
             AbstractType::WidthConstraint {
-                span: width_span,
+                data: width_span,
                 width: awc,
             } => Ok(Box::new(move |name| {
                 awc.fields.get(name).map(|t| t.clone()).ok_or(
                     TypeError::UnknownField {
                         name: name.clone(),
                         struct_type: AbstractType::WidthConstraint {
-                            span: width_span.clone(),
+                            data: width_span.clone(),
                             width: awc.clone(),
                         },
                         span: span.clone(),
@@ -1379,7 +1379,7 @@ fn resolve_field_access(
             })),
 
             AbstractType::Record {
-                span: record_span,
+                data: record_span,
                 type_id,
                 abstract_field_map: afm,
             } => {
@@ -1393,7 +1393,7 @@ fn resolve_field_access(
                         .ok_or(TypeError::UnknownField {
                             name: name.clone(),
                             struct_type: AbstractType::Record {
-                                span: record_span.clone(),
+                                data: record_span.clone(),
                                 type_id: type_id,
                                 abstract_field_map: AbstractFieldMap {
                                     fields: fields.clone(),
@@ -1524,7 +1524,7 @@ fn resolve_field_access(
                 // TODO: Use this span?
                 match field_type {
                     AbstractType::Array {
-                        span,
+                        data,
                         element_type,
                         size: _,
                     } => {

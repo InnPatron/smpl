@@ -112,7 +112,7 @@ impl TypeParams {
         // TODO: Pass the AST span into the type span
         let constraint = constraint
             .map(|awc| AbstractType::WidthConstraint {
-                span: Span::dummy(),
+                data: Span::dummy(),
                 width: awc,
             })
             .unwrap_or(AbstractType::Any(Span::dummy()));
