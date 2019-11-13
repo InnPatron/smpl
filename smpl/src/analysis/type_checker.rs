@@ -270,7 +270,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         expr: &ExprData,
     ) -> Result<(), E> {
         let expr_type = expr_type!(self, &expr.expr)?;
-        resolve!(self, &expr_type, &AbstractType::Bool, expr.span.clone())?;
+        resolve!(self, &expr_type, &AbstractType::Bool(expr.span.clone()), expr.span.clone())?;
 
         Ok(())
     }
@@ -408,7 +408,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         e: &ExprData,
     ) -> Result<(), E> {
         let expr_type = expr_type!(self, &e.expr)?;
-        resolve!(self, &expr_type, &AbstractType::Bool, e.span.clone())?;
+        resolve!(self, &expr_type, &AbstractType::Bool(e.span.clone()), e.span.clone())?;
 
         Ok(())
     }
@@ -513,7 +513,7 @@ fn resolve_tmp(
             Literal::Int(_) => AbstractType::Int(tmp_span.clone()),
             Literal::Float(_) => AbstractType::Float(tmp_span.clone()),
             Literal::String(_) => AbstractType::String(tmp_span.clone()),
-            Literal::Bool(_) => AbstractType::Bool,
+            Literal::Bool(_) => AbstractType::Bool(tmp_span.clone()),
         },
 
         Value::BinExpr(ref op, ref lhs, ref rhs) => {
@@ -618,7 +618,7 @@ fn resolve_bin_op(
 
     let expected_int = AbstractType::Int(span.clone());
     let expected_float = AbstractType::Float(span.clone());
-    let expected_bool = AbstractType::Bool;
+    let expected_bool = AbstractType::Bool(span.clone());
 
     let resolve_type = match *op {
         Add | Sub | Mul | Div | Mod => match (&lhs, &rhs) {
@@ -638,7 +638,7 @@ fn resolve_bin_op(
         },
 
         LogicalAnd | LogicalOr => match (&lhs, &rhs) {
-            (&AbstractType::Bool, &AbstractType::Bool) => AbstractType::Bool,
+            (&AbstractType::Bool(_), &AbstractType::Bool(_)) => AbstractType::Bool(span.clone()),
             _ => {
                 return Err(TypeError::BinOp {
                     op: op.clone(),
@@ -652,8 +652,8 @@ fn resolve_bin_op(
         },
 
         GreaterEq | LesserEq | Greater | Lesser => match (&lhs, &rhs) {
-            (&AbstractType::Int(_), &AbstractType::Int(_)) => AbstractType::Bool,
-            (&AbstractType::Float(_), &AbstractType::Float(_)) => AbstractType::Bool,
+            (&AbstractType::Int(_), &AbstractType::Int(_)) => AbstractType::Bool(span.clone()),
+            (&AbstractType::Float(_), &AbstractType::Float(_)) => AbstractType::Bool(span.clone()),
 
             _ => {
                 return Err(TypeError::BinOp {
@@ -670,10 +670,10 @@ fn resolve_bin_op(
         Eq | InEq => {
             // TODO: Stricter equality check?
             type_resolver::resolve_types(
-                universe, scope, context, lhs, rhs, span,
+                universe, scope, context, lhs, rhs, span.clone(),
             )?;
 
-            AbstractType::Bool
+            AbstractType::Bool(span.clone())
         }
     };
 
@@ -694,7 +694,7 @@ fn resolve_uni_op(
 
     let expected_float = AbstractType::Float(span.clone());
 
-    let expected_bool = AbstractType::Bool;
+    let expected_bool = AbstractType::Bool(span.clone());
 
     match *op {
         Negate => match tmp_type {
@@ -709,7 +709,7 @@ fn resolve_uni_op(
         },
 
         LogicalInvert => match tmp_type {
-            AbstractType::Bool => Ok(tmp_type.clone()),
+            AbstractType::Bool(_) => Ok(tmp_type.clone()),
             _ => Err(TypeError::UniOp {
                 op: op.clone(),
                 expected: vec![expected_bool],
