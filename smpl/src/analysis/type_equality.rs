@@ -16,7 +16,7 @@ pub fn equal_types_static(
     constraint: &AbstractType,
     span: Span,
 ) -> Result<(), TypeError> {
-    use super::abstract_type::AbstractType::*;
+    use super::abstract_type::AbstractTypeX::*;
 
     match (synthesis, constraint) {
         (

@@ -10,60 +10,64 @@ use super::type_checker::TypingContext;
 use super::type_resolver::resolve_types_static;
 use super::type_cons::{TypeCons, TypeParams};
 
+pub type AbstractType = AbstractTypeX<Span>;
+pub type AbstractFieldMap = AbstractFieldMapX<Span>;
+pub type AbstractWidthConstraint = AbstractWidthConstraintX<Span>;
+
 #[derive(Debug, Clone)]
-pub enum AbstractType {
-    Any(Span),
+pub enum AbstractTypeX<X> {
+    Any(X),
 
     Record {
-        span: Span,
+        span: X,
         type_id: TypeId,
-        abstract_field_map: AbstractFieldMap,
+        abstract_field_map: AbstractFieldMapX<X>,
     },
 
     App {
-        span: Span,
+        span: X,
         type_cons: TypeId,
         args: Vec<AbstractType>,
     },
 
     Array {
-        span: Span,
+        span: X,
         element_type: Box<AbstractType>,
         size: u64,
     },
 
     UncheckedFunction {
-        span: Span,
+        span: X,
         return_type: Box<AbstractType>,
     },
 
     Function {
-        span: Span,
+        span: X,
         parameters: Vec<AbstractType>,
         return_type: Box<AbstractType>,
     },
 
     WidthConstraint {
-        span: Span, 
-        width: AbstractWidthConstraint
+        span: X, 
+        width: AbstractWidthConstraintX<X>
     },
 
     Opaque {
-        span: Span, 
+        span: X, 
         type_id: TypeId,
         args: Vec<AbstractType>,
     },
 
-    TypeVar(Span, TypeVarId),
+    TypeVar(X, TypeVarId),
 
-    Int(Span),
-    Float(Span),
-    String(Span),
-    Bool(Span),
-    Unit(Span),
+    Int(X),
+    Float(X),
+    String(X),
+    Bool(X),
+    Unit(X),
 }
 
-impl AbstractType {
+impl AbstractTypeX<Span> {
     pub fn type_cons(&self) -> Option<TypeId> {
         match *self {
             AbstractType::App {
@@ -610,20 +614,20 @@ impl AbstractType {
 }
 
 #[derive(Debug, Clone)]
-pub struct AbstractFieldMap {
-    pub fields: HashMap<FieldId, AbstractType>,
+pub struct AbstractFieldMapX<X> {
+    pub fields: HashMap<FieldId, AbstractTypeX<X>>,
     pub field_map: HashMap<Ident, FieldId>,
 }
 
-impl AbstractFieldMap {
-    pub fn get(&self, name: &Ident) -> Option<&AbstractType> {
+impl<X> AbstractFieldMapX<X> {
+    pub fn get(&self, name: &Ident) -> Option<&AbstractTypeX<X>> {
         self.field_map.get(name).and_then(|id| self.fields.get(id))
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct AbstractWidthConstraint {
-    pub fields: HashMap<Ident, AbstractType>,
+pub struct AbstractWidthConstraintX<X> {
+    pub fields: HashMap<Ident, AbstractTypeX<X>>,
 }
 
 pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(

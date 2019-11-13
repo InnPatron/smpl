@@ -34,7 +34,7 @@ pub fn resolve_types_static(
     constraint: &AbstractType,
     span: Span,
 ) -> Result<(), TypeError> {
-    use super::abstract_type::AbstractType::*;
+    use super::abstract_type::AbstractTypeX::*;
 
     match (synthesis, constraint) {
         (_, Any(_)) => Ok(()),
@@ -419,7 +419,7 @@ fn resolve_param_static(
     constraint: &AbstractType,
     span: Span,
 ) -> Result<(), TypeError> {
-    use super::abstract_type::AbstractType::*;
+    use super::abstract_type::AbstractTypeX::*;
 
     match (synth, constraint) {
         (Any(_), Any(_)) => Ok(()),
