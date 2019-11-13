@@ -111,8 +111,7 @@ pub fn generate_fn_type_cons(
             )?
         }
 
-        // TODO: Get span from type signature
-        None => AbstractType::Unit(Span::dummy()),
+        None => AbstractType::Unit(fn_def.name.span()),
     };
 
     let mut param_metadata = Vec::new();
@@ -189,8 +188,7 @@ pub fn generate_builtin_fn_type(
             type_app
         }
 
-        // TODO: Get span from type signature
-        None => AbstractType::Unit(Span::dummy()),
+        None => AbstractType::Unit(fn_def.name.span()),
     };
 
     // TODO: Insert existential type variables representing the type parameters in any context
@@ -279,8 +277,7 @@ pub fn generate_anonymous_fn_type(
             )?
         }
 
-        // TODO: Get span from fn signature
-        None => AbstractType::Unit(Span::dummy()),
+        None => AbstractType::Unit(fn_def.body.span()),
     };
 
     let mut param_metadata = Vec::new();
@@ -333,7 +330,7 @@ fn type_param_map(
     let mut current_scope = outer_scope.clone();
     let mut typing_context = outer_typing_context.clone();
 
-    let mut internal_type_map: HashMap<_, (TypeParamId, TypeVarId)> =
+    let mut internal_type_map: HashMap<_, (Span, TypeParamId, TypeVarId)> =
         HashMap::new();
     let mut type_param_order = Vec::new();
 
@@ -353,14 +350,13 @@ fn type_param_map(
                 let type_var_id = universe.new_type_var_id();
                 // Insert type parameter into set
                 internal_type_map
-                    .insert(p.data().clone(), (type_param_id, type_var_id));
+                    .insert(p.data().clone(), (p.span(), type_param_id, type_var_id));
 
                 // TODO: What kind of recursion to support? Probably equirecursive
                 // Add type parameters to typing context to allow recursive constraints
-                // TODO: Pass the AST span into the type span
                 typing_context
                     .type_vars
-                    .insert(type_var_id.clone(), AbstractType::Any(Span::dummy()));
+                    .insert(type_var_id.clone(), AbstractType::Any(p.span()));
                 type_param_order.push(type_param_id);
             }
         }
@@ -371,7 +367,7 @@ fn type_param_map(
         for (ident, vec_ast_type_ann) in where_clause.0.iter() {
             // Remove from type_parameter_map
             match internal_type_map.remove(ident) {
-                Some((type_param_id, type_var_id)) => {
+                Some((param_span, type_param_id, type_var_id)) => {
                     if vec_ast_type_ann.len() > 1 {
                         // TODO: Allow multiple constraint declarations on one type param?
                         // where A: { ... }
@@ -435,13 +431,12 @@ fn type_param_map(
     }
 
     // Any type param still left in type_parameter_map has no constraint
-    for (ident, (type_param_id, type_var_id)) in internal_type_map.into_iter() {
+    for (ident, (param_span, type_param_id, type_var_id)) in internal_type_map.into_iter() {
         // TODO: Also insert into the typing env
         current_scope.insert_type_var(ident.clone(), type_var_id);
-        // TODO: Pass the AST span into the type span
         typing_context
             .type_vars
-            .insert(type_var_id.clone(), AbstractType::Any(Span::dummy()));
+            .insert(type_var_id.clone(), AbstractType::Any(param_span));
 
         finished.insert(type_param_id.clone(), (None, type_var_id.clone()));
     }
