@@ -60,7 +60,7 @@ pub enum AbstractType {
     Float(Span),
     String(Span),
     Bool(Span),
-    Unit,
+    Unit(Span),
 }
 
 impl AbstractType {
@@ -224,7 +224,7 @@ impl AbstractType {
             TypeCons::Float => Ok(AbstractType::Float(Span::dummy())),
             TypeCons::Bool => Ok(AbstractType::Bool(Span::dummy())),
             TypeCons::String => Ok(AbstractType::String(Span::dummy())),
-            TypeCons::Unit => Ok(AbstractType::Unit),
+            TypeCons::Unit => Ok(AbstractType::Unit(Span::dummy())),
         }
     }
 
@@ -603,7 +603,7 @@ impl AbstractType {
             AbstractType::Float(ref s) => Ok(AbstractType::Float(s.clone())),
             AbstractType::String(ref s) => Ok(AbstractType::String(s.clone())),
             AbstractType::Bool(ref s) => Ok(AbstractType::Bool(s.clone())),
-            AbstractType::Unit => Ok(AbstractType::Unit),
+            AbstractType::Unit(ref s) => Ok(AbstractType::Unit(s.clone())),
             AbstractType::Any(ref l) => Ok(AbstractType::Any(l.clone())),
         }
     }
@@ -750,7 +750,8 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                         return_type.data(),
                     )
                 })
-                .unwrap_or(Ok(AbstractType::Unit))?;
+                // TODO: Get span from annotation span
+                .unwrap_or(Ok(AbstractType::Unit(Span::dummy())))?;
 
             // TODO: Get this span from annotation span
             Ok(AbstractType::Function {
@@ -912,7 +913,7 @@ fn fuse_field_width_constraints(
         | AbstractType::Float(_)
         | AbstractType::String(_)
         | AbstractType::Bool(_)
-        | AbstractType::Unit
+        | AbstractType::Unit(_)
         | AbstractType::Opaque { .. }
         | AbstractType::Any(_) => true,
 

@@ -370,7 +370,7 @@ impl CFG {
                 &outer_scope,
                 &outer_context,
             )?;
-            if let AbstractType::Unit = return_type {
+            if let AbstractType::Unit(_) = return_type {
                 append_node!(
                     cfg,
                     head,

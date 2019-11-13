@@ -385,7 +385,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
 
             None => resolve!(
                 self,
-                &AbstractType::Unit,
+                &AbstractType::Unit(rdata.span.clone()),
                 &self.return_type,
                 rdata.span.clone()
             )

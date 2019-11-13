@@ -111,7 +111,8 @@ pub fn generate_fn_type_cons(
             )?
         }
 
-        None => AbstractType::Unit,
+        // TODO: Get span from type signature
+        None => AbstractType::Unit(Span::dummy()),
     };
 
     let mut param_metadata = Vec::new();
@@ -187,7 +188,9 @@ pub fn generate_builtin_fn_type(
             // TODO: Function signature scanner?
             type_app
         }
-        None => AbstractType::Unit,
+
+        // TODO: Get span from type signature
+        None => AbstractType::Unit(Span::dummy()),
     };
 
     // TODO: Insert existential type variables representing the type parameters in any context
@@ -276,7 +279,8 @@ pub fn generate_anonymous_fn_type(
             )?
         }
 
-        None => AbstractType::Unit,
+        // TODO: Get span from fn signature
+        None => AbstractType::Unit(Span::dummy()),
     };
 
     let mut param_metadata = Vec::new();

@@ -310,7 +310,7 @@ pub fn resolve_types_static(
         (Float(_), Float(_)) => Ok(()),
         (Bool(_), Bool(_)) => Ok(()),
         (String(_), String(_)) => Ok(()),
-        (Unit, Unit) => Ok(()),
+        (Unit(_), Unit(_)) => Ok(()),
 
         (synthesis @ Opaque { .. }, constraint @ Opaque { .. }) => {
             super::type_equality::equal_types_static(
