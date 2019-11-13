@@ -27,24 +27,24 @@ pub enum AbstractTypeX<X> {
     App {
         data: X,
         type_cons: TypeId,
-        args: Vec<AbstractType>,
+        args: Vec<AbstractTypeX<X>>,
     },
 
     Array {
         data: X,
-        element_type: Box<AbstractType>,
+        element_type: Box<AbstractTypeX<X>>,
         size: u64,
     },
 
     UncheckedFunction {
         data: X,
-        return_type: Box<AbstractType>,
+        return_type: Box<AbstractTypeX<X>>,
     },
 
     Function {
         data: X,
-        parameters: Vec<AbstractType>,
-        return_type: Box<AbstractType>,
+        parameters: Vec<AbstractTypeX<X>>,
+        return_type: Box<AbstractTypeX<X>>,
     },
 
     WidthConstraint {
@@ -55,7 +55,7 @@ pub enum AbstractTypeX<X> {
     Opaque {
         data: X, 
         type_id: TypeId,
-        args: Vec<AbstractType>,
+        args: Vec<AbstractTypeX<X>>,
     },
 
     TypeVar(X, TypeVarId),
@@ -93,7 +93,10 @@ impl<T> AbstractTypeX<T> {
                 App {
                     data: (),
                     type_cons,
-                    args,
+                    args: args
+                        .into_iter()
+                        .map(|t| t.downcast())
+                        .collect(),
                 }
             }
 
@@ -104,7 +107,7 @@ impl<T> AbstractTypeX<T> {
             } => {
                 Array {
                     data: (),
-                    element_type,
+                    element_type: Box::new(element_type.downcast()),
                     size,
                 } 
             }
@@ -115,7 +118,7 @@ impl<T> AbstractTypeX<T> {
             } => {
                 UncheckedFunction {
                     data: (),
-                    return_type,
+                    return_type: Box::new(return_type.downcast()),
                 }
             }
 
@@ -126,8 +129,10 @@ impl<T> AbstractTypeX<T> {
             } => {
                 Function {
                     data: (),
-                    parameters,
-                    return_type,
+                    parameters: parameters.into_iter()
+                        .map(|t| t.downcast())
+                        .collect(),
+                    return_type: Box::new(return_type.downcast()),
                 }
             }
 
@@ -149,7 +154,9 @@ impl<T> AbstractTypeX<T> {
                 Opaque {
                     data: (), 
                     type_id,
-                    args,
+                    args: args.into_iter()
+                        .map(|t| t.downcast())
+                        .collect(),
                 }
             }
 
