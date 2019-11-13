@@ -67,6 +67,103 @@ pub enum AbstractTypeX<X> {
     Unit(X),
 }
 
+impl<T> AbstractTypeX<T> {
+    fn downcast(self) -> AbstractTypeX<()> {
+        use self::AbstractTypeX::*;
+        match self {
+            Any(_) => Any(()),
+
+            Record {
+                type_id,
+                abstract_field_map,
+                ..
+            } => {
+                Record {
+                    data: (),
+                    type_id,
+                    abstract_field_map: abstract_field_map.downcast(),
+                }
+            }
+
+            App {
+                type_cons,
+                args,
+                ..
+            } => {
+                App {
+                    data: (),
+                    type_cons,
+                    args,
+                }
+            }
+
+            Array {
+                element_type,
+                size,
+                ..
+            } => {
+                Array {
+                    data: (),
+                    element_type,
+                    size,
+                } 
+            }
+
+            UncheckedFunction {
+                return_type,
+                ..
+            } => {
+                UncheckedFunction {
+                    data: (),
+                    return_type,
+                }
+            }
+
+            Function {
+                parameters,
+                return_type,
+                ..
+            } => {
+                Function {
+                    data: (),
+                    parameters,
+                    return_type,
+                }
+            }
+
+            WidthConstraint {
+                width,
+                ..
+            } => {
+                WidthConstraint {
+                    data: (),
+                    width: width.downcast(),
+                }
+            }
+
+            Opaque {
+                type_id,
+                args,
+                ..
+            } => {
+                Opaque {
+                    data: (), 
+                    type_id,
+                    args,
+                }
+            }
+
+            TypeVar(_, type_var) => TypeVar((), type_var),
+
+            Int(_) => Int(()),
+            Float(_) => Float(()),
+            String(_) => String(()),
+            Bool(_) => Bool(()),
+            Unit(_) => Unit(()),
+        }
+    }
+}
+
 impl AbstractTypeX<Span> {
     pub fn type_cons(&self) -> Option<TypeId> {
         match *self {
@@ -623,11 +720,32 @@ impl<X> AbstractFieldMapX<X> {
     pub fn get(&self, name: &Ident) -> Option<&AbstractTypeX<X>> {
         self.field_map.get(name).and_then(|id| self.fields.get(id))
     }
+
+    pub fn downcast(self) -> AbstractFieldMapX<()> {
+        AbstractFieldMapX {
+            fields: self.fields
+                .into_iter()
+                .map(|(id, at)| (id, at.downcast()))
+                .collect(),
+            field_map: self.field_map,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct AbstractWidthConstraintX<X> {
     pub fields: HashMap<Ident, AbstractTypeX<X>>,
+}
+
+impl<X> AbstractWidthConstraintX<X> {
+    pub fn downcast(self) -> AbstractWidthConstraintX<()> {
+        AbstractWidthConstraintX {
+            fields: self.fields
+                .into_iter()
+                .map(|(ident, at)| (ident, at.downcast()))
+                .collect(),
+        }
+    }
 }
 
 pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
