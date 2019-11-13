@@ -169,9 +169,64 @@ impl<T> AbstractTypeX<T> {
             Unit(_) => Unit(()),
         }
     }
+
+    pub fn data(&self) -> &T {
+        use self::AbstractTypeX::*;
+        match *self {
+            Any(ref data) => data,
+
+            Record {
+                ref data,
+                ..
+            } => data,
+
+            App {
+                ref data,
+                ..
+            } => data,
+
+            Array {
+                ref data,
+                ..
+            } => data,
+
+            UncheckedFunction {
+                ref data,
+                ..
+            } => data,
+
+            Function {
+                ref data,
+                ..
+            } => data,
+
+            WidthConstraint {
+                ref data,
+                ..
+            } => data,
+
+            Opaque {
+                ref data,
+                ..
+            } => data,
+
+            TypeVar(ref data, _) => data,
+
+            Int(ref data) => data,
+            Float(ref data) => data,
+            String(ref data) => data,
+            Bool(ref data) => data,
+            Unit(ref data) => data, 
+        }
+    }
 }
 
-impl AbstractTypeX<Span> {
+impl AbstractTypeX<Span> { 
+
+    pub fn span(&self) -> &Span {
+        self.data()
+    }
+
     pub fn type_cons(&self) -> Option<TypeId> {
         match *self {
             AbstractType::App {
