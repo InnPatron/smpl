@@ -955,7 +955,7 @@ mod tests {
 
     fn expected_app(tc: TypeId) -> AbstractType {
         AbstractType::App {
-            span: Span::dummy(),
+            data: Span::dummy(),
             type_cons: tc,
             args: Vec::new(),
         }
