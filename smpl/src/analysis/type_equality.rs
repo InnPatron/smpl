@@ -255,7 +255,7 @@ pub fn equal_types_static(
         (Int(_), Int(_)) => Ok(()),
         (Float(_), Float(_)) => Ok(()),
         (Bool, Bool) => Ok(()),
-        (String, String) => Ok(()),
+        (String(_), String(_)) => Ok(()),
         (Unit, Unit) => Ok(()),
 
         // Unconstrained type parameters

@@ -512,7 +512,7 @@ fn resolve_tmp(
         Value::Literal(ref literal) => match *literal {
             Literal::Int(_) => AbstractType::Int(tmp_span.clone()),
             Literal::Float(_) => AbstractType::Float(tmp_span.clone()),
-            Literal::String(_) => AbstractType::String,
+            Literal::String(_) => AbstractType::String(tmp_span.clone()),
             Literal::Bool(_) => AbstractType::Bool,
         },
 
