@@ -98,10 +98,10 @@ where
                         existential_type_var,
                     );
 
-                    // TODO: Get span from declaration
                     existential_map.insert(
                         placeholder_variable,
-                        AbstractType::TypeVar(Span::dummy(), existential_type_var),
+                        AbstractType::TypeVar(constraint.span().clone(), 
+                            existential_type_var),
                     );
 
                     existential_type_vars.push(existential_type_var);
