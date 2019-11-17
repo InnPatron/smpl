@@ -840,8 +840,7 @@ pub fn type_from_ann(
                     }
 
                     assert!(typing_context.type_vars.contains_key(&tv_id));
-                    // TODO: Get span from declaration
-                    return Ok(AbstractType::TypeVar(Span::dummy(), tv_id.clone()));
+                    return Ok(AbstractType::TypeVar(anno.span(), tv_id.clone()));
                 }
             }
 
@@ -873,9 +872,8 @@ pub fn type_from_ann(
                 None => Vec::new(),
             };
 
-            // TODO: Get this span from annotation span
             Ok(AbstractType::App {
-                data: Span::dummy(),
+                data: anno.span(),
                 type_cons: type_cons,
                 args: type_args,
             })
@@ -889,9 +887,8 @@ pub fn type_from_ann(
                 element_type,
             )?;
 
-            // TODO: Get this span from annotation span
             Ok(AbstractType::Array {
-                data: Span::dummy(),
+                data: anno.span(),
                 element_type: Box::new(element_type_app),
                 size: *size,
             })
@@ -935,12 +932,10 @@ pub fn type_from_ann(
                         return_type,
                     )
                 })
-                // TODO: Get span from annotation span
-                .unwrap_or(Ok(AbstractType::Unit(Span::dummy())))?;
+                .unwrap_or(Ok(AbstractType::Unit(anno.span())))?;
 
-            // TODO: Get this span from annotation span
             Ok(AbstractType::Function {
-                data: Span::dummy(),
+                data: anno.span(),
                 parameters: param_types,
                 return_type: Box::new(return_type),
             })
