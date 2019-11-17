@@ -382,7 +382,7 @@ impl fmt::Display for Ident {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypedPath {
     NillArity(ModulePath),
-    Parameterized(ModulePath, Vec<TypeAnnotation>),
+    Parameterized(ModulePath, Vec<AstNode<TypeAnnotation>>),
 }
 
 impl TypedPath {
@@ -393,7 +393,7 @@ impl TypedPath {
         }
     }
 
-    pub fn annotations(&self) -> Option<&[TypeAnnotation]> {
+    pub fn annotations(&self) -> Option<&[AstNode<TypeAnnotation>]> {
         match *self {
             TypedPath::NillArity(_) => None,
             TypedPath::Parameterized(_, ref anno) => Some(anno),
@@ -404,7 +404,7 @@ impl TypedPath {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypedPathRef<'a> {
     NillArity(&'a ModulePath),
-    Parameterized(&'a ModulePath, &'a [TypeAnnotation]),
+    Parameterized(&'a ModulePath, &'a [AstNode<TypeAnnotation>]),
 }
 
 impl<'a> TypedPathRef<'a> {
@@ -415,7 +415,7 @@ impl<'a> TypedPathRef<'a> {
         }
     }
 
-    pub fn annotations(&self) -> Option<&[TypeAnnotation]> {
+    pub fn annotations(&self) -> Option<&[AstNode<TypeAnnotation>]> {
         match *self {
             TypedPathRef::NillArity(_) => None,
             TypedPathRef::Parameterized(_, anno) => Some(anno),

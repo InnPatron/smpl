@@ -109,8 +109,8 @@ impl LocalVarDecl {
         self.span.clone()
     }
 
-    pub fn type_annotation(&self) -> Option<&ast::TypeAnnotation> {
-        self.type_ann.as_ref().map(|node| node.data())
+    pub fn type_annotation(&self) -> Option<&AstNode<ast::TypeAnnotation>> {
+        self.type_ann.as_ref()
     }
 
     pub fn var_name(&self) -> &ast::Ident {
@@ -258,14 +258,14 @@ pub enum Value {
 #[derive(Debug, Clone)]
 pub struct TypeInst {
     path: ast::ModulePath,
-    args: Vec<ast::TypeAnnotation>,
+    args: Vec<AstNode<ast::TypeAnnotation>>,
     fn_id: Option<FnId>,
 }
 
 impl TypeInst {
     pub fn new(
         path: ast::ModulePath,
-        args: Vec<ast::TypeAnnotation>,
+        args: Vec<AstNode<ast::TypeAnnotation>>,
     ) -> TypeInst {
         TypeInst {
             path: path,
@@ -278,7 +278,7 @@ impl TypeInst {
         &self.path
     }
 
-    pub fn args(&self) -> &[ast::TypeAnnotation] {
+    pub fn args(&self) -> &[AstNode<ast::TypeAnnotation>] {
         &self.args
     }
 
@@ -364,7 +364,7 @@ impl StructInit {
         self.struct_type_name.module_path()
     }
 
-    pub fn type_args(&self) -> Option<&[ast::TypeAnnotation]> {
+    pub fn type_args(&self) -> Option<&[AstNode<ast::TypeAnnotation>]> {
         self.struct_type_name.annotations()
     }
 

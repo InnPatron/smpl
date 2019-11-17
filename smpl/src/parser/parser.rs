@@ -2059,7 +2059,7 @@ fn type_param_list_post_lparen(
 
 pub fn type_arg_list(
     tokens: &mut BufferedTokenizer,
-) -> ParseErr<Vec<TypeAnnotation>> {
+) -> ParseErr<Vec<AstNode<TypeAnnotation>>> {
     let _lparen = consume_token!(
         tokens,
         Token::LParen,
@@ -2071,7 +2071,7 @@ pub fn type_arg_list(
 
 pub fn type_arg_list_post_lparen(
     tokens: &mut BufferedTokenizer,
-) -> ParseErr<Vec<TypeAnnotation>> {
+) -> ParseErr<Vec<AstNode<TypeAnnotation>>> {
     let _type = consume_token!(
         tokens,
         Token::Type,
@@ -2121,11 +2121,6 @@ pub fn type_arg_list_post_lparen(
         Token::RParen,
         parser_state!("type-arg-list", "rparen")
     );
-
-    let type_args = type_args
-        .into_iter()
-        .map(|node| node.to_data().0)
-        .collect::<Vec<_>>();
 
     Ok(type_args)
 }

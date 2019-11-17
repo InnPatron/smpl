@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::{AstNode, Ident, TypeAnnotationRef, WidthConstraint};
+use crate::ast::{AstNode, Ident, TypeAnnotation, WidthConstraint};
 use crate::span::Span;
 
 use super::error::{AnalysisError, ApplicationError, TypeError as ATypeError};
@@ -807,14 +807,16 @@ impl<X> AbstractWidthConstraintX<X> {
     }
 }
 
-pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
-    universe: &'a Universe,
-    scope: &'b ScopedData,
-    typing_context: &'d TypingContext,
-    anno: T,
-) -> Result<AbstractType, AnalysisError> {
-    match anno.into() {
-        TypeAnnotationRef::Path(typed_path) => {
+pub fn type_from_ann(
+    universe: &Universe,
+    scope: &ScopedData,
+    typing_context: &TypingContext,
+    anno: &AstNode<TypeAnnotation>,
+) -> Result<AbstractType, AnalysisError> 
+
+{
+    match anno.data() {
+        TypeAnnotation::Path(ref typed_path) => {
             // Check if path refers to type parameter
             // Assume naming conflicts detected at type parameter declaration
             if typed_path.module_path().0.len() == 1 {
@@ -860,7 +862,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             let type_args = typed_path.annotations().map(|ref vec| {
                 vec.iter()
                     .map(|anno| {
-                        type_from_ann(universe, scope, typing_context, anno)
+                        type_from_ann(universe, scope, typing_context, &*anno)
                     })
                     .collect::<Result<Vec<_>, _>>()
             });
@@ -879,12 +881,12 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             })
         }
 
-        TypeAnnotationRef::Array(element_type, size) => {
+        TypeAnnotation::Array(ref element_type, size) => {
             let element_type_app = type_from_ann(
                 universe,
                 scope,
                 typing_context,
-                element_type.data(),
+                element_type,
             )?;
 
             // TODO: Get this span from annotation span
@@ -895,7 +897,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             })
         }
 
-        TypeAnnotationRef::FnType(tp, params, return_type) => {
+        TypeAnnotation::FnType(ref tp, ref params, ref return_type) => {
             let (_local_type_params, new_scope) = match tp {
                 Some(_local_type_params) => {
                     return Err(ATypeError::FnAnnLocalTypeParameter.into());
@@ -907,6 +909,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             let scope = new_scope.as_ref().unwrap_or(scope);
 
             let param_types = params
+                .as_ref()
                 .map(|slice| {
                     slice
                         .iter()
@@ -915,7 +918,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                                 universe,
                                 scope,
                                 typing_context,
-                                p.data(),
+                                p,
                             )
                         })
                         .collect::<Result<Vec<_>, _>>()
@@ -923,12 +926,13 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
                 .unwrap_or(Ok(Vec::new()))?;
 
             let return_type = return_type
+                .as_ref()
                 .map(|return_type| {
                     type_from_ann(
                         universe,
                         scope,
                         typing_context,
-                        return_type.data(),
+                        return_type,
                     )
                 })
                 // TODO: Get span from annotation span
@@ -942,7 +946,7 @@ pub fn type_from_ann<'a, 'b, 'c, 'd, T: Into<TypeAnnotationRef<'c>>>(
             })
         }
 
-        TypeAnnotationRef::WidthConstraint(ast_constraints) => {
+        TypeAnnotation::WidthConstraint(ref ast_constraints) => {
             fuse_width_constraints(
                 universe,
                 scope,
@@ -971,7 +975,7 @@ fn fuse_width_constraints(
             //   for a new WidthConstraint
             WidthConstraint::BaseStruct(ref ann) => {
                 let ann_type =
-                    type_from_ann(universe, scope, typing_context, ann.data())?
+                    type_from_ann(universe, scope, typing_context, ann)?
                         .substitute(universe, scope, typing_context)?;
 
                 match ann_type {
@@ -1020,7 +1024,7 @@ fn fuse_width_constraints(
                         universe,
                         scope,
                         typing_context,
-                        ast_ann.data(),
+                        ast_ann,
                     )?;
                     field_constraints
                         .entry(ast_ident.data().clone())

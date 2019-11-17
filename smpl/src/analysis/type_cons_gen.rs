@@ -46,7 +46,7 @@ pub fn generate_struct_type_cons(
             let f_id = universe.new_field_id();
             let f_name = field.name.data().clone();
 
-            let field_type_annotation = field.field_type.data();
+            let field_type_annotation = &field.field_type;
 
             // TODO: Insert type parameters into scope
             let field_type_app = type_from_ann(
@@ -101,7 +101,6 @@ pub fn generate_fn_type_cons(
 
     let return_type = match fn_def.return_type {
         Some(ref ann) => {
-            let ann = ann.data();
 
             type_from_ann(
                 universe,
@@ -121,7 +120,7 @@ pub fn generate_fn_type_cons(
 
             for param in params.iter() {
                 let param = param.data();
-                let param_ann = param.param_type.data();
+                let param_ann = &param.param_type;
 
                 let param_type = type_from_ann(
                     universe,
@@ -177,7 +176,6 @@ pub fn generate_builtin_fn_type(
 
     let ret_type = match fn_def.return_type {
         Some(ref anno) => {
-            let anno = anno.data();
             let type_app = type_from_ann(
                 universe,
                 &type_param_scope,
@@ -202,7 +200,7 @@ pub fn generate_builtin_fn_type(
                 let mut param_metadata = Vec::new();
                 for param in params.iter() {
                     let param = param.data();
-                    let param_anno = param.param_type.data();
+                    let param_anno = &param.param_type;
 
                     let param_type = type_from_ann(
                         universe,
@@ -267,7 +265,6 @@ pub fn generate_anonymous_fn_type(
 
     let return_type = match fn_def.return_type {
         Some(ref ann) => {
-            let ann = ann.data();
 
             type_from_ann(
                 universe,
@@ -287,7 +284,7 @@ pub fn generate_anonymous_fn_type(
 
             for param in params.iter() {
                 let param = param.data();
-                let param_ann = param.param_type.data();
+                let param_ann = &param.param_type;
 
                 let param_type = type_from_ann(
                     universe,
@@ -385,7 +382,7 @@ fn type_param_map(
                         universe,
                         &current_scope,
                         &typing_context,
-                        ast_constraint.data(),
+                        ast_constraint,
                     )?;
 
                     // TypeVar already in TypingContext as TypeVar(self_id)
