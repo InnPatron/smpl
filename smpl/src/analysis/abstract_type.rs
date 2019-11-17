@@ -254,11 +254,10 @@ impl AbstractTypeX<Span> {
         typing_context: &TypingContext,
     ) -> Result<AbstractType, Vec<ATypeError>> {
         match self {
-            // TODO: Need to pass this span somewhere?
             AbstractType::App {
-                data: ref _span,
                 type_cons: _,
                 args: _,
+                ..
             } => {
                 let no_sub_map = HashMap::new();
                 self.substitute_internal(
