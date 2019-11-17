@@ -108,14 +108,14 @@ impl TypeParams {
         param: TypeParamId,
         constraint: Option<AbstractWidthConstraint>,
         placeholder_var: TypeVarId,
+        var_span: Span,
     ) {
-        // TODO: Pass the AST span into the type span
         let constraint = constraint
             .map(|awc| AbstractType::WidthConstraint {
-                data: Span::dummy(),
+                data: var_span.clone(),
                 width: awc,
             })
-            .unwrap_or(AbstractType::Any(Span::dummy()));
+            .unwrap_or(AbstractType::Any(var_span));
 
         self.params.push((param, constraint));
         self.placeholder_variables.insert(param, placeholder_var);

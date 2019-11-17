@@ -359,7 +359,7 @@ fn type_param_map(
         }
     }
 
-    let mut finished = HashMap::new();
+    let mut finished: HashMap<TypeParamId, (Option<_>, _, Span)> = HashMap::new();
     if let Some(where_clause) = where_clause {
         for (ident, vec_ast_type_ann) in where_clause.0.iter() {
             // Remove from type_parameter_map
@@ -406,7 +406,7 @@ fn type_param_map(
 
                         finished.insert(
                             type_param_id.clone(),
-                            (Some(constraint), type_var_id.clone()),
+                            (Some(constraint), type_var_id.clone(), param_span),
                         );
                     } else {
                         // TODO: found non-constraint in constraint position
@@ -433,16 +433,16 @@ fn type_param_map(
         current_scope.insert_type_var(ident.clone(), type_var_id);
         typing_context
             .type_vars
-            .insert(type_var_id.clone(), AbstractType::Any(param_span));
+            .insert(type_var_id.clone(), AbstractType::Any(param_span.clone()));
 
-        finished.insert(type_param_id.clone(), (None, type_var_id.clone()));
+        finished.insert(type_param_id.clone(), (None, type_var_id.clone(), param_span));
     }
 
     let mut type_params = TypeParams::new();
     // NEED TO PRESERVE ORDER
     for param_id in type_param_order {
-        let (opt, ty) = finished.remove(&param_id).unwrap();
-        type_params.add_param(param_id.clone(), opt, ty);
+        let (opt, ty, param_span) = finished.remove(&param_id).unwrap();
+        type_params.add_param(param_id.clone(), opt, ty, param_span);
     }
 
     Ok((type_params, current_scope, typing_context))
