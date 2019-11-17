@@ -287,13 +287,13 @@ impl AbstractTypeX<Span> {
         scoped_data: &ScopedData,
         typing_context: &TypingContext,
         map: &HashMap<TypeVarId, AbstractType>,
+        app_span: &Span,
     ) -> Result<AbstractType, Vec<ATypeError>> {
         match type_cons {
-            // TODO: Get span of declaration
             TypeCons::UncheckedFunction {
                 ref return_type, ..
             } => Ok(AbstractType::UncheckedFunction {
-                data: Span::dummy(),
+                data: app_span.clone(),
                 return_type: Box::new(return_type.substitute_internal(
                     universe,
                     scoped_data,
@@ -302,13 +302,12 @@ impl AbstractTypeX<Span> {
                 )?),
             }),
 
-            // TODO: Get span of declaration
             TypeCons::Function {
                 ref parameters,
                 ref return_type,
                 ..
             } => Ok(AbstractType::Function {
-                data: Span::dummy(),
+                data: app_span.clone(),
                 parameters: parameters
                     .iter()
                     .map(|p| {
@@ -350,9 +349,8 @@ impl AbstractTypeX<Span> {
                     );
                 }
 
-                // TODO: Pass in AST span
                 Ok(AbstractType::Record {
-                    data: Span::dummy(),
+                    data: app_span.clone(),
                     type_id: type_id.clone(),
                     abstract_field_map: AbstractFieldMap {
                         fields: subbed_fields,
@@ -374,20 +372,18 @@ impl AbstractTypeX<Span> {
                     })
                     .collect();
 
-                // TODO: Pass in AST span
                 Ok(AbstractType::Opaque {
-                    data: Span::dummy(),
+                    data: app_span.clone(),
                     type_id: type_id.clone(),
                     args: ok_args,
                 })
             }
 
-            // TODO: Pass in AST span
-            TypeCons::Int => Ok(AbstractType::Int(Span::dummy())),
-            TypeCons::Float => Ok(AbstractType::Float(Span::dummy())),
-            TypeCons::Bool => Ok(AbstractType::Bool(Span::dummy())),
-            TypeCons::String => Ok(AbstractType::String(Span::dummy())),
-            TypeCons::Unit => Ok(AbstractType::Unit(Span::dummy())),
+            TypeCons::Int => Ok(AbstractType::Int(app_span.clone())),
+            TypeCons::Float => Ok(AbstractType::Float(app_span.clone())),
+            TypeCons::Bool => Ok(AbstractType::Bool(app_span.clone())),
+            TypeCons::String => Ok(AbstractType::String(app_span.clone())),
+            TypeCons::Unit => Ok(AbstractType::Unit(app_span.clone())),
         }
     }
 
@@ -412,9 +408,8 @@ impl AbstractTypeX<Span> {
         map: &HashMap<TypeVarId, AbstractType>,
     ) -> Result<AbstractType, Vec<ATypeError>> {
         match *self {
-            // TODO: Use this span somewhere
             AbstractType::App {
-                data: ref _span,
+                data: ref app_span,
                 type_cons: ref type_cons_id,
                 args: ref type_args,
             } => {
@@ -525,6 +520,7 @@ impl AbstractTypeX<Span> {
                         scoped_data,
                         typing_context,
                         &constraint_sub_map,
+                        app_span,
                     )
                 } else if ok_args.len() != 0 {
                     return Err(vec![ATypeError::ApplicationError(
@@ -540,6 +536,7 @@ impl AbstractTypeX<Span> {
                         scoped_data,
                         typing_context,
                         &HashMap::new(),
+                        app_span,
                     )
                 }
             }
