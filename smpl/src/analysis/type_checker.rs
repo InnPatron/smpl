@@ -727,7 +727,7 @@ fn resolve_struct_init(
     scope: &ScopedData,
     context: &mut TypingContext,
     init: &StructInit,
-    span: Span,
+    init_span: Span,
 ) -> Result<AbstractType, AnalysisError> {
     // Get type info
     let type_name = init.type_name();
@@ -746,9 +746,8 @@ fn resolve_struct_init(
         .unwrap_or(Ok(Vec::new()))?;
 
     // TODO: Take into account type arguments
-    // TODO: Is this span right?
     let struct_type = AbstractType::App {
-        data: span.clone(),
+        data: init_span.clone(),
         type_cons: struct_type_id,
         args: type_args,
     }
@@ -770,7 +769,7 @@ fn resolve_struct_init(
         AbstractType::Opaque { .. } => {
             return Err(TypeError::InitOpaqueType {
                 struct_type: struct_type,
-                span: span,
+                span: init_span,
             }
             .into());
         }
@@ -779,7 +778,7 @@ fn resolve_struct_init(
             return Err(TypeError::NotAStruct {
                 type_name: type_name.clone(),
                 found: struct_type,
-                span: span,
+                span: init_span,
             }
             .into());
         }
@@ -793,7 +792,7 @@ fn resolve_struct_init(
             field_map.get(field_name).ok_or(TypeError::UnknownField {
                 name: field_name.clone(),
                 struct_type: struct_type.clone(),
-                span: span.clone(),
+                span: init_span.clone(),
             })?;
 
         let tmp_type = context
@@ -822,7 +821,7 @@ fn resolve_struct_init(
             type_name: type_name.clone(),
             struct_type: struct_type.clone(),
             missing_fields: missing_fields,
-            span: span,
+            span: init_span,
         }
         .into());
     }
@@ -843,7 +842,7 @@ fn resolve_struct_init(
             context,
             init_expr_type,
             field_type,
-            span.clone(),
+            init_span.clone(),
         )?;
     }
 
@@ -902,7 +901,7 @@ fn resolve_binding(
     scope: &ScopedData,
     context: &TypingContext,
     binding: &Binding,
-    _span: Span,
+    bind_span: Span,
 ) -> Result<AbstractType, AnalysisError> {
     match binding.get_id().unwrap() {
         BindingId::Var(var_id) => Ok(context
@@ -944,9 +943,8 @@ fn resolve_binding(
             };
             */
 
-            // TODO: Is this span right?
             let fn_type = AbstractType::App {
-                data: _span,
+                data: bind_span,
                 type_cons: fn_type_id,
                 args: Vec::new(),
             }
@@ -962,7 +960,7 @@ fn resolve_mod_access(
     scope: &ScopedData,
     context: &TypingContext,
     mod_access: &ModAccess,
-    span: Span,
+    access_span: Span,
 ) -> Result<AbstractType, AnalysisError> {
     let fn_id = mod_access
         .fn_id()
@@ -984,9 +982,8 @@ fn resolve_mod_access(
         .fn_type()
         .expect("Expect anonymous functions to already be resolved");
 
-    // TODO: Is this span right?
     let fn_type = AbstractType::App {
-        data: span,
+        data: access_span,
         type_cons: fn_type_id,
         args: Vec::new(),
     }
@@ -1229,7 +1226,7 @@ fn resolve_type_inst(
     scope: &ScopedData,
     context: &TypingContext,
     type_inst: &TypeInst,
-    span: Span,
+    inst_span: Span,
 ) -> Result<AbstractType, AnalysisError> {
     let fn_id = type_inst
         .get_id()
@@ -1246,9 +1243,8 @@ fn resolve_type_inst(
         .map(|ann| type_from_ann(universe, scope, context, ann))
         .collect::<Result<Vec<_>, _>>()?;
 
-    // TODO: Is this span right?
     let inst_type = AbstractType::App {
-        data: span,
+        data: inst_span,
         type_cons: fn_type_id,
         args: type_args,
     }
@@ -1521,7 +1517,6 @@ fn resolve_field_access(
                 };
 
                 // TODO: Application?
-                // TODO: Use this span?
                 match field_type {
                     AbstractType::Array {
                         data,
@@ -1531,10 +1526,10 @@ fn resolve_field_access(
                         next_type = *element_type;
                     }
 
-                    _ => {
+                    ref t => {
                         return Err(TypeError::NotAnArray {
                             found: field_type.clone(),
-                            span: span,
+                            span: t.span().clone(),
                         }
                         .into());
                     }
