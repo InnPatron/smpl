@@ -114,10 +114,9 @@ impl<'a> TypeChecker<'a> {
                         let return_type: AbstractType = {
                             let type_id = fn_type.clone();
 
-                            // TODO: Get span from fn_type
                             let fn_type = AbstractType::App {
-                                data: Span::dummy(),
-                                type_cons: type_id,
+                                data: fn_type.span(),
+                                type_cons: type_id.data().clone(),
                                 args: analysis_context
                                     .existential_type_vars()
                                     .iter()
@@ -157,15 +156,15 @@ impl<'a> TypeChecker<'a> {
                 let return_type: AbstractType = {
                     let type_id = smpl_function.fn_type();
 
-                    // TODO: Get span from function declaration
+                    let decl_span = smpl_function.span();
                     let fn_type = AbstractType::App {
-                        data: Span::dummy(),
+                        data: decl_span.clone(),
                         type_cons: type_id,
                         args: smpl_function
                             .analysis_context()
                             .existential_type_vars()
                             .iter()
-                            .map(|id| AbstractType::TypeVar(Span::dummy(), id.clone()))
+                            .map(|id| AbstractType::TypeVar(decl_span.clone(), id.clone()))
                             .collect::<Vec<_>>(),
                     }
                     .substitute(
@@ -1281,20 +1280,22 @@ fn resolve_anonymous_fn(
                     scope,
                     context,
                     fn_id,
-                    ast_anonymous_fn,
+                    ast_anonymous_fn.data(),
                 )?;
+
+            let anon_span = ast_anonymous_fn.span();
 
             let analysis_context = analysis_helpers::generate_fn_analysis_data(
                 universe,
                 scope,
                 context,
                 &fn_type_cons,
-                ast_anonymous_fn,
+                ast_anonymous_fn.data(),
             )?;
 
             let cfg = super::control_flow::CFG::generate(
                 universe,
-                ast_anonymous_fn.body.clone(),
+                ast_anonymous_fn.data().body.clone(),
                 &fn_type_cons,
                 &analysis_context,
             )?;
@@ -1302,7 +1303,7 @@ fn resolve_anonymous_fn(
             let fn_type_id = universe.insert_type_cons(fn_type_cons);
 
             resolved = Some(AnonymousFunction::Resolved {
-                fn_type: fn_type_id,
+                fn_type: crate::ast::AstNode::new(fn_type_id, anon_span),
                 analysis_context: analysis_context,
                 cfg: Rc::new(RefCell::new(cfg)),
             });
@@ -1318,13 +1319,12 @@ fn resolve_anonymous_fn(
 
     let fn_type = if let Function::Anonymous(ref afn) = universe.get_fn(fn_id) {
         if let AnonymousFunction::Resolved { ref fn_type, .. } = afn {
-            let _fn_type_cons = universe.get_type_cons(fn_type.clone());
+            let fn_type_cons = fn_type.data().clone();
 
             // TODO: Anonymous functions are not allowed to have type parameters
-            // TODO: Is this span right?
             AbstractType::App {
-                data: span,
-                type_cons: fn_type.clone(),
+                data: fn_type.span(),
+                type_cons: fn_type_cons,
                 args: Vec::new(),
             }
             .substitute(universe, scope, context)?

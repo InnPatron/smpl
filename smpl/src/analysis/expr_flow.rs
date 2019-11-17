@@ -213,7 +213,7 @@ pub fn flatten_expr(
         }
 
         AstExpr::AnonymousFn(a_fn) => {
-            let (a_fn, span) = a_fn.to_data();
+            let span = a_fn.span();
             let fn_id = universe.new_fn_id();
             universe.reserve_anonymous_fn(fn_id, a_fn);
             (

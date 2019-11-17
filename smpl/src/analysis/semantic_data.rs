@@ -6,6 +6,7 @@ use std::slice::Iter;
 
 use uuid::Uuid;
 
+use crate::span::Span;
 use crate::ast::*;
 use crate::ast::{AnonymousFn as AstAnonymousFn, ModulePath as AstModulePath};
 use crate::feature::PresentFeatures;
@@ -217,12 +218,14 @@ impl Universe {
         type_id: TypeId,
         analysis_context: AnalysisContext,
         cfg: CFG,
+        span: Span,
     ) {
         let function = SMPLFunction {
             name: name,
             fn_type: type_id,
             cfg: Rc::new(RefCell::new(cfg)),
             analysis_context: analysis_context,
+            span: span,
         };
 
         if self
@@ -265,7 +268,7 @@ impl Universe {
     pub fn reserve_anonymous_fn(
         &mut self,
         fn_id: FnId,
-        ast_fn: AstAnonymousFn,
+        ast_fn: AstNode<AstAnonymousFn>,
     ) {
         let anon_fn = AnonymousFunction::Reserved(ast_fn);
 
@@ -487,9 +490,9 @@ impl Function {
 
 #[derive(Clone, Debug)]
 pub enum AnonymousFunction {
-    Reserved(AstAnonymousFn),
+    Reserved(AstNode<AstAnonymousFn>),
     Resolved {
-        fn_type: TypeId,
+        fn_type: AstNode<TypeId>,
         cfg: Rc<RefCell<CFG>>,
         analysis_context: AnalysisContext,
     },
@@ -504,7 +507,7 @@ impl AnonymousFunction {
         match self {
             AnonymousFunction::Reserved(_) => None,
             AnonymousFunction::Resolved { fn_type, .. } => {
-                Some(fn_type.clone())
+                Some(fn_type.data().clone())
             }
         }
     }
@@ -532,6 +535,7 @@ pub struct SMPLFunction {
     fn_type: TypeId,
     cfg: Rc<RefCell<CFG>>,
     analysis_context: AnalysisContext,
+    span: Span,
 }
 
 impl SMPLFunction {
@@ -545,6 +549,10 @@ impl SMPLFunction {
 
     pub fn cfg(&self) -> Rc<RefCell<CFG>> {
         self.cfg.clone()
+    }
+
+    pub fn span(&self) -> Span {
+        self.span.clone()
     }
 
     pub(crate) fn analysis_context(&self) -> &AnalysisContext {

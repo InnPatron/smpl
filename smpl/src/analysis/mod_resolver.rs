@@ -120,6 +120,7 @@ pub fn check_modules(
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;
+            let fn_span = reserved_fn.1.span();
             let fn_decl = reserved_fn.1.data();
             let fn_name = fn_decl.name.data();
             // TODO: Store new function scope storing the type parameters
@@ -160,6 +161,7 @@ pub fn check_modules(
                 fn_type_id,
                 analysis_context,
                 cfg,
+                fn_span,
             );
             program.metadata_mut().insert_module_fn(
                 mod_id.clone(),
