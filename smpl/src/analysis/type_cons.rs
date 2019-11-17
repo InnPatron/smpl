@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::{AstNode, Ident, TypeAnnotationRef, WidthConstraint};
+use crate::ast::{AstNode, Ident, WidthConstraint};
 use crate::span::Span;
 
 use super::abstract_type::*;
