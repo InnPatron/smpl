@@ -959,11 +959,18 @@ fn fuse_width_constraints(
     ast_constraints: &[AstNode<WidthConstraint>],
 ) -> Result<AbstractType, AnalysisError> {
     // TODO: Fuse constraints
+    let mut constraint_span = None;
     let mut field_constraints: HashMap<Ident, Vec<AbstractType>> =
         HashMap::new();
 
     // Map field to its (unfused) constraints
     for ast_constraint in ast_constraints {
+
+        constraint_span = Some(constraint_span
+            .map(|s| Span::combine(s, ast_constraint.span()))
+            .unwrap_or(ast_constraint.span())
+        );
+
         match ast_constraint.data() {
             // base Struct/WidthConstraint
             // Inspect the type and use it's field types as field constraints
@@ -1060,9 +1067,9 @@ fn fuse_width_constraints(
         return Err(errors.into());
     }
 
-    // TODO: Get span from declarations
     Ok(AbstractType::WidthConstraint {
-        data: Span::dummy(),
+        data: constraint_span
+            .expect("Expect constraint span to be Some. Implies no constraints"),
         width: AbstractWidthConstraint {
             fields: ok_constraints,
         }
@@ -1083,6 +1090,7 @@ fn fuse_field_width_constraints(
         .next()
         .expect("Always at least one constraint");
 
+    let mut constraint_span = first_constraint.span().clone();
     let is_first_non_width_constraint = match first_constraint {
         AbstractType::Record { .. }
         | AbstractType::App { .. }
@@ -1107,8 +1115,9 @@ fn fuse_field_width_constraints(
     let mut internal_field_constraints: HashMap<Ident, Vec<AbstractType>> =
         HashMap::new();
 
-    // TODO: Get span for constraints
     for constraint in constraint_iter {
+        constraint_span = Span::combine(constraint_span, constraint.span().clone());
+
         match constraint {
             AbstractType::WidthConstraint {
                 data: ref span,
@@ -1150,14 +1159,13 @@ fn fuse_field_width_constraints(
                     .into());
                 }
 
-                // TODO: Pass span info
                 resolve_types_static(
                     universe,
                     scope,
                     typing_context,
                     constraint,
                     first_constraint,
-                    crate::span::Span::dummy(),
+                    constraint.span().clone(),
                 )
                 .map_err(|_e| {
                     TypeError::ConflictingConstraints {
@@ -1194,9 +1202,8 @@ fn fuse_field_width_constraints(
             }
         }
 
-        // TODO: Get span of total width constraint
         Ok(AbstractType::WidthConstraint {
-            data: Span::dummy(),
+            data: constraint_span,
             width: AbstractWidthConstraint {
                 fields: final_internal_map,
             }
