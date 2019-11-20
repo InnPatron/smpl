@@ -18,16 +18,16 @@ pub fn vm_module() -> VmModule {
     let parsed = parse_module(input).unwrap();
 
     let module = VmModule::new(parsed)
-        .add_builtin(STRING_LEN, len)
-        .add_builtin(STRING_TO_STRING, to_string)
-        .add_builtin(STRING_APPEND, append)
-        .add_builtin(STRING_TO_LOWER, to_lower)
-        .add_builtin(STRING_TO_UPPER, to_upper);
+        .add_builtin(STRING_LEN,        super::erase(len))
+        .add_builtin(STRING_TO_STRING,  super::erase(to_string))
+        .add_builtin(STRING_APPEND,     super::erase(append))
+        .add_builtin(STRING_TO_LOWER,   super::erase(to_lower))
+        .add_builtin(STRING_TO_UPPER,   super::erase(to_upper));
 
     module
 }
 
-fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn len(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let string = args.pop().unwrap();
@@ -36,7 +36,7 @@ fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Int(string.len() as i64))
 }
 
-fn to_string(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn to_string(args: Vec<Value>) -> Result<Value, Error> {
     let args = min_args!(1, args)?;
 
     let mut s = String::new();
@@ -48,7 +48,7 @@ fn to_string(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::String(s))
 }
 
-fn append(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn append(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = min_args!(1, args)?;
 
     let to_append = args.pop().unwrap();
@@ -62,7 +62,7 @@ fn append(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::String(base))
 }
 
-fn to_lower(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn to_lower(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let string = args.pop().unwrap();
@@ -71,7 +71,7 @@ fn to_lower(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::String(string.to_lowercase()))
 }
 
-fn to_upper(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn to_upper(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let string = args.pop().unwrap();
@@ -98,7 +98,7 @@ mod tests {
         let fn_handle = vm.query_module(MOD_STRING, STRING_LEN).unwrap().unwrap();
 
         let result = vm
-            .spawn_executor(fn_handle, Some(vec![Value::String("".to_string())]), SpawnOptions {
+            .spawn_executor(fn_handle, vec![Value::String("".to_string())], SpawnOptions {
                 type_check: false
             })
             .unwrap()
@@ -107,7 +107,7 @@ mod tests {
         assert_eq!(Value::Int(0), result);
 
         let result = vm
-            .spawn_executor(fn_handle, Some(vec![Value::String("1".to_string())]), SpawnOptions {
+            .spawn_executor(fn_handle, vec![Value::String("1".to_string())], SpawnOptions {
                 type_check: false    
             })
             .unwrap()
@@ -118,7 +118,7 @@ mod tests {
         let result = vm
             .spawn_executor(
                 fn_handle,
-                Some(vec![Value::String("123456789".to_string())]),
+                vec![Value::String("123456789".to_string())],
                 SpawnOptions {
                     type_check: false
                 }
@@ -141,11 +141,11 @@ mod tests {
         let result = vm
             .spawn_executor(
                 fn_handle,
-                Some(vec![
+                vec![
                     Value::String("I am ".to_string()),
                     Value::Int(1337),
                     Value::String("!".to_string()),
-                ]),
+                ],
                 SpawnOptions {
                     type_check: false
                 }
@@ -165,10 +165,10 @@ mod tests {
         let result = vm
             .spawn_executor(
                 fn_handle,
-                Some(vec![
+                vec![
                     Value::String("I'll ".to_string()),
                     Value::String("be back.".to_string()),
-                ]),
+                ],
                 SpawnOptions {
                     type_check: false
                 }
@@ -191,7 +191,7 @@ mod tests {
         let result = vm
             .spawn_executor(
                 fn_handle,
-                Some(vec![Value::String("LOUD NOISES".to_string())]),
+                vec![Value::String("LOUD NOISES".to_string())],
                 SpawnOptions {
                     type_check: false,
                 }
@@ -214,7 +214,7 @@ mod tests {
         let result = vm
             .spawn_executor(
                 fn_handle,
-                Some(vec![Value::String("loud noises".to_string())]),
+                vec![Value::String("loud noises".to_string())],
                 SpawnOptions {
                     type_check: false,
                 }
@@ -244,7 +244,7 @@ return str::to_string(\"Cannot\", \" touch\", \" this!?\");
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
-    let result = vm.spawn_executor(fn_handle, None, SpawnOptions {
+    let result = vm.spawn_executor(fn_handle, vec![], SpawnOptions {
         type_check: false    
     })
         .unwrap()

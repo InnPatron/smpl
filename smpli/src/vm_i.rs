@@ -1,10 +1,17 @@
+use std::pin::Pin;
+use std::future::Future;
+
 use failure::Error;
 
 use smpl::{FnId, TypeId, ModuleId};
 
 use super::value::Value;
 
-pub type BuiltinFn = fn(args: Option<Vec<Value>>) -> Result<Value, Error>;
+// TODO: Add choice between Future/NonFuture builtins?
+pub type ArgType        = Vec<Value>;
+pub type BuiltinResult  = Result<Value, Error>;
+pub type NativeReturn   = Pin<Box<dyn Future<Output=BuiltinResult>>>;
+pub type BuiltinFn      = fn(args: ArgType) -> NativeReturn;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModQuery {

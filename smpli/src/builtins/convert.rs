@@ -22,12 +22,12 @@ pub fn vm_module() -> VmModule {
     let parsed = parse_module(input).unwrap();
 
     let module = VmModule::new(parsed)
-        .add_builtin(CONVERT_INT_TO_FLOAT, int_to_float)
-        .add_builtin(CONVERT_FLOAT_TO_INT, float_to_int)
-        .add_builtin(CONVERT_IS_FLOAT, is_float)
-        .add_builtin(CONVERT_IS_INT, is_int)
-        .add_builtin(CONVERT_STRING_TO_FLOAT, string_to_float)
-        .add_builtin(CONVERT_STRING_TO_INT, string_to_int);
+        .add_builtin(CONVERT_INT_TO_FLOAT,      super::erase(int_to_float))
+        .add_builtin(CONVERT_FLOAT_TO_INT,      super::erase(float_to_int))
+        .add_builtin(CONVERT_IS_FLOAT,          super::erase(is_float))
+        .add_builtin(CONVERT_IS_INT,            super::erase(is_int))
+        .add_builtin(CONVERT_STRING_TO_FLOAT,   super::erase(string_to_float))
+        .add_builtin(CONVERT_STRING_TO_INT,     super::erase(string_to_int));
 
     module
 }
@@ -46,7 +46,7 @@ pub enum ConversionTarget {
     Float,
 }
 
-fn int_to_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn int_to_float(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let a = args.remove(0);
@@ -56,7 +56,7 @@ fn int_to_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-fn float_to_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn float_to_int(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let a = args.remove(0);
@@ -66,7 +66,7 @@ fn float_to_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-fn is_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn is_float(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let a = args.remove(0);
@@ -76,7 +76,7 @@ fn is_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-fn is_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn is_int(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let a = args.remove(0);
@@ -86,7 +86,7 @@ fn is_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-fn string_to_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn string_to_float(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let a = args.remove(0);
@@ -100,7 +100,7 @@ fn string_to_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-fn string_to_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn string_to_int(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let a = args.remove(0);

@@ -27,15 +27,15 @@ pub fn vm_module() -> VmModule {
     let parsed = parse_module(input).unwrap();
 
     let module = VmModule::new(parsed)
-        .add_builtin(VEC_NEW, new)
-        .add_builtin(VEC_LEN, len)
-        .add_builtin(VEC_CONTAINS, contains)
-        .add_builtin(VEC_PUSH, push)
-        .add_builtin(VEC_INSERT, insert)
-        .add_builtin(VEC_GET_VALUE, get_value)
-        .add_builtin(VEC_GET, get)
-        .add_builtin(VEC_REMOVE, remove)
-        .add_builtin(VEC_CLEAR, clear);
+        .add_builtin(VEC_NEW,       super::erase(new))
+        .add_builtin(VEC_LEN,       super::erase(len))
+        .add_builtin(VEC_CONTAINS,  super::erase(contains))
+        .add_builtin(VEC_PUSH,      super::erase(push))
+        .add_builtin(VEC_INSERT,    super::erase(insert))
+        .add_builtin(VEC_GET_VALUE, super::erase(get_value))
+        .add_builtin(VEC_GET,       super::erase(get))
+        .add_builtin(VEC_REMOVE,    super::erase(remove))
+        .add_builtin(VEC_CLEAR,     super::erase(clear));
 
     module
 }
@@ -46,7 +46,7 @@ pub enum VecError {
     IndexOutOfRange(i64, usize),
 }
 
-fn new(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn new(args: Vec<Value>) -> Result<Value, Error> {
     no_args!(args)?;
 
     let mut vec = Struct::new();
@@ -56,7 +56,7 @@ fn new(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Struct(vec))
 }
 
-fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn len(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let vec_struct = args.pop().unwrap();
     let vec_struct = irmatch!(vec_struct; Value::Struct(s) => s);
@@ -66,7 +66,7 @@ fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(length)
 }
 
-fn contains(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn contains(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(2, args)?;
 
     let to_search = args.pop().unwrap();
@@ -89,7 +89,7 @@ fn contains(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Bool(false))
 }
 
-fn insert(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn insert(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(3, args)?;
 
     let to_insert = args.pop().unwrap();
@@ -117,7 +117,7 @@ fn insert(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Struct(vec_struct))
 }
 
-fn push(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn push(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(2, args)?;
 
     let to_insert = args.pop().unwrap();
@@ -143,7 +143,7 @@ fn push(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Struct(vec_struct))
 }
 
-fn get_value(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn get_value(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(2, args)?;
 
     let index = args.pop().unwrap();
@@ -171,7 +171,7 @@ fn get_value(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(item)
 }
 
-fn get(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn get(args: Vec<Value>) -> Result<Value, Error> {
     use super::option;
 
     let mut args = exact_args!(2, args)?;
@@ -201,7 +201,7 @@ fn get(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(option::make_some(item))
 }
 
-fn remove(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn remove(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(2, args)?;
 
     let index = args.pop().unwrap();
@@ -238,7 +238,7 @@ fn remove(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Struct(vec_struct))
 }
 
-fn clear(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn clear(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let vec_struct = args.pop().unwrap();
     let vec_struct = irmatch!(vec_struct; Value::Struct(s) => s);
@@ -306,7 +306,7 @@ fn vec_new() {
     let v: vec::Vec(type int)= vec::new(type int)();
 }
 ";
-    let result = vec_test!(mod1, "mod1", "vec_new", None);
+    let result = vec_test!(mod1, "mod1", "vec_new", vec![]);
 
     assert_eq!(Value::Unit, result);
 }
@@ -327,7 +327,7 @@ return vec::len(type int)(v);
 }
 ";
 
-    let result = vec_test!(mod1, "mod1", "test", None);
+    let result = vec_test!(mod1, "mod1", "test", vec![]);
 
     assert_eq!(Value::Int(2), result);
 }
@@ -352,7 +352,7 @@ return a * b;
 ";
 
 
-    let result = vec_test!(mod1, "mod1", "test", None);
+    let result = vec_test!(mod1, "mod1", "test", vec![]);
 
     assert_eq!(Value::Int(123 * 456), result);
 }
@@ -376,7 +376,7 @@ return vec::get_value(type int)(v, 1);
 }
 ";
     
-    let result = vec_test!(mod1, "mod1", "test", None);
+    let result = vec_test!(mod1, "mod1", "test", vec![]);
 
     assert_eq!(Value::Int(789), result);
 }
@@ -401,7 +401,7 @@ return a;
 }
 ";
     
-    let result = vec_test!(mod1, "mod1", "test", None);
+    let result = vec_test!(mod1, "mod1", "test", vec![]);
 
     assert_eq!(Value::Int(1337), result);
 }
@@ -440,11 +440,11 @@ return vec::contains(type int)(v, 20);
 }
 ";
     
-    let result = vec_test!(mod1, "mod1", "test", None);
+    let result = vec_test!(mod1, "mod1", "test", vec![]);
 
     assert_eq!(Value::Bool(true), result);
 
-    let result = vec_test!(mod1, "mod1", "test2", None);
+    let result = vec_test!(mod1, "mod1", "test2", vec![]);
 
     assert_eq!(Value::Bool(false), result);
 }
@@ -467,7 +467,7 @@ return vec::len(type int)(cleared);
 }
 ";
 
-    let result = vec_test!(mod1, "mod1", "test", None);
+    let result = vec_test!(mod1, "mod1", "test", vec![]);
 
     assert_eq!(Value::Int(0), result);
 }

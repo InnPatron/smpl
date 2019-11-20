@@ -123,8 +123,8 @@ impl AVM {
         }
     }
 
-    pub fn spawn_executor(&self, fn_handle: FnHandle, 
-                          args: Option<Vec<Value>>, 
+    pub fn spawn_executor(&self, fn_handle: FnHandle,
+                          args: Vec<Value>,
                           spawn_options: SpawnOptions) -> Result<Executor, InternalError> {
 
         if spawn_options.type_check {

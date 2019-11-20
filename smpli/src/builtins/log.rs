@@ -15,8 +15,8 @@ pub fn vm_module() -> VmModule {
     let parsed = parse_module(input).unwrap();
 
     let module = VmModule::new(parsed)
-        .add_builtin(LOG_PRINT, print)
-        .add_builtin(LOG_PRINTLN, println);
+        .add_builtin(LOG_PRINT,   super::erase(print))
+        .add_builtin(LOG_PRINTLN, super::erase(println));
 
     module
 }
@@ -25,7 +25,7 @@ pub fn vm_module() -> VmModule {
 #[fail(display = "Logging Error: '{}'", _0)]
 pub struct LoggingError(std::io::Error);
 
-fn print(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn print(args: Vec<Value>) -> Result<Value, Error> {
     let args = min_args!(1, args)?;
 
     for arg in args {
@@ -37,11 +37,9 @@ fn print(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Unit)
 }
 
-fn println(args: Option<Vec<Value>>) -> Result<Value, Error> {
-    if let Some(args) = args {
-        for arg in args {
-            print!("{}", arg);
-        }
+async fn println(args: Vec<Value>) -> Result<Value, Error> {
+    for arg in args {
+        print!("{}", arg);
     }
 
     print!("\n");

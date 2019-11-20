@@ -16,9 +16,9 @@ pub fn vm_module() -> VmModule {
     let parsed = parse_module(input).unwrap();
 
     let module = VmModule::new(parsed)
-        .add_builtin(ERR_PANIC, panic)
-        .add_builtin(ERR_PANIC_MSG, panic_msg)
-        .add_builtin(ERR_ASSERT, assert);
+        .add_builtin(ERR_PANIC,     super::erase(panic))
+        .add_builtin(ERR_PANIC_MSG, super::erase(panic_msg))
+        .add_builtin(ERR_ASSERT,    super::erase(assert));
 
     module
 }
@@ -35,12 +35,11 @@ impl std::fmt::Display for RuntimeError {
     }
 }
 
-fn panic(_args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn panic(_args: Vec<Value>) -> Result<Value, Error> {
     Err(RuntimeError(None))?
 }
 
-fn panic_msg(args: Option<Vec<Value>>) -> Result<Value, Error> {
-    let mut args = args.unwrap();
+async fn panic_msg(mut args: Vec<Value>) -> Result<Value, Error> {
     let a = args.remove(0);
 
     match a {
@@ -49,8 +48,7 @@ fn panic_msg(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-fn assert(args: Option<Vec<Value>>) -> Result<Value, Error> {
-    let mut args = args.unwrap();
+async fn assert(mut args: Vec<Value>) -> Result<Value, Error> {
     let a = args.remove(0);
 
     let a = irmatch!(a; Value::Bool(a) => a);
