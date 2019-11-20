@@ -11,7 +11,7 @@ pub fn vm_module() -> VmModule {
         .add_builtin("user_key", smpli::erase(user_input))
 }
 
-async fn user_input(_args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn user_input(_args: Vec<Value>) -> smpli::BuiltinResult {
     let mut input = String::new();
     let size = io::stdin().read_line(&mut input).unwrap();
 
