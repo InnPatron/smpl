@@ -10,33 +10,28 @@ SMPL is a simple statically typed programming language meant for easy embedding 
 
 SMPL was built to replace [Popstcl](https://github.com/InnPatron/Popstcl) as the scripting language of my choose-your-own-adventure engine [CYOA](https://github.com/InnPatron/cyoa).
 
-Popstcl has dynamic types and dynamic scoping, all of which I found painful to use.
-
 ## The Good
 
 * Rust-like syntax.
 * Statically typed
 * Lexically scoped
 * ~~Compiler with Rust code generator~~
-* Embeddable (**asynchronous!**) interpreter
-* SMPL code is sandboxed (?)
+* Embeddable (**asynchronous**) interpreter
 * Function piping
 * Width-based structural subtyping 
 * Generics (with width-based structural constraints)
 
 ## The Bad
-* ~~Types and functions are brought into scope top-to-bottom.~~ Declarations can be in any order
-* ~~A lot of unimplemented features~~ It works...
-* Does not have the same semantics as Rust code
+* Does match Rust 1:1
   * No move semantics
   * No concept of lifetime
-* ~~No~~ Bare-bones standard library for the interpreter
+* Bare-bones standard library
 
 ## Using the Code
 
 The project is split it up into 2 parts:
 * smpl
-  * Core library that defines the language
+  * The core crate that defines the language
   * Includes:
     * The parser
     * The static analyzer
@@ -52,10 +47,12 @@ The project is split it up into 2 parts:
 
 ## Example
 
-See `examples/tic-tac-toe` for embedding examples.
+See `examples/tic-tac-toe` for more embedding examples.
+
+### SMPL code
 
 ```
-// SMPL Code in a file or as a String
+// In a file or as a String
 mod test;
 
 // From interpreter's stdlib 
@@ -98,9 +95,10 @@ fn main() {
 }
 ```
 
+### Rust Code
 
 ```
-// Rust code running the above using the 'smpli' crate
+// Running the above SMPL code using the 'smpli' crate
 let scripts = vec![
     // If you have a path, can use:
     //   parse_module(UnparsedModule::file(path, &str_buff))
@@ -143,7 +141,7 @@ let _result = match executor.execute_sync() {
 
 The Rust backend is temporarily unsupported.
 
-**SMPL is meant to be embedded in other Rust programs. The interpreter is the only method of SMPL code execution guaranteed to support ALL language features.**
+**SMPL is meant to be embedded in other Rust programs. The interpreter is the only method of SMPL code execution guaranteed to support ALL present and future language features.**
 
 ## License
 Released under the [MIT License](https://opensource.org/licenses/MIT) (See LICENSE-MIT).
