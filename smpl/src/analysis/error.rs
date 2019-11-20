@@ -11,7 +11,7 @@ pub enum AnalysisError {
     MultipleMainFns,
     UnknownType(ModulePath, Span),
     UnknownBinding(Ident, Span),
-    UnknownFn(ModulePath),
+    UnknownFn(ModulePath, Span),
     UnresolvedUses(Vec<AstNode<UseDecl>>),
     UnresolvedStructs(Vec<AstNode<Struct>>),
     UnresolvedFns(Vec<AstNode<Function>>),

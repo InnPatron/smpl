@@ -465,6 +465,19 @@ impl ModulePath {
     pub fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = &Ident> + 'a> {
         Box::new(self.0.iter().map(|node| &node.data))
     }
+
+    pub fn span(&self) -> Span {
+        let mut iter = self.0
+            .iter()
+            .map(|node| node.span());
+
+        let s = iter
+            .next()
+            .unwrap();
+
+        iter
+            .fold(s, |acc, next| Span::combine(acc, next))
+    }
 }
 
 impl fmt::Display for ModulePath {

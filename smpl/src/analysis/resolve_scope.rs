@@ -420,7 +420,7 @@ impl ScopedData {
         self.fn_map
             .get(&path.clone().into())
             .map(|id| id.clone())
-            .ok_or(AnalysisError::UnknownFn(path.clone()))
+            .ok_or(AnalysisError::UnknownFn(path.clone(), path.span()))
     }
 
     pub fn insert_type_var(&mut self, ident: Ident, id: TypeVarId) -> bool {
