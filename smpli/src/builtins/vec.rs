@@ -46,7 +46,7 @@ pub enum VecError {
     IndexOutOfRange(i64, usize),
 }
 
-async fn new(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn new(args: Vec<Value>) -> Result<Value, Error> {
     no_args!(args)?;
 
     let mut vec = Struct::new();
@@ -56,7 +56,7 @@ async fn new(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Struct(vec))
 }
 
-async fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn len(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let vec_struct = args.pop().unwrap();
     let vec_struct = irmatch!(vec_struct; Value::Struct(s) => s);
@@ -66,7 +66,7 @@ async fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(length)
 }
 
-async fn contains(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn contains(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(2, args)?;
 
     let to_search = args.pop().unwrap();
@@ -89,7 +89,7 @@ async fn contains(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Bool(false))
 }
 
-async fn insert(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn insert(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(3, args)?;
 
     let to_insert = args.pop().unwrap();
@@ -117,7 +117,7 @@ async fn insert(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Struct(vec_struct))
 }
 
-async fn push(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn push(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(2, args)?;
 
     let to_insert = args.pop().unwrap();
@@ -143,7 +143,7 @@ async fn push(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Struct(vec_struct))
 }
 
-async fn get_value(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn get_value(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(2, args)?;
 
     let index = args.pop().unwrap();
@@ -171,7 +171,7 @@ async fn get_value(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(item)
 }
 
-async fn get(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn get(args: Vec<Value>) -> Result<Value, Error> {
     use super::option;
 
     let mut args = exact_args!(2, args)?;
@@ -201,7 +201,7 @@ async fn get(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(option::make_some(item))
 }
 
-async fn remove(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn remove(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(2, args)?;
 
     let index = args.pop().unwrap();
@@ -238,7 +238,7 @@ async fn remove(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Struct(vec_struct))
 }
 
-async fn clear(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn clear(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let vec_struct = args.pop().unwrap();
     let vec_struct = irmatch!(vec_struct; Value::Struct(s) => s);

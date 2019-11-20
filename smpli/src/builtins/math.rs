@@ -53,7 +53,7 @@ pub fn vm_module() -> VmModule {
 }
 
 /// In radians
-async fn sin(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn sin(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let v = args.remove(0);
 
@@ -64,7 +64,7 @@ async fn sin(args: Option<Vec<Value>>) -> Result<Value, Error> {
 }
 
 /// In radians
-async fn cos(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn cos(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let v = args.remove(0);
 
@@ -75,7 +75,7 @@ async fn cos(args: Option<Vec<Value>>) -> Result<Value, Error> {
 }
 
 /// In radians
-async fn tan(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn tan(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let v = args.remove(0);
 
@@ -86,7 +86,7 @@ async fn tan(args: Option<Vec<Value>>) -> Result<Value, Error> {
 }
 
 /// In radians
-async fn asin(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn asin(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let v = args.remove(0);
 
@@ -97,7 +97,7 @@ async fn asin(args: Option<Vec<Value>>) -> Result<Value, Error> {
 }
 
 /// In radians
-async fn acos(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn acos(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let v = args.remove(0);
 
@@ -108,7 +108,7 @@ async fn acos(args: Option<Vec<Value>>) -> Result<Value, Error> {
 }
 
 /// In radians
-async fn atan(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn atan(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let v = args.remove(0);
 
@@ -119,7 +119,7 @@ async fn atan(args: Option<Vec<Value>>) -> Result<Value, Error> {
 }
 
 /// In radians
-async fn atan2(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn atan2(args: Vec<Value>) -> Result<Value, Error> {
     let args = exact_args!(2, args)?;
     let v = args.get(0).unwrap().clone();
     let a = args.get(1).unwrap().clone();
@@ -130,7 +130,7 @@ async fn atan2(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-async fn to_radians(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn to_radians(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let v = args.remove(0);
 
@@ -140,7 +140,7 @@ async fn to_radians(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-async fn to_degrees(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn to_degrees(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let v = args.remove(0);
 
@@ -150,7 +150,7 @@ async fn to_degrees(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-async fn fpowf(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn fpowf(args: Vec<Value>) -> Result<Value, Error> {
     let args = exact_args!(2, args)?;
     let b = args.get(0).unwrap().clone();
     let p = args.get(1).unwrap().clone();
@@ -161,7 +161,7 @@ async fn fpowf(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-async fn fpowi(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn fpowi(args: Vec<Value>) -> Result<Value, Error> {
     let args = exact_args!(2, args)?;
     let b = args.get(0).unwrap().clone();
     let p = args.get(1).unwrap().clone();
@@ -183,7 +183,7 @@ async fn fpowi(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-async fn ipow(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn ipow(args: Vec<Value>) -> Result<Value, Error> {
     let args = exact_args!(2, args)?;
     let b = args.get(0).unwrap().clone();
     let p = args.get(1).unwrap().clone();
@@ -206,7 +206,7 @@ async fn ipow(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-async fn floor(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn floor(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let v = args.remove(0);
 
@@ -216,7 +216,7 @@ async fn floor(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-async fn ceil(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn ceil(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let v = args.remove(0);
 
@@ -226,7 +226,7 @@ async fn ceil(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-async fn round(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn round(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
     let v = args.remove(0);
 

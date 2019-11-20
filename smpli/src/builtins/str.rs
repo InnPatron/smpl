@@ -27,7 +27,7 @@ pub fn vm_module() -> VmModule {
     module
 }
 
-async fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn len(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let string = args.pop().unwrap();
@@ -36,7 +36,7 @@ async fn len(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Int(string.len() as i64))
 }
 
-async fn to_string(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn to_string(args: Vec<Value>) -> Result<Value, Error> {
     let args = min_args!(1, args)?;
 
     let mut s = String::new();
@@ -48,7 +48,7 @@ async fn to_string(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::String(s))
 }
 
-async fn append(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn append(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = min_args!(1, args)?;
 
     let to_append = args.pop().unwrap();
@@ -62,7 +62,7 @@ async fn append(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::String(base))
 }
 
-async fn to_lower(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn to_lower(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let string = args.pop().unwrap();
@@ -71,7 +71,7 @@ async fn to_lower(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::String(string.to_lowercase()))
 }
 
-async fn to_upper(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn to_upper(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let string = args.pop().unwrap();

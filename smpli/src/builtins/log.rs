@@ -25,7 +25,7 @@ pub fn vm_module() -> VmModule {
 #[fail(display = "Logging Error: '{}'", _0)]
 pub struct LoggingError(std::io::Error);
 
-async fn print(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn print(args: Vec<Value>) -> Result<Value, Error> {
     let args = min_args!(1, args)?;
 
     for arg in args {
@@ -37,11 +37,9 @@ async fn print(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Unit)
 }
 
-async fn println(args: Option<Vec<Value>>) -> Result<Value, Error> {
-    if let Some(args) = args {
-        for arg in args {
-            print!("{}", arg);
-        }
+async fn println(args: Vec<Value>) -> Result<Value, Error> {
+    for arg in args {
+        print!("{}", arg);
     }
 
     print!("\n");

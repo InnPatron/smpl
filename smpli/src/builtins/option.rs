@@ -147,7 +147,7 @@ pub fn expect(value: Value, message: String) -> Result<Value, Error> {
     }
 }
 
-async fn builtin_make_some(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn builtin_make_some(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let data = args.pop().unwrap();
@@ -155,7 +155,7 @@ async fn builtin_make_some(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(make_some(data))
 }
 
-async fn builtin_is_some(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn builtin_is_some(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let data = args.pop().unwrap();
@@ -163,7 +163,7 @@ async fn builtin_is_some(args: Option<Vec<Value>>) -> Result<Value, Error> {
     Ok(Value::Bool(is_some(data)))
 }
 
-async fn builtin_unwrap(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn builtin_unwrap(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let data = args.pop().unwrap();
@@ -171,7 +171,7 @@ async fn builtin_unwrap(args: Option<Vec<Value>>) -> Result<Value, Error> {
     unwrap(data)
 }
 
-async fn builtin_expect(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn builtin_expect(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(2, args)?;
 
     let message = args.pop().unwrap();
@@ -182,13 +182,13 @@ async fn builtin_expect(args: Option<Vec<Value>>) -> Result<Value, Error> {
     expect(data, message)
 }
 
-async fn builtin_make_none(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn builtin_make_none(args: Vec<Value>) -> Result<Value, Error> {
     no_args!(args)?;
 
     Ok(make_none())
 }
 
-async fn builtin_is_none(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn builtin_is_none(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let data = args.pop().unwrap();

@@ -46,7 +46,7 @@ pub enum ConversionTarget {
     Float,
 }
 
-async fn int_to_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn int_to_float(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let a = args.remove(0);
@@ -56,7 +56,7 @@ async fn int_to_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-async fn float_to_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn float_to_int(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let a = args.remove(0);
@@ -66,7 +66,7 @@ async fn float_to_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-async fn is_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn is_float(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let a = args.remove(0);
@@ -76,7 +76,7 @@ async fn is_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-async fn is_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn is_int(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let a = args.remove(0);
@@ -86,7 +86,7 @@ async fn is_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-async fn string_to_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn string_to_float(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let a = args.remove(0);
@@ -100,7 +100,7 @@ async fn string_to_float(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-async fn string_to_int(args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn string_to_int(args: Vec<Value>) -> Result<Value, Error> {
     let mut args = exact_args!(1, args)?;
 
     let a = args.remove(0);

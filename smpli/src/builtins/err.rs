@@ -35,12 +35,11 @@ impl std::fmt::Display for RuntimeError {
     }
 }
 
-async fn panic(_args: Option<Vec<Value>>) -> Result<Value, Error> {
+async fn panic(_args: Vec<Value>) -> Result<Value, Error> {
     Err(RuntimeError(None))?
 }
 
-async fn panic_msg(args: Option<Vec<Value>>) -> Result<Value, Error> {
-    let mut args = args.unwrap();
+async fn panic_msg(mut args: Vec<Value>) -> Result<Value, Error> {
     let a = args.remove(0);
 
     match a {
@@ -49,8 +48,7 @@ async fn panic_msg(args: Option<Vec<Value>>) -> Result<Value, Error> {
     }
 }
 
-async fn assert(args: Option<Vec<Value>>) -> Result<Value, Error> {
-    let mut args = args.unwrap();
+async fn assert(mut args: Vec<Value>) -> Result<Value, Error> {
     let a = args.remove(0);
 
     let a = irmatch!(a; Value::Bool(a) => a);
