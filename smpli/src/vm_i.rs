@@ -7,6 +7,7 @@ use smpl::{FnId, TypeId, ModuleId};
 
 use super::value::Value;
 
+// TODO: Add choice between Future/NonFuture builtins?
 pub type ArgType        = Option<Vec<Value>>;
 pub type BuiltinResult  = Result<Value, Error>;
 pub type NativeReturn   = Pin<Box<dyn Future<Output=BuiltinResult>>>;
