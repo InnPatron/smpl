@@ -2,6 +2,8 @@ use std::collections::HashSet;
 
 use petgraph::graph::NodeIndex;
 
+use crate::span::Span;
+
 use super::control_data::Node;
 use super::control_flow::CFG;
 use super::error::{AnalysisError, ControlFlowError};
@@ -18,7 +20,8 @@ pub fn return_trace(
         Function::SMPL(ref smpl_fn) => {
             let cfg = smpl_fn.cfg();
             let cfg = cfg.borrow();
-            check_returns_form(&*cfg)
+            let fn_span = &smpl_fn.span();
+            check_returns_form(&*cfg, fn_span)
         }
 
         Function::Anonymous(ref anon_fn) => match anon_fn {
@@ -26,9 +29,14 @@ pub fn return_trace(
                 panic!("Anonymous function should be resolved")
             }
 
-            AnonymousFunction::Resolved { ref cfg, .. } => {
+            AnonymousFunction::Resolved { 
+                ref cfg,
+                ref fn_type,
+                ..
+            } => {
                 let cfg = cfg.borrow();
-                check_returns_form(&*cfg)
+                let fn_span = &fn_type.span();
+                check_returns_form(&*cfg, fn_span)
             }
         },
 
@@ -38,7 +46,11 @@ pub fn return_trace(
     }
 }
 
-fn check_returns_form(cfg: &CFG) -> Result<(), AnalysisError> {
+fn check_returns_form(
+    cfg: &CFG, 
+    fn_span: &Span,
+) -> Result<(), AnalysisError> {
+
     let end = cfg.end();
     let scope_exit = cfg.previous(end);
 
@@ -55,7 +67,7 @@ fn check_returns_form(cfg: &CFG) -> Result<(), AnalysisError> {
                 if (traced.contains(&id)) == false {
                     traced.insert(id);
 
-                    let more_to_trace = return_check_id(cfg, id)?;
+                    let more_to_trace = return_check_id(cfg, id, fn_span)?;
                     if let Some(vec) = more_to_trace {
                         node_stack.extend(vec);
                     }
@@ -72,6 +84,7 @@ fn check_returns_form(cfg: &CFG) -> Result<(), AnalysisError> {
 fn return_check_id(
     cfg: &CFG,
     id: NodeIndex,
+    fn_span: &Span,
 ) -> Result<Option<Vec<NodeIndex>>, AnalysisError> {
     match *cfg.node_weight(id) {
         Node::Return(..) => Ok(None),
@@ -80,6 +93,6 @@ fn return_check_id(
 
         Node::ExitScope => Ok(Some(vec![cfg.previous(id)])),
 
-        _ => return Err(ControlFlowError::MissingReturn.into()),
+        _ => return Err(ControlFlowError::MissingReturn(fn_span.clone()).into()),
     }
 }

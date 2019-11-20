@@ -50,7 +50,7 @@ pub enum TopLevelError {
 
 #[derive(Clone, Debug)]
 pub enum ControlFlowError {
-    MissingReturn,
+    MissingReturn(Span),
     BadBreak(Span),
     BadContinue(Span),
 }
