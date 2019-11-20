@@ -139,7 +139,7 @@ pub struct Struct {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct WhereClause(pub HashMap<Ident, Vec<AstNode<TypeAnnotation>>>);
+pub struct WhereClause(pub HashMap<AstNode<Ident>, Vec<AstNode<TypeAnnotation>>>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructBody(pub Option<Vec<StructField>>);

@@ -281,7 +281,7 @@ fn where_clause(tokens: &mut BufferedTokenizer) -> ParseErr<WhereClause> {
     let mut parameter_constraints = HashMap::new();
 
     loop {
-        let (_, parameter) = consume_token!(
+        let (param_span, parameter) = consume_token!(
             tokens,
             Token::Identifier(ident) => Ident(ident),
             parser_state!("where-clause-constraints", "param"));
@@ -296,7 +296,7 @@ fn where_clause(tokens: &mut BufferedTokenizer) -> ParseErr<WhereClause> {
         );
 
         parameter_constraints
-            .entry(parameter)
+            .entry(AstNode::new(parameter, param_span))
             .or_insert(Vec::new())
             .push(annotation);
 

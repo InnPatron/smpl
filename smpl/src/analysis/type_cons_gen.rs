@@ -365,7 +365,7 @@ fn type_param_map(
     if let Some(where_clause) = where_clause {
         for (ident, vec_ast_type_ann) in where_clause.0.iter() {
             // Remove from type_parameter_map
-            match internal_type_map.remove(ident) {
+            match internal_type_map.remove(ident.data()) {
                 Some((param_span, type_param_id, type_var_id)) => {
                     if vec_ast_type_ann.len() > 1 {
                         // TODO: Allow multiple constraint declarations on one type param?
@@ -375,7 +375,7 @@ fn type_param_map(
 
                         unimplemented!(
                             "Multiple declarations on one type param:{}",
-                            ident
+                            ident.data()
                         );
                     }
 
@@ -389,7 +389,7 @@ fn type_param_map(
 
                     // TypeVar already in TypingContext as TypeVar(self_id)
                     current_scope
-                        .insert_type_var(ident.clone(), type_var_id.clone());
+                        .insert_type_var(ident.data().clone(), type_var_id.clone());
 
                     if let AbstractType::WidthConstraint {
                         data: span, 
@@ -421,7 +421,8 @@ fn type_param_map(
                 None => {
                     // TODO: where clause with unknown TP
                     return Err(TypeError::UnknownTypeParameter {
-                        ident: ident.clone(),
+                        ident: ident.data().clone(),
+                        span: ident.span(),
                     }
                     .into());
                 }

@@ -207,6 +207,7 @@ pub enum TypeError {
 
     UnknownTypeParameter {
         ident: Ident,
+        span: Span,
     },
 
     // TODO: fill this in
