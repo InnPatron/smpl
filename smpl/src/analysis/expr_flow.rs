@@ -35,7 +35,7 @@ pub fn flatten_expr(
                         Typed::untyped(lhs),
                         Typed::untyped(rhs),
                     ),
-                    span,
+                    span.clone(),
                 ),
                 span,
             )
@@ -48,7 +48,7 @@ pub fn flatten_expr(
                 scope.map_tmp(
                     universe,
                     Value::UniExpr(uni.op, Typed::untyped(expr)),
-                    span,
+                    span.clone(),
                 ),
                 span,
             )
@@ -56,7 +56,7 @@ pub fn flatten_expr(
 
         AstExpr::Literal(literal) => {
             let (literal, span) = literal.to_data();
-            (scope.map_tmp(universe, Value::Literal(literal), span), span)
+            (scope.map_tmp(universe, Value::Literal(literal), span.clone()), span)
         }
 
         AstExpr::StructInit(init) => {
@@ -75,7 +75,7 @@ pub fn flatten_expr(
                 scope.map_tmp(
                     universe,
                     Value::StructInit(StructInit::new(struct_name, field_init)),
-                    span,
+                    span.clone(),
                 ),
                 span,
             )
@@ -95,7 +95,7 @@ pub fn flatten_expr(
                 scope.map_tmp(
                     universe,
                     Value::AnonStructInit(AnonStructInit::new(field_init)),
-                    span,
+                    span.clone(),
                 ),
                 span,
             )
@@ -107,7 +107,7 @@ pub fn flatten_expr(
                 scope.map_tmp(
                     universe,
                     Value::Binding(TypedBinding::new(ident)),
-                    span,
+                    span.clone(),
                 ),
                 span,
             )
@@ -117,7 +117,7 @@ pub fn flatten_expr(
             let (path, span) = path.to_data();
             let field_access = FieldAccess::new(universe, path);
             (
-                scope.map_tmp(universe, Value::FieldAccess(field_access), span),
+                scope.map_tmp(universe, Value::FieldAccess(field_access), span.clone()),
                 span,
             )
         }
@@ -135,7 +135,7 @@ pub fn flatten_expr(
 
             let fn_call = FnCall::new(fn_val, args);
 
-            (scope.map_tmp(universe, Value::FnCall(fn_call), span), span)
+            (scope.map_tmp(universe, Value::FnCall(fn_call), span.clone()), span)
         }
 
         AstExpr::ArrayInit(init) => {
@@ -154,7 +154,7 @@ pub fn flatten_expr(
                     let init = ArrayInit::List(list);
 
                     (
-                        scope.map_tmp(universe, Value::ArrayInit(init), span),
+                        scope.map_tmp(universe, Value::ArrayInit(init), span.clone()),
                         span,
                     )
                 }
@@ -164,7 +164,7 @@ pub fn flatten_expr(
                     let init = ArrayInit::Value(value, size);
 
                     (
-                        scope.map_tmp(universe, Value::ArrayInit(init), span),
+                        scope.map_tmp(universe, Value::ArrayInit(init), span.clone()),
                         span,
                     )
                 }
@@ -187,7 +187,7 @@ pub fn flatten_expr(
             };
 
             (
-                scope.map_tmp(universe, Value::Indexing(indexing), span),
+                scope.map_tmp(universe, Value::Indexing(indexing), span.clone()),
                 span,
             )
         }
@@ -209,18 +209,18 @@ pub fn flatten_expr(
                 }
             };
 
-            (scope.map_tmp(universe, tmp, span), span)
+            (scope.map_tmp(universe, tmp, span.clone()), span)
         }
 
         AstExpr::AnonymousFn(a_fn) => {
-            let (a_fn, span) = a_fn.to_data();
+            let span = a_fn.span();
             let fn_id = universe.new_fn_id();
             universe.reserve_anonymous_fn(fn_id, a_fn);
             (
                 scope.map_tmp(
                     universe,
                     Value::AnonymousFn(AnonymousFn::new(fn_id)),
-                    span,
+                    span.clone(),
                 ),
                 span,
             )
@@ -278,11 +278,14 @@ mod tests {
     use super::*;
     use crate::parser::expr_parser::*;
     use crate::parser::*;
+    use crate::module::ModuleSource;
 
     #[test]
     fn expr_exec_order_ck() {
         let input = "5 + 2 / 3";
-        let mut input = buffer_input(input);
+        let source = ModuleSource::Anonymous(None);
+
+        let mut input = buffer_input(&source, input);
         let expr = piped_expr(&mut input, &[]).unwrap().to_data().0;
 
         let mut universe = Universe::std();

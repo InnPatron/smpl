@@ -262,7 +262,7 @@ fn use_decl(tokens: &mut BufferedTokenizer) -> ParseErr<DeclStmt> {
         parser_state!("use-decl", "semicolon")
     );
 
-    let span = LocationSpan::new(uspan.start(), mspan.end());
+    let span = LocationSpan::combine(uspan, mspan.clone());
 
     let use_decl = UseDecl(AstNode::new(module, mspan));
 
@@ -281,7 +281,7 @@ fn where_clause(tokens: &mut BufferedTokenizer) -> ParseErr<WhereClause> {
     let mut parameter_constraints = HashMap::new();
 
     loop {
-        let (_, parameter) = consume_token!(
+        let (param_span, parameter) = consume_token!(
             tokens,
             Token::Identifier(ident) => Ident(ident),
             parser_state!("where-clause-constraints", "param"));
@@ -296,7 +296,7 @@ fn where_clause(tokens: &mut BufferedTokenizer) -> ParseErr<WhereClause> {
         );
 
         parameter_constraints
-            .entry(parameter)
+            .entry(AstNode::new(parameter, param_span))
             .or_insert(Vec::new())
             .push(annotation);
 
@@ -580,7 +580,7 @@ fn fn_param(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<FnParameter>> {
         parser_state!("fn-param", "param-type")
     );
 
-    let span = Span::combine(idloc, ann.span());
+    let span = Span::combine(idloc.clone(), ann.span());
     let param = FnParameter {
         name: AstNode::new(ident, idloc),
         param_type: ann,
@@ -644,7 +644,7 @@ fn opaque_decl(
         parser_state!("opaque-decl", "end-semi")
     );
 
-    let overall_span = LocationSpan::new(opaque_loc.start(), semi_loc.start());
+    let overall_span = LocationSpan::combine(opaque_loc, semi_loc);
 
     Ok(AstNode::new(
         Opaque {
@@ -732,7 +732,7 @@ fn struct_decl(
         parser_state!("struct-decl", "fields rbrace")
     );
 
-    let overall_span = LocationSpan::new(struct_loc.start(), rloc.start());
+    let overall_span = LocationSpan::combine(struct_loc, rloc);
 
     Ok(AstNode::new(
         Struct {
@@ -823,7 +823,7 @@ fn module_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Ident>> {
         parser_state!("mod-decl", "semicolon")
     );
 
-    let span = LocationSpan::new(modloc.start(), semiloc.end());
+    let span = LocationSpan::combine(modloc, semiloc);
     Ok(AstNode::new(ident, span))
 }
 
@@ -942,7 +942,7 @@ fn width_constraint_list(
             )
         );
 
-        span = LocationSpan::new(span.start(), next_constraint.span().end());
+        span = LocationSpan::combine(span, next_constraint.span());
         constraints.push(next_constraint);
 
         counter += 1;
@@ -982,7 +982,7 @@ fn width_constraint(
             )
             .to_data();
 
-            let span = LocationSpan::new(base_loc.start(), name_loc.end());
+            let span = LocationSpan::combine(base_loc, name_loc.clone());
 
             let constraint = AstNode::new(
                 WidthConstraint::BaseStruct(AstNode::new(name, name_loc)),
@@ -1011,7 +1011,7 @@ fn width_constraint(
                 Token::RBrace,
                 parser_state!("width-constraint", "anonymous-close")
             );
-            let span = LocationSpan::new(l_loc.start(), r_loc.end());
+            let span = LocationSpan::combine(l_loc, r_loc);
             let constraint =
                 AstNode::new(WidthConstraint::Anonymous(fields), span);
 
@@ -1030,7 +1030,7 @@ pub fn module_binding(
                                         Token::Identifier(i) => Ident(i),
                                         parser_state!("module-binding", "root"));
 
-    let mut binding_span = LocationSpan::new(floc.start(), floc.end());
+    let mut binding_span = floc.clone();
     path.push(AstNode::new(first, floc));
 
     if peek_token!(
@@ -1049,8 +1049,8 @@ pub fn module_binding(
         let (nloc, next) = consume_token!(tokens, 
                                           Token::Identifier(i) => Ident(i),
                                           parser_state!("module-binding", "segment name"));
-        path.push(AstNode::new(next, nloc));
-        binding_span = LocationSpan::new(floc.start(), nloc.end());
+        path.push(AstNode::new(next, nloc.clone()));
+        binding_span = LocationSpan::combine(binding_span, nloc);
     }
 
     Ok(AstNode::new(ModulePath(path), binding_span))
@@ -1082,7 +1082,7 @@ fn array_type(
         parser_state!("array-type", "rbracket")
     );
 
-    let array_type_span = LocationSpan::new(lloc.start(), rloc.end());
+    let array_type_span = LocationSpan::combine(lloc, rloc);
 
     if number <= 0 {
         unimplemented!(
@@ -1154,7 +1154,7 @@ fn fn_type(
         parser_state!("fn-type", "param rparen")
     );
 
-    let mut fn_type_span = LocationSpan::new(fnloc.start(), rparenloc.end());
+    let mut fn_type_span = LocationSpan::combine(fnloc, rparenloc);
 
     let mut return_type = None;
     if peek_token!(
@@ -1250,7 +1250,7 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Block>> {
     let (rloc, _) =
         consume_token!(tokens, Token::RBrace, parser_state!("block", "rbrace"));
 
-    let span = LocationSpan::new(lloc.start(), rloc.end());
+    let span = LocationSpan::combine(lloc, rloc);
 
     let block = Block(stmts);
 
@@ -1481,7 +1481,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
                         let typed_path =
                             TypedPath::Parameterized(path, type_args);
                         let typed_path =
-                            Expr::Path(AstNode::new(typed_path, path_span));
+                            Expr::Path(AstNode::new(typed_path, path_span.clone()));
                         return Ok(Stmt::Expr(AstNode::new(
                             typed_path, path_span,
                         )));
@@ -1521,12 +1521,12 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             };
 
             let fn_call = FnCall {
-                path: AstNode::new(fn_path, base_span),
+                path: AstNode::new(fn_path, base_span.clone()),
                 args: args,
             };
 
             let span = Span::combine(base_span, args_span);
-            let expr_base = AstNode::new(fn_call, span);
+            let expr_base = AstNode::new(fn_call, span.clone());
             let expr_base = AstNode::new(Expr::FnCall(expr_base), span);
 
             let expr = production!(
@@ -1588,7 +1588,7 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
                 //Single indexing
                 let span = base_span;
                 let root = PathSegment::Indexing(
-                    AstNode::new(base_ident, span),
+                    AstNode::new(base_ident, span.clone()),
                     Box::new(indexer),
                 );
 
@@ -1619,9 +1619,9 @@ fn potential_assign(tokens: &mut BufferedTokenizer) -> ParseErr<Stmt> {
             );
 
             let segment =
-                PathSegment::Ident(AstNode::new(base_ident, base_span));
+                PathSegment::Ident(AstNode::new(base_ident, base_span.clone()));
             let path = vec![segment];
-            let path = AstNode::new(Path(path), base_span);
+            let path = AstNode::new(Path(path), base_span.clone());
 
             let assignment_span = Span::combine(base_span, value_span);
             let assignment = Assignment {
@@ -1773,7 +1773,7 @@ fn local_var_decl(
         parser_state!("local-var-decl", "semicolon")
     );
 
-    let span = LocationSpan::new(letloc.start(), semiloc.end());
+    let span = LocationSpan::combine(letloc, semiloc);
 
     let local_var_decl = LocalVarDecl {
         var_type: type_anno,
@@ -1794,7 +1794,7 @@ fn if_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
     let (ifloc, _) =
         consume_token!(tokens, Token::If, parser_state!("if-stmt", "if"));
 
-    let mut end = ifloc;
+    let mut end = ifloc.clone();
 
     let first_branch = production!(
         if_branch(tokens),
@@ -1908,7 +1908,7 @@ fn return_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
         parser_state!("return-stmt", "return")
     );
 
-    let mut end = returnloc;
+    let mut end = returnloc.clone();
 
     let expr = if peek_token!(
         tokens,
@@ -1947,7 +1947,7 @@ fn return_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
 
     let span = Span::combine(returnloc, end);
     Ok(AstNode::new(
-        ExprStmt::Return(span, expr.map(|e| e.to_data().0)),
+        ExprStmt::Return(span.clone(), expr.map(|e| e.to_data().0)),
         span,
     ))
 }
@@ -1966,8 +1966,8 @@ fn continue_stmt(
         parser_state!("continue-stmt", "semicolon")
     );
 
-    let span = LocationSpan::new(contloc.start(), semiloc.end());
-    Ok(AstNode::new(ExprStmt::Continue(span), span))
+    let span = LocationSpan::combine(contloc, semiloc);
+    Ok(AstNode::new(ExprStmt::Continue(span.clone()), span))
 }
 
 fn break_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
@@ -1982,8 +1982,8 @@ fn break_stmt(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<ExprStmt>> {
         parser_state!("break-stmt", "semicolon")
     );
 
-    let span = LocationSpan::new(contloc.start(), semiloc.end());
-    Ok(AstNode::new(ExprStmt::Break(span), span))
+    let span = LocationSpan::combine(contloc, semiloc);
+    Ok(AstNode::new(ExprStmt::Break(span.clone()), span))
 }
 
 fn type_param_list(tokens: &mut BufferedTokenizer) -> ParseErr<TypeParams> {
@@ -2059,7 +2059,7 @@ fn type_param_list_post_lparen(
 
 pub fn type_arg_list(
     tokens: &mut BufferedTokenizer,
-) -> ParseErr<Vec<TypeAnnotation>> {
+) -> ParseErr<Vec<AstNode<TypeAnnotation>>> {
     let _lparen = consume_token!(
         tokens,
         Token::LParen,
@@ -2071,7 +2071,7 @@ pub fn type_arg_list(
 
 pub fn type_arg_list_post_lparen(
     tokens: &mut BufferedTokenizer,
-) -> ParseErr<Vec<TypeAnnotation>> {
+) -> ParseErr<Vec<AstNode<TypeAnnotation>>> {
     let _type = consume_token!(
         tokens,
         Token::Type,
@@ -2121,11 +2121,6 @@ pub fn type_arg_list_post_lparen(
         Token::RParen,
         parser_state!("type-arg-list", "rparen")
     );
-
-    let type_args = type_args
-        .into_iter()
-        .map(|node| node.to_data().0)
-        .collect::<Vec<_>>();
 
     Ok(type_args)
 }

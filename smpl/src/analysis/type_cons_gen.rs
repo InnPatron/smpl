@@ -5,6 +5,7 @@ use crate::ast::{
     TypeParams as AstTypeParams, WhereClause,
 };
 use crate::feature::*;
+use crate::span::Span;
 
 use super::error::{AnalysisError, TypeError};
 use super::metadata::*;
@@ -14,6 +15,7 @@ use super::semantic_data::{
 };
 use super::type_checker::TypingContext;
 use super::type_cons::*;
+use super::abstract_type::*;
 
 // TODO: Store type constructors in Program
 pub fn generate_struct_type_cons(
@@ -44,7 +46,7 @@ pub fn generate_struct_type_cons(
             let f_id = universe.new_field_id();
             let f_name = field.name.data().clone();
 
-            let field_type_annotation = field.field_type.data();
+            let field_type_annotation = &field.field_type;
 
             // TODO: Insert type parameters into scope
             let field_type_app = type_from_ann(
@@ -60,6 +62,7 @@ pub fn generate_struct_type_cons(
             if field_map.contains_key(&f_name) {
                 return Err(TypeError::FieldNamingConflict {
                     ident: f_name.clone(),
+                    span: field.name.span(),
                 }
                 .into());
             } else {
@@ -99,7 +102,6 @@ pub fn generate_fn_type_cons(
 
     let return_type = match fn_def.return_type {
         Some(ref ann) => {
-            let ann = ann.data();
 
             type_from_ann(
                 universe,
@@ -109,7 +111,7 @@ pub fn generate_fn_type_cons(
             )?
         }
 
-        None => AbstractType::Unit,
+        None => AbstractType::Unit(fn_def.name.span()),
     };
 
     let mut param_metadata = Vec::new();
@@ -119,7 +121,7 @@ pub fn generate_fn_type_cons(
 
             for param in params.iter() {
                 let param = param.data();
-                let param_ann = param.param_type.data();
+                let param_ann = &param.param_type;
 
                 let param_type = type_from_ann(
                     universe,
@@ -175,7 +177,6 @@ pub fn generate_builtin_fn_type(
 
     let ret_type = match fn_def.return_type {
         Some(ref anno) => {
-            let anno = anno.data();
             let type_app = type_from_ann(
                 universe,
                 &type_param_scope,
@@ -185,7 +186,8 @@ pub fn generate_builtin_fn_type(
             // TODO: Function signature scanner?
             type_app
         }
-        None => AbstractType::Unit,
+
+        None => AbstractType::Unit(fn_def.name.span()),
     };
 
     // TODO: Insert existential type variables representing the type parameters in any context
@@ -199,7 +201,7 @@ pub fn generate_builtin_fn_type(
                 let mut param_metadata = Vec::new();
                 for param in params.iter() {
                     let param = param.data();
-                    let param_anno = param.param_type.data();
+                    let param_anno = &param.param_type;
 
                     let param_type = type_from_ann(
                         universe,
@@ -264,7 +266,6 @@ pub fn generate_anonymous_fn_type(
 
     let return_type = match fn_def.return_type {
         Some(ref ann) => {
-            let ann = ann.data();
 
             type_from_ann(
                 universe,
@@ -274,7 +275,7 @@ pub fn generate_anonymous_fn_type(
             )?
         }
 
-        None => AbstractType::Unit,
+        None => AbstractType::Unit(fn_def.body.span()),
     };
 
     let mut param_metadata = Vec::new();
@@ -284,7 +285,7 @@ pub fn generate_anonymous_fn_type(
 
             for param in params.iter() {
                 let param = param.data();
-                let param_ann = param.param_type.data();
+                let param_ann = &param.param_type;
 
                 let param_type = type_from_ann(
                     universe,
@@ -327,7 +328,7 @@ fn type_param_map(
     let mut current_scope = outer_scope.clone();
     let mut typing_context = outer_typing_context.clone();
 
-    let mut internal_type_map: HashMap<_, (TypeParamId, TypeVarId)> =
+    let mut internal_type_map: HashMap<_, (Span, TypeParamId, TypeVarId)> =
         HashMap::new();
     let mut type_param_order = Vec::new();
 
@@ -340,6 +341,7 @@ fn type_param_map(
                 // Naming conflict
                 return Err(TypeError::ParameterNamingConflict {
                     ident: p.data().clone(),
+                    span: p.span(),
                 }
                 .into());
             } else {
@@ -347,24 +349,24 @@ fn type_param_map(
                 let type_var_id = universe.new_type_var_id();
                 // Insert type parameter into set
                 internal_type_map
-                    .insert(p.data().clone(), (type_param_id, type_var_id));
+                    .insert(p.data().clone(), (p.span(), type_param_id, type_var_id));
 
                 // TODO: What kind of recursion to support? Probably equirecursive
                 // Add type parameters to typing context to allow recursive constraints
                 typing_context
                     .type_vars
-                    .insert(type_var_id.clone(), AbstractType::Any);
+                    .insert(type_var_id.clone(), AbstractType::Any(p.span()));
                 type_param_order.push(type_param_id);
             }
         }
     }
 
-    let mut finished = HashMap::new();
+    let mut finished: HashMap<TypeParamId, (Option<_>, _, Span)> = HashMap::new();
     if let Some(where_clause) = where_clause {
         for (ident, vec_ast_type_ann) in where_clause.0.iter() {
             // Remove from type_parameter_map
-            match internal_type_map.remove(ident) {
-                Some((type_param_id, type_var_id)) => {
+            match internal_type_map.remove(ident.data()) {
+                Some((param_span, type_param_id, type_var_id)) => {
                     if vec_ast_type_ann.len() > 1 {
                         // TODO: Allow multiple constraint declarations on one type param?
                         // where A: { ... }
@@ -373,7 +375,7 @@ fn type_param_map(
 
                         unimplemented!(
                             "Multiple declarations on one type param:{}",
-                            ident
+                            ident.data()
                         );
                     }
 
@@ -382,18 +384,22 @@ fn type_param_map(
                         universe,
                         &current_scope,
                         &typing_context,
-                        ast_constraint.data(),
+                        ast_constraint,
                     )?;
 
                     // TypeVar already in TypingContext as TypeVar(self_id)
                     current_scope
-                        .insert_type_var(ident.clone(), type_var_id.clone());
+                        .insert_type_var(ident.data().clone(), type_var_id.clone());
 
-                    if let AbstractType::WidthConstraint(constraint) =
-                        abstract_type
-                    {
+                    if let AbstractType::WidthConstraint {
+                        data: span, 
+                        width: constraint
+                    } = abstract_type {
                         let abstract_type =
-                            AbstractType::WidthConstraint(constraint.clone());
+                            AbstractType::WidthConstraint {
+                                data: span,
+                                width: constraint.clone(),
+                            };
 
                         // Insert type var into scope
                         typing_context
@@ -402,7 +408,7 @@ fn type_param_map(
 
                         finished.insert(
                             type_param_id.clone(),
-                            (Some(constraint), type_var_id.clone()),
+                            (Some(constraint), type_var_id.clone(), param_span),
                         );
                     } else {
                         // TODO: found non-constraint in constraint position
@@ -415,7 +421,8 @@ fn type_param_map(
                 None => {
                     // TODO: where clause with unknown TP
                     return Err(TypeError::UnknownTypeParameter {
-                        ident: ident.clone(),
+                        ident: ident.data().clone(),
+                        span: ident.span(),
                     }
                     .into());
                 }
@@ -424,21 +431,21 @@ fn type_param_map(
     }
 
     // Any type param still left in type_parameter_map has no constraint
-    for (ident, (type_param_id, type_var_id)) in internal_type_map.into_iter() {
+    for (ident, (param_span, type_param_id, type_var_id)) in internal_type_map.into_iter() {
         // TODO: Also insert into the typing env
         current_scope.insert_type_var(ident.clone(), type_var_id);
         typing_context
             .type_vars
-            .insert(type_var_id.clone(), AbstractType::Any);
+            .insert(type_var_id.clone(), AbstractType::Any(param_span.clone()));
 
-        finished.insert(type_param_id.clone(), (None, type_var_id.clone()));
+        finished.insert(type_param_id.clone(), (None, type_var_id.clone(), param_span));
     }
 
     let mut type_params = TypeParams::new();
     // NEED TO PRESERVE ORDER
     for param_id in type_param_order {
-        let (opt, ty) = finished.remove(&param_id).unwrap();
-        type_params.add_param(param_id.clone(), opt, ty);
+        let (opt, ty, param_span) = finished.remove(&param_id).unwrap();
+        type_params.add_param(param_id.clone(), opt, ty, param_span);
     }
 
     Ok((type_params, current_scope, typing_context))

@@ -14,7 +14,7 @@ use super::metadata::Metadata;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::Function;
 use super::semantic_data::*;
-use super::type_cons::*;
+use super::abstract_type::*;
 use super::type_resolver;
 use super::typed_ast::*;
 
@@ -115,11 +115,12 @@ impl<'a> TypeChecker<'a> {
                             let type_id = fn_type.clone();
 
                             let fn_type = AbstractType::App {
-                                type_cons: type_id,
+                                data: fn_type.span(),
+                                type_cons: type_id.data().clone(),
                                 args: analysis_context
                                     .existential_type_vars()
                                     .iter()
-                                    .map(|id| AbstractType::TypeVar(id.clone()))
+                                    .map(|id| AbstractType::TypeVar(Span::dummy(), id.clone()))
                                     .collect::<Vec<_>>(),
                             }
                             .substitute(universe, &fn_scope, &typing_context)?;
@@ -155,13 +156,15 @@ impl<'a> TypeChecker<'a> {
                 let return_type: AbstractType = {
                     let type_id = smpl_function.fn_type();
 
+                    let decl_span = smpl_function.span();
                     let fn_type = AbstractType::App {
+                        data: decl_span.clone(),
                         type_cons: type_id,
                         args: smpl_function
                             .analysis_context()
                             .existential_type_vars()
                             .iter()
-                            .map(|id| AbstractType::TypeVar(id.clone()))
+                            .map(|id| AbstractType::TypeVar(decl_span.clone(), id.clone()))
                             .collect::<Vec<_>>(),
                     }
                     .substitute(
@@ -239,8 +242,8 @@ macro_rules! resolve {
 
 macro_rules! ann_to_type {
     ($self: expr, $ann: expr) => {{
-        use super::type_cons;
-        type_cons::type_from_ann(
+        use super::abstract_type;
+        abstract_type::type_from_ann(
             $self.universe,
             $self.scopes.last().expect("Should always have a scope"),
             &$self.typing_context,
@@ -266,7 +269,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         expr: &ExprData,
     ) -> Result<(), E> {
         let expr_type = expr_type!(self, &expr.expr)?;
-        resolve!(self, &expr_type, &AbstractType::Bool, expr.span)?;
+        resolve!(self, &expr_type, &AbstractType::Bool(expr.span.clone()), expr.span.clone())?;
 
         Ok(())
     }
@@ -305,14 +308,14 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         let var_type = match var_decl.type_annotation() {
             Some(ann) => {
                 let ann_type = ann_to_type!(self, ann)?;
-                resolve!(self, &expr_type, &ann_type, decl.span).map_err(
+                resolve!(self, &expr_type, &ann_type, decl.span.clone()).map_err(
                     |_| {
                         let name = var_decl.var_name();
                         TypeError::IncompatibleLocal {
                             name: name.clone(),
                             local_type: ann_type.clone(),
                             found_type: expr_type,
-                            span: decl.span,
+                            span: decl.span.clone(),
                         }
                     },
                 )?;
@@ -357,7 +360,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
             assignment.access_span(),
         )?;
 
-        resolve!(self, &value_type, &assignee_type, assign.span)?;
+        resolve!(self, &value_type, &assignee_type, assign.span.clone())?;
 
         Ok(())
     }
@@ -375,15 +378,15 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         match rdata.expr {
             Some(ref expr) => {
                 let expr_type = expr_type!(self, expr)?;
-                resolve!(self, &expr_type, &self.return_type, rdata.span)
+                resolve!(self, &expr_type, &self.return_type, rdata.span.clone())
                     .map_err(|e| e.into())
             }
 
             None => resolve!(
                 self,
-                &AbstractType::Unit,
+                &AbstractType::Unit(rdata.span.clone()),
                 &self.return_type,
-                rdata.span
+                rdata.span.clone()
             )
             .map_err(|e| e.into()),
         }
@@ -404,7 +407,7 @@ impl<'a> Passenger<E> for TypeChecker<'a> {
         e: &ExprData,
     ) -> Result<(), E> {
         let expr_type = expr_type!(self, &e.expr)?;
-        resolve!(self, &expr_type, &AbstractType::Bool, e.span)?;
+        resolve!(self, &expr_type, &AbstractType::Bool(e.span.clone()), e.span.clone())?;
 
         Ok(())
     }
@@ -506,10 +509,10 @@ fn resolve_tmp(
     let tmp_value = tmp.value();
     let tmp_type = match tmp_value.data() {
         Value::Literal(ref literal) => match *literal {
-            Literal::Int(_) => AbstractType::Int,
-            Literal::Float(_) => AbstractType::Float,
-            Literal::String(_) => AbstractType::String,
-            Literal::Bool(_) => AbstractType::Bool,
+            Literal::Int(_) => AbstractType::Int(tmp_span.clone()),
+            Literal::Float(_) => AbstractType::Float(tmp_span.clone()),
+            Literal::String(_) => AbstractType::String(tmp_span.clone()),
+            Literal::Bool(_) => AbstractType::Bool(tmp_span.clone()),
         },
 
         Value::BinExpr(ref op, ref lhs, ref rhs) => {
@@ -612,14 +615,14 @@ fn resolve_bin_op(
 ) -> Result<AbstractType, AnalysisError> {
     use crate::ast::BinOp::*;
 
-    let expected_int = AbstractType::Int;
-    let expected_float = AbstractType::Float;
-    let expected_bool = AbstractType::Bool;
+    let expected_int = AbstractType::Int(span.clone());
+    let expected_float = AbstractType::Float(span.clone());
+    let expected_bool = AbstractType::Bool(span.clone());
 
     let resolve_type = match *op {
         Add | Sub | Mul | Div | Mod => match (&lhs, &rhs) {
-            (&AbstractType::Int, &AbstractType::Int) => AbstractType::Int,
-            (&AbstractType::Float, &AbstractType::Float) => AbstractType::Float,
+            (&AbstractType::Int(_), &AbstractType::Int(_)) => AbstractType::Int(span.clone()),
+            (&AbstractType::Float(_), &AbstractType::Float(_)) => AbstractType::Float(span.clone()),
 
             _ => {
                 return Err(TypeError::BinOp {
@@ -634,7 +637,7 @@ fn resolve_bin_op(
         },
 
         LogicalAnd | LogicalOr => match (&lhs, &rhs) {
-            (&AbstractType::Bool, &AbstractType::Bool) => AbstractType::Bool,
+            (&AbstractType::Bool(_), &AbstractType::Bool(_)) => AbstractType::Bool(span.clone()),
             _ => {
                 return Err(TypeError::BinOp {
                     op: op.clone(),
@@ -648,8 +651,8 @@ fn resolve_bin_op(
         },
 
         GreaterEq | LesserEq | Greater | Lesser => match (&lhs, &rhs) {
-            (&AbstractType::Int, &AbstractType::Int) => AbstractType::Bool,
-            (&AbstractType::Float, &AbstractType::Float) => AbstractType::Bool,
+            (&AbstractType::Int(_), &AbstractType::Int(_)) => AbstractType::Bool(span.clone()),
+            (&AbstractType::Float(_), &AbstractType::Float(_)) => AbstractType::Bool(span.clone()),
 
             _ => {
                 return Err(TypeError::BinOp {
@@ -666,10 +669,10 @@ fn resolve_bin_op(
         Eq | InEq => {
             // TODO: Stricter equality check?
             type_resolver::resolve_types(
-                universe, scope, context, lhs, rhs, span,
+                universe, scope, context, lhs, rhs, span.clone(),
             )?;
 
-            AbstractType::Bool
+            AbstractType::Bool(span.clone())
         }
     };
 
@@ -686,15 +689,15 @@ fn resolve_uni_op(
 ) -> Result<AbstractType, AnalysisError> {
     use crate::ast::UniOp::*;
 
-    let expected_int = AbstractType::Int;
+    let expected_int = AbstractType::Int(span.clone());
 
-    let expected_float = AbstractType::Float;
+    let expected_float = AbstractType::Float(span.clone());
 
-    let expected_bool = AbstractType::Bool;
+    let expected_bool = AbstractType::Bool(span.clone());
 
     match *op {
         Negate => match tmp_type {
-            AbstractType::Int | AbstractType::Float => Ok(tmp_type.clone()),
+            AbstractType::Int(_) | AbstractType::Float(_) => Ok(tmp_type.clone()),
             _ => Err(TypeError::UniOp {
                 op: op.clone(),
                 expected: vec![expected_int, expected_float],
@@ -705,7 +708,7 @@ fn resolve_uni_op(
         },
 
         LogicalInvert => match tmp_type {
-            AbstractType::Bool => Ok(tmp_type.clone()),
+            AbstractType::Bool(_) => Ok(tmp_type.clone()),
             _ => Err(TypeError::UniOp {
                 op: op.clone(),
                 expected: vec![expected_bool],
@@ -724,14 +727,14 @@ fn resolve_struct_init(
     scope: &ScopedData,
     context: &mut TypingContext,
     init: &StructInit,
-    span: Span,
+    init_span: Span,
 ) -> Result<AbstractType, AnalysisError> {
     // Get type info
     let type_name = init.type_name();
     let tmp_type_name = type_name.clone().into();
     let struct_type_id = scope
         .type_cons(universe, &tmp_type_name)
-        .ok_or(AnalysisError::UnknownType(type_name.clone()))?;
+        .ok_or(AnalysisError::UnknownType(type_name.clone(), init_span.clone()))?;
 
     let type_args = init
         .type_args()
@@ -744,6 +747,7 @@ fn resolve_struct_init(
 
     // TODO: Take into account type arguments
     let struct_type = AbstractType::App {
+        data: init_span.clone(),
         type_cons: struct_type_id,
         args: type_args,
     }
@@ -765,7 +769,7 @@ fn resolve_struct_init(
         AbstractType::Opaque { .. } => {
             return Err(TypeError::InitOpaqueType {
                 struct_type: struct_type,
-                span: span,
+                span: init_span,
             }
             .into());
         }
@@ -774,7 +778,7 @@ fn resolve_struct_init(
             return Err(TypeError::NotAStruct {
                 type_name: type_name.clone(),
                 found: struct_type,
-                span: span,
+                span: init_span,
             }
             .into());
         }
@@ -788,7 +792,7 @@ fn resolve_struct_init(
             field_map.get(field_name).ok_or(TypeError::UnknownField {
                 name: field_name.clone(),
                 struct_type: struct_type.clone(),
-                span: span,
+                span: init_span.clone(),
             })?;
 
         let tmp_type = context
@@ -817,7 +821,7 @@ fn resolve_struct_init(
             type_name: type_name.clone(),
             struct_type: struct_type.clone(),
             missing_fields: missing_fields,
-            span: span,
+            span: init_span,
         }
         .into());
     }
@@ -838,7 +842,7 @@ fn resolve_struct_init(
             context,
             init_expr_type,
             field_type,
-            span,
+            init_span.clone(),
         )?;
     }
 
@@ -885,7 +889,10 @@ fn resolve_anon_struct_init(
         .into());
     }
 
-    let width_type = AbstractType::WidthConstraint(width_constraint);
+    let width_type = AbstractType::WidthConstraint {
+        data: span,
+        width: width_constraint
+    };
     Ok(width_type)
 }
 
@@ -894,7 +901,7 @@ fn resolve_binding(
     scope: &ScopedData,
     context: &TypingContext,
     binding: &Binding,
-    _span: Span,
+    bind_span: Span,
 ) -> Result<AbstractType, AnalysisError> {
     match binding.get_id().unwrap() {
         BindingId::Var(var_id) => Ok(context
@@ -937,6 +944,7 @@ fn resolve_binding(
             */
 
             let fn_type = AbstractType::App {
+                data: bind_span,
                 type_cons: fn_type_id,
                 args: Vec::new(),
             }
@@ -952,7 +960,7 @@ fn resolve_mod_access(
     scope: &ScopedData,
     context: &TypingContext,
     mod_access: &ModAccess,
-    _span: Span,
+    access_span: Span,
 ) -> Result<AbstractType, AnalysisError> {
     let fn_id = mod_access
         .fn_id()
@@ -975,6 +983,7 @@ fn resolve_mod_access(
         .expect("Expect anonymous functions to already be resolved");
 
     let fn_type = AbstractType::App {
+        data: access_span,
         type_cons: fn_type_id,
         args: Vec::new(),
     }
@@ -997,6 +1006,7 @@ fn resolve_fn_call(
     // Check args and parameters align
     match fn_value_type {
         AbstractType::Function {
+            data: ref _fn_type_span,
             parameters: ref params,
             ref return_type,
         } => {
@@ -1091,7 +1101,7 @@ fn resolve_array_init(
                         .get(tmp_id.data())
                         .expect("Missing TMP")
                         .clone();
-                    (tmp_type, span)
+                    (tmp_type, span.clone())
                 })
                 .collect::<Vec<_>>();
 
@@ -1117,7 +1127,7 @@ fn resolve_array_init(
                     context,
                     &current_element_type,
                     expected_element_type,
-                    span,
+                    span.clone(),
                 )
                 .map_err(|_| TypeError::HeterogenousArray {
                     expected: expected_element_type.clone(),
@@ -1128,6 +1138,7 @@ fn resolve_array_init(
             }
 
             let array_type = AbstractType::Array {
+                data: span,
                 element_type: Box::new(expected_element_type.unwrap().clone()),
                 size: size,
             };
@@ -1140,6 +1151,7 @@ fn resolve_array_init(
                 context.tmp_type_map.get(val.data()).expect("Missing TMP");
 
             let array_type = AbstractType::Array {
+                data: span,
                 element_type: Box::new(element_type.clone()),
                 size: size,
             };
@@ -1194,7 +1206,7 @@ fn resolve_indexing(
 
         // TODO: Already applied?
         match &tmp_type {
-            AbstractType::Int => (),
+            AbstractType::Int(_) => (),
 
             _ => {
                 return Err(TypeError::InvalidIndex {
@@ -1214,7 +1226,7 @@ fn resolve_type_inst(
     scope: &ScopedData,
     context: &TypingContext,
     type_inst: &TypeInst,
-    _span: Span,
+    inst_span: Span,
 ) -> Result<AbstractType, AnalysisError> {
     let fn_id = type_inst
         .get_id()
@@ -1232,6 +1244,7 @@ fn resolve_type_inst(
         .collect::<Result<Vec<_>, _>>()?;
 
     let inst_type = AbstractType::App {
+        data: inst_span,
         type_cons: fn_type_id,
         args: type_args,
     }
@@ -1246,7 +1259,7 @@ fn resolve_anonymous_fn(
     scope: &ScopedData,
     context: &TypingContext,
     a_fn: &AnonymousFn,
-    _span: Span,
+    span: Span,
 ) -> Result<AbstractType, AnalysisError> {
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -1263,20 +1276,22 @@ fn resolve_anonymous_fn(
                     scope,
                     context,
                     fn_id,
-                    ast_anonymous_fn,
+                    ast_anonymous_fn.data(),
                 )?;
+
+            let anon_span = ast_anonymous_fn.span();
 
             let analysis_context = analysis_helpers::generate_fn_analysis_data(
                 universe,
                 scope,
                 context,
                 &fn_type_cons,
-                ast_anonymous_fn,
+                ast_anonymous_fn.data(),
             )?;
 
             let cfg = super::control_flow::CFG::generate(
                 universe,
-                ast_anonymous_fn.body.clone(),
+                ast_anonymous_fn.data().body.clone(),
                 &fn_type_cons,
                 &analysis_context,
             )?;
@@ -1284,7 +1299,7 @@ fn resolve_anonymous_fn(
             let fn_type_id = universe.insert_type_cons(fn_type_cons);
 
             resolved = Some(AnonymousFunction::Resolved {
-                fn_type: fn_type_id,
+                fn_type: crate::ast::AstNode::new(fn_type_id, anon_span),
                 analysis_context: analysis_context,
                 cfg: Rc::new(RefCell::new(cfg)),
             });
@@ -1300,11 +1315,12 @@ fn resolve_anonymous_fn(
 
     let fn_type = if let Function::Anonymous(ref afn) = universe.get_fn(fn_id) {
         if let AnonymousFunction::Resolved { ref fn_type, .. } = afn {
-            let _fn_type_cons = universe.get_type_cons(fn_type.clone());
+            let fn_type_cons = fn_type.data().clone();
 
             // TODO: Anonymous functions are not allowed to have type parameters
             AbstractType::App {
-                type_cons: fn_type.clone(),
+                data: fn_type.span(),
+                type_cons: fn_type_cons,
                 args: Vec::new(),
             }
             .substitute(universe, scope, context)?
@@ -1341,18 +1357,25 @@ fn resolve_field_access(
         AnalysisError,
     > {
         match current_type.substitute(universe, scope, context)? {
-            AbstractType::WidthConstraint(awc) => Ok(Box::new(move |name| {
+            AbstractType::WidthConstraint {
+                data: width_span,
+                width: awc,
+            } => Ok(Box::new(move |name| {
                 awc.fields.get(name).map(|t| t.clone()).ok_or(
                     TypeError::UnknownField {
                         name: name.clone(),
-                        struct_type: AbstractType::WidthConstraint(awc.clone()),
-                        span: span,
+                        struct_type: AbstractType::WidthConstraint {
+                            data: width_span.clone(),
+                            width: awc.clone(),
+                        },
+                        span: span.clone(),
                     }
                     .into(),
                 )
             })),
 
             AbstractType::Record {
+                data: record_span,
                 type_id,
                 abstract_field_map: afm,
             } => {
@@ -1366,13 +1389,14 @@ fn resolve_field_access(
                         .ok_or(TypeError::UnknownField {
                             name: name.clone(),
                             struct_type: AbstractType::Record {
+                                data: record_span.clone(),
                                 type_id: type_id,
                                 abstract_field_map: AbstractFieldMap {
                                     fields: fields.clone(),
                                     field_map: field_map.clone(),
                                 },
                             },
-                            span: span,
+                            span: span.clone(),
                         })?;
 
                     let field_type =
@@ -1382,7 +1406,7 @@ fn resolve_field_access(
                 }))
             }
 
-            AbstractType::TypeVar(ref type_var) => {
+            AbstractType::TypeVar(ref span, ref type_var) => {
                 let type_var_value = context
                     .get_type_var(*type_var)
                     .expect(&format!("Missing type variable: {}", type_var));
@@ -1395,7 +1419,7 @@ fn resolve_field_access(
                     index,
                     field_access,
                     root_var_type,
-                    span,
+                    span.clone(),
                 )
             }
 
@@ -1429,7 +1453,7 @@ fn resolve_field_access(
             resolve_expr(universe, metadata, scope, context, expr)?;
 
         match indexing_type.substitute(universe, scope, context)? {
-            AbstractType::Int => (),
+            AbstractType::Int(_) => (),
             _ => {
                 return Err(TypeError::InvalidIndex {
                     found: indexing_type.clone(),
@@ -1465,7 +1489,7 @@ fn resolve_field_access(
             index,
             field_access,
             &root_var_type,
-            span,
+            span.clone(),
         )?;
 
         match *field {
@@ -1481,7 +1505,7 @@ fn resolve_field_access(
 
                 // TODO: Application?
                 match indexing_type {
-                    AbstractType::Int => (),
+                    AbstractType::Int(_) => (),
 
                     _ => {
                         return Err(TypeError::InvalidIndex {
@@ -1495,16 +1519,17 @@ fn resolve_field_access(
                 // TODO: Application?
                 match field_type {
                     AbstractType::Array {
+                        data,
                         element_type,
                         size: _,
                     } => {
                         next_type = *element_type;
                     }
 
-                    _ => {
+                    ref t => {
                         return Err(TypeError::NotAnArray {
                             found: field_type.clone(),
-                            span: span,
+                            span: t.span().clone(),
                         }
                         .into());
                     }

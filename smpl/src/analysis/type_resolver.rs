@@ -4,7 +4,7 @@ use super::error::*;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::Universe;
 use super::type_checker::TypingContext;
-use super::type_cons::*;
+use super::abstract_type::*;
 
 /// May or may not alter the typing context for inference purposes
 pub fn resolve_types(
@@ -34,13 +34,14 @@ pub fn resolve_types_static(
     constraint: &AbstractType,
     span: Span,
 ) -> Result<(), TypeError> {
-    use super::type_cons::AbstractType::*;
+    use super::abstract_type::AbstractTypeX::*;
 
     match (synthesis, constraint) {
-        (_, Any) => Ok(()),
+        (_, Any(_)) => Ok(()),
 
         (
             Record {
+                data: ref synth_span,
                 type_id: synth_type_id,
                 abstract_field_map:
                     AbstractFieldMap {
@@ -49,6 +50,7 @@ pub fn resolve_types_static(
                     },
             },
             Record {
+                data: ref constraint_span,
                 type_id: constraint_type_id,
                 abstract_field_map:
                     AbstractFieldMap {
@@ -78,7 +80,7 @@ pub fn resolve_types_static(
                     typing_context,
                     synth_type,
                     constraint_type,
-                    span,
+                    span.clone(),
                 )?;
             }
 
@@ -87,8 +89,14 @@ pub fn resolve_types_static(
 
         // Synth width must be wider than constraint width
         (
-            WidthConstraint(ref synth_awc),
-            WidthConstraint(ref constraint_awc),
+            WidthConstraint {
+                data: ref synth_span,
+                width: ref synth_awc
+            },
+            WidthConstraint {
+                data: ref constraint_span,
+                width: ref constraint_awc,
+            },
         ) => {
             for (constraint_ident, constraint_type) in
                 constraint_awc.fields.iter()
@@ -101,7 +109,7 @@ pub fn resolve_types_static(
                             typing_context,
                             synth_type,
                             constraint_type,
-                            span,
+                            span.clone(),
                         )?;
                     }
 
@@ -126,7 +134,10 @@ pub fn resolve_types_static(
                 abstract_field_map: ref synth_afm,
                 ..
             },
-            WidthConstraint(ref constraint_awc),
+            WidthConstraint {
+                data: ref constraint_span,
+                width: ref constraint_awc
+            },
         ) => {
             for (constraint_ident, constraint_type) in
                 constraint_awc.fields.iter()
@@ -139,7 +150,7 @@ pub fn resolve_types_static(
                             typing_context,
                             synth_type,
                             constraint_type,
-                            span,
+                            span.clone(),
                         )?;
                     }
 
@@ -161,9 +172,11 @@ pub fn resolve_types_static(
 
         (
             UncheckedFunction {
+                data: ref synth_span,
                 return_type: ref synth_return,
             },
             UncheckedFunction {
+                data: ref constraint_span,
                 return_type: ref constraint_return,
             },
         ) => resolve_types_static(
@@ -172,15 +185,17 @@ pub fn resolve_types_static(
             typing_context,
             synth_return,
             constraint_return,
-            span,
+            synth_span.clone(),
         ),
 
         (
             Function {
+                data: ref synth_span,
                 parameters: ref synth_params,
                 return_type: ref synth_return,
             },
             Function {
+                data: ref constraint_span,
                 parameters: ref constraint_params,
                 return_type: ref constraint_return,
             },
@@ -204,7 +219,7 @@ pub fn resolve_types_static(
                     typing_context,
                     sp,
                     cp,
-                    span,
+                    synth_span.clone(),
                 )
                 .map_err(|_| {
                     TypeError::FunctionTypeMismatch {
@@ -213,7 +228,7 @@ pub fn resolve_types_static(
                         param_found: sp.clone(),
                         param_expected: cp.clone(),
                         index: index,
-                        span: span,
+                        span: synth_span.clone(),
                     }
                 })?;
             }
@@ -224,16 +239,18 @@ pub fn resolve_types_static(
                 typing_context,
                 synth_return,
                 constraint_return,
-                span,
+                synth_span.clone(),
             )
         }
 
         (
             Array {
+                data: ref synth_span,
                 element_type: ref synth_element,
                 size: synth_size,
             },
             Array {
+                data: ref constraint_span,
                 element_type: ref constraint_element,
                 size: constraint_size,
             },
@@ -243,7 +260,7 @@ pub fn resolve_types_static(
                 return Err(TypeError::UnexpectedType {
                     found: synthesis.clone(),
                     expected: constraint.clone(),
-                    span: span,
+                    span: span.clone(),
                 }
                 .into());
             }
@@ -254,7 +271,7 @@ pub fn resolve_types_static(
                 typing_context,
                 synth_element,
                 constraint_element,
-                span,
+                synth_span.clone(),
             )
         }
 
@@ -288,11 +305,11 @@ pub fn resolve_types_static(
             )
         }
 
-        (Int, Int) => Ok(()),
-        (Float, Float) => Ok(()),
-        (Bool, Bool) => Ok(()),
-        (String, String) => Ok(()),
-        (Unit, Unit) => Ok(()),
+        (Int(_), Int(_)) => Ok(()),
+        (Float(_), Float(_)) => Ok(()),
+        (Bool(_), Bool(_)) => Ok(()),
+        (String(_), String(_)) => Ok(()),
+        (Unit(_), Unit(_)) => Ok(()),
 
         (synthesis @ Opaque { .. }, constraint @ Opaque { .. }) => {
             super::type_equality::equal_types_static(
@@ -307,7 +324,7 @@ pub fn resolve_types_static(
 
         // Unconstrained type parameters
         // Check if type parameters are equal
-        (TypeVar(synth_id), TypeVar(constraint_id)) => {
+        (TypeVar(ref synth_span, synth_id), TypeVar(ref constraint_span, constraint_id)) => {
             if synth_id == constraint_id {
                 Ok(())
             } else {
@@ -320,7 +337,7 @@ pub fn resolve_types_static(
             }
         }
 
-        (TypeVar(synth_id), constraint) => {
+        (TypeVar(ref synth_span, synth_id), constraint) => {
             let synth_var_type = typing_context
                 .get_type_var(synth_id.clone())
                 .expect("Missing synth var");
@@ -331,19 +348,19 @@ pub fn resolve_types_static(
                 typing_context,
                 synth_var_type,
                 constraint,
-                span,
+                span.clone(),
             )
             .map_err(|_| {
                 TypeError::UnexpectedType {
                     found: synthesis.clone(),
                     expected: constraint.clone(),
-                    span: span,
+                    span: span.clone(),
                 }
                 .into()
             })
         }
 
-        (synthesis, TypeVar(constraint_id)) => {
+        (synthesis, TypeVar(ref constraint_span, constraint_id)) => {
             let constraint_var_type = typing_context
                 .get_type_var(constraint_id.clone())
                 .expect("Missing synth var");
@@ -354,7 +371,7 @@ pub fn resolve_types_static(
                 typing_context,
                 synthesis,
                 constraint_var_type,
-                span,
+                span.clone(),
             )
             .map_err(|_| {
                 TypeError::UnexpectedType {
@@ -401,14 +418,14 @@ fn resolve_param_static(
     constraint: &AbstractType,
     span: Span,
 ) -> Result<(), TypeError> {
-    use super::type_cons::AbstractType::*;
+    use super::abstract_type::AbstractTypeX::*;
 
     match (synth, constraint) {
-        (Any, Any) => Ok(()),
+        (Any(_), Any(_)) => Ok(()),
 
         // If the synth is Any but a specific type is expected, reject
         // EVAL ORDER
-        (Any, _) => {
+        (Any(_), _) => {
             return Err(TypeError::UnexpectedType {
                 found: constraint.clone(),
                 expected: synth.clone(),
@@ -435,8 +452,14 @@ fn resolve_param_static(
 
         // NOTE(alex): Synth width must be narrower than the constraint width
         (
-            WidthConstraint(ref synth_awc),
-            WidthConstraint(ref constraint_awc),
+            WidthConstraint {
+                data: ref synth_span,
+                width: ref synth_awc
+            },
+            WidthConstraint {
+                data: ref constraint_span,
+                width: ref constraint_awc,
+            },
         ) => {
             for (synth_ident, synth_type) in synth_awc.fields.iter() {
                 match constraint_awc.fields.get(synth_ident) {
@@ -447,7 +470,7 @@ fn resolve_param_static(
                             typing_context,
                             synth_type,
                             constraint_type,
-                            span,
+                            span.clone(),
                         )?;
                     }
 
@@ -470,7 +493,10 @@ fn resolve_param_static(
         // NOTE(alex): Synth width must be narrower than the nominal record constraint
         // Calling with the nominal record value on the width constraint is allowed
         (
-            WidthConstraint(ref synth_awc),
+            WidthConstraint {
+                data: ref synth_span,
+                width: ref synth_awc
+            },
             Record {
                 abstract_field_map: ref afm,
                 ..
@@ -484,7 +510,7 @@ fn resolve_param_static(
                         typing_context,
                         synth_type,
                         constraint_type,
-                        span,
+                        span.clone(),
                     )?,
 
                     None => {
@@ -502,7 +528,7 @@ fn resolve_param_static(
             Ok(())
         }
 
-        (TypeVar(synth_id), TypeVar(constraint_id)) => {
+        (TypeVar(ref synth_span, synth_id), TypeVar(ref constraint_span, constraint_id)) => {
             if synth_id == constraint_id {
                 Ok(())
             } else {
@@ -519,7 +545,7 @@ fn resolve_param_static(
                     typing_context,
                     synth_type,
                     constraint_type,
-                    span,
+                    span.clone(),
                 )
                 .map_err(|_| {
                     TypeError::UnexpectedType {
@@ -532,7 +558,7 @@ fn resolve_param_static(
             }
         }
 
-        (TypeVar(synth_id), _) => {
+        (TypeVar(ref synth_span, synth_id), _) => {
             let synth_var_type = typing_context
                 .get_type_var(synth_id.clone())
                 .expect("Missing synth var");
@@ -543,7 +569,7 @@ fn resolve_param_static(
                 typing_context,
                 synth_var_type,
                 constraint,
-                span,
+                span.clone(),
             )
             .map_err(|_| {
                 TypeError::UnexpectedType {
@@ -555,7 +581,7 @@ fn resolve_param_static(
             })
         }
 
-        (_, TypeVar(constraint_id)) => {
+        (_, TypeVar(ref constraint_span, constraint_id)) => {
             let constraint_var_type = typing_context
                 .get_type_var(constraint_id.clone())
                 .expect("Missing synth var");
@@ -566,7 +592,7 @@ fn resolve_param_static(
                 typing_context,
                 synth,
                 constraint_var_type,
-                span,
+                span.clone(),
             )
             .map_err(|_| {
                 TypeError::UnexpectedType {

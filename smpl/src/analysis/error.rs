@@ -1,4 +1,4 @@
-use crate::analysis::type_cons::AbstractType;
+use crate::analysis::abstract_type::AbstractType;
 use crate::ast::*;
 use crate::err::Error;
 use crate::span::Span;
@@ -9,12 +9,12 @@ pub enum AnalysisError {
     TypeError(TypeError),
     ParseError(String),
     MultipleMainFns,
-    UnknownType(ModulePath),
+    UnknownType(ModulePath, Span),
     UnknownBinding(Ident, Span),
-    UnknownFn(ModulePath),
-    UnresolvedUses(Vec<AstNode<UseDecl>>),
-    UnresolvedStructs(Vec<AstNode<Struct>>),
-    UnresolvedFns(Vec<AstNode<Function>>),
+    UnknownFn(ModulePath, Span),
+    UnresolvedUses(Vec<(Ident, Span)>),
+    UnresolvedStructs(Vec<(Ident, Span)>),
+    UnresolvedFns(Vec<(Ident, Span)>),
     TopLevelError(TopLevelError),
     MissingModName,
     Errors(Vec<AnalysisError>),
@@ -44,13 +44,13 @@ impl From<TopLevelError> for AnalysisError {
 
 #[derive(Clone, Debug)]
 pub enum TopLevelError {
-    DuplicateTypes(Ident),
-    DuplicateFns(Ident),
+    DuplicateTypes(Ident, Span),
+    DuplicateFns(Ident, Span),
 }
 
 #[derive(Clone, Debug)]
 pub enum ControlFlowError {
-    MissingReturn,
+    MissingReturn(Span),
     BadBreak(Span),
     BadContinue(Span),
 }
@@ -179,18 +179,22 @@ pub enum TypeError {
 
     ParameterNamingConflict {
         ident: Ident,
+        span: Span,
     },
 
     FieldNamingConflict {
         ident: Ident,
+        span: Span,
     },
 
     TypeParameterNamingConflict {
         ident: Ident,
+        span: Span,
     },
 
     ParameterizedParameter {
         ident: Ident,
+        span: Span,
     },
 
     InvalidTypeConstraintBase {
@@ -203,6 +207,7 @@ pub enum TypeError {
 
     UnknownTypeParameter {
         ident: Ident,
+        span: Span,
     },
 
     // TODO: fill this in

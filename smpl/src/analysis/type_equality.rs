@@ -4,7 +4,7 @@ use super::error::*;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::Universe;
 use super::type_checker::TypingContext;
-use super::type_cons::*;
+use super::abstract_type::*;
 
 /// Used for invariance (i.e. types must match EXACTLY)
 /// Will NOT perform any inferences
@@ -16,11 +16,12 @@ pub fn equal_types_static(
     constraint: &AbstractType,
     span: Span,
 ) -> Result<(), TypeError> {
-    use super::type_cons::AbstractType::*;
+    use super::abstract_type::AbstractTypeX::*;
 
     match (synthesis, constraint) {
         (
             Record {
+                data: ref synth_span,
                 type_id: synth_type_id,
                 abstract_field_map:
                     AbstractFieldMap {
@@ -29,6 +30,7 @@ pub fn equal_types_static(
                     },
             },
             Record {
+                data: ref constraint_span,
                 type_id: constraint_type_id,
                 abstract_field_map:
                     AbstractFieldMap {
@@ -58,7 +60,7 @@ pub fn equal_types_static(
                     typing_context,
                     synth_type,
                     constraint_type,
-                    span,
+                    span.clone(),
                 )?;
             }
 
@@ -66,8 +68,14 @@ pub fn equal_types_static(
         }
 
         (
-            WidthConstraint(ref synth_awc),
-            WidthConstraint(ref constraint_awc),
+            WidthConstraint {
+                data: ref synth_span,
+                width: ref synth_awc,
+            },
+            WidthConstraint {
+                data: ref constraint_span,
+                width: ref constraint_awc,
+            },
         ) => {
             if constraint_awc.fields.len() != synth_awc.fields.len() {
                 return Err(TypeError::UnexpectedType {
@@ -89,7 +97,7 @@ pub fn equal_types_static(
                             typing_context,
                             synth_type,
                             constraint_type,
-                            span,
+                            span.clone(),
                         )?;
                     }
 
@@ -110,9 +118,11 @@ pub fn equal_types_static(
 
         (
             UncheckedFunction {
+                data: ref synth_span,
                 return_type: ref synth_return,
             },
             UncheckedFunction {
+                data: ref constraint_span,
                 return_type: ref constraint_return,
             },
         ) => equal_types_static(
@@ -121,15 +131,17 @@ pub fn equal_types_static(
             typing_context,
             synth_return,
             constraint_return,
-            span,
+            synth_span.clone(),
         ),
 
         (
             Function {
+                data: ref synth_span,
                 parameters: ref synth_params,
                 return_type: ref synth_return,
             },
             Function {
+                data: ref constraint_span,
                 parameters: ref constraint_params,
                 return_type: ref constraint_return,
             },
@@ -153,7 +165,7 @@ pub fn equal_types_static(
                     typing_context,
                     sp,
                     cp,
-                    span,
+                    span.clone(),
                 )
                 .map_err(|_| {
                     TypeError::FunctionTypeMismatch {
@@ -162,7 +174,7 @@ pub fn equal_types_static(
                         param_found: sp.clone(),
                         param_expected: cp.clone(),
                         index: index,
-                        span: span,
+                        span: span.clone(),
                     }
                 })?;
             }
@@ -173,16 +185,18 @@ pub fn equal_types_static(
                 typing_context,
                 synth_return,
                 constraint_return,
-                span,
+                synth_span.clone(),
             )
         }
 
         (
             Array {
+                data: ref synth_span,
                 element_type: ref synth_element,
                 size: synth_size,
             },
             Array {
+                data: ref constraint_span,
                 element_type: ref constraint_element,
                 size: constraint_size,
             },
@@ -192,7 +206,7 @@ pub fn equal_types_static(
                 return Err(TypeError::UnexpectedType {
                     found: synthesis.clone(),
                     expected: constraint.clone(),
-                    span: span,
+                    span: span.clone(),
                 }
                 .into());
             }
@@ -203,7 +217,7 @@ pub fn equal_types_static(
                 typing_context,
                 synth_element,
                 constraint_element,
-                span,
+                synth_span.clone(),
             )
         }
 
@@ -237,15 +251,15 @@ pub fn equal_types_static(
             )
         }
 
-        (Int, Int) => Ok(()),
-        (Float, Float) => Ok(()),
-        (Bool, Bool) => Ok(()),
-        (String, String) => Ok(()),
-        (Unit, Unit) => Ok(()),
+        (Int(_), Int(_)) => Ok(()),
+        (Float(_), Float(_)) => Ok(()),
+        (Bool(_), Bool(_)) => Ok(()),
+        (String(_), String(_)) => Ok(()),
+        (Unit(_), Unit(_)) => Ok(()),
 
         // Unconstrained type parameters
         // Check if type parameters are equal
-        (TypeVar(synth_id), TypeVar(constraint_id)) => {
+        (TypeVar(ref synth_span, synth_id), TypeVar(ref constraint_span, constraint_id)) => {
             if synth_id == constraint_id {
                 Ok(())
             } else {
@@ -258,7 +272,7 @@ pub fn equal_types_static(
             }
         }
 
-        (TypeVar(synth_id), constraint) => {
+        (TypeVar(ref synth_span, synth_id), constraint) => {
             let synth_var_type = typing_context
                 .get_type_var(synth_id.clone())
                 .expect("Missing synth var");
@@ -269,7 +283,7 @@ pub fn equal_types_static(
                 typing_context,
                 synth_var_type,
                 constraint,
-                span,
+                synth_span.clone(),
             )
             .map_err(|_| {
                 TypeError::UnexpectedType {
@@ -281,7 +295,7 @@ pub fn equal_types_static(
             })
         }
 
-        (synthesis, TypeVar(constraint_id)) => {
+        (synthesis, TypeVar(ref constraint_span, constraint_id)) => {
             let constraint_var_type = typing_context
                 .get_type_var(constraint_id.clone())
                 .expect("Missing synth var");
@@ -292,13 +306,13 @@ pub fn equal_types_static(
                 typing_context,
                 synthesis,
                 constraint_var_type,
-                span,
+                constraint_span.clone(),
             )
             .map_err(|_| {
                 TypeError::UnexpectedType {
                     found: synthesis.clone(),
                     expected: constraint.clone(),
-                    span: span,
+                    span: constraint_span.clone(),
                 }
                 .into()
             })
@@ -306,10 +320,12 @@ pub fn equal_types_static(
 
         (
             Opaque {
+                data: ref synth_span,
                 type_id: synth_id,
                 args: ref synth_args,
             },
             Opaque {
+                data: ref constraint_span,
                 type_id: constraint_id,
                 args: ref constraint_args,
             },
@@ -332,7 +348,7 @@ pub fn equal_types_static(
                     typing_context,
                     synthesis,
                     constraint,
-                    span,
+                    span.clone(),
                 )?;
             }
 

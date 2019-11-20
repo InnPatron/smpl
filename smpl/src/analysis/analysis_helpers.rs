@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast;
+use crate::span::Span;
 
 use super::error::AnalysisError;
 use super::metadata::*;
@@ -10,7 +11,9 @@ use super::semantic_data::{
     Universe,
 };
 use super::type_checker::TypingContext;
-use super::type_cons::*;
+use super::type_cons::{TypeCons, TypeParams};
+use super::abstract_type::AbstractType;
+
 
 pub fn analyze_fn(
     universe: &mut Universe,
@@ -97,7 +100,8 @@ where
 
                     existential_map.insert(
                         placeholder_variable,
-                        AbstractType::TypeVar(existential_type_var),
+                        AbstractType::TypeVar(constraint.span().clone(), 
+                            existential_type_var),
                     );
 
                     existential_type_vars.push(existential_type_var);

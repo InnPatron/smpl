@@ -4,6 +4,7 @@ use std::iter::{Enumerate, Iterator, Peekable};
 use std::str::CharIndices;
 
 use crate::span::*;
+use crate::module::ModuleSource;
 
 #[derive(Debug)]
 pub struct SpannedToken {
@@ -35,7 +36,7 @@ impl SpannedToken {
     }
 
     pub fn location(&self) -> LocationSpan {
-        self.location
+        self.location.clone()
     }
 }
 
@@ -221,7 +222,8 @@ pub enum TokenizerError {
 }
 
 #[derive(Debug)]
-struct CharInput<'input> {
+struct CharInput<'src_str, 'input> {
+    source: &'src_str ModuleSource,
     chars: Peekable<Enumerate<CharIndices<'input>>>,
     lookahead: Option<(Location, char)>,
     line: usize,
@@ -229,8 +231,10 @@ struct CharInput<'input> {
     end_of_input: Location,
 }
 
-impl<'input> CharInput<'input> {
-    fn new(input: &str) -> CharInput {
+impl<'src_str, 'input> CharInput<'src_str, 'input> {
+    fn new(source: &'src_str ModuleSource, input: &'input str) 
+        -> CharInput<'src_str, 'input> {
+
         let last = if input.len() == 0 {
             0
         } else {
@@ -239,16 +243,25 @@ impl<'input> CharInput<'input> {
         let mut chars = input.char_indices().enumerate().peekable();
         let lookahead = chars.peek().map(|(char_index, (byte_index, c))| {
             (
-                Location::new(byte_index.clone(), char_index.clone(), 1, 2),
+                Location::new(
+                    byte_index.clone(), 
+                    char_index.clone(), 
+                    1, 
+                    2),
                 c.clone(),
             )
         });
         CharInput {
+            source: source,
             chars: chars,
             line: 1,
             column: 0,
             lookahead: lookahead,
-            end_of_input: Location::new(last + 1, last, 1, 0),
+            end_of_input: Location::new(
+                last + 1,
+                last,
+                1,
+                0),
         }
     }
 
@@ -261,7 +274,7 @@ impl<'input> CharInput<'input> {
     }
 }
 
-impl<'input> Iterator for CharInput<'input> {
+impl<'src_str, 'input> Iterator for CharInput<'src_str, 'input> {
     type Item = (Location, char);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -277,7 +290,11 @@ impl<'input> Iterator for CharInput<'input> {
                 self.end_of_input.column += 1;
             }
             (
-                Location::new(byte_index, char_index, self.line, self.column),
+                Location::new(
+                    byte_index,
+                    char_index,
+                    self.line,
+                    self.column),
                 c.clone(),
             )
         });
@@ -302,16 +319,20 @@ impl<'input> Iterator for CharInput<'input> {
 }
 
 #[derive(Debug)]
-pub struct Tokenizer<'input> {
+pub struct Tokenizer<'src_str, 'input> {
+    source: &'src_str ModuleSource,
     input: &'input str,
-    chars: CharInput<'input>,
+    chars: CharInput<'src_str, 'input>,
 }
 
-impl<'input> Tokenizer<'input> {
-    pub fn new(input: &str) -> Tokenizer {
+impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
+    pub fn new(source: &'src_str ModuleSource, input: &'input str) 
+        -> Tokenizer<'src_str, 'input> {
+
         Tokenizer {
+            source: source,
             input: input,
-            chars: CharInput::new(input),
+            chars: CharInput::new(source, input),
         }
     }
 
@@ -378,7 +399,7 @@ impl<'input> Tokenizer<'input> {
     }
 }
 
-impl<'input> Tokenizer<'input> {
+impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
     fn line_comment(&mut self, start: Location) -> (Location, &'input str) {
         self.take_until(start, |c| c == '\n')
     }
@@ -391,27 +412,27 @@ impl<'input> Tokenizer<'input> {
         match c {
             '+' => Ok(SpannedToken::new(
                 Token::Plus,
-                LocationSpan::span_1(start, 1),
+                LocationSpan::span_1(self.source.to_string(), start, 1),
             )),
 
             '-' => Ok(SpannedToken::new(
                 Token::Minus,
-                LocationSpan::span_1(start, 1),
+                LocationSpan::span_1(self.source.to_string(), start, 1),
             )),
 
             '*' => Ok(SpannedToken::new(
                 Token::Star,
-                LocationSpan::span_1(start, 1),
+                LocationSpan::span_1(self.source.to_string(), start, 1),
             )),
 
             '/' => Ok(SpannedToken::new(
                 Token::Slash,
-                LocationSpan::span_1(start, 1),
+                LocationSpan::span_1(self.source.to_string(), start, 1),
             )),
 
             '%' => Ok(SpannedToken::new(
                 Token::Percent,
-                LocationSpan::span_1(start, 1),
+                LocationSpan::span_1(self.source.to_string(), start, 1),
             )),
 
             '&' => {
@@ -422,12 +443,12 @@ impl<'input> Tokenizer<'input> {
                     })?;
                     Ok(SpannedToken::new(
                         Token::LAnd,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     ))
                 } else {
                     Ok(SpannedToken::new(
                         Token::Ref,
-                        LocationSpan::span_1(start, 1),
+                        LocationSpan::span_1(self.source.to_string(), start, 1),
                     ))
                 }
             }
@@ -440,7 +461,7 @@ impl<'input> Tokenizer<'input> {
                     })?;
                     Ok(SpannedToken::new(
                         Token::LOr,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     ))
                 } else if self.test_lookahead(|c| c == '>') {
                     let (end, _) = self.chars.next().ok_or(SpannedError {
@@ -449,7 +470,7 @@ impl<'input> Tokenizer<'input> {
                     })?;
                     Ok(SpannedToken::new(
                         Token::Pipe,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     ))
                 } else {
                     Err(SpannedError {
@@ -467,12 +488,12 @@ impl<'input> Tokenizer<'input> {
                     })?;
                     Ok(SpannedToken::new(
                         Token::Eq,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     ))
                 } else {
                     Ok(SpannedToken::new(
                         Token::Assign,
-                        LocationSpan::span_1(start, 1),
+                        LocationSpan::span_1(self.source.to_string(), start, 1),
                     ))
                 }
             }
@@ -485,12 +506,12 @@ impl<'input> Tokenizer<'input> {
                     })?;
                     Ok(SpannedToken::new(
                         Token::NEq,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     ))
                 } else {
                     Ok(SpannedToken::new(
                         Token::Invert,
-                        LocationSpan::span_1(start, 1),
+                        LocationSpan::span_1(self.source.to_string(), start, 1),
                     ))
                 }
             }
@@ -503,12 +524,12 @@ impl<'input> Tokenizer<'input> {
                     })?;
                     Ok(SpannedToken::new(
                         Token::Lte,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     ))
                 } else {
                     Ok(SpannedToken::new(
                         Token::Lt,
-                        LocationSpan::span_1(start, 1),
+                        LocationSpan::span_1(self.source.to_string(), start, 1),
                     ))
                 }
             }
@@ -521,12 +542,12 @@ impl<'input> Tokenizer<'input> {
                     })?;
                     Ok(SpannedToken::new(
                         Token::Gte,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     ))
                 } else {
                     Ok(SpannedToken::new(
                         Token::Gt,
-                        LocationSpan::span_1(start, 1),
+                        LocationSpan::span_1(self.source.to_string(), start, 1),
                     ))
                 }
             }
@@ -564,7 +585,7 @@ impl<'input> Tokenizer<'input> {
             str => Token::Identifier(str.to_string()),
         };
 
-        SpannedToken::new(token, LocationSpan::new(start, end))
+        SpannedToken::new(token, LocationSpan::new(self.source.to_string(), start, end))
     }
 
     fn numeric_literal(
@@ -591,7 +612,7 @@ impl<'input> Tokenizer<'input> {
 
                 return Ok(SpannedToken::new(
                     Token::FloatLiteral(f),
-                    LocationSpan::new(start, end),
+                    LocationSpan::new(self.source.to_string(), start, end),
                 ));
             }
         }
@@ -599,7 +620,7 @@ impl<'input> Tokenizer<'input> {
         let i = int.parse::<i64>().unwrap();
         Ok(SpannedToken::new(
             Token::IntLiteral(i),
-            LocationSpan::new(start, end),
+            LocationSpan::new(self.source.to_string(), start, end),
         ))
     }
 
@@ -613,7 +634,7 @@ impl<'input> Tokenizer<'input> {
                 '\"' => {
                     return Ok(SpannedToken::new(
                         Token::StringLiteral(literal),
-                        LocationSpan::new(start, e),
+                        LocationSpan::new(self.source.to_string(), start, e),
                     ));
                 }
 
@@ -629,7 +650,7 @@ impl<'input> Tokenizer<'input> {
     }
 }
 
-impl<'input> Iterator for Tokenizer<'input> {
+impl<'src_str, 'input> Iterator for Tokenizer<'src_str, 'input> {
     type Item = Result<SpannedToken, SpannedError>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -644,68 +665,68 @@ impl<'input> Iterator for Tokenizer<'input> {
                     let (end, _) = self.chars.next().unwrap();
                     Some(Ok(SpannedToken::new(
                         Token::Arrow,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     )))
                 }
 
                 ',' => Some(Ok(SpannedToken::new(
                     Token::Comma,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
                 '.' => Some(Ok(SpannedToken::new(
                     Token::Dot,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
                 ';' => Some(Ok(SpannedToken::new(
                     Token::Semi,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
 
                 ':' if self.test_lookahead(is_colon) => {
                     let (end, _) = self.chars.next().unwrap();
                     Some(Ok(SpannedToken::new(
                         Token::ColonColon,
-                        LocationSpan::new(start, end),
+                        LocationSpan::new(self.source.to_string(), start, end),
                     )))
                 }
 
                 ':' if self.test_lookahead(is_colon) == false => {
                     Some(Ok(SpannedToken::new(
                         Token::Colon,
-                        LocationSpan::span_1(start, 1),
+                        LocationSpan::span_1(self.source.to_string(), start, 1),
                     )))
                 }
 
                 '(' => Some(Ok(SpannedToken::new(
                     Token::LParen,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
                 ')' => Some(Ok(SpannedToken::new(
                     Token::RParen,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
 
                 '[' => Some(Ok(SpannedToken::new(
                     Token::LBracket,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
                 ']' => Some(Ok(SpannedToken::new(
                     Token::RBracket,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
 
                 '{' => Some(Ok(SpannedToken::new(
                     Token::LBrace,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
                 '}' => Some(Ok(SpannedToken::new(
                     Token::RBrace,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
 
                 '#' => Some(Ok(SpannedToken::new(
                     Token::Pound,
-                    LocationSpan::span_1(start, 1),
+                    LocationSpan::span_1(self.source.to_string(), start, 1),
                 ))),
 
                 '\"' => Some(self.string_literal(start)),
@@ -732,13 +753,13 @@ impl<'input> Iterator for Tokenizer<'input> {
 }
 
 #[derive(Debug)]
-pub struct BufferedTokenizer<'a> {
-    tokenizer: Tokenizer<'a>,
+pub struct BufferedTokenizer<'a, 'b> {
+    tokenizer: Tokenizer<'a, 'b>,
     next: Option<Result<SpannedToken, SpannedError>>,
 }
 
-impl<'a> BufferedTokenizer<'a> {
-    pub fn new(mut tokenizer: Tokenizer) -> BufferedTokenizer {
+impl<'a, 'b> BufferedTokenizer<'a, 'b> {
+    pub fn new(mut tokenizer: Tokenizer<'a, 'b>) -> BufferedTokenizer<'a, 'b> {
         let next = tokenizer.next();
 
         BufferedTokenizer {
@@ -811,6 +832,7 @@ fn is_digit(c: char) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::module::*;
 
     fn unwrap(v: Option<Result<SpannedToken, SpannedError>>) -> Token {
         v.expect("Some").expect("Ok").to_data().1
@@ -819,7 +841,8 @@ mod tests {
     #[test]
     fn tokenize_mod_decl() {
         let input = "mod test;";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Mod, unwrap(tok.next()));
         assert_eq!(Token::Identifier("test".to_string()), unwrap(tok.next()));
@@ -830,7 +853,8 @@ mod tests {
     #[test]
     fn tokenize_struct_decl() {
         let input = "struct Test { field1: i32, field2: f32 }";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Struct, unwrap(tok.next()));
         assert_eq!(Token::Identifier("Test".to_string()), unwrap(tok.next()));
@@ -854,7 +878,8 @@ mod tests {
     fn tokenize_line_comment() {
         let input = "// Test Bla
 mod hello;";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Mod, unwrap(tok.next()));
         assert_eq!(Token::Identifier("hello".to_string()), unwrap(tok.next()));
@@ -875,7 +900,8 @@ false
 -1. 
 -1.0
 ";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::BoolLiteral(true), unwrap(tok.next()));
         assert_eq!(Token::BoolLiteral(false), unwrap(tok.next()));
@@ -898,7 +924,8 @@ false
         let input = "\" this is lit \"
 \" -erally\"
 ";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(
             Token::StringLiteral(" this is lit ".to_string()),
@@ -921,7 +948,8 @@ abcd
 a1b2
 A1b2
 ";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
         assert_eq!(Token::Identifier("_ident".to_string()), unwrap(tok.next()));
         assert_eq!(Token::Identifier("_123".to_string()), unwrap(tok.next()));
         assert_eq!(Token::Identifier("abcd".to_string()), unwrap(tok.next()));
@@ -932,7 +960,8 @@ A1b2
     #[test]
     fn tokenize_math_expr() {
         let input = "2.0 * foo - (bar/3)--100 % 1. + 3";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::FloatLiteral(2.0), unwrap(tok.next()));
         assert_eq!(Token::Star, unwrap(tok.next()));
@@ -958,7 +987,8 @@ A1b2
     #[test]
     fn tokenize_keywords() {
         let input = "if struct while fn mod use else elif let";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::If, unwrap(tok.next()));
         assert_eq!(Token::Struct, unwrap(tok.next()));
@@ -974,7 +1004,8 @@ A1b2
     #[test]
     fn tokenize_end_of_input() {
         let input = "let";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Let, unwrap(tok.next()));
         assert_eq!(None, tok.next());
@@ -983,7 +1014,8 @@ A1b2
     #[test]
     fn tokenize_module_path() {
         let input = "foo::bar::baz";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Identifier("foo".to_string()), unwrap(tok.next()));
         assert_eq!(Token::ColonColon, unwrap(tok.next()));
@@ -995,7 +1027,8 @@ A1b2
     #[test]
     fn tokenize_field_access() {
         let input = "foo.bar.baz";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Identifier("foo".to_string()), unwrap(tok.next()));
         assert_eq!(Token::Dot, unwrap(tok.next()));
@@ -1007,7 +1040,8 @@ A1b2
     #[test]
     fn tokenize_comma_list() {
         let input = "foo, bar,baz";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Identifier("foo".to_string()), unwrap(tok.next()));
         assert_eq!(Token::Comma, unwrap(tok.next()));
@@ -1019,7 +1053,8 @@ A1b2
     #[test]
     fn tokenize_assignment() {
         let input = "let foo: bar = baz;";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::Let, unwrap(tok.next()));
         assert_eq!(Token::Identifier("foo".to_string()), unwrap(tok.next()));
@@ -1034,7 +1069,8 @@ A1b2
     #[test]
     fn tokenize_single_float() {
         let input = "21.";
-        let mut tok = Tokenizer::new(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut tok = Tokenizer::new(&source, input);
 
         assert_eq!(Token::FloatLiteral(21.0), unwrap(tok.next()));
     }

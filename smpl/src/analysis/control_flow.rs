@@ -10,7 +10,8 @@ use super::error::{AnalysisError, ControlFlowError};
 use super::expr_flow;
 
 use super::semantic_data::{AnalysisContext, LoopId, Universe};
-use super::type_cons::*;
+use super::type_cons::TypeCons;
+use super::abstract_type::AbstractType;
 
 use super::type_checker::TypingContext;
 use super::typed_ast;
@@ -369,7 +370,7 @@ impl CFG {
                 &outer_scope,
                 &outer_context,
             )?;
-            if let AbstractType::Unit = return_type {
+            if let AbstractType::Unit(_) = return_type {
                 append_node!(
                     cfg,
                     head,
@@ -444,7 +445,7 @@ impl CFG {
                             let decl = typed_ast::LocalVarDecl::new(
                                 universe,
                                 decl,
-                                expr_stmt_span,
+                                expr_stmt_span.clone(),
                             );
                             current_block.append(BlockNode::LocalVarDecl(
                                 LocalVarDeclData {
@@ -570,10 +571,7 @@ impl CFG {
 
                             let loop_data = LoopData {
                                 loop_id: loop_id,
-                                span: Span::new(
-                                    expr_stmt_span.start(),
-                                    expr_stmt_span.start(),
-                                ),
+                                span: expr_stmt_span.clone(),
                             };
 
                             let loop_head = self.graph.add_node(
@@ -935,10 +933,13 @@ mod tests {
     use super::super::analysis_helpers::*;
     use crate::parser::*;
     use crate::parser::parser::*;
+    use crate::module::ModuleSource;
+    use crate::span::Span;
     use petgraph::dot::{Config, Dot};
     use petgraph::Direction;
 
     use super::super::semantic_data::{TypeId, Universe};
+    use super::super::type_cons::*;
 
     macro_rules! edges {
         ($CFG: expr, $node: expr) => {
@@ -954,6 +955,7 @@ mod tests {
 
     fn expected_app(tc: TypeId) -> AbstractType {
         AbstractType::App {
+            data: Span::dummy(),
             type_cons: tc,
             args: Vec::new(),
         }
@@ -975,7 +977,8 @@ mod tests {
 let a: int = 2;
 let b: int = 3;
 }";
-        let mut input = buffer_input(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut input = buffer_input(&source, input);
         let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
@@ -1045,7 +1048,8 @@ if (test) {
     let c: int = 4;
 }
 }";
-        let mut input = buffer_input(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut input = buffer_input(&source, input);
 
         let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
@@ -1202,7 +1206,8 @@ if (test) {
 
     }
 }";
-        let mut input = buffer_input(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut input = buffer_input(&source, input);
         let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         
@@ -1418,7 +1423,8 @@ if (test) {
         
     }
 }";
-        let mut input = buffer_input(input);
+        let source = ModuleSource::Anonymous(None);
+        let mut input = buffer_input(&source, input);
         let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         

@@ -246,7 +246,7 @@ mod tests {
                     match e {
                         AnalysisError::ControlFlowError(e) => {
                             match e {
-                                ControlFlowError::MissingReturn => (),
+                                ControlFlowError::MissingReturn(..) => (),
 
                                 e @ _ => panic!("Expected ControlFlowError::MissingReturn. Test {}. Found {:?}", i, e),
                             }

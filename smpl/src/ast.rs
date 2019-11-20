@@ -139,7 +139,7 @@ pub struct Struct {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct WhereClause(pub HashMap<Ident, Vec<AstNode<TypeAnnotation>>>);
+pub struct WhereClause(pub HashMap<AstNode<Ident>, Vec<AstNode<TypeAnnotation>>>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructBody(pub Option<Vec<StructField>>);
@@ -382,7 +382,7 @@ impl fmt::Display for Ident {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypedPath {
     NillArity(ModulePath),
-    Parameterized(ModulePath, Vec<TypeAnnotation>),
+    Parameterized(ModulePath, Vec<AstNode<TypeAnnotation>>),
 }
 
 impl TypedPath {
@@ -393,7 +393,7 @@ impl TypedPath {
         }
     }
 
-    pub fn annotations(&self) -> Option<&[TypeAnnotation]> {
+    pub fn annotations(&self) -> Option<&[AstNode<TypeAnnotation>]> {
         match *self {
             TypedPath::NillArity(_) => None,
             TypedPath::Parameterized(_, ref anno) => Some(anno),
@@ -404,7 +404,7 @@ impl TypedPath {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypedPathRef<'a> {
     NillArity(&'a ModulePath),
-    Parameterized(&'a ModulePath, &'a [TypeAnnotation]),
+    Parameterized(&'a ModulePath, &'a [AstNode<TypeAnnotation>]),
 }
 
 impl<'a> TypedPathRef<'a> {
@@ -415,7 +415,7 @@ impl<'a> TypedPathRef<'a> {
         }
     }
 
-    pub fn annotations(&self) -> Option<&[TypeAnnotation]> {
+    pub fn annotations(&self) -> Option<&[AstNode<TypeAnnotation>]> {
         match *self {
             TypedPathRef::NillArity(_) => None,
             TypedPathRef::Parameterized(_, anno) => Some(anno),
@@ -458,84 +458,25 @@ pub enum TypeAnnotation {
     WidthConstraint(Vec<AstNode<WidthConstraint>>),
 }
 
-impl<'a> From<&'a TypeAnnotation> for TypeAnnotationRef<'a> {
-    fn from(t: &TypeAnnotation) -> TypeAnnotationRef {
-        match t {
-            &TypeAnnotation::Path(ref p) => TypeAnnotationRef::Path(p.into()),
-            &TypeAnnotation::Array(ref t, ref s) => {
-                TypeAnnotationRef::Array(t, s)
-            }
-            &TypeAnnotation::FnType(ref tp, ref p, ref r) => {
-                TypeAnnotationRef::FnType(
-                    tp.as_ref(),
-                    p.as_ref().map(|v| v.as_slice()),
-                    r.as_ref().map(|r| r.borrow()),
-                )
-            }
-            &TypeAnnotation::WidthConstraint(ref w) => {
-                TypeAnnotationRef::WidthConstraint(w.as_slice())
-            }
-        }
-    }
-}
-
-impl<'a> From<TypedPathRef<'a>> for TypeAnnotationRef<'a> {
-    fn from(p: TypedPathRef<'a>) -> TypeAnnotationRef {
-        TypeAnnotationRef::Path(p)
-    }
-}
-
-impl<'a> From<&'a ModulePath> for TypedPathRef<'a> {
-    fn from(mp: &'a ModulePath) -> TypedPathRef<'a> {
-        TypedPathRef::NillArity(mp)
-    }
-}
-
-impl<'a> From<&'a ModulePath> for TypeAnnotationRef<'a> {
-    fn from(mp: &'a ModulePath) -> TypeAnnotationRef<'a> {
-        TypeAnnotationRef::Path(mp.into())
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum TypeAnnotationRef<'a> {
-    Path(TypedPathRef<'a>),
-    Array(&'a AstNode<TypeAnnotation>, &'a u64),
-    FnType(
-        Option<&'a TypeParams>,
-        Option<&'a [AstNode<TypeAnnotation>]>,
-        Option<&'a AstNode<TypeAnnotation>>,
-    ),
-    WidthConstraint(&'a [AstNode<WidthConstraint>]),
-}
-
-impl<'a> From<TypeAnnotationRef<'a>> for TypeAnnotation {
-    fn from(tr: TypeAnnotationRef) -> TypeAnnotation {
-        match tr {
-            TypeAnnotationRef::Path(p) => TypeAnnotation::Path(p.into()),
-            TypeAnnotationRef::Array(t, s) => {
-                TypeAnnotation::Array(Box::new(t.clone()), s.clone())
-            }
-            TypeAnnotationRef::FnType(tp, p, r) => TypeAnnotation::FnType(
-                tp.map(|tp| tp.clone()),
-                p.map(|params| {
-                    params.iter().map(|param| param.clone()).collect()
-                }),
-                r.map(|r| Box::new(r.clone())),
-            ),
-            TypeAnnotationRef::WidthConstraint(w) => {
-                TypeAnnotation::WidthConstraint(w.to_vec())
-            }
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ModulePath(pub Vec<AstNode<Ident>>);
 
 impl ModulePath {
     pub fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = &Ident> + 'a> {
         Box::new(self.0.iter().map(|node| &node.data))
+    }
+
+    pub fn span(&self) -> Span {
+        let mut iter = self.0
+            .iter()
+            .map(|node| node.span());
+
+        let s = iter
+            .next()
+            .unwrap();
+
+        iter
+            .fold(s, |acc, next| Span::combine(acc, next))
     }
 }
 
