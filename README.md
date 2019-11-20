@@ -36,17 +36,18 @@ Popstcl has dynamic types and dynamic scoping, all of which I found painful to u
 
 The project is split it up into 2 parts:
 * smpl
-  * Core library that defines a language
+  * Core library that defines the language
   * Includes:
-    * SMPL module parser
-    * Static analyzer
-    * Byte Code data structures 
+    * The parser
+    * The static analyzer
+    * Byte code data structures 
     * Byte code generator
     * Metadata collector
 * smpli
-  * Interpreter for smpl's byte code
-    * Create an AVM from modules
-    * The AVM can spawn executors that will run the byte code
+  * The interpreter for smpl's byte code
+    * Creates an AVM from parsed and analyzed SMPL modules
+    * Spawns instruction executors for SMPL functions 
+    * Provides an interface for mapping Rust -> SMPL (builtin) functions
   * Runtime data structures
 
 ## Example
@@ -54,7 +55,7 @@ The project is split it up into 2 parts:
 See `examples/tic-tac-toe` for embedding examples.
 
 ```
-// SMPL Code
+// SMPL Code in a file or as a String
 mod test;
 
 // From interpreter's stdlib 
@@ -101,7 +102,12 @@ fn main() {
 ```
 // Rust code running the above using the 'smpli' crate
 let scripts = vec![
-    VmModule::new(parse_module(UnparsedModule::anonymous(module_string)).unwrap())
+    // If you have a path, can use:
+    //   parse_module(UnparsedModule::file(path, &str_buff))
+    VmModule::new(
+      parse_module(UnparsedModule::anonymous(module_string))
+        .unwrap()
+    )
 ];
 
 let std = StdBuilder::default().log(true).build().unwrap();
