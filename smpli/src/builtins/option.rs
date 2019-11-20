@@ -234,7 +234,7 @@ fn test() -> option::Option(type String) {
     return o1;
 }
 ";
-        let result = option_test!(mod1, "mod1", "test", None);
+        let result = option_test!(mod1, "mod1", "test", vec![]);
 
         let result = irmatch!(result; Value::Struct(inner) => inner);
 
@@ -257,7 +257,7 @@ fn test() -> option::Option(type String) {
     return o1;
 }
 ";
-        let result = option_test!(mod1, "mod1", "test", None);
+        let result = option_test!(mod1, "mod1", "test", vec![]);
 
         let result = irmatch!(result; Value::Struct(inner) => inner);
 
@@ -292,10 +292,10 @@ fn is_some_false() -> bool {
     let o1: option::Option(type String) = option::none(type String)();
     return option::is_some(type String)(o1);
 }";
-        let is_none_true = option_test!(mod1, "mod1", "is_none_true", None);
-        let is_some_true = option_test!(mod1, "mod1", "is_some_true", None);
-        let is_none_false = option_test!(mod1, "mod1", "is_none_false", None);
-        let is_some_false = option_test!(mod1, "mod1", "is_some_false", None);
+        let is_none_true = option_test!(mod1, "mod1", "is_none_true", vec![]);
+        let is_some_true = option_test!(mod1, "mod1", "is_some_true", vec![]);
+        let is_none_false = option_test!(mod1, "mod1", "is_none_false", vec![]);
+        let is_some_false = option_test!(mod1, "mod1", "is_some_false", vec![]);
 
         assert_eq!(is_none_true, Value::Bool(true));
         assert_eq!(is_some_true, Value::Bool(true));
@@ -320,8 +320,8 @@ fn expect() -> String {
     return option::expect(type String)(o1, \"ERROR\"); 
 }";
 
-        let unwrap = option_test!(mod1, "mod1", "unwrap", None);
-        let expect = option_test!(mod1, "mod1", "expect", None);
+        let unwrap = option_test!(mod1, "mod1", "unwrap", vec![]);
+        let expect = option_test!(mod1, "mod1", "expect", vec![]);
 
         assert_eq!(unwrap, Value::String("Hello world".to_string()));
         assert_eq!(expect, Value::String("Hello world".to_string()));

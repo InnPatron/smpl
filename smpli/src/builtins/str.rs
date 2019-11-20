@@ -98,7 +98,7 @@ mod tests {
         let fn_handle = vm.query_module(MOD_STRING, STRING_LEN).unwrap().unwrap();
 
         let result = vm
-            .spawn_executor(fn_handle, Some(vec![Value::String("".to_string())]), SpawnOptions {
+            .spawn_executor(fn_handle, vec![Value::String("".to_string())], SpawnOptions {
                 type_check: false
             })
             .unwrap()
@@ -107,7 +107,7 @@ mod tests {
         assert_eq!(Value::Int(0), result);
 
         let result = vm
-            .spawn_executor(fn_handle, Some(vec![Value::String("1".to_string())]), SpawnOptions {
+            .spawn_executor(fn_handle, vec![Value::String("1".to_string())], SpawnOptions {
                 type_check: false    
             })
             .unwrap()
@@ -118,7 +118,7 @@ mod tests {
         let result = vm
             .spawn_executor(
                 fn_handle,
-                Some(vec![Value::String("123456789".to_string())]),
+                vec![Value::String("123456789".to_string())],
                 SpawnOptions {
                     type_check: false
                 }
@@ -141,11 +141,11 @@ mod tests {
         let result = vm
             .spawn_executor(
                 fn_handle,
-                Some(vec![
+                vec![
                     Value::String("I am ".to_string()),
                     Value::Int(1337),
                     Value::String("!".to_string()),
-                ]),
+                ],
                 SpawnOptions {
                     type_check: false
                 }
@@ -165,10 +165,10 @@ mod tests {
         let result = vm
             .spawn_executor(
                 fn_handle,
-                Some(vec![
+                vec![
                     Value::String("I'll ".to_string()),
                     Value::String("be back.".to_string()),
-                ]),
+                ],
                 SpawnOptions {
                     type_check: false
                 }
@@ -191,7 +191,7 @@ mod tests {
         let result = vm
             .spawn_executor(
                 fn_handle,
-                Some(vec![Value::String("LOUD NOISES".to_string())]),
+                vec![Value::String("LOUD NOISES".to_string())],
                 SpawnOptions {
                     type_check: false,
                 }
@@ -214,7 +214,7 @@ mod tests {
         let result = vm
             .spawn_executor(
                 fn_handle,
-                Some(vec![Value::String("loud noises".to_string())]),
+                vec![Value::String("loud noises".to_string())],
                 SpawnOptions {
                     type_check: false,
                 }
@@ -244,7 +244,7 @@ return str::to_string(\"Cannot\", \" touch\", \" this!?\");
 
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
-    let result = vm.spawn_executor(fn_handle, None, SpawnOptions {
+    let result = vm.spawn_executor(fn_handle, vec![], SpawnOptions {
         type_check: false    
     })
         .unwrap()

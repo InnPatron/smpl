@@ -98,8 +98,7 @@ macro_rules! wrap_input {
     }}
 }
 
-async fn add(args: Option<Vec<Value>>) -> Result<Value, Error> {
-    let args = args.unwrap();
+async fn add(mut args: Vec<Value>) -> Result<Value, Error> {
     let lhs = args.get(0).unwrap();
     let rhs = args.get(1).unwrap();
 
@@ -109,8 +108,7 @@ async fn add(args: Option<Vec<Value>>) -> Result<Value, Error> {
     return Ok(Value::Int(lhs + rhs));
 }
 
-async fn var_arg_sum(args: Option<Vec<Value>>) -> Result<Value, Error> {
-    let args = args.unwrap();
+async fn var_arg_sum(args: Vec<Value>) -> Result<Value, Error> {
 
     let mut sum = 0;
 
@@ -125,14 +123,14 @@ async fn var_arg_sum(args: Option<Vec<Value>>) -> Result<Value, Error> {
 expect_value!(interpreter_basic,
     module :: "mod1",
     eval :: "test",
-    args :: Some(vec![Value::Int(5), Value::Int(7)]),
+    args :: vec![Value::Int(5), Value::Int(7)],
     expect :: Value::Int(12)
 );
 
 expect_value!(interpreter_struct,
     module :: "mod1",
     eval :: "test",
-    args :: Some(vec![Value::Int(5), Value::Int(7)]),
+    args :: vec![Value::Int(5), Value::Int(7)],
     finalizer :: |result|  {
         let result = irmatch!(result; Value::Struct(s) => s.get_field("f").unwrap());
         let result = irmatch!(result; Value::Int(i) => i);
@@ -144,7 +142,7 @@ expect_value!(interpreter_struct,
 expect_value!(interpreter_builtin,
     module :: "mod1",
     eval :: "test",
-    args :: Some(vec![Value::Int(5), Value::Int(7)]), 
+    args :: vec![Value::Int(5), Value::Int(7)], 
     expect :: Value::Int(12),
     builtins :: |vm: VmModule| {
         vm.add_builtin("add", erase(add))
@@ -154,7 +152,7 @@ expect_value!(interpreter_builtin,
 expect_value!(interpreter_builtin_unchecked_params,
     module :: "mod1",
     eval :: "test",
-    args :: Some(vec![Value::Int(5), Value::Int(7)]),
+    args :: vec![Value::Int(5), Value::Int(7)],
     expect :: Value::Int(114),
     builtins :: |vm: VmModule| {
         vm.add_builtin("sum", erase(var_arg_sum))
@@ -195,7 +193,7 @@ return mod1::add(1, 2);
     
     let a_fn_handle = avm.query_module("mod2", "test2").unwrap().unwrap();
 
-    let a_result = avm.spawn_executor(a_fn_handle, None, SpawnOptions {
+    let a_result = avm.spawn_executor(a_fn_handle, vec![], SpawnOptions {
         type_check: false,    
     })
         .unwrap()
@@ -209,77 +207,77 @@ return mod1::add(1, 2);
 expect_value!(interpreter_field_access,
     module :: "mod1",
     eval :: "test",
-    args :: None,
+    args :: vec![],
     expect :: Value::Int(1337)
 );
 
 expect_value!(interpreter_array,
     module :: "mod1",
     eval :: "test",
-    args :: None,
+    args :: vec![],
     expect :: Value::Int(1 + 2 + 3 + 4 + 5)
 );
 
 expect_value!(interpreter_fn_value,
     module :: "mod1",
     eval :: "test",
-    args :: None,
+    args :: vec![],
     expect :: Value::Int(420)
 );
 
 expect_value!(interpreter_optional_local_type_annotation,
     module :: "mod1",
     eval :: "test",
-    args :: None,
+    args :: vec![],
     expect :: Value::Int(420)
 );
 
 expect_value!(interpreter_recursive_fn_call,
     module :: "mod1",
     eval :: "recurse",
-    args :: Some(vec![Value::Int(2)]),
+    args :: vec![Value::Int(2)],
     expect :: Value::Int(3)
 );
 
 expect_value!(interpreter_mutually_recursive_fn_call,
     module :: "mod1",
     eval :: "recurse_a",
-    args :: Some(vec![Value::Int(1)]),
+    args :: vec![Value::Int(1)],
     expect :: Value::Int(-5)
 );
 
 expect_value!(interpreter_loaded_builtin,
     module :: "mod1",
     eval :: "test_floor",
-    args :: None,
+    args :: vec![],
     expect :: Value::Float(1.0)
 );
 
 expect_value!(interpreter_anonymous_fn_call,
     module :: "mod1",
     eval :: "test",
-    args :: None,
+    args :: vec![],
     expect :: Value::Int(15)
 );
 
 expect_value!(interpreter_anonymous_fn_arg,
     module :: "mod1",
     eval :: "test",
-    args :: None,
+    args :: vec![],
     expect :: Value::Int(15)
 );
 
 expect_value!(interpreter_fn_piping,
     module :: "mod1",
     eval :: "test",
-    args :: None,
+    args :: vec![],
     expect :: Value::Int(5)
 );
 
 expect_value!(interpreter_builtin_bind,
     module :: "mod1",
     eval :: "bar",
-    args :: None,
+    args :: vec![],
     expect :: Value::Int(8),
     builtins :: |vm: VmModule| {
         vm.add_builtin("add", erase(add))
@@ -289,35 +287,35 @@ expect_value!(interpreter_builtin_bind,
 expect_value!(interpreter_complex_if,
     module :: "mod1",
     eval :: "foo",
-    args :: None,
+    args :: vec![],
     expect :: Value::Int(1000)
 );
 
 expect_value!(interpreter_uni_expr,
     module :: "mod1",
     eval :: "foo",
-    args :: None,
+    args :: vec![],
     expect :: Value::Bool(true)
 );
 
 expect_value!(interpreter_2d_array,
     module :: "mod1",
     eval :: "foo",
-    args :: None,
+    args :: vec![],
     expect :: Value::Int(0)
 );
 
 expect_value!(interpreter_structs_complex,
     module :: "mod1",
     eval :: "foo",
-    args :: None,
+    args :: vec![],
     expect :: Value::Int(0)
 );
 
 expect_value!(interpreter_while_loop,
     module :: "mod1",
     eval :: "foo",
-    args :: None,
+    args :: vec![],
     expect :: Value::Int(137)
 );
 
@@ -356,7 +354,7 @@ fn test() -> int {
     
     let fn_handle = avm.query_module("mod2", "test").unwrap().unwrap();
 
-    let result = avm.spawn_executor(fn_handle, None, SpawnOptions {
+    let result = avm.spawn_executor(fn_handle, vec![], SpawnOptions {
         type_check: false   
     })
         .expect("Executor spawn error error")
@@ -369,7 +367,7 @@ fn test() -> int {
 expect_value!(interpreter_array_path_assignment,
     module :: "mod1",
     eval :: "test",
-    args :: None,
+    args :: vec![],
     expect :: {
         let array = Array::new_init(vec![
             Value::Int(1),

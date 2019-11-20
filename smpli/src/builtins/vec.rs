@@ -306,7 +306,7 @@ fn vec_new() {
     let v: vec::Vec(type int)= vec::new(type int)();
 }
 ";
-    let result = vec_test!(mod1, "mod1", "vec_new", None);
+    let result = vec_test!(mod1, "mod1", "vec_new", vec![]);
 
     assert_eq!(Value::Unit, result);
 }
@@ -327,7 +327,7 @@ return vec::len(type int)(v);
 }
 ";
 
-    let result = vec_test!(mod1, "mod1", "test", None);
+    let result = vec_test!(mod1, "mod1", "test", vec![]);
 
     assert_eq!(Value::Int(2), result);
 }
@@ -352,7 +352,7 @@ return a * b;
 ";
 
 
-    let result = vec_test!(mod1, "mod1", "test", None);
+    let result = vec_test!(mod1, "mod1", "test", vec![]);
 
     assert_eq!(Value::Int(123 * 456), result);
 }
@@ -376,7 +376,7 @@ return vec::get_value(type int)(v, 1);
 }
 ";
     
-    let result = vec_test!(mod1, "mod1", "test", None);
+    let result = vec_test!(mod1, "mod1", "test", vec![]);
 
     assert_eq!(Value::Int(789), result);
 }
@@ -401,7 +401,7 @@ return a;
 }
 ";
     
-    let result = vec_test!(mod1, "mod1", "test", None);
+    let result = vec_test!(mod1, "mod1", "test", vec![]);
 
     assert_eq!(Value::Int(1337), result);
 }
@@ -440,11 +440,11 @@ return vec::contains(type int)(v, 20);
 }
 ";
     
-    let result = vec_test!(mod1, "mod1", "test", None);
+    let result = vec_test!(mod1, "mod1", "test", vec![]);
 
     assert_eq!(Value::Bool(true), result);
 
-    let result = vec_test!(mod1, "mod1", "test2", None);
+    let result = vec_test!(mod1, "mod1", "test2", vec![]);
 
     assert_eq!(Value::Bool(false), result);
 }
@@ -467,7 +467,7 @@ return vec::len(type int)(cleared);
 }
 ";
 
-    let result = vec_test!(mod1, "mod1", "test", None);
+    let result = vec_test!(mod1, "mod1", "test", vec![]);
 
     assert_eq!(Value::Int(0), result);
 }
