@@ -32,11 +32,29 @@ Popstcl has dynamic types and dynamic scoping, all of which I found painful to u
   * No concept of lifetime
 * ~~No~~ Bare-bones standard library for the interpreter
 
+## Using the Code
+
+The project is split it up into 2 parts:
+* smpl
+  * Core library that defines a language
+  * Includes:
+    * SMPL module parser
+    * Static analyzer
+    * Byte Code data structures 
+    * Byte code generator
+    * Metadata collector
+* smpli
+  * Interpreter for smpl's byte code
+    * Create an AVM from modules
+    * The AVM can spawn executors that will run the byte code
+  * Runtime data structures
+
 ## Example
 
 See `examples/tic-tac-toe` for embedding examples.
 
 ```
+// SMPL Code
 mod test;
 
 // From interpreter's stdlib 
@@ -77,7 +95,41 @@ fn main() {
     // Should print '4'
     log::println(add(getX(p), 1) |> add(2));
 }
+```
 
+
+```
+// Rust code running the above using the 'smpli' crate
+let scripts = vec![
+    VmModule::new(parse_module(UnparsedModule::anonymous(module_string)).unwrap())
+];
+
+let std = StdBuilder::default().log(true).build().unwrap();
+let vm = match AVM::new(std, scripts)?;
+
+let fn_handle = vm.query_module("rt", "run").unwrap().unwrap(); 
+let executor = match vm
+    .spawn_executor(fn_handle, None, SpawnOptions {
+        type_check: false
+    }) {
+
+    Ok(executor) => executor,
+
+    Err(e) => {
+        println!("{:?}", e);
+        process::exit(1);
+    }
+
+};
+
+let _result = match executor.execute_sync() {
+
+    Ok(val) => val,
+
+    Err(e) => {
+        println!("{:?}", e);
+    }
+};
 
 ```
 
@@ -86,23 +138,6 @@ fn main() {
 The Rust backend is temporarily unsupported.
 
 **SMPL is meant to be embedded in other Rust programs. The interpreter is the only method of SMPL code execution guaranteed to support ALL language features.**
-
-## Using the Code
-
-The project is split it up into 2 parts:
-* smpl
-  * Core library that defines a language
-  * Includes:
-    * SMPL module parser
-    * Static analyzer
-    * Byte Code data structures 
-    * Byte code generator
-    * Metadata collector
-* smpli
-  * Interpreter for smpl's byte code
-    * Create an AVM from modules
-    * The AVM can spawn executors that will run the byte code
-  * Runtime data structures
 
 ## License
 Released under the [MIT License](https://opensource.org/licenses/MIT) (See LICENSE-MIT).
