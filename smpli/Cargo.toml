@@ -8,6 +8,7 @@ description = "Interpreter for the SMPL language"
 
 license="MIT"
 repository="https://github.com/InnPatron/smpl"
+readme="../README.md"
 
 [dependencies]
 smpl = "0.17.0"
