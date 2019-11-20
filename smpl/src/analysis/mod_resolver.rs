@@ -378,6 +378,7 @@ fn raw_mod_data(
         for decl_stmt in ast_module.1.into_iter() {
             match decl_stmt {
                 DeclStmt::Struct(d) => {
+                    let span = d.data().name.span();
                     let name = d.data().name.data().clone();
                     if struct_reserve
                         .insert(
@@ -390,11 +391,12 @@ fn raw_mod_data(
                         .is_some()
                         || opaque_reserve.contains_key(&name)
                     {
-                        return Err(TopLevelError::DuplicateTypes(name).into());
+                        return Err(TopLevelError::DuplicateTypes(name, span).into());
                     }
                 }
 
                 DeclStmt::Function(d) => {
+                    let span = d.data().name.span();
                     let name = d.data().name.data().clone();
                     if fn_reserve
                         .insert(
@@ -404,11 +406,12 @@ fn raw_mod_data(
                         .is_some()
                         || builtin_fn_reserve.contains_key(&name)
                     {
-                        return Err(TopLevelError::DuplicateFns(name).into());
+                        return Err(TopLevelError::DuplicateFns(name, span).into());
                     }
                 }
 
                 DeclStmt::BuiltinFunction(d) => {
+                    let span = d.data().name.span();
                     let name = d.data().name.data().clone();
                     if builtin_fn_reserve
                         .insert(
@@ -421,7 +424,7 @@ fn raw_mod_data(
                         .is_some()
                         || fn_reserve.contains_key(&name)
                     {
-                        return Err(TopLevelError::DuplicateFns(name).into());
+                        return Err(TopLevelError::DuplicateFns(name, span).into());
                     }
                 }
 
@@ -430,6 +433,7 @@ fn raw_mod_data(
                 }
 
                 DeclStmt::Opaque(o) => {
+                    let span = o.data().name.span();
                     let name = o.data().name.data().clone();
                     if opaque_reserve
                         .insert(
@@ -442,7 +446,7 @@ fn raw_mod_data(
                         .is_some()
                         || struct_reserve.contains_key(&name)
                     {
-                        return Err(TopLevelError::DuplicateTypes(name).into());
+                        return Err(TopLevelError::DuplicateTypes(name, span).into());
                     }
                 }
             }

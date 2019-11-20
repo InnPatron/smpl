@@ -44,8 +44,8 @@ impl From<TopLevelError> for AnalysisError {
 
 #[derive(Clone, Debug)]
 pub enum TopLevelError {
-    DuplicateTypes(Ident),
-    DuplicateFns(Ident),
+    DuplicateTypes(Ident, Span),
+    DuplicateFns(Ident, Span),
 }
 
 #[derive(Clone, Debug)]
