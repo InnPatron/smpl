@@ -20,8 +20,8 @@ impl std::fmt::Display for ModuleSource {
 }
 
 pub struct UnparsedModule<'a> {
-    pub source: ModuleSource,
-    pub module: &'a str,
+    pub(crate) source: ModuleSource,
+    pub(crate) module: &'a str,
 }
 
 impl<'a> UnparsedModule<'a> {
