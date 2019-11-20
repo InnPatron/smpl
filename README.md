@@ -109,7 +109,7 @@ let scripts = vec![
 ];
 
 let std = StdBuilder::default().log(true).build().unwrap();
-let vm = match AVM::new(std, scripts)?;
+let vm = AVM::new(std, scripts)?;
 
 let fn_handle = vm.query_module("rt", "run").unwrap().unwrap(); 
 let executor = match vm
