@@ -37,7 +37,7 @@ impl Executor {
                       fn_handle: FnHandle, 
                       compiled: CompiledProgram,
                       builtins: MappedBuiltins,
-                      args: Option<Vec<Value>>) -> Result<Executor, InternalError> {
+                      args: Vec<Value>) -> Result<Executor, InternalError> {
 
         let mut module_env = Env::new();
 
@@ -95,7 +95,7 @@ impl Executor {
                       compiled: CompiledProgram,
                       builtins: MappedBuiltins,
                       module_env: &Env,
-                      args: Option<Vec<Value>>) -> Result<StackInfo, InternalError> {
+                      args: Vec<Value>) -> Result<StackInfo, InternalError> {
 
         let fn_id = fn_handle.fn_id();
         if metadata.is_builtin(fn_id) {
@@ -108,7 +108,7 @@ impl Executor {
 
             let param_info: &[_]= metadata.function_param_ids(fn_id);
 
-            let args_len = args.as_ref().map(|v| v.len()).unwrap_or(0);
+            let args_len = args.len();
 
             if param_info.len() != args_len {
                 return Err(InternalError::InvalidArgCount(args_len, 
@@ -118,14 +118,12 @@ impl Executor {
             let mut stack_info = ByteCodeStack::new(
                 fn_handle, compiled.clone(), builtins.clone(), module_env);
             
-            if let Some(args) = args {
-                for (arg, param_info) in args
-                        .into_iter()
-                        .zip(param_info) {
+            for (arg, param_info) in args
+                    .into_iter()
+                    .zip(param_info) {
 
-                   stack_info.env 
-                        .map_value(param_info.name().to_string(), arg);
-                }
+               stack_info.env 
+                    .map_value(param_info.name().to_string(), arg);
             }
 
             Ok(StackInfo::ByteCodeStack(stack_info))
@@ -141,7 +139,9 @@ impl Executor {
             }) => {
                 // TODO(alex): If StackInfo is going to be used for inspecting,
                 //   need args.clone() instead of args.take()
-                let result = (*current_fn)(args.take()).await?;
+                let mut arg_buff = Vec::new();
+                std::mem::swap(args, &mut arg_buff);
+                let result = (*current_fn)(arg_buff).await?;
 
                 ExecuteAction::PopStack(result)
             }
@@ -740,7 +740,7 @@ impl Executor {
                             Some(args)
                         };
 
-                        Ok(ExecuteAction::PushStack(handle.clone(), args))
+                        Ok(ExecuteAction::PushStack(handle.clone(), args.unwrap_or(vec![])))
                     }
                     
                     _ => Err(InternalError::RuntimeInstructionError(
@@ -832,7 +832,7 @@ enum ExecuteAction {
     IncrementIP,
     SetIP(InstructionPointerType),
     AddIP(i64),
-    PushStack(FnHandle, Option<Vec<Value>>),
+    PushStack(FnHandle, Vec<Value>),
     PopStack(Value),
 }
 
@@ -849,12 +849,12 @@ struct BuiltinStack {
     current_fn: Arc<BuiltinFn>,
     compiled: CompiledProgram,
     builtins: MappedBuiltins,
-    args: Option<Vec<Value>>,
+    args: Vec<Value>,
 }
 
 impl BuiltinStack {
     fn new(handle: FnHandle, compiled: CompiledProgram, 
-           builtins: MappedBuiltins, args: Option<Vec<Value>>) -> BuiltinStack {
+           builtins: MappedBuiltins, args: Vec<Value>) -> BuiltinStack {
 
         let current_fn = builtins.get(&handle.fn_id()).unwrap().clone();
 
