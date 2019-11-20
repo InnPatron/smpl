@@ -834,6 +834,7 @@ pub fn type_from_ann(
                                 .unwrap()
                                 .data()
                                 .clone(),
+                            span: anno.span(),
                         }
                         .into());
                     }

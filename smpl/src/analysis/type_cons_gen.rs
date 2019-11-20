@@ -62,6 +62,7 @@ pub fn generate_struct_type_cons(
             if field_map.contains_key(&f_name) {
                 return Err(TypeError::FieldNamingConflict {
                     ident: f_name.clone(),
+                    span: field.name.span(),
                 }
                 .into());
             } else {
@@ -340,6 +341,7 @@ fn type_param_map(
                 // Naming conflict
                 return Err(TypeError::ParameterNamingConflict {
                     ident: p.data().clone(),
+                    span: p.span(),
                 }
                 .into());
             } else {

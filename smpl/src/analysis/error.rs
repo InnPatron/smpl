@@ -179,18 +179,22 @@ pub enum TypeError {
 
     ParameterNamingConflict {
         ident: Ident,
+        span: Span,
     },
 
     FieldNamingConflict {
         ident: Ident,
+        span: Span,
     },
 
     TypeParameterNamingConflict {
         ident: Ident,
+        span: Span,
     },
 
     ParameterizedParameter {
         ident: Ident,
+        span: Span,
     },
 
     InvalidTypeConstraintBase {
