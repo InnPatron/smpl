@@ -275,7 +275,10 @@ fn map_usings(
             let import_id = raw_prog
                 .raw_map
                 .get(import_name)
-                .ok_or(AnalysisError::UnresolvedUses(vec![use_decl.clone()]))?;
+                .ok_or({
+                    let (ident, span) = use_decl.data().0.clone().to_data();
+                    AnalysisError::UnresolvedUses(vec![(ident, span)])
+                })?;
 
             dependencies.push(import_id.clone());
             // Get imported module's types and functions
