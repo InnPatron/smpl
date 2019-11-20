@@ -30,7 +30,7 @@ SMPL was built to replace [Popstcl](https://github.com/InnPatron/Popstcl) as the
 ## Using the Code
 
 The project is split it up into 2 parts:
-* smpl
+* [smpl](https://crates.io/crates/smpl)
   * The core crate that defines the language
   * Includes:
     * The parser
@@ -38,7 +38,7 @@ The project is split it up into 2 parts:
     * Byte code data structures 
     * Byte code generator
     * Metadata collector
-* smpli
+* [smpli](https://crates.io/crates/smpli)
   * The interpreter for smpl's byte code
     * Creates an AVM from parsed and analyzed SMPL modules
     * Spawns instruction executors for SMPL functions 
