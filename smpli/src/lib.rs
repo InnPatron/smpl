@@ -30,11 +30,13 @@ pub use value:: {
 };
 
 pub use vm_i::{
-    BuiltinFn,
     FnHandle,
     TypeHandle,
+    ArgType,
+    BuiltinResult,
+    NativeReturn,
+    BuiltinFn,
 };
-
 pub use module::VmModule;
 
 pub use std_options::*;
