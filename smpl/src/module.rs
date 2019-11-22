@@ -87,13 +87,13 @@ impl<'a> UnparsedModule<'a> {
 }
 
 pub struct ParsedModule {
-    pub source: ModuleSource,
-    pub module: Module,
-    pub id: ModuleId,
+    pub(crate) source: ModuleSource,
+    pub(crate) module: Module,
+    pub(crate) id: ModuleId,
 }
 
 impl ParsedModule {
-    pub fn new(data: Module, source: ModuleSource) -> ParsedModule {
+    pub(crate) fn new(data: Module, source: ModuleSource) -> ParsedModule {
         ParsedModule {
             source: source,
             module: data,
