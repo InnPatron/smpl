@@ -32,7 +32,7 @@ impl std::fmt::Display for ModuleSource {
 }
 
 ///
-/// Represents an unparsed SMPL module
+/// Represents an unparsed SMPL module.
 ///
 pub struct UnparsedModule<'a> {
     pub(crate) source: ModuleSource,
@@ -93,6 +93,11 @@ impl<'a> UnparsedModule<'a> {
     }
 }
 
+///
+/// Represents a parsed SMPL module that is syntactically correct.
+///
+/// Created by calling `smpl::parser::parse_module`.
+/// 
 pub struct ParsedModule {
     pub(crate) source: ModuleSource,
     pub(crate) module: Module,
