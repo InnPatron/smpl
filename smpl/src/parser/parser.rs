@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use super::expr_parser::*;
-use super::parser_err::*;
+use super::error::*;
 use super::tokens::*;
 use crate::ast::*;
 use crate::span::*;

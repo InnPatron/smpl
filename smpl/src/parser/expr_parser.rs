@@ -4,7 +4,7 @@ use super::parser::{
     block, fn_param_list, module_binding as full_module_binding,
     type_annotation, type_arg_list, type_arg_list_post_lparen, ParseErr,
 };
-use super::parser_err::*;
+use super::error::*;
 use super::tokens::*;
 use crate::ast::*;
 use crate::span::*;

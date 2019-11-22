@@ -1,5 +1,5 @@
 pub use crate::analysis::error as analysis_error;
-pub use crate::parser::parser_err as parser_error;
+pub use crate::parser::error as parser_error;
 
 use analysis_error::AnalysisError;
 use parser_error::ParserError;

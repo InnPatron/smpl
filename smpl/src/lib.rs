@@ -14,13 +14,13 @@ mod feature;
 #[macro_use]
 mod ast_macros;
 mod ast;
-mod parser;
 #[macro_use]
 mod analysis;
 mod code_gen;
 mod program;
 mod span;
 
+pub mod parser;
 pub mod error;
 pub use self::module::{ParsedModule, UnparsedModule};
 
