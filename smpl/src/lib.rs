@@ -21,12 +21,13 @@ mod code_gen;
 mod program;
 mod span;
 
+pub mod error;
 pub use self::module::{ParsedModule, UnparsedModule};
 
 pub use self::parser::parse_module;
 pub use crate::analysis::{FnId, ModuleId, TypeId};
 
-pub use crate::analysis::{error, metadata};
+pub use crate::analysis::metadata;
 
 pub use crate::code_gen::byte_gen;
 

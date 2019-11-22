@@ -1,7 +1,7 @@
 use crate::module::*;
 
 #[macro_use]
-mod parser_err;
+pub mod parser_err;
 mod tokens;
 
 #[cfg(not(test))]
@@ -19,7 +19,7 @@ pub mod expr_parser;
 #[cfg(test)]
 mod parser_tests;
 
-pub use self::parser_err::{ ParserErrorKind, ParserError };
+use self::parser_err::ParserError;
 
 ///
 /// Tokenizes and parses an unparsed SMPL module.
