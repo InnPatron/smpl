@@ -7,20 +7,21 @@ mod control_flow;
 mod analysis_helpers;
 mod blocky_linear_cfg_traversal;
 mod control_data;
-pub mod error;
 mod expr_flow;
 mod linear_cfg_traversal;
-pub mod metadata;
 mod mod_resolver;
 mod resolve_scope;
 mod return_trace;
 mod type_checker;
-pub mod type_cons;
-pub mod abstract_type;
 mod type_cons_gen;
 mod type_equality;
 mod type_resolver;
 mod unique_linear_cfg_traversal;
+
+pub mod error;
+pub mod metadata;
+pub mod type_cons;
+pub mod abstract_type;
 
 pub use self::blocky_linear_cfg_traversal::{BlockyPassenger, BlockyTraverser};
 pub use self::control_data::*;
