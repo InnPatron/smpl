@@ -84,6 +84,13 @@ impl<'a> UnparsedModule<'a> {
             module: data,
         }
     }
+
+    ///
+    /// Returns a reference to a SMPL module's source data
+    ///
+    pub fn source(&self) -> &ModuleSource {
+        &self.source
+    }
 }
 
 pub struct ParsedModule {
@@ -103,5 +110,12 @@ impl ParsedModule {
 
     pub fn id(&self) -> ModuleId {
         self.id
+    }
+
+    ///
+    /// Returns a reference to a SMPL module's source data
+    ///
+    pub fn source(&self) -> &ModuleSource {
+        &self.source
     }
 }
