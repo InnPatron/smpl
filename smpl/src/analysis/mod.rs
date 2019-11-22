@@ -20,15 +20,17 @@ mod unique_linear_cfg_traversal;
 
 pub mod error;
 pub mod metadata;
-pub mod type_cons;
-pub mod abstract_type;
+pub(crate) mod type_cons;
+pub(crate) mod abstract_type;
 
-pub use self::blocky_linear_cfg_traversal::{BlockyPassenger, BlockyTraverser};
-pub use self::control_data::*;
-pub use self::control_flow::CFG;
-pub use self::linear_cfg_traversal::{Passenger, Traverser};
-pub use self::semantic_ck::check_program;
-pub use self::semantic_data::*;
-pub use self::semantic_data::{Function, Module, Program};
-pub use self::type_checker::TypingContext;
-pub use self::typed_ast::*;
+pub use self::semantic_data::{FnId, TypeId, ModuleId};
+
+pub(crate) use self::blocky_linear_cfg_traversal::{BlockyPassenger, BlockyTraverser};
+pub(crate) use self::control_data::*;
+pub(crate) use self::control_flow::CFG;
+pub(crate) use self::linear_cfg_traversal::{Passenger, Traverser};
+pub(crate) use self::semantic_ck::check_program;
+pub(crate) use self::semantic_data::*;
+pub(crate) use self::semantic_data::{Function, Module, Program};
+pub(crate) use self::type_checker::TypingContext;
+pub(crate) use self::typed_ast::*;
