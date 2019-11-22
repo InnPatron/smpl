@@ -8,6 +8,8 @@ extern crate failure_derive;
 #[macro_use]
 extern crate display_derive;
 
+pub mod module;
+
 mod err;
 mod feature;
 #[macro_use]
@@ -17,7 +19,6 @@ mod parser;
 #[macro_use]
 mod analysis;
 mod code_gen;
-mod module;
 mod program;
 mod span;
 
