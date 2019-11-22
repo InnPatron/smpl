@@ -1,6 +1,5 @@
 use crate::analysis::abstract_type::AbstractType;
 use crate::ast::*;
-use crate::err::Error;
 use crate::span::Span;
 
 #[derive(Clone, Debug)]
@@ -27,12 +26,6 @@ where
 {
     fn from(t: T) -> AnalysisError {
         AnalysisError::Errors(t.into_iter().map(|i| i.into()).collect())
-    }
-}
-
-impl From<AnalysisError> for Error {
-    fn from(e: AnalysisError) -> Error {
-        Error::AnalysisError(format!("{:?}", e))
     }
 }
 

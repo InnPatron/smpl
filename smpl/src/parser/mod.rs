@@ -19,7 +19,7 @@ pub mod expr_parser;
 #[cfg(test)]
 mod parser_tests;
 
-pub use self::parser_err::ParserError;
+pub use self::parser_err::{ ParserErrorKind, ParserError };
 
 ///
 /// Tokenizes and parses an unparsed SMPL module.

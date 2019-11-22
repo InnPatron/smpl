@@ -10,7 +10,6 @@ extern crate display_derive;
 
 pub mod module;
 
-mod err;
 mod feature;
 #[macro_use]
 mod ast_macros;
@@ -22,13 +21,12 @@ mod code_gen;
 mod program;
 mod span;
 
-pub use self::err::Error;
 pub use self::module::{ParsedModule, UnparsedModule};
 
 pub use self::parser::parse_module;
 pub use crate::analysis::{FnId, ModuleId, TypeId};
 
-pub use crate::analysis::metadata;
+pub use crate::analysis::{error, metadata};
 
 pub use crate::code_gen::byte_gen;
 
