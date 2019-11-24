@@ -26,8 +26,7 @@ impl Program {
         &self.program.metadata()
     }
 
-    pub fn compilable_modules(&self) ->
-        impl Iterator<Item = CompilableModule> {
+    pub fn compilable_modules(&self) -> impl Iterator<Item = CompilableModule> {
 
         self.program
             .universe()
