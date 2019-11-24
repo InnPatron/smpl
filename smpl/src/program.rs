@@ -71,9 +71,14 @@ impl<'a> CompilableModule<'a> {
     pub fn get_fn(&self, fn_id: FnId) -> Option<CompilableFn> {
         self.module.owned_fns
             .get(&fn_id)
-            .map(move |fn_id| {
+            .map_or(None, |fn_id| {
                 let func = self.program.universe().get_fn(fn_id.clone());
-                CompilableModule::to_compilable_fn(fn_id.clone(), func)
+
+                match func {
+                    Function::Builtin(_) => None,
+
+                    f => Some(CompilableModule::to_compilable_fn(fn_id.clone(), func))
+                }
             })
     }
 
@@ -82,6 +87,13 @@ impl<'a> CompilableModule<'a> {
 
         self.module
             .owned_fns()
+            .filter(move |fn_id| {
+                match self.program.universe().get_fn(fn_id.clone()) {
+                    Function::Builtin(_) => false,
+
+                    _ => true
+                }
+            })
             .map(move |fn_id| {
                 let func = self.program.universe().get_fn(fn_id.clone());
                 CompilableModule::to_compilable_fn(fn_id.clone(), func)
