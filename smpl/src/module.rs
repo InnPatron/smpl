@@ -1,3 +1,9 @@
+/*!
+
+  Contains data structures used to represent SMPL code.
+
+*/
+
 use std::path::PathBuf;
 
 use crate::analysis::ModuleId;

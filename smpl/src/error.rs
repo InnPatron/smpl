@@ -1,9 +1,15 @@
+/*!
+  Contains smpl's top level error type.
+*/
 pub use crate::analysis::error as analysis_error;
 pub use crate::parser::error as parser_error;
 
 use analysis_error::AnalysisError;
 use parser_error::ParserError;
 
+/// 
+/// smpl's top-level error type.
+///
 #[derive(Debug, Clone)]
 pub enum Error {
     Analysis(AnalysisError),
