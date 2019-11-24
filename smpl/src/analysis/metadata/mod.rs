@@ -179,7 +179,7 @@ impl Metadata {
         let universe = u;
 
         for (_, mod_id) in universe.all_modules().into_iter() {
-            let module = universe.get_module(*mod_id);
+            let module = universe.get_module(mod_id);
             if let Ok(id) =
                 module.module_scope().get_fn(&ModulePath(vec![AstNode::new(
                     ident!["main"],
@@ -187,7 +187,7 @@ impl Metadata {
                 )]))
             {
                 if m.main.is_none() {
-                    m.main = Some((id, *mod_id))
+                    m.main = Some((id, mod_id))
                 } else {
                     return Err(AnalysisError::MultipleMainFns);
                 }

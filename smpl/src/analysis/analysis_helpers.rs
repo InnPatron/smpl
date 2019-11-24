@@ -8,7 +8,7 @@ use super::metadata::*;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::{
     AnalysisContext, FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId,
-    Universe,
+    Universe, ModuleId,
 };
 use super::type_checker::TypingContext;
 use super::type_cons::{TypeCons, TypeParams};
@@ -18,6 +18,7 @@ use super::abstract_type::AbstractType;
 pub fn analyze_fn(
     universe: &mut Universe,
     metadata: &mut Metadata,
+    module_id: ModuleId,
     fn_id: FnId,
 ) -> Result<(), AnalysisError> {
     use super::resolve_scope;
@@ -25,7 +26,7 @@ pub fn analyze_fn(
     use super::type_checker;
 
     resolve_scope::resolve(universe, fn_id)?;
-    type_checker::type_check(universe, metadata, fn_id)?;
+    type_checker::type_check(universe, metadata, module_id, fn_id)?;
     return_trace::return_trace(universe, fn_id)?;
 
     Ok(())

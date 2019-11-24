@@ -5,6 +5,7 @@ use crate::analysis::error::AnalysisError;
 use crate::analysis::{
     check_program, AnonymousFunction, FnId, Function,
     Program as AnalyzedProgram, TypingContext, CFG,
+    ModuleId, Module as AnalyzedModule,
 };
 use crate::module::{UnparsedModule, ParsedModule};
 use crate::error::Error;
@@ -53,57 +54,126 @@ impl Program {
         &self.program.metadata()
     }
 
-    pub fn compilable_fns<'a>(
-        &'a self,
-    ) -> impl Iterator<Item = (FnId, CompilableFn)> + 'a {
+    pub fn compilable_modules(&self) -> impl Iterator<Item = CompilableModule> {
+
         self.program
-            .all_fns()
-            .filter(|(_, f)| {
-                match f {
-                    Function::SMPL(_) => true,
-                    Function::Anonymous(_) => true,
-                    _ => false
+            .universe()
+            .all_modules()
+            .map(move |(_, mod_id)| {
+                let module = self.program.universe().get_module(mod_id);
+
+                CompilableModule {
+                    program: &self.program,
+                    module: module,
                 }
             })
-            .map(|(f_id, f)| {
-                match f {
-                    Function::SMPL(f) => {
-                        let c_fn = CompilableFn {
-                            cfg: f.cfg(),
-                            typing_context: f.analysis_context().typing_context(),
-                        };
-                        (f_id, c_fn)
-                    },
+    }
 
-                    Function::Anonymous(AnonymousFunction::Reserved(_)) => {
-                        panic!("All anonymous functions should be resolved after analysis");
-                    }
+    pub fn get_module(&self, module_id: ModuleId) -> CompilableModule {
+        let module = self.program
+            .universe()
+            .get_module(module_id);
 
-                    Function::Anonymous(AnonymousFunction::Resolved {
-                        ref cfg,
-                        ref analysis_context,
-                        ..
-                    }) => {
-                        let c_fn = CompilableFn {
-                            cfg: cfg.clone(),
-                            typing_context: analysis_context.typing_context()
-                        };
+        CompilableModule {
+            program: &self.program,
+            module: module
+        }
+    }
+}
 
-                        (f_id, c_fn)
-                    },
+pub struct CompilableModule<'a> {
+    program: &'a AnalyzedProgram,
+    module: &'a AnalyzedModule,
+}
 
-                    _ => unreachable!(),
+impl<'a> CompilableModule<'a> {
+
+    pub fn id(&self) -> ModuleId {
+        self.module.module_id()
+    }
+
+    pub fn source(&self) -> &crate::module::ModuleSource {
+        self.module.source()
+    }
+
+    pub fn get_fn(&self, fn_id: FnId) -> Option<CompilableFn> {
+        self.module.owned_fns
+            .get(&fn_id)
+            .map_or(None, |fn_id| {
+                let func = self.program.universe().get_fn(fn_id.clone());
+
+                match func {
+                    Function::Builtin(_) => None,
+
+                    f => Some(CompilableModule::to_compilable_fn(fn_id.clone(), func))
                 }
             })
+    }
+
+    pub fn compilable_fns(&self) -> 
+        impl Iterator<Item = CompilableFn> {
+
+        self.module
+            .owned_fns()
+            .filter(move |fn_id| {
+                match self.program.universe().get_fn(fn_id.clone()) {
+                    Function::Builtin(_) => false,
+
+                    _ => true
+                }
+            })
+            .map(move |fn_id| {
+                let func = self.program.universe().get_fn(fn_id.clone());
+                CompilableModule::to_compilable_fn(fn_id.clone(), func)
+            })
+    }
+
+    fn to_compilable_fn(f_id: FnId, f: &Function) -> CompilableFn {
+        match f {
+            Function::SMPL(f) => {
+                let c_fn = CompilableFn {
+                    fn_id: f_id.clone(),
+                    cfg: f.cfg(),
+                    typing_context: f.analysis_context().typing_context(),
+                };
+                c_fn
+            },
+
+            Function::Anonymous(AnonymousFunction::Reserved(_)) => {
+                panic!("All anonymous functions should be resolved after analysis");
+            }
+
+            Function::Anonymous(AnonymousFunction::Resolved {
+                ref cfg,
+                ref analysis_context,
+                ..
+            }) => {
+                let c_fn = CompilableFn {
+                    fn_id: f_id.clone(),
+                    cfg: cfg.clone(),
+                    typing_context: analysis_context.typing_context()
+                };
+
+                c_fn
+            },
+
+            _ => unreachable!(),
+        }
     }
 }
 
 pub struct CompilableFn<'a> {
+    fn_id: FnId,
     cfg: Rc<RefCell<CFG>>,
     typing_context: &'a TypingContext,
 }
 
 impl<'a> CompilableFn<'a> {
+
+    pub fn fn_id(&self) -> FnId {
+        self.fn_id.clone()
+    }
+
     pub(crate) fn cfg(&self) -> &Rc<RefCell<CFG>> {
         &self.cfg
     }
