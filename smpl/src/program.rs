@@ -41,6 +41,17 @@ impl Program {
                 }
             })
     }
+
+    pub fn get_module(&self, module_id: ModuleId) -> CompilableModule {
+        let module = self.program
+            .universe()
+            .get_module(module_id);
+
+        CompilableModule {
+            program: &self.program,
+            module: module
+        }
+    }
 }
 
 pub struct CompilableModule<'a> {
@@ -56,6 +67,15 @@ impl<'a> CompilableModule<'a> {
 
     pub fn source(&self) -> &crate::module::ModuleSource {
         self.module.source()
+    }
+
+    pub fn get_fn(&self, fn_id: FnId) -> Option<CompilableFn> {
+        self.module.owned_fns
+            .get(&fn_id)
+            .map(move |fn_id| {
+                let func = self.program.universe().get_fn(fn_id.clone());
+                CompilableModule::to_compilable_fn(fn_id.clone(), func)
+            })
     }
 
     pub fn compilable_fns(&self) -> 
