@@ -370,8 +370,10 @@ impl Universe {
         self.fn_map.iter().map(|(id, f)| (id.clone(), f))
     }
 
-    pub fn all_modules(&self) -> Vec<(&Ident, &ModuleId)> {
-        self.module_name.iter().collect()
+    pub fn all_modules(&self) -> impl Iterator<Item = (&Ident, ModuleId)> {
+        self.module_name
+            .iter()
+            .map(|(name, id)| (name, id.clone()))
     }
 }
 
