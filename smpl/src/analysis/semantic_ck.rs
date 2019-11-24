@@ -412,7 +412,7 @@ fn main() {
         let program = check_program(vec![mod1]).unwrap();
         let module_id = program.universe().module_id(&Ident("mod1".to_string())).unwrap();
         let module = program.universe().get_module(module_id);
-        let struct_type = module.owned_types().iter().next().unwrap().clone();
+        let struct_type = module.owned_types().next().unwrap().clone();
         let annotations = program.metadata().get_struct_annotations(struct_type).unwrap();
         assert!(annotations.get("test") == Some(&None));
         assert!(annotations.get("foo") == Some(&Some("bar".to_string())));
@@ -426,7 +426,7 @@ fn main() {
         let program = check_program(vec![mod1]).unwrap();
         let module_id = program.universe().module_id(&Ident("mod1".to_string())).unwrap();
         let module = program.universe().get_module(module_id);
-        let function = module.owned_fns().iter().next().unwrap().clone();
+        let function = module.owned_fns().next().unwrap().clone();
         let annotations = program.metadata().get_fn_annotations(function).unwrap();
         assert!(annotations.get("test") == Some(&None));
         assert!(annotations.get("foo") == Some(&Some("bar".to_string())));
