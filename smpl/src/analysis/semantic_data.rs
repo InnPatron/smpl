@@ -51,7 +51,7 @@ impl Program {
         (&mut self.universe, &mut self.metadata, &mut self.features)
     }
 
-    pub(super) fn universe(&self) -> &Universe {
+    pub(crate) fn universe(&self) -> &Universe {
         &self.universe
     }
 
