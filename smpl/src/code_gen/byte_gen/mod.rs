@@ -1,3 +1,7 @@
+/*!
+  Data structures/functions to convert analyzed SMPL code into byte code instructions.
+*/
+
 mod byte_code;
 mod byte_expr;
 mod first_pass;

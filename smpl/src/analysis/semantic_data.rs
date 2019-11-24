@@ -10,6 +10,7 @@ use crate::span::Span;
 use crate::ast::*;
 use crate::ast::{AnonymousFn as AstAnonymousFn, ModulePath as AstModulePath};
 use crate::feature::PresentFeatures;
+use crate::module::ModuleSource;
 
 use super::control_flow::CFG;
 use super::resolve_scope::ScopedData;
@@ -50,7 +51,7 @@ impl Program {
         (&mut self.universe, &mut self.metadata, &mut self.features)
     }
 
-    pub(super) fn universe(&self) -> &Universe {
+    pub(crate) fn universe(&self) -> &Universe {
         &self.universe
     }
 
@@ -199,6 +200,10 @@ impl Universe {
 
     pub fn get_module(&self, id: ModuleId) -> &Module {
         self.module_map.get(&id).unwrap()
+    }
+
+    pub(crate) fn get_module_mut(&mut self, id: ModuleId) -> &mut Module {
+        self.module_map.get_mut(&id).unwrap()
     }
 
     pub fn module_id(&self, name: &Ident) -> Option<ModuleId> {
@@ -369,35 +374,32 @@ impl Universe {
         self.fn_map.iter().map(|(id, f)| (id.clone(), f))
     }
 
-    pub fn all_modules(&self) -> Vec<(&Ident, &ModuleId)> {
-        self.module_name.iter().collect()
+    pub fn all_modules(&self) -> impl Iterator<Item = (&Ident, ModuleId)> {
+        self.module_name
+            .iter()
+            .map(|(name, id)| (name, id.clone()))
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct Module {
-    id: ModuleId,
-    module_scope: ScopedData,
-    owned_types: Vec<TypeId>,
-    owned_fns: Vec<FnId>,
-    dependencies: Vec<ModuleId>,
+    pub(crate) name: Ident,
+    pub(crate) source: ModuleSource,
+    pub(crate) id: ModuleId,
+    pub(crate) module_scope: ScopedData,
+    pub(crate) owned_types: HashSet<TypeId>,
+    pub(crate) owned_fns: HashSet<FnId>,
+    pub(crate) dependencies: HashSet<ModuleId>,
 }
 
 impl Module {
-    pub fn new(
-        module_scope: ScopedData,
-        owned_t: Vec<TypeId>,
-        owned_fns: Vec<FnId>,
-        dependencies: Vec<ModuleId>,
-        id: ModuleId,
-    ) -> Module {
-        Module {
-            id: id,
-            module_scope: module_scope,
-            owned_types: owned_t,
-            owned_fns: owned_fns,
-            dependencies: dependencies,
-        }
+
+    pub fn name(&self) -> &Ident {
+        &self.name
+    }
+
+    pub fn source(&self) -> &ModuleSource {
+        &self.source
     }
 
     pub fn module_id(&self) -> ModuleId {
@@ -408,16 +410,16 @@ impl Module {
         &self.module_scope
     }
 
-    pub fn owned_types(&self) -> &[TypeId] {
-        &self.owned_types
+    pub fn owned_types<'a>(&'a self) -> impl Iterator<Item=TypeId> + 'a {
+        self.owned_types.iter().cloned()
     }
 
-    pub fn owned_fns(&self) -> &[FnId] {
-        &self.owned_fns
+    pub fn owned_fns<'a>(&'a self) -> impl Iterator<Item=FnId> + 'a {
+        self.owned_fns.iter().cloned()
     }
 
-    pub fn dependencies(&self) -> &[ModuleId] {
-        &self.dependencies
+    pub fn dependencies<'a>(&'a self) -> impl Iterator<Item=ModuleId> + 'a {
+        self.dependencies.iter().cloned()
     }
 }
 

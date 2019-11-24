@@ -12,14 +12,14 @@ macro_rules! parser_error {
     }};
 
     ($kind: expr, $state: expr, $location: expr) => {{
-        use crate::parser::parser_err::*;
+        use crate::parser::error::*;
         ParserError::new($kind, $location).push_state($state)
     }};
 }
 
 macro_rules! production {
     ($production: expr, $state: expr) => {{
-        use crate::parser::parser_err::*;
+        use crate::parser::error::*;
         ($production).map_err(|e| e.push_state($state))?
     }};
 }

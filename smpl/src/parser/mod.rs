@@ -1,8 +1,7 @@
-use crate::err::Error;
 use crate::module::*;
 
 #[macro_use]
-mod parser_err;
+pub mod error;
 mod tokens;
 
 #[cfg(not(test))]
@@ -20,13 +19,18 @@ pub mod expr_parser;
 #[cfg(test)]
 mod parser_tests;
 
-pub fn parse_module(input: UnparsedModule) -> Result<ParsedModule, Error> {
+use self::error::ParserError;
+
+///
+/// Tokenizes and parses an unparsed SMPL module.
+///
+pub fn parse_module(input: UnparsedModule) -> Result<ParsedModule, ParserError> {
     let (module, source) = (input.module, input.source);
     let tokenizer = tokens::Tokenizer::new(&source, &module);
     let mut tokenizer = tokens::BufferedTokenizer::new(tokenizer);
 
-    let module = parser::module(&mut tokenizer)
-        .map_err(|e| Error::ParseErr(e.to_string()))?;
+    let module = parser::module(&mut tokenizer)?;
+
     Ok(ParsedModule::new(module, source))
 }
 
