@@ -10,7 +10,7 @@ use crate::module::{UnparsedModule, ParsedModule};
 use crate::error::Error;
 
 ///
-/// Represents a collection of fully parsed and analyzed SMPL modules.
+/// Represents a self-contained SMPL program made of fully parsed and analyzed SMPL modules.
 ///
 pub struct Program {
     program: AnalyzedProgram,
