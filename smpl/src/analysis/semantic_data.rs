@@ -379,35 +379,16 @@ impl Universe {
 
 #[derive(Clone, Debug)]
 pub struct Module {
-    name: Ident,
-    source: ModuleSource,
-    id: ModuleId,
-    module_scope: ScopedData,
-    owned_types: Vec<TypeId>,
-    owned_fns: Vec<FnId>,
-    dependencies: Vec<ModuleId>,
+    pub(crate) name: Ident,
+    pub(crate) source: ModuleSource,
+    pub(crate) id: ModuleId,
+    pub(crate) module_scope: ScopedData,
+    pub(crate) owned_types: Vec<TypeId>,
+    pub(crate) owned_fns: Vec<FnId>,
+    pub(crate) dependencies: Vec<ModuleId>,
 }
 
 impl Module {
-    pub fn new(
-        name: Ident,
-        source: ModuleSource,
-        module_scope: ScopedData,
-        owned_t: Vec<TypeId>,
-        owned_fns: Vec<FnId>,
-        dependencies: Vec<ModuleId>,
-        id: ModuleId,
-    ) -> Module {
-        Module {
-            name: name,
-            source: source,
-            id: id,
-            module_scope: module_scope,
-            owned_types: owned_t,
-            owned_fns: owned_fns,
-            dependencies: dependencies,
-        }
-    }
 
     pub fn name(&self) -> &Ident {
         &self.name

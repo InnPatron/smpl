@@ -251,15 +251,15 @@ pub fn check_modules(
 
         let dependencies = raw_program.dependencies.remove(&mod_id).unwrap();
 
-        let module = Module::new(
-            name.clone(),
-            module_data.source,
-            module_scope,
-            owned_structs,
-            owned_fns,
-            dependencies,
-            mod_id,
-        );
+        let module = Module {
+            name: name.clone(),
+            source: module_data.source,
+            id: mod_id,
+            module_scope: module_scope,
+            owned_types: owned_structs,
+            owned_fns: owned_fns,
+            dependencies: dependencies,
+        };
 
         program.universe_mut().map_module(mod_id, name, module);
     }
