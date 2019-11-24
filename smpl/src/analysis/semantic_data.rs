@@ -202,6 +202,10 @@ impl Universe {
         self.module_map.get(&id).unwrap()
     }
 
+    pub(crate) fn get_module_mut(&mut self, id: ModuleId) -> &mut Module {
+        self.module_map.get_mut(&id).unwrap()
+    }
+
     pub fn module_id(&self, name: &Ident) -> Option<ModuleId> {
         self.module_name.get(name).map(|id| id.clone())
     }

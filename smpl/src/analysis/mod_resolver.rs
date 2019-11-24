@@ -75,6 +75,53 @@ pub fn check_modules(
 
     map_usings(&raw_data, &mut raw_program)?;
 
+    // Insert modules BEFORE static analysis
+    // Anonymous functions are marked as owned by a module during analysis
+    for (name, mod_id) in raw_program.raw_map.iter() {
+        let module_data = raw_data.get(mod_id).unwrap();
+
+        let owned_structs = module_data
+            .reserved_structs
+            .iter()
+            .map(|(_, r)| r.0)
+            .chain(module_data.reserved_opaque.iter().map(|(_, r)| r.0))
+            .collect::<HashSet<_>>();
+        let owned_fns = module_data
+            .reserved_fns
+            .iter()
+            .map(|(_, r)| r.0)
+            .chain(module_data.reserved_builtins.iter().map(|(_, r)| r.0))
+            .collect::<HashSet<_>>();
+
+        let module_scope = raw_program.scopes.get(&mod_id).unwrap();
+
+        // Insert module scope metadata
+        let module_scope_meta = super::metadata::ModuleScope {
+            funcs: module_scope
+                .all_fns()
+                .map(|(_, fn_id)| fn_id.clone())
+                .collect(),
+        };
+        program
+            .metadata_mut()
+            .mod_metadata_mut()
+            .insert_module_scope(mod_id.clone(), module_scope_meta);
+
+        let dependencies = raw_program.dependencies.get(&mod_id).unwrap();
+
+        let module = Module {
+            name: name.clone(),
+            source: module_data.source.clone(),
+            id: mod_id.clone(),
+            module_scope: module_scope.clone(),
+            owned_types: owned_structs,
+            owned_fns: owned_fns,
+            dependencies: dependencies.clone(),
+        };
+
+        program.universe_mut().map_module(mod_id.clone(), name.clone(), module);
+    }
+
     // Map ALL structs into the universe before generating functions
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_struct) in raw_mod.reserved_structs.iter() {
@@ -210,59 +257,14 @@ pub fn check_modules(
         }
     }
 
-    for (_mod_id, raw_mod) in raw_data.iter() {
+    for (mod_id, raw_mod) in raw_data.iter() {
         let (universe, metadata, _) = program.analysis_context();
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;
 
-            analysis_helpers::analyze_fn(universe, metadata, fn_id)?;
+            analysis_helpers::analyze_fn(universe, metadata, mod_id.clone(), fn_id)?;
         }
-    }
-
-    for (name, mod_id) in raw_program.raw_map.into_iter() {
-        let module_data = raw_data.remove(&mod_id).unwrap();
-
-        let owned_structs = module_data
-            .reserved_structs
-            .into_iter()
-            .map(|(_, r)| r.0)
-            .chain(module_data.reserved_opaque.iter().map(|(_, r)| r.0))
-            .collect::<HashSet<_>>();
-        let owned_fns = module_data
-            .reserved_fns
-            .into_iter()
-            .map(|(_, r)| r.0)
-            .chain(module_data.reserved_builtins.into_iter().map(|(_, r)| r.0))
-            .collect::<HashSet<_>>();
-
-        let module_scope = raw_program.scopes.remove(&mod_id).unwrap();
-
-        // Insert module scope metadata
-        let module_scope_meta = super::metadata::ModuleScope {
-            funcs: module_scope
-                .all_fns()
-                .map(|(_, fn_id)| fn_id.clone())
-                .collect(),
-        };
-        program
-            .metadata_mut()
-            .mod_metadata_mut()
-            .insert_module_scope(mod_id, module_scope_meta);
-
-        let dependencies = raw_program.dependencies.remove(&mod_id).unwrap();
-
-        let module = Module {
-            name: name.clone(),
-            source: module_data.source,
-            id: mod_id,
-            module_scope: module_scope,
-            owned_types: owned_structs,
-            owned_fns: owned_fns,
-            dependencies: dependencies,
-        };
-
-        program.universe_mut().map_module(mod_id, name, module);
-    }
+    } 
 
     Ok(())
 }
