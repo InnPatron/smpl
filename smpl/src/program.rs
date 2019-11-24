@@ -81,6 +81,9 @@ impl Program {
     }
 }
 
+/// 
+/// Represents a fully analyzed SMPL module that can be compiled.
+///
 pub struct CompilableModule<'a> {
     program: &'a AnalyzedProgram,
     module: &'a AnalyzedModule,
@@ -162,6 +165,11 @@ impl<'a> CompilableModule<'a> {
     }
 }
 
+/// 
+/// Represents a fully analyzed SMPL function that can be compiled.
+///
+/// Does **NOT** include builtin functions.
+///
 pub struct CompilableFn<'a> {
     fn_id: FnId,
     cfg: Rc<RefCell<CFG>>,
