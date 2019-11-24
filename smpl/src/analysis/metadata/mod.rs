@@ -1,3 +1,7 @@
+/*!
+  Contains data structures for metadata collected during static analysis.
+*/
+
 macro_rules! map_unique_set {
     ($map: expr, $key: expr, $val: expr, $msg: expr) => {{
         if $map.insert($key, $val).is_some() {
@@ -21,6 +25,9 @@ use super::error::AnalysisError;
 use crate::analysis::semantic_data::{FnId, ModuleId, Program, TypeId};
 use crate::ast::{Annotation, Ident};
 
+///
+/// Primary container for metadata collected during static analysis.
+///
 #[derive(Clone, Debug)]
 pub struct Metadata {
     module_meta: ModuleMetadata,
