@@ -252,6 +252,7 @@ pub fn check_modules(
         let dependencies = raw_program.dependencies.remove(&mod_id).unwrap();
 
         let module = Module::new(
+            name.clone(),
             module_data.source,
             module_scope,
             owned_structs,

@@ -377,6 +377,7 @@ impl Universe {
 
 #[derive(Clone, Debug)]
 pub struct Module {
+    name: Ident,
     source: ModuleSource,
     id: ModuleId,
     module_scope: ScopedData,
@@ -387,6 +388,7 @@ pub struct Module {
 
 impl Module {
     pub fn new(
+        name: Ident,
         source: ModuleSource,
         module_scope: ScopedData,
         owned_t: Vec<TypeId>,
@@ -395,6 +397,7 @@ impl Module {
         id: ModuleId,
     ) -> Module {
         Module {
+            name: name,
             source: source,
             id: id,
             module_scope: module_scope,
@@ -402,6 +405,10 @@ impl Module {
             owned_fns: owned_fns,
             dependencies: dependencies,
         }
+    }
+
+    pub fn name(&self) -> &Ident {
+        &self.name
     }
 
     pub fn source(&self) -> &ModuleSource {
