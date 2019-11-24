@@ -1267,6 +1267,7 @@ fn resolve_anonymous_fn(
     let fn_id = a_fn.fn_id();
 
     let mut resolved = None;
+    let mut carry_data = None;
     if let Function::Anonymous(ref afn) = universe.get_fn(fn_id) {
         if let AnonymousFunction::Reserved(ref ast_anonymous_fn) = afn {
             let fn_type_cons =
@@ -1289,23 +1290,33 @@ fn resolve_anonymous_fn(
                 ast_anonymous_fn.data(),
             )?;
 
-            let cfg = super::control_flow::CFG::generate(
-                universe,
-                ast_anonymous_fn.data().body.clone(),
-                &fn_type_cons,
-                &analysis_context,
-            )?;
+            let body = ast_anonymous_fn.data().body.clone();
 
-            let fn_type_id = universe.insert_type_cons(fn_type_cons);
-
-            resolved = Some(AnonymousFunction::Resolved {
-                fn_type: crate::ast::AstNode::new(fn_type_id, anon_span),
-                analysis_context: analysis_context,
-                cfg: Rc::new(RefCell::new(cfg)),
-            });
+            // Needed to get around possible future borrow checker error
+            // See issue #59159 (mutable_borrow_reservation_conflict)
+            carry_data = Some((body, analysis_context, fn_type_cons, anon_span)); 
         }
     } else {
         panic!("FN ID did not refer to an anonymous function");
+    }
+
+    // Needed to get around possible future borrow checker error
+    // See issue #59159 (mutable_borrow_reservation_conflict)
+    if let Some((body, analysis_context, fn_type_cons, anon_span)) = carry_data {
+        let cfg = super::control_flow::CFG::generate(
+            universe,
+            body,
+            &fn_type_cons,
+            &analysis_context,
+        )?;
+
+        let fn_type_id = universe.insert_type_cons(fn_type_cons);
+
+        resolved = Some(AnonymousFunction::Resolved {
+            fn_type: crate::ast::AstNode::new(fn_type_id, anon_span),
+            analysis_context: analysis_context,
+            cfg: Rc::new(RefCell::new(cfg)),
+        });
     }
 
     if let Some(resolved) = resolved {
