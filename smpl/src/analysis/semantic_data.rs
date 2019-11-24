@@ -10,6 +10,7 @@ use crate::span::Span;
 use crate::ast::*;
 use crate::ast::{AnonymousFn as AstAnonymousFn, ModulePath as AstModulePath};
 use crate::feature::PresentFeatures;
+use crate::module::ModuleSource;
 
 use super::control_flow::CFG;
 use super::resolve_scope::ScopedData;
@@ -376,6 +377,7 @@ impl Universe {
 
 #[derive(Clone, Debug)]
 pub struct Module {
+    source: ModuleSource,
     id: ModuleId,
     module_scope: ScopedData,
     owned_types: Vec<TypeId>,
@@ -385,6 +387,7 @@ pub struct Module {
 
 impl Module {
     pub fn new(
+        source: ModuleSource,
         module_scope: ScopedData,
         owned_t: Vec<TypeId>,
         owned_fns: Vec<FnId>,
@@ -392,12 +395,17 @@ impl Module {
         id: ModuleId,
     ) -> Module {
         Module {
+            source: source,
             id: id,
             module_scope: module_scope,
             owned_types: owned_t,
             owned_fns: owned_fns,
             dependencies: dependencies,
         }
+    }
+
+    pub fn source(&self) -> &ModuleSource {
+        &self.source
     }
 
     pub fn module_id(&self) -> ModuleId {

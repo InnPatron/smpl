@@ -25,6 +25,7 @@ struct RawProgram {
 }
 
 struct RawModData {
+    source: ModuleSource,
     name: AstNode<Ident>,
     id: ModuleId,
     reserved_opaque: HashMap<Ident, ReservedOpaque>,
@@ -251,6 +252,7 @@ pub fn check_modules(
         let dependencies = raw_program.dependencies.remove(&mod_id).unwrap();
 
         let module = Module::new(
+            module_data.source,
             module_scope,
             owned_structs,
             owned_fns,
@@ -456,6 +458,7 @@ fn raw_mod_data(
         }
 
         let raw = RawModData {
+            source: module.source.clone(),
             name: ast_module.0.ok_or(AnalysisError::MissingModName)?,
             id: module.id,
             reserved_opaque: opaque_reserve,
