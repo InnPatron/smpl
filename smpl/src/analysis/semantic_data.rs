@@ -383,9 +383,9 @@ pub struct Module {
     pub(crate) source: ModuleSource,
     pub(crate) id: ModuleId,
     pub(crate) module_scope: ScopedData,
-    pub(crate) owned_types: Vec<TypeId>,
-    pub(crate) owned_fns: Vec<FnId>,
-    pub(crate) dependencies: Vec<ModuleId>,
+    pub(crate) owned_types: HashSet<TypeId>,
+    pub(crate) owned_fns: HashSet<FnId>,
+    pub(crate) dependencies: HashSet<ModuleId>,
 }
 
 impl Module {
@@ -406,16 +406,16 @@ impl Module {
         &self.module_scope
     }
 
-    pub fn owned_types(&self) -> &[TypeId] {
-        &self.owned_types
+    pub fn owned_types<'a>(&'a self) -> impl Iterator<Item=TypeId> + 'a {
+        self.owned_types.iter().cloned()
     }
 
-    pub fn owned_fns(&self) -> &[FnId] {
-        &self.owned_fns
+    pub fn owned_fns<'a>(&'a self) -> impl Iterator<Item=FnId> + 'a {
+        self.owned_fns.iter().cloned()
     }
 
-    pub fn dependencies(&self) -> &[ModuleId] {
-        &self.dependencies
+    pub fn dependencies<'a>(&'a self) -> impl Iterator<Item=ModuleId> + 'a {
+        self.dependencies.iter().cloned()
     }
 }
 

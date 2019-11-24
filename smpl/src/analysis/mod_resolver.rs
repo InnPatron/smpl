@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
     AstNode, BuiltinFunction as AstBuiltinFunction, Ident, UseDecl,
@@ -20,7 +20,7 @@ use crate::feature::*;
 
 struct RawProgram {
     scopes: HashMap<ModuleId, ScopedData>,
-    dependencies: HashMap<ModuleId, Vec<ModuleId>>,
+    dependencies: HashMap<ModuleId, HashSet<ModuleId>>,
     raw_map: HashMap<Ident, ModuleId>,
 }
 
@@ -227,13 +227,13 @@ pub fn check_modules(
             .into_iter()
             .map(|(_, r)| r.0)
             .chain(module_data.reserved_opaque.iter().map(|(_, r)| r.0))
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
         let owned_fns = module_data
             .reserved_fns
             .into_iter()
             .map(|(_, r)| r.0)
             .chain(module_data.reserved_builtins.into_iter().map(|(_, r)| r.0))
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
 
         let module_scope = raw_program.scopes.remove(&mod_id).unwrap();
 
@@ -272,7 +272,7 @@ fn map_usings(
     raw_prog: &mut RawProgram,
 ) -> Result<(), AnalysisError> {
     for (id, raw_mod) in raw_modules {
-        let mut dependencies = Vec::new();
+        let mut dependencies = HashSet::new();
         for use_decl in raw_mod.uses.iter() {
             let import_name = use_decl.data().0.data();
             let import_id = raw_prog
@@ -283,7 +283,7 @@ fn map_usings(
                     AnalysisError::UnresolvedUses(vec![(ident, span)])
                 })?;
 
-            dependencies.push(import_id.clone());
+            dependencies.insert(import_id.clone());
             // Get imported module's types and functions
             let (all_types, all_fns) = {
                 let imported_scope = raw_prog.scopes.get(import_id).unwrap();

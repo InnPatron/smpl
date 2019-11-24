@@ -63,7 +63,6 @@ impl<'a> CompilableModule<'a> {
 
         self.module
             .owned_fns()
-            .iter()
             .map(move |fn_id| {
                 let func = self.program.universe().get_fn(fn_id.clone());
                 CompilableModule::to_compilable_fn(fn_id.clone(), func)
