@@ -13,7 +13,7 @@ pub struct Program {
 }
 
 impl Program {
-    pub fn create(
+    pub fn new(
         modules: Vec<ParsedModule>,
     ) -> Result<Program, AnalysisError> {
         Ok(Program {
