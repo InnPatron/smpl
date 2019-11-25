@@ -249,6 +249,19 @@ pub struct AnonymousFn {
     pub params: Option<Vec<AstNode<FnParameter>>>,
     pub return_type: Option<AstNode<TypeAnnotation>>,
     pub body: AstNode<Block>,
+    pub env_clauses: EnvClauses,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct EnvClauses {
+    pub captures: Option<AstNode<Vec<AstNode<EnvBind>>>>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct EnvBind {
+    pub name: AstNode<Ident>,
+    pub annotation: Option<AstNode<TypeAnnotation>>,
+    pub value: AstNode<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

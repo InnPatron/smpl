@@ -13,6 +13,7 @@ use crate::span::*;
 pub enum Delimiter {
     RParen,
     RBracket,
+    RBrace,
     Comma,
     Semi,
     LBrace,
@@ -1213,6 +1214,45 @@ fn anonymous_fn(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         ));
     }
 
+    let mut captures = None;
+
+    // Parse for freeze/capture list
+    {
+        let mut found_captures = false;
+        enum AnonEnvBindings {
+            Capture,
+            None,
+        }
+
+        match peek_token!(
+            tokens,
+            |tok| match tok {
+                Token::Capture => AnonEnvBindings::Capture,
+
+                _ => AnonEnvBindings::None
+            }, parser_state!("anonymous-fn", "env-bindings?")) {
+
+            AnonEnvBindings::Capture => {
+                if found_captures {
+                    unimplemented!("Cannot have multiple capture clauses");
+                }
+
+                found_captures = true;
+                let _capture = consume_token!(
+                    tokens,
+                    Token::Capture,
+                    parser_state!("anonymous-fn", "capture")
+                );
+
+                captures =
+                    Some(production!(env_binding_list(tokens), 
+                        parser_state!("anonymous-fn", "capture-bindings")));
+            }
+
+            AnonEnvBindings::None => (),
+        }
+    }
+
     let body =
         production!(block(tokens), parser_state!("anonymous-fn", "body"));
 
@@ -1222,11 +1262,111 @@ fn anonymous_fn(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Expr>> {
         params: params,
         return_type: return_type,
         body: body,
+        env_clauses: EnvClauses {
+            captures: captures,
+        },
     };
 
     let anon = AstNode::new(anon, span.clone());
 
     Ok(AstNode::new(Expr::AnonymousFn(anon), span))
+}
+
+// Assume keyword already consumed
+fn env_binding_list(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Vec<AstNode<EnvBind>>>> {
+    let (lspan, _) = consume_token!(tokens,
+        Token::LBrace,
+        parser_state!("env-binding-list", "lbrace"));
+
+    let mut list = vec![production!(
+        env_binding(tokens),
+        parser_state!("env_binding-list", "env-binding")
+    )];
+
+    loop {
+        if peek_token!(
+            tokens,
+            |tok| match tok {
+                Token::Comma => true,
+                _ => false,
+            },
+            parser_state!("env_binding-list", "comma separator?")
+        ) {
+            let _comma = consume_token!(
+                tokens,
+                Token::Comma,
+                parser_state!("env_binding-list", "comma separator")
+            );
+            if peek_token!(
+                tokens,
+                |tok| match tok {
+                    Token::RBrace => false,
+                    _ => true,
+                },
+                parser_state!("env_binding-list", "rbrace?")
+            ) {
+                list.push(production!(
+                    env_binding(tokens),
+                    parser_state!("env_binding-list", "env-binding")
+                ));
+                continue;
+            }
+        }
+
+        break;
+    }
+
+    let (rspan, _) = consume_token!(tokens,
+        Token::RBrace,
+        parser_state!("env-binding-list", "rbrace"));
+
+    Ok(AstNode::new(list, Span::combine(lspan, rspan)))
+}
+
+fn env_binding(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<EnvBind>> {
+    let (ispan, ident) = consume_token!(tokens,
+        Token::Identifier(i) => Ident(i),
+        parser_state!("env-binding", "name")
+    );
+
+    let ident = AstNode::new(ident, ispan);
+
+    let ann: Option<AstNode<_>> = peek_token!(
+        tokens,
+        |tok| match tok {
+            Token::Colon => Some(()),
+            _ => None,
+        },
+        parser_state!("env-binding", "type-annotation?")
+    )
+        .map(|_| {
+            let _colon = consume_token!(tokens, 
+                Token::Colon,
+                parser_state!("env-binding", "type-annotation-colon"));
+
+            let ann = production!(
+                type_annotation(tokens),
+                parser_state!("env-binding", "type-annotation"));
+
+            Ok(ann)
+        })
+        .transpose()?;
+
+    let _assign = consume_token!(tokens,
+        Token::Assign,
+        parser_state!("env-binding", "assign"));
+
+    let expr = production!(
+        piped_expr(tokens, &[Delimiter::Comma, Delimiter::RBrace]),
+        parser_state!("env-binding", "expr"));
+
+    let span = Span::combine(ident.span(), expr.span());
+
+    Ok(AstNode::new(EnvBind {
+        name: ident,
+        annotation: ann,
+        value: expr,
+    }, span))
 }
 
 fn is_delim(token: &Token, delim: &[Delimiter]) -> bool {
