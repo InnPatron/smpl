@@ -58,20 +58,23 @@ pub fn check_modules(
     program: &mut Program,
     modules: Vec<ParsedModule>,
 ) -> Result<(), AnalysisError> {
-    let unscoped_raw_data = raw_mod_data(program, modules)?;
 
-    let mut mapped_raw = HashMap::new();
-    let mut scopes = HashMap::new(); 
+    let mut global_data = GlobalData::new();
+    let unscoped_raw_program = raw_mod_data(&mut global_data, modules)?;
 
-    // Map reserved data
-    for (mod_id, raw) in raw_data.iter() {
-        // Map reserved data
-        let mut scope = program.universe().std_scope();
-        map_internal_data(&mut scope, raw);
+    let scoped_raw_program = ScopedRawProgram {
+        map: unscoped_raw_program.map.into_iter()
+                .map(|(id, raw_data)| {
+                    let mut scope = program.universe().std_scope();
+                    map_internal_data(&mut scope, &raw_data);
 
-        mapped_raw.insert(raw.name.data().clone(), mod_id.clone());
-        scopes.insert(mod_id.clone(), scope);
-    }
+                    (id, ScopedRawModData {
+                        scope: scope,
+                        raw: raw_data,
+                    })
+                })
+            .collect(),
+    };
 
     let mut raw_program = RawProgram {
         scopes: scopes,
