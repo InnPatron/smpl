@@ -329,32 +329,6 @@ fn map_usings(
     Ok(())
 }
 
-fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
-    // TODO: Perform name collision check here?
-    for (_ident, r) in raw.reserved_structs.iter() {
-        scope.insert_type_cons(
-            r.1.data().name.data().clone().into(),
-            r.0.clone(),
-        );
-    }
-
-    // TODO: Perform name collision check here?
-    for (_ident, r) in raw.reserved_opaque.iter() {
-        scope.insert_type_cons(
-            r.1.data().name.data().clone().into(),
-            r.0.clone(),
-        );
-    }
-
-    for (_ident, r) in raw.reserved_fns.iter() {
-        scope.insert_fn(r.1.data().name.data().clone().into(), r.0.clone());
-    }
-
-    for (_ident, r) in raw.reserved_builtins.iter() {
-        scope.insert_fn(r.1.data().name.data().clone().into(), r.0.clone());
-    }
-}
-
 fn raw_mod_data(
     global_data: &mut GlobalData,
     modules: Vec<ParsedModule>,
@@ -490,5 +464,31 @@ fn scope_raw_data_internal(universe: &Universe, unscoped_raw_program: UnscopedRa
     ScopedRawProgram {
        module_map: unscoped_raw_program.map,
        scope_map: scope_map
+    }
+}
+
+fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
+    // TODO: Perform name collision check here?
+    for (_ident, r) in raw.reserved_structs.iter() {
+        scope.insert_type_cons(
+            r.1.data().name.data().clone().into(),
+            r.0.clone(),
+        );
+    }
+
+    // TODO: Perform name collision check here?
+    for (_ident, r) in raw.reserved_opaque.iter() {
+        scope.insert_type_cons(
+            r.1.data().name.data().clone().into(),
+            r.0.clone(),
+        );
+    }
+
+    for (_ident, r) in raw.reserved_fns.iter() {
+        scope.insert_fn(r.1.data().name.data().clone().into(), r.0.clone());
+    }
+
+    for (_ident, r) in raw.reserved_builtins.iter() {
+        scope.insert_fn(r.1.data().name.data().clone().into(), r.0.clone());
     }
 }
