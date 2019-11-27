@@ -585,7 +585,7 @@ impl From<FnId> for BindingId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TypeId(u64);
+pub struct TypeId(pub(super) u64);
 
 impl ::std::fmt::Display for TypeId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -600,7 +600,7 @@ impl TypeId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TypeParamId(u64);
+pub struct TypeParamId(pub(super) u64);
 
 impl ::std::fmt::Display for TypeParamId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -615,7 +615,7 @@ impl TypeParamId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TypeVarId(u64);
+pub struct TypeVarId(pub(super) u64);
 
 impl ::std::fmt::Display for TypeVarId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -630,7 +630,7 @@ impl TypeVarId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct FieldId(u64);
+pub struct FieldId(pub(super) u64);
 
 impl ::std::fmt::Display for FieldId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -671,7 +671,7 @@ impl From<TmpId> for DataId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct VarId(u64);
+pub struct VarId(pub(super) u64);
 
 impl ::std::fmt::Display for VarId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -686,7 +686,7 @@ impl VarId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct FnId(u64);
+pub struct FnId(pub(super) u64);
 
 impl ::std::fmt::Display for FnId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -701,7 +701,7 @@ impl FnId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TmpId(u64);
+pub struct TmpId(pub(super) u64);
 
 impl ::std::fmt::Display for TmpId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -716,7 +716,7 @@ impl TmpId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct LoopId(u64);
+pub struct LoopId(pub(super) u64);
 
 impl ::std::fmt::Display for LoopId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -725,7 +725,7 @@ impl ::std::fmt::Display for LoopId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct BranchingId(u64);
+pub struct BranchingId(pub(super)u64);
 
 impl ::std::fmt::Display for BranchingId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
