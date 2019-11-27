@@ -58,9 +58,8 @@ pub fn check_modules(
     let mut global_data = GlobalData::new();
     let unscoped_raw_program = raw_mod_data(&mut global_data, modules)?;
 
-    let scoped_raw_program = scope_raw_mod_data(unscoped_raw_program);
-
-    ;
+    let internally_scoped_raw_program = 
+        scope_raw_data_internal(program.universe(), unscoped_raw_program);
 
     let mut raw_program = RawProgram {
         scopes: scopes,
