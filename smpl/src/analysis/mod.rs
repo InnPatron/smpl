@@ -17,6 +17,7 @@ mod type_cons_gen;
 mod type_equality;
 mod type_resolver;
 mod unique_linear_cfg_traversal;
+mod analysis_context;
 
 pub mod error;
 pub mod metadata;
