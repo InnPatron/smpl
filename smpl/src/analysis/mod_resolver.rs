@@ -15,13 +15,27 @@ use super::semantic_data::Module;
 use super::semantic_data::*;
 use super::type_checker::TypingContext;
 use super::type_cons_gen;
+use super::analysis_context::GlobalData;
 
 use crate::feature::*;
+
+struct UnscopedRawProgram {
+    map: HashMap<ModuleId, RawModData>,
+}
 
 struct RawProgram {
     scopes: HashMap<ModuleId, ScopedData>,
     dependencies: HashMap<ModuleId, HashSet<ModuleId>>,
     raw_map: HashMap<Ident, ModuleId>,
+}
+
+struct ScopedRawProgram {
+   map: HashMap<ModuleId, ScopedRawModData> 
+}
+
+struct ScopedRawModData {
+    scope: ScopedData,
+    raw: RawModData
 }
 
 struct RawModData {
@@ -44,18 +58,10 @@ pub fn check_modules(
     program: &mut Program,
     modules: Vec<ParsedModule>,
 ) -> Result<(), AnalysisError> {
-    let (mut raw_data, sources) = raw_mod_data(program, modules)?;
+    let unscoped_raw_data = raw_mod_data(program, modules)?;
 
     let mut mapped_raw = HashMap::new();
-    let mut scopes = HashMap::new();
-
-    // Map module IDs to sources
-    for (mod_id, source) in sources.into_iter() {
-        program
-            .metadata_mut()
-            .mod_metadata_mut()
-            .insert_mod_source(mod_id.clone(), source);
-    }
+    let mut scopes = HashMap::new(); 
 
     // Map reserved data
     for (mod_id, raw) in raw_data.iter() {
@@ -364,17 +370,13 @@ fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
 }
 
 fn raw_mod_data(
-    program: &mut Program,
+    global_data: &mut GlobalData,
     modules: Vec<ParsedModule>,
-) -> Result<
-    (HashMap<ModuleId, RawModData>, Vec<(ModuleId, ModuleSource)>),
-    AnalysisError,
-> {
+) -> Result<UnscopedRawProgram, AnalysisError> {
+
     use super::error::TopLevelError;
 
     let mut mod_map = HashMap::new();
-    let mut source_map = Vec::new();
-
     for module in modules {
         let mut opaque_reserve = HashMap::new();
         let mut struct_reserve = HashMap::new();
@@ -392,7 +394,7 @@ fn raw_mod_data(
                         .insert(
                             name.clone(),
                             ReservedStruct(
-                                program.universe_mut().new_type_id(),
+                                global_data.new_type_id(),
                                 d,
                             ),
                         )
@@ -409,7 +411,7 @@ fn raw_mod_data(
                     if fn_reserve
                         .insert(
                             name.clone(),
-                            ReservedFn(program.universe_mut().new_fn_id(), d),
+                            ReservedFn(global_data.new_fn_id(), d),
                         )
                         .is_some()
                         || builtin_fn_reserve.contains_key(&name)
@@ -425,7 +427,7 @@ fn raw_mod_data(
                         .insert(
                             name.clone(),
                             ReservedBuiltinFn(
-                                program.universe_mut().new_fn_id(),
+                                global_data.new_fn_id(),
                                 d,
                             ),
                         )
@@ -447,7 +449,7 @@ fn raw_mod_data(
                         .insert(
                             name.clone(),
                             ReservedOpaque(
-                                program.universe_mut().new_type_id(),
+                                global_data.new_type_id(),
                                 o,
                             ),
                         )
@@ -471,16 +473,18 @@ fn raw_mod_data(
             uses: uses,
         };
 
-        // Map module name to id
-        program
-            .metadata_mut()
-            .mod_metadata_mut()
-            .map_module(raw.name.data().clone(), module.id);
+        // TODO Map module name to id
+        // program
+        //     .metadata_mut()
+        //     .mod_metadata_mut()
+        //     .map_module(raw.name.data().clone(), module.id);
 
         let id = raw.id;
         mod_map.insert(id, raw);
-        source_map.push((id, module.source));
     }
 
-    Ok((mod_map, source_map))
+
+    Ok(UnscopedRawProgram {
+        map: mod_map    
+    })
 }
