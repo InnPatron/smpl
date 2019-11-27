@@ -30,12 +30,8 @@ struct RawProgram {
 }
 
 struct ScopedRawProgram {
-   map: HashMap<ModuleId, ScopedRawModData> 
-}
-
-struct ScopedRawModData {
-    scope: ScopedData,
-    raw: RawModData
+   module_map: HashMap<ModuleId, RawModData>,
+   scope_map: HashMap<ModuleId, ScopedData>,
 }
 
 struct RawModData {
@@ -62,19 +58,9 @@ pub fn check_modules(
     let mut global_data = GlobalData::new();
     let unscoped_raw_program = raw_mod_data(&mut global_data, modules)?;
 
-    let scoped_raw_program = ScopedRawProgram {
-        map: unscoped_raw_program.map.into_iter()
-                .map(|(id, raw_data)| {
-                    let mut scope = program.universe().std_scope();
-                    map_internal_data(&mut scope, &raw_data);
+    let scoped_raw_program = scope_raw_mod_data(unscoped_raw_program);
 
-                    (id, ScopedRawModData {
-                        scope: scope,
-                        raw: raw_data,
-                    })
-                })
-            .collect(),
-    };
+    ;
 
     let mut raw_program = RawProgram {
         scopes: scopes,
@@ -487,4 +473,22 @@ fn raw_mod_data(
     Ok(UnscopedRawProgram {
         map: mod_map    
     })
+}
+
+fn scope_raw_data_internal(universe: &Universe, unscoped_raw_program: UnscopedRawProgram) 
+    -> ScopedRawProgram {
+
+    let scope_map = unscoped_raw_program.map.iter()
+        .map(|(id, raw_mod_data)| {
+            let mut scope = universe.std_scope();
+            map_internal_data(&mut scope, raw_mod_data);
+
+            (id.clone(), scope)
+        })
+    .collect();
+
+    ScopedRawProgram {
+       module_map: unscoped_raw_program.map,
+       scope_map: scope_map
+    }
 }
