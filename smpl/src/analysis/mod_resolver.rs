@@ -23,15 +23,21 @@ struct UnscopedRawProgram {
     map: HashMap<ModuleId, RawModData>,
 }
 
+struct ScopedRawProgram {
+    module_map: HashMap<ModuleId, RawModData>,
+    scope_map: HashMap<ModuleId, ScopedData>,
+}
+
+struct DependentRawProgram {
+    module_map: HashMap<ModuleId, RawModData>,
+    scope_map: HashMap<ModuleId, ScopedData>,
+    dependency_map: HashMap<ModuleId, HashSet<ModuleId>>,
+}
+
 struct RawProgram {
     scopes: HashMap<ModuleId, ScopedData>,
     dependencies: HashMap<ModuleId, HashSet<ModuleId>>,
     raw_map: HashMap<Ident, ModuleId>,
-}
-
-struct ScopedRawProgram {
-   module_map: HashMap<ModuleId, RawModData>,
-   scope_map: HashMap<ModuleId, ScopedData>,
 }
 
 struct RawModData {
@@ -61,13 +67,7 @@ pub fn check_modules(
     let internally_scoped_raw_program = 
         scope_raw_data_internal(program.universe(), unscoped_raw_program);
 
-    let mut raw_program = RawProgram {
-        scopes: scopes,
-        raw_map: mapped_raw,
-        dependencies: HashMap::new(),
-    };
-
-    map_usings(&raw_data, &mut raw_program)?;
+    let dependent_raw_program = map_usings(internally_scoped_raw_program)?;
 
     // Insert modules BEFORE static analysis
     // Anonymous functions are marked as owned by a module during analysis
@@ -261,15 +261,29 @@ pub fn check_modules(
 }
 
 fn map_usings(
-    raw_modules: &HashMap<ModuleId, RawModData>,
-    raw_prog: &mut RawProgram,
-) -> Result<(), AnalysisError> {
-    for (id, raw_mod) in raw_modules {
+    internally_scoped: ScopedRawProgram,
+) -> Result<DependentRawProgram, AnalysisError> {
+
+    let module_map = internally_scoped.module_map;
+    let internally_scoped_map = internally_scoped.scope_map;
+    let mut fully_scoped_map = internally_scoped_map.clone();
+
+    let module_name_map: HashMap<Ident, ModuleId> = module_map
+        .iter()
+        .map(|(id, raw_module)| {
+
+            (raw_module.name.data().clone(), id.clone())
+        })
+    .collect();
+
+    let mut dependency_map: HashMap<ModuleId, HashSet<ModuleId>> = HashMap::new();
+    for (id, raw_mod) in module_map {
+
         let mut dependencies = HashSet::new();
+
         for use_decl in raw_mod.uses.iter() {
             let import_name = use_decl.data().0.data();
-            let import_id = raw_prog
-                .raw_map
+            let import_id = module_name_map
                 .get(import_name)
                 .ok_or({
                     let (ident, span) = use_decl.data().0.clone().to_data();
@@ -279,7 +293,10 @@ fn map_usings(
             dependencies.insert(import_id.clone());
             // Get imported module's types and functions
             let (all_types, all_fns) = {
-                let imported_scope = raw_prog.scopes.get(import_id).unwrap();
+                let imported_scope = internally_scoped_map
+                    .get(import_id)
+                    .unwrap();
+
                 let all_types = imported_scope
                     .all_types()
                     .into_iter()
@@ -304,7 +321,9 @@ fn map_usings(
                 (all_types, all_fns)
             };
 
-            let current_module_scope = raw_prog.scopes.get_mut(id).unwrap();
+            let current_module_scope = fully_scoped_map
+                .get_mut(&id)
+                .unwrap();
 
             // Bring imported types into scope
             for (path, imported) in all_types.into_iter() {
@@ -322,10 +341,14 @@ fn map_usings(
             }
         }
 
-        raw_prog.dependencies.insert(id.clone(), dependencies);
+        dependency_map.insert(id.clone(), dependencies);
     }
 
-    Ok(())
+    Ok(DependentRawProgram {
+        module_map: module_map,
+        scope_map: fully_scoped_map,
+        dependency_map: dependency_map,
+    })
 }
 
 fn raw_mod_data(
