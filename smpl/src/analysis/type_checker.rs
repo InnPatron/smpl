@@ -744,7 +744,7 @@ fn resolve_struct_init(
     let type_name = init.type_name();
     let tmp_type_name = type_name.clone().into();
     let struct_type_id = scope
-        .type_cons(universe, &tmp_type_name)
+        .type_cons(&tmp_type_name)
         .ok_or(AnalysisError::UnknownType(type_name.clone(), init_span.clone()))?;
 
     let type_args = init

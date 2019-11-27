@@ -854,7 +854,7 @@ pub fn type_from_ann(
                     .map(|node| node.data().clone())
                     .collect(),
             );
-            let type_cons = scope.type_cons(universe, &type_cons_path).ok_or(
+            let type_cons = scope.type_cons(&type_cons_path).ok_or(
                 AnalysisError::UnknownType(typed_path.module_path().clone(), anno.span()),
             )?;
 
