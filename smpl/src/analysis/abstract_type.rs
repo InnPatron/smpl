@@ -806,6 +806,10 @@ impl<X> AbstractWidthConstraintX<X> {
     }
 }
 
+// TODO: Make AbstractWidthType generation LAZY
+//   Current width constraint based off of a struct (i.e. base STRUCT)
+//     eagerly evaluates the STRUCT name (which may not be inserted into 
+//     the Universe during type constructor generation)
 pub fn type_from_ann(
     universe: &Universe,
     scope: &ScopedData,
