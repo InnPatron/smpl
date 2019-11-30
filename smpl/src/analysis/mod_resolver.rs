@@ -14,6 +14,7 @@ use super::resolve_scope::ScopedData;
 use super::semantic_data::Module;
 use super::semantic_data::*;
 use super::type_checker::TypingContext;
+use super::type_cons::TypeCons;
 use super::type_cons_gen;
 use super::analysis_context::GlobalData;
 
@@ -32,6 +33,13 @@ struct DependentRawProgram {
     module_map: HashMap<ModuleId, RawModData>,
     scope_map: HashMap<ModuleId, ScopedData>,
     dependency_map: HashMap<ModuleId, HashSet<ModuleId>>,
+}
+
+struct TypableRawProgram {
+    module_map: HashMap<ModuleId, RawModData>,
+    scope_map: HashMap<ModuleId, ScopedData>,
+    dependency_map: HashMap<ModuleId, HashSet<ModuleId>>,
+    type_map: HashMap<TypeId, TypeCons>,
 }
 
 struct RawProgram {
@@ -114,47 +122,9 @@ pub fn check_modules(
     //     };
 
     //     program.universe_mut().map_module(mod_id.clone(), name.clone(), module);
-    // }
-
-    let mut type_map = HashMap::new();
-    // Map ALL structs into the universe before generating functions
-    for (mod_id, raw_mod) in raw_data.iter() {
-        for (_, reserved_struct) in raw_mod.reserved_structs.iter() {
-            let type_id = reserved_struct.0;
-            let (struct_type, field_ordering) =
-                type_cons_gen::generate_struct_type_cons(
-                    program,
-                    type_id,
-                    raw_program.scopes.get(mod_id).unwrap(),
-                    &TypingContext::empty(),
-                    reserved_struct.1.data(),
-                )?;
-
-            type_map.insert(type_id, struct_type);
-
-            let field_ordering = FieldOrdering::new(type_id, field_ordering);
-            program
-                .metadata_mut()
-                .insert_field_ordering(type_id, field_ordering);
-            program.metadata_mut().set_struct_annotations(
-                type_id,
-                &reserved_struct.1.data().annotations,
-            );
-        }
-
-        for (_, reserved_opaque) in raw_mod.reserved_opaque.iter() {
-            let type_id = reserved_opaque.0;
-            let opaque_type_cons = type_cons_gen::generate_opaque_type_cons(
-                program,
-                type_id,
-                raw_program.scopes.get(mod_id).unwrap(),
-                &TypingContext::empty(),
-                reserved_opaque.1.data(),
-            )?;
-
-            type_map.insert(type_id, opaque_type_cons);
-        }
-    }
+    // } 
+    
+    let typable_raw_program = map_types(program, dependent_raw_program)?;
 
     for (mod_id, raw_mod) in raw_data.iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
@@ -513,4 +483,57 @@ fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
     for (_ident, r) in raw.reserved_builtins.iter() {
         scope.insert_fn(r.1.data().name.data().clone().into(), r.0.clone());
     }
+}
+
+fn map_types(program: &mut Program, 
+    raw_program: DependentRawProgram) 
+
+    -> Result<TypableRawProgram, AnalysisError> {
+
+    let mut type_map = HashMap::new();
+    // Map ALL structs into the universe before generating functions
+    for (mod_id, raw_mod) in raw_program.module_map.iter() {
+        for (_, reserved_struct) in raw_mod.reserved_structs.iter() {
+            let type_id = reserved_struct.0;
+            let (struct_type, field_ordering) =
+                type_cons_gen::generate_struct_type_cons(
+                    program,
+                    type_id,
+                    raw_program.scope_map.get(mod_id).unwrap(),
+                    &TypingContext::empty(),
+                    reserved_struct.1.data(),
+                )?;
+
+            assert!(type_map.insert(type_id, struct_type).is_none());
+
+            let field_ordering = FieldOrdering::new(type_id, field_ordering);
+            program.metadata_mut()
+                .insert_field_ordering(type_id, field_ordering);
+            program.metadata_mut().set_struct_annotations(
+                type_id,
+                &reserved_struct.1.data().annotations,
+            );
+        }
+
+        for (_, reserved_opaque) in raw_mod.reserved_opaque.iter() {
+            let type_id = reserved_opaque.0;
+            let opaque_type_cons = type_cons_gen::generate_opaque_type_cons(
+                program,
+                type_id,
+                raw_program.scope_map.get(mod_id).unwrap(),
+                &TypingContext::empty(),
+                reserved_opaque.1.data(),
+            )?;
+
+            assert!(type_map.insert(type_id, opaque_type_cons).is_none());
+        }
+    }
+
+    Ok(TypableRawProgram {
+        module_map: raw_program.module_map,
+        scope_map: raw_program.scope_map,
+        dependency_map: raw_program.dependency_map,
+        type_map: type_map,
+    })
+
 }
