@@ -485,6 +485,7 @@ fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
     }
 }
 
+/// Insert types into the Universe and a separate type map
 fn map_types(program: &mut Program, 
     raw_program: DependentRawProgram) 
 
@@ -504,7 +505,9 @@ fn map_types(program: &mut Program,
                     reserved_struct.1.data(),
                 )?;
 
-            assert!(type_map.insert(type_id, struct_type).is_none());
+            // TODO: Insert type constructors into program? Or just type map
+            assert!(type_map.insert(type_id, struct_type.clone()).is_none());
+            program.universe_mut().manual_insert_type_cons(type_id, struct_type);
 
             let field_ordering = FieldOrdering::new(type_id, field_ordering);
             program.metadata_mut()
@@ -525,10 +528,12 @@ fn map_types(program: &mut Program,
                 reserved_opaque.1.data(),
             )?;
 
-            assert!(type_map.insert(type_id, opaque_type_cons).is_none());
+            assert!(type_map.insert(type_id, opaque_type_cons.clone()).is_none());
+            program.universe_mut().manual_insert_type_cons(type_id, opaque_type_cons);
         }
     }
 
+    // TODO: Use type map outside of map types?
     Ok(TypableRawProgram {
         module_map: raw_program.module_map,
         scope_map: raw_program.scope_map,
