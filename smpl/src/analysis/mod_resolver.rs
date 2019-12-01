@@ -5,6 +5,7 @@ use crate::ast::{
 };
 use crate::ast::{DeclStmt, Function as AstFunction, Opaque, Struct};
 use crate::module::{ModuleSource, ParsedModule};
+use crate::span::Span;
 
 use super::analysis_helpers;
 use super::control_flow::CFG;
@@ -40,6 +41,34 @@ struct TypableRawProgram {
     scope_map: HashMap<ModuleId, ScopedData>,
     dependency_map: HashMap<ModuleId, HashSet<ModuleId>>,
     type_map: HashMap<TypeId, TypeCons>,
+}
+
+struct AnalyzableRawProgram {
+    module_map: HashMap<ModuleId, RawModData>,
+    scope_map: HashMap<ModuleId, ScopedData>,
+    dependency_map: HashMap<ModuleId, HashSet<ModuleId>>,
+    type_map: HashMap<TypeId, TypeCons>,
+    fn_map: HashMap<FnId, Function>,
+}
+
+enum Function {
+    SMPL(SMPLFunction),
+    Builtin(BuiltinFunction),
+}
+
+pub struct BuiltinFunction {
+    fn_id: FnId,
+    name: Ident,
+    type_id: TypeId,
+}
+
+struct SMPLFunction {
+    fn_id: FnId,
+    name: Ident,
+    type_id: TypeId,
+    cfg: CFG,
+    analysis_context: AnalysisContext,
+    span: Span,
 }
 
 struct RawProgram {
@@ -124,9 +153,26 @@ pub fn check_modules(
     //     program.universe_mut().map_module(mod_id.clone(), name.clone(), module);
     // } 
     
-    let typable_raw_program = map_types(program, dependent_raw_program)?;
+    let typable_raw_program = map_types(program, dependent_raw_program)?; 
+    let analyzable_raw_program = generate_analyzable_fns(program, typable_raw_program)?;
 
     for (mod_id, raw_mod) in raw_data.iter() {
+        let (universe, metadata, _) = program.analysis_context();
+        for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
+            let fn_id = reserved_fn.0;
+
+            analysis_helpers::analyze_fn(universe, metadata, mod_id.clone(), fn_id)?;
+        }
+    } 
+
+    Ok(())
+}
+
+fn generate_analyzable_fns(program: &mut Program, raw_program: TypableRawProgram)
+    -> Result<AnalyzableRawProgram, AnalysisError> {
+
+    let mut fn_map = HashMap::new();
+    for (mod_id, raw_mod) in raw_program.module_map.iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;
             let fn_span = reserved_fn.1.span();
@@ -139,7 +185,7 @@ pub fn check_modules(
             let fn_type_cons = type_cons_gen::generate_fn_type_cons(
                 universe,
                 metadata,
-                raw_program.scopes.get(mod_id).unwrap(),
+                raw_program.scope_map.get(mod_id).unwrap(),
                 &TypingContext::empty(),
                 fn_id,
                 reserved_fn.1.data(),
@@ -147,7 +193,7 @@ pub fn check_modules(
 
             let analysis_context = analysis_helpers::generate_fn_analysis_data(
                 universe,
-                raw_program.scopes.get(mod_id).unwrap(),
+                raw_program.scope_map.get(mod_id).unwrap(),
                 &TypingContext::empty(),
                 &fn_type_cons,
                 reserved_fn.1.data(),
@@ -163,6 +209,16 @@ pub fn check_modules(
             // TODO: Insert fn typing context
             let fn_type_id =
                 program.universe_mut().insert_type_cons(fn_type_cons);
+
+            // TODO: Only insert into fn_map, not universe
+            assert!(fn_map.insert(fn_id.clone(), Function::SMPL(SMPLFunction {
+                fn_id: fn_id.clone(),
+                name: fn_name.clone(),
+                type_id: fn_type_id.clone(),
+                cfg: cfg.clone(),
+                analysis_context: analysis_context.clone(),
+                span: fn_span.clone(),
+            })).is_none());
 
             program.universe_mut().insert_fn(
                 fn_id,
@@ -189,7 +245,7 @@ pub fn check_modules(
 
             let fn_type = type_cons_gen::generate_builtin_fn_type(
                 program,
-                raw_program.scopes.get(mod_id).unwrap(),
+                raw_program.scope_map.get(mod_id).unwrap(),
                 &TypingContext::empty(),
                 fn_id,
                 reserved_builtin.1.data(),
@@ -199,11 +255,18 @@ pub fn check_modules(
 
             program.features_mut().add_feature(BUILTIN_FN);
 
+            // TODO: Only insert into fn_map, not universe
+            assert!(fn_map.insert(fn_id.clone(), Function::Builtin(BuiltinFunction {
+                fn_id: fn_id.clone(),
+                name: fn_name.clone(),
+                type_id: fn_type_id.clone(),
+            })).is_none());
+
             program.universe_mut().insert_builtin_fn(
                 fn_id,
                 fn_name.clone(),
                 fn_type_id,
-            );
+            ); 
 
             program.metadata_mut().insert_builtin(fn_id);
             program.metadata_mut().insert_module_fn(
@@ -218,16 +281,13 @@ pub fn check_modules(
         }
     }
 
-    for (mod_id, raw_mod) in raw_data.iter() {
-        let (universe, metadata, _) = program.analysis_context();
-        for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
-            let fn_id = reserved_fn.0;
-
-            analysis_helpers::analyze_fn(universe, metadata, mod_id.clone(), fn_id)?;
-        }
-    } 
-
-    Ok(())
+    Ok(AnalyzableRawProgram {
+        module_map: raw_program.module_map,
+        scope_map: raw_program.scope_map,
+        dependency_map: raw_program.dependency_map,
+        type_map: raw_program.type_map,
+        fn_map: fn_map,
+    })
 }
 
 fn map_usings(
