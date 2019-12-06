@@ -815,6 +815,20 @@ pub struct AbstractWidthConstraintX<X> {
 
 impl<X> AbstractWidthConstraintX<X> {
 
+    pub fn new_evaluated(map: HashMap<Ident, AbstractTypeX<X>>) -> Self {
+        AbstractWidthConstraintX {
+            state: WidthConstraintState::Evaluated(map),
+        }
+    }
+
+    pub fn is_evaluated(&self) -> bool {
+        if let &WidthConstraintState::Evaluated(..) = &self.state {
+            true
+        } else {
+            false
+        }
+    }
+
     pub(super) fn evaluate(self, universe: &Universe) -> Result<Self, AnalysisError> {
         match self.state {
             WidthConstraintState::Unevaluated(fields, struct_bases) => {
