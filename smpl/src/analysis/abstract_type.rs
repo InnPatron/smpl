@@ -979,6 +979,7 @@ fn fuse_width_constraints(
     let mut constraint_span = None;
     let mut field_constraints: HashMap<Ident, Vec<AbstractType>> =
         HashMap::new();
+    let mut base_structs: Vec<AbstractType> = Vec::new();
 
     // Map field to its (unfused) constraints
     for ast_constraint in ast_constraints {
@@ -990,49 +991,13 @@ fn fuse_width_constraints(
 
         match ast_constraint.data() {
             // base Struct/WidthConstraint
-            // Inspect the type and use it's field types as field constraints
-            //   for a new WidthConstraint
+            // Lazy store abstract type. Only inspect type during type checking
+            //   Laziness required in order to remove Universe parameter on type_from_ann()
             WidthConstraint::BaseStruct(ref ann) => {
                 let ann_type =
-                    type_from_ann(universe, scope, typing_context, ann)?
-                        .substitute(universe, scope, typing_context)?;
+                    type_from_ann(universe, scope, typing_context, ann)?;
 
-                match ann_type {
-                    AbstractType::Record {
-                        abstract_field_map:
-                            AbstractFieldMap {
-                                ref fields,
-                                ref field_map,
-                            },
-                        ..
-                    } => {
-                        for (field_name, field_id) in field_map.iter() {
-                            let field_type = fields
-                                .get(field_id)
-                                .expect("Missing field id")
-                                .clone();
-
-                            field_constraints
-                                .entry(field_name.clone())
-                                .or_insert(Vec::new())
-                                .push(field_type);
-                        }
-                    }
-
-                    AbstractType::WidthConstraint {
-                        data: ref span,
-                        width: AbstractWidthConstraint { ref fields },
-                    } => {
-                        for (field_name, field_type) in fields {
-                            field_constraints
-                                .entry(field_name.clone())
-                                .or_insert(vec![field_type.clone()])
-                                .push(field_type.clone());
-                        }
-                    }
-
-                    _ => unimplemented!("Non-record/width constraint base"),
-                }
+                base_structs.push(ann_type);
             }
 
             // A pseudo-width-constraint type (not actually a type)
@@ -1054,45 +1019,19 @@ fn fuse_width_constraints(
         }
     }
 
-    let (ok_constraints, errors) = field_constraints
-        .iter()
-        .map(|(name, field_constraints)| {
-            let fuse = fuse_field_width_constraints(
-                universe,
-                scope,
-                typing_context,
-                field_constraints,
-            );
-            (name, fuse)
-        })
-        .fold(
-            (HashMap::new(), Vec::new()),
-            |(mut ok, mut err), (name, fuse_result)| {
-                match fuse_result {
-                    Ok(r) => {
-                        ok.insert(name.clone(), r);
-                    }
-
-                    Err(e) => err.push(e),
-                };
-
-                (ok, err)
-            },
-        );
-
-    if errors.len() != 0 {
-        return Err(errors.into());
-    }
-
+    // Do not validate width constraints here
+    //   Only validate during type checking
+    //   Necessary to lift Universe parameter on type_from_ann()
     Ok(AbstractType::WidthConstraint {
         data: constraint_span
             .expect("Expect constraint span to be Some. Implies no constraints"),
         width: AbstractWidthConstraint {
-            fields: ok_constraints,
+            state: WidthConstraintState::Unevaluated(field_constraints, base_structs)
         }
     })
 }
 
+/*
 /// Ensures that there are no conflicting constraints on a field
 fn fuse_field_width_constraints(
     universe: &Universe,
@@ -1227,3 +1166,4 @@ fn fuse_field_width_constraints(
         })
     }
 }
+*/
