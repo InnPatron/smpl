@@ -852,7 +852,6 @@ impl<X> AbstractWidthConstraintX<X> {
 }
 
 pub fn type_from_ann(
-    universe: &Universe,
     scope: &ScopedData,
     typing_context: &TypingContext,
     anno: &AstNode<TypeAnnotation>,
@@ -899,14 +898,14 @@ pub fn type_from_ann(
                     .map(|node| node.data().clone())
                     .collect(),
             );
-            let type_cons = scope.type_cons(universe, &type_cons_path).ok_or(
+            let type_cons = scope.type_cons(&type_cons_path).ok_or(
                 AnalysisError::UnknownType(typed_path.module_path().clone(), anno.span()),
             )?;
 
             let type_args = typed_path.annotations().map(|ref vec| {
                 vec.iter()
                     .map(|anno| {
-                        type_from_ann(universe, scope, typing_context, &*anno)
+                        type_from_ann(scope, typing_context, &*anno)
                     })
                     .collect::<Result<Vec<_>, _>>()
             });
@@ -926,7 +925,6 @@ pub fn type_from_ann(
 
         TypeAnnotation::Array(ref element_type, size) => {
             let element_type_app = type_from_ann(
-                universe,
                 scope,
                 typing_context,
                 element_type,
@@ -957,7 +955,6 @@ pub fn type_from_ann(
                         .iter()
                         .map(|p| {
                             type_from_ann(
-                                universe,
                                 scope,
                                 typing_context,
                                 p,
@@ -971,7 +968,6 @@ pub fn type_from_ann(
                 .as_ref()
                 .map(|return_type| {
                     type_from_ann(
-                        universe,
                         scope,
                         typing_context,
                         return_type,
@@ -988,7 +984,6 @@ pub fn type_from_ann(
 
         TypeAnnotation::WidthConstraint(ref ast_constraints) => {
             fuse_width_constraints(
-                universe,
                 scope,
                 typing_context,
                 ast_constraints,
@@ -998,7 +993,6 @@ pub fn type_from_ann(
 }
 
 fn fuse_width_constraints(
-    universe: &Universe,
     scope: &ScopedData,
     typing_context: &TypingContext,
     ast_constraints: &[AstNode<WidthConstraint>],
@@ -1023,7 +1017,7 @@ fn fuse_width_constraints(
             //   Laziness required in order to remove Universe parameter on type_from_ann()
             WidthConstraint::BaseStruct(ref ann) => {
                 let ann_type =
-                    type_from_ann(universe, scope, typing_context, ann)?;
+                    type_from_ann(scope, typing_context, ann)?;
 
                 base_structs.push(ann_type);
             }
@@ -1033,7 +1027,6 @@ fn fuse_width_constraints(
             WidthConstraint::Anonymous(ref ident_ann_pairs) => {
                 for (ast_ident, ast_ann) in ident_ann_pairs.iter() {
                     let ann_type = type_from_ann(
-                        universe,
                         scope,
                         typing_context,
                         ast_ann,

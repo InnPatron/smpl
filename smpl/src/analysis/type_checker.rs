@@ -250,7 +250,6 @@ macro_rules! ann_to_type {
     ($self: expr, $ann: expr) => {{
         use super::abstract_type;
         abstract_type::type_from_ann(
-            $self.universe,
             $self.scopes.last().expect("Should always have a scope"),
             &$self.typing_context,
             $ann,
@@ -744,14 +743,14 @@ fn resolve_struct_init(
     let type_name = init.type_name();
     let tmp_type_name = type_name.clone().into();
     let struct_type_id = scope
-        .type_cons(universe, &tmp_type_name)
+        .type_cons(&tmp_type_name)
         .ok_or(AnalysisError::UnknownType(type_name.clone(), init_span.clone()))?;
 
     let type_args = init
         .type_args()
         .map(|vec| {
             vec.iter()
-                .map(|ann| type_from_ann(universe, scope, context, ann))
+                .map(|ann| type_from_ann(scope, context, ann))
                 .collect::<Result<Vec<_>, _>>()
         })
         .unwrap_or(Ok(Vec::new()))?;
@@ -1251,7 +1250,7 @@ fn resolve_type_inst(
     let type_args = type_inst
         .args()
         .iter()
-        .map(|ann| type_from_ann(universe, scope, context, ann))
+        .map(|ann| type_from_ann(scope, context, ann))
         .collect::<Result<Vec<_>, _>>()?;
 
     let inst_type = AbstractType::App {

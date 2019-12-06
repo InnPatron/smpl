@@ -50,7 +50,6 @@ pub fn generate_struct_type_cons(
 
             // TODO: Insert type parameters into scope
             let field_type_app = type_from_ann(
-                universe,
                 &type_param_scope,
                 &type_param_typing_context,
                 field_type_annotation,
@@ -104,7 +103,6 @@ pub fn generate_fn_type_cons(
         Some(ref ann) => {
 
             type_from_ann(
-                universe,
                 &type_param_scope,
                 &type_param_typing_context,
                 ann,
@@ -124,7 +122,6 @@ pub fn generate_fn_type_cons(
                 let param_ann = &param.param_type;
 
                 let param_type = type_from_ann(
-                    universe,
                     &type_param_scope,
                     &type_param_typing_context,
                     param_ann,
@@ -178,7 +175,6 @@ pub fn generate_builtin_fn_type(
     let ret_type = match fn_def.return_type {
         Some(ref anno) => {
             let type_app = type_from_ann(
-                universe,
                 &type_param_scope,
                 &type_param_typing_context,
                 anno,
@@ -204,7 +200,6 @@ pub fn generate_builtin_fn_type(
                     let param_anno = &param.param_type;
 
                     let param_type = type_from_ann(
-                        universe,
                         &type_param_scope,
                         &type_param_typing_context,
                         param_anno,
@@ -268,7 +263,6 @@ pub fn generate_anonymous_fn_type(
         Some(ref ann) => {
 
             type_from_ann(
-                universe,
                 &type_param_scope,
                 &type_param_typing_context,
                 ann,
@@ -288,7 +282,6 @@ pub fn generate_anonymous_fn_type(
                 let param_ann = &param.param_type;
 
                 let param_type = type_from_ann(
-                    universe,
                     &type_param_scope,
                     &type_param_typing_context,
                     param_ann,
@@ -381,7 +374,6 @@ fn type_param_map(
 
                     let ast_constraint = vec_ast_type_ann.get(0).unwrap();
                     let abstract_type = type_from_ann(
-                        universe,
                         &current_scope,
                         &typing_context,
                         ast_constraint,
