@@ -791,11 +791,28 @@ impl<X> AbstractFieldMapX<X> {
 }
 
 #[derive(Debug, Clone)]
+enum WidthConstraintState<X> {
+    Unevaluated(HashMap<Ident, AbstractTypeX<X>>, Vec<AbstractTypeX<X>>),
+    Evaluated(HashMap<Ident, AbstractTypeX<X>>),
+}
+
+#[derive(Debug, Clone)]
 pub struct AbstractWidthConstraintX<X> {
-    pub fields: HashMap<Ident, AbstractTypeX<X>>,
+    state: WidthConstraintState<X>
 }
 
 impl<X> AbstractWidthConstraintX<X> {
+
+    pub(super) fn evaluate(&mut self, universe: &Universe) -> Result<(), AnalysisError> {
+        match self {
+            WidthConstraintState::Unevaluated(fields, struct_bases) => {
+                unimplemented!();
+            }
+
+            WidthConstraintState::Evaluated(..) => Ok(()),
+        }
+    }
+
     pub fn downcast(self) -> AbstractWidthConstraintX<()> {
         AbstractWidthConstraintX {
             fields: self.fields
