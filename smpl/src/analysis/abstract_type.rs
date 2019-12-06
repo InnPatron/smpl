@@ -808,6 +808,12 @@ enum WidthConstraintState<X> {
     Evaluated(HashMap<Ident, AbstractTypeX<X>>),
 }
 
+///
+/// To be marked as 'evaluated', the top level types for each field must be resolved
+///    to a single AbstractType. 
+///
+/// Unevaluated width constraints may hold conflicting/invalid constraints.
+///
 #[derive(Debug, Clone)]
 pub struct AbstractWidthConstraintX<X> {
     state: WidthConstraintState<X>
