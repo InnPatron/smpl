@@ -803,13 +803,13 @@ pub struct AbstractWidthConstraintX<X> {
 
 impl<X> AbstractWidthConstraintX<X> {
 
-    pub(super) fn evaluate(&mut self, universe: &Universe) -> Result<(), AnalysisError> {
-        match self {
+    pub(super) fn evaluate(self, universe: &Universe) -> Result<Self, AnalysisError> {
+        match self.state {
             WidthConstraintState::Unevaluated(fields, struct_bases) => {
                 unimplemented!();
             }
 
-            WidthConstraintState::Evaluated(..) => Ok(()),
+            WidthConstraintState::Evaluated(..) => Ok(self),
         }
     }
 
