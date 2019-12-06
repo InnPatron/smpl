@@ -814,11 +814,39 @@ impl<X> AbstractWidthConstraintX<X> {
     }
 
     pub fn downcast(self) -> AbstractWidthConstraintX<()> {
+
+        let new_state = match self.state {
+            WidthConstraintState::Unevaluated(fields, base_structs) => {
+                WidthConstraintState::Unevaluated(
+                    fields
+                        .into_iter()
+                        .map(|(i, vec)| {
+                            let vec = vec.into_iter()
+                                .map(|t| t.downcast())
+                                .collect();
+                            (i, vec)
+                        })
+                        .collect(),
+                    base_structs
+                        .into_iter()
+                        .map(|t| t.downcast())
+                        .collect()
+                    )
+                        
+            }
+
+            WidthConstraintState::Evaluated(fields) => {
+                WidthConstraintState::Evaluated(
+                    fields
+                        .into_iter()
+                        .map(|(i, t)| (i, t.downcast()))
+                        .collect()
+                )
+            }
+        };
+
         AbstractWidthConstraintX {
-            fields: self.fields
-                .into_iter()
-                .map(|(ident, at)| (ident, at.downcast()))
-                .collect(),
+            state: new_state
         }
     }
 }
