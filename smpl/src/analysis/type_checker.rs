@@ -872,21 +872,18 @@ fn resolve_anon_struct_init(
     init: &AnonStructInit,
     span: Span,
 ) -> Result<AbstractType, AnalysisError> {
-    let mut width_constraint = AbstractWidthConstraint {
-        fields: HashMap::new(),
-    };
-
+    
+    let mut fields: HashMap<_, AbstractType> = HashMap::new();
     // Map init'd field to its type
     let mut duplicate_fields = Vec::new();
     for (field_name, typed_tmp) in init.raw_field_init() {
         let tmp_type =
             context.tmp_type_map.get(typed_tmp).expect("Missing tmp");
 
-        if width_constraint.fields.contains_key(field_name) {
+        if fields.contains_key(field_name) {
             duplicate_fields.push(field_name.clone());
         } else {
-            width_constraint
-                .fields
+            fields
                 .insert(field_name.clone(), tmp_type.clone());
         }
     }
@@ -901,7 +898,7 @@ fn resolve_anon_struct_init(
 
     let width_type = AbstractType::WidthConstraint {
         data: span,
-        width: width_constraint
+        width: AbstractWidthConstraint::new_evaluated(fields),
     };
     Ok(width_type)
 }
