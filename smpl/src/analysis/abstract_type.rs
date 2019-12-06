@@ -792,7 +792,7 @@ impl<X> AbstractFieldMapX<X> {
 
 #[derive(Debug, Clone)]
 enum WidthConstraintState<X> {
-    Unevaluated(HashMap<Ident, AbstractTypeX<X>>, Vec<AbstractTypeX<X>>),
+    Unevaluated(HashMap<Ident, Vec<AbstractTypeX<X>>>, Vec<AbstractTypeX<X>>),
     Evaluated(HashMap<Ident, AbstractTypeX<X>>),
 }
 
