@@ -790,6 +790,18 @@ impl<X> AbstractFieldMapX<X> {
     }
 }
 
+macro_rules! eval_op {
+    ($self: expr; $p: pat => $e: expr) => { match $self.state {
+        WidthConstraintState::Unevaluated(fields, struct_bases) => {
+            panic!("Cannot perform op on an unevaluated width constraint");
+        }
+
+        WidthConstraintState::Evaluated($p) => {
+            $e
+        }
+    }}
+}
+
 #[derive(Debug, Clone)]
 enum WidthConstraintState<X> {
     Unevaluated(HashMap<Ident, Vec<AbstractTypeX<X>>>, Vec<AbstractTypeX<X>>),
@@ -811,6 +823,18 @@ impl<X> AbstractWidthConstraintX<X> {
 
             WidthConstraintState::Evaluated(..) => Ok(self),
         }
+    }
+
+    pub fn len(&self) -> usize {
+        eval_op!(self; ref fields => fields.len())
+    }
+
+    pub fn fields(&self) -> &HashMap<Ident, AbstractTypeX<X>> {
+        eval_op!(self; ref fields => fields)
+    }
+
+    pub fn fields_iter(&self) -> impl Iterator<Item=(&Ident, &AbstractTypeX<X>)> {
+        eval_op!(self; ref fields => fields.iter())
     }
 
     pub fn downcast(self) -> AbstractWidthConstraintX<()> {
