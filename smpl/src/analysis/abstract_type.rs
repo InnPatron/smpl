@@ -814,7 +814,7 @@ impl<X> AbstractFieldMapX<X> {
 
 macro_rules! eval_op {
     ($self: expr; $p: pat => $e: expr) => { match $self.state {
-        WidthConstraintState::Unevaluated(fields, struct_bases) => {
+        WidthConstraintState::Unevaluated(..) => {
             panic!("Cannot perform op on an unevaluated width constraint");
         }
 
