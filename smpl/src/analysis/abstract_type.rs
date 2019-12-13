@@ -243,7 +243,7 @@ impl AbstractTypeX<Span> {
         scoped_data: &ScopedData,
         typing_context: &TypingContext,
         map: &HashMap<TypeVarId, AbstractType>,
-    ) -> Result<AbstractType, Vec<ATypeError>> {
+    ) -> Result<AbstractType, AnalysisError> {
         self.substitute_internal(universe, scoped_data, typing_context, map)
     }
 
@@ -252,7 +252,7 @@ impl AbstractTypeX<Span> {
         universe: &Universe,
         scoped_data: &ScopedData,
         typing_context: &TypingContext,
-    ) -> Result<AbstractType, Vec<ATypeError>> {
+    ) -> Result<AbstractType, AnalysisError> {
         match self {
             AbstractType::App {
                 type_cons: _,
@@ -287,7 +287,7 @@ impl AbstractTypeX<Span> {
         typing_context: &TypingContext,
         map: &HashMap<TypeVarId, AbstractType>,
         app_span: &Span,
-    ) -> Result<AbstractType, Vec<ATypeError>> {
+    ) -> Result<AbstractType, AnalysisError> {
         match type_cons {
             TypeCons::UncheckedFunction {
                 ref return_type, ..
@@ -405,7 +405,7 @@ impl AbstractTypeX<Span> {
         scoped_data: &ScopedData,
         typing_context: &TypingContext,
         map: &HashMap<TypeVarId, AbstractType>,
-    ) -> Result<AbstractType, Vec<ATypeError>> {
+    ) -> Result<AbstractType, AnalysisError> {
         match *self {
             AbstractType::App {
                 data: ref app_span,
@@ -427,15 +427,18 @@ impl AbstractTypeX<Span> {
                         |(mut ok, mut err), apply_result| {
                             match apply_result {
                                 Ok(app) => ok.push(app),
-                                Err(mut e) => err.append(&mut e),
+                                Err(e) => err.push(e),
                             }
 
                             (ok, err)
                         },
                     );
 
-                if err.len() != 0 {
-                    return Err(err);
+                if err.len() > 1 {
+                    return Err(AnalysisError::Errors(err
+                            .into_iter().map(|e| e.into()).collect()));
+                } else if err.len() == 1 {
+                    return Err(err.remove(0));
                 }
 
                 let type_cons = universe.get_type_cons(*type_cons_id);
@@ -443,12 +446,12 @@ impl AbstractTypeX<Span> {
                 // Check if args match constraints
                 if let Some(type_params) = type_cons.type_params() {
                     if ok_args.len() != type_params.len() {
-                        return Err(vec![ATypeError::ApplicationError(
+                        return Err(AnalysisError::TypeError(ATypeError::ApplicationError(
                             ApplicationError::Arity {
                                 expected: type_params.len(),
                                 found: ok_args.len(),
                             },
-                        )]);
+                        )));
                     }
 
                     // Need to substitute all args into constraints
@@ -479,12 +482,15 @@ impl AbstractTypeX<Span> {
 
                             match constraint {
                                 Ok(c) => constraints.push(c),
-                                Err(mut e) => constraint_errors.append(&mut e),
+                                Err(e) => constraint_errors.push(e),
                             }
                         }
 
-                        if constraint_errors.len() != 0 {
-                            return Err(constraint_errors);
+                        if constraint_errors.len() > 1 {
+                            return Err(AnalysisError::Errors(constraint_errors
+                                    .into_iter().map(|e| e.into()).collect()));
+                        } else if constraint_errors.len() == 1 {
+                            return Err(constraint_errors.remove(0));
                         } else {
                             (constraints, constraint_sub_map)
                         }
@@ -509,8 +515,11 @@ impl AbstractTypeX<Span> {
                         }
                     }
 
-                    if arg_constraint_errors.len() != 0 {
-                        return Err(arg_constraint_errors);
+                    if arg_constraint_errors.len() > 1 {
+                        return Err(AnalysisError::Errors(arg_constraint_errors
+                                .into_iter().map(|e| e.into()).collect()));
+                    } else if arg_constraint_errors.len() == 1 {
+                        return Err(arg_constraint_errors.remove(0).into());
                     }
 
                     AbstractType::apply_internal(
@@ -522,12 +531,12 @@ impl AbstractTypeX<Span> {
                         app_span,
                     )
                 } else if ok_args.len() != 0 {
-                    return Err(vec![ATypeError::ApplicationError(
+                    return Err(AnalysisError::TypeError(ATypeError::ApplicationError(
                         ApplicationError::Arity {
                             expected: 0,
                             found: ok_args.len(),
                         },
-                    )]);
+                    )));
                 } else {
                     AbstractType::apply_internal(
                         type_cons,
@@ -566,15 +575,18 @@ impl AbstractTypeX<Span> {
                                 Ok(app) => {
                                     ok.insert(f_id, app);
                                 }
-                                Err(mut e) => err.append(&mut e),
+                                Err(e) => err.push(e),
                             }
 
                             (ok, err)
                         },
                     );
 
-                if err.len() != 0 {
-                    return Err(err);
+                if err.len() > 1 {
+                    return Err(AnalysisError::Errors(err
+                            .into_iter().map(|e| e.into()).collect()));
+                } else if err.len() == 1 {
+                    return Err(err.remove(0));
                 }
 
                 Ok(AbstractType::Record {
@@ -622,15 +634,18 @@ impl AbstractTypeX<Span> {
                         |(mut ok, mut err), result| {
                             match result {
                                 Ok(app) => ok.push(app),
-                                Err(mut e) => err.append(&mut e),
+                                Err(e) => err.push(e),
                             }
 
                             (ok, err)
                         },
                     );
 
-                if errors.len() != 0 {
-                    return Err(errors);
+                if errors.len() > 0 {
+                    return Err(AnalysisError::Errors(errors
+                            .into_iter().map(|e| e.into()).collect()));
+                } else if errors.len() == 1 {
+                    return Err(errors.remove(0));
                 }
 
                 let new_return = return_type.substitute_internal(
@@ -690,15 +705,18 @@ impl AbstractTypeX<Span> {
                                 Ok((ref_ident, at)) => {
                                     ok.insert(ref_ident.clone(), at);
                                 }
-                                Err(mut e) => err.append(&mut e),
+                                Err(e) => err.push(e),
                             };
 
                             (ok, err)
                         },
                     );
 
-                if errors.len() != 0 {
-                    return Err(errors);
+                if errors.len() > 0 {
+                    return Err(AnalysisError::Errors(errors
+                            .into_iter().map(|e| e.into()).collect()));
+                } else if errors.len() == 1 {
+                    return Err(errors.remove(0));
                 }
 
                 let new_width = AbstractWidthConstraint::new_evaluated(ok_field_types);
@@ -741,15 +759,18 @@ impl AbstractTypeX<Span> {
                         |(mut ok, mut err), result| {
                             match result {
                                 Ok(app) => ok.push(app),
-                                Err(mut e) => err.append(&mut e),
+                                Err(e) => err.push(e),
                             }
 
                             (ok, err)
                         },
                     );
 
-                if errors.len() != 0 {
-                    return Err(errors);
+                if errors.len() > 0 {
+                    return Err(AnalysisError::Errors(errors
+                            .into_iter().map(|e| e.into()).collect()));
+                } else if errors.len() == 1 {
+                    return Err(errors.remove(0));
                 }
 
                 Ok(AbstractType::Opaque {
