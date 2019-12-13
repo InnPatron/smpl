@@ -685,7 +685,7 @@ impl AbstractTypeX<Span> {
             } => {
                 let width_constraint = width_constraint
                     .clone()
-                    .evaluate(universe)?;
+                    .evaluate(universe, scoped_data, typing_context)?;
                 let (ok_field_types, mut errors) = width_constraint
                     .fields()
                     .iter()
@@ -910,7 +910,10 @@ impl<X> AbstractWidthConstraintX<X> {
 }
 
 impl AbstractWidthConstraint {
-    pub(super) fn evaluate(self, universe: &Universe) -> Result<Self, AnalysisError> {
+    pub(super) fn evaluate(self, universe: &Universe,
+        scope: &ScopedData,
+        typing_context: &TypingContext,
+    ) -> Result<Self, AnalysisError> {
         match self.state {
             WidthConstraintState::Unevaluated(mut constraint_map, struct_bases) => {
 
@@ -942,7 +945,9 @@ impl AbstractWidthConstraint {
                             ref width,
                             ..
                         } => {
-                            let width = width.clone().evaluate(universe)?;
+                            let width = width
+                                .clone()
+                                .evaluate(universe, scope, typing_context)?;
                             for (field_name, field_type) in width.fields() {
                                 constraint_map
                                     .entry(field_name.clone())
@@ -955,7 +960,23 @@ impl AbstractWidthConstraint {
                     }
                 }
 
-                unimplemented!();
+                // Fuse each field's constraints
+                let final_constraints = constraint_map
+                    .into_iter()
+                    .map(|(field, constraints)| {
+
+                        let constraint_iter = constraints.iter();
+                        let fused = fuse_field_width_constraints(universe, 
+                            scope,
+                            typing_context,
+                            constraint_iter
+                        );
+
+                        fused.map(|fused| (field, fused))
+                    })
+                .collect::<Result<HashMap<Ident, AbstractType>, _>>()?;
+
+                Ok(AbstractWidthConstraint::new_evaluated(final_constraints))
             }
 
             WidthConstraintState::Evaluated(..) => Ok(self),
@@ -1212,7 +1233,9 @@ where I: Iterator<Item=&'a AbstractType> + Clone {
                 data: ref span,
                 width: ref inner_awc, 
             } => {
-                let inner_awc = inner_awc.clone().evaluate(universe)?;
+                let inner_awc = inner_awc
+                    .clone()
+                    .evaluate(universe, scope, typing_context)?;
                 if found_non_width_constraint {
                     // Error: found { foo: int } + { foo: { ... } }
                     // TODO: Make this collect only conflicting constraints
