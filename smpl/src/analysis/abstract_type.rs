@@ -919,7 +919,7 @@ impl AbstractWidthConstraint {
 
                 // Gather field constraints from bases
                 for base in struct_bases.into_iter() {
-                    match base {
+                    match base.substitute(universe, scope, typing_context)? {
                         AbstractType::Record {
                             abstract_field_map:
                                 AbstractFieldMapX {
