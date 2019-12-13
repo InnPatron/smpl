@@ -1389,7 +1389,7 @@ fn resolve_field_access(
                 data: width_span,
                 width: awc,
             } => Ok(Box::new(move |name| {
-                awc.fields.get(name).map(|t| t.clone()).ok_or(
+                awc.fields().get(name).map(|t| t.clone()).ok_or(
                     TypeError::UnknownField {
                         name: name.clone(),
                         struct_type: AbstractType::WidthConstraint {

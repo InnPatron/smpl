@@ -99,9 +99,9 @@ pub fn resolve_types_static(
             },
         ) => {
             for (constraint_ident, constraint_type) in
-                constraint_awc.fields.iter()
+                constraint_awc.fields().iter()
             {
-                match synth_awc.fields.get(constraint_ident) {
+                match synth_awc.fields().get(constraint_ident) {
                     Some(synth_type) => {
                         resolve_types_static(
                             universe,
@@ -140,7 +140,7 @@ pub fn resolve_types_static(
             },
         ) => {
             for (constraint_ident, constraint_type) in
-                constraint_awc.fields.iter()
+                constraint_awc.fields().iter()
             {
                 match synth_afm.get(constraint_ident) {
                     Some(synth_type) => {
@@ -461,8 +461,8 @@ fn resolve_param_static(
                 width: ref constraint_awc,
             },
         ) => {
-            for (synth_ident, synth_type) in synth_awc.fields.iter() {
-                match constraint_awc.fields.get(synth_ident) {
+            for (synth_ident, synth_type) in synth_awc.fields().iter() {
+                match constraint_awc.fields().get(synth_ident) {
                     Some(constraint_type) => {
                         resolve_types_static(
                             universe,
@@ -502,7 +502,7 @@ fn resolve_param_static(
                 ..
             },
         ) => {
-            for (synth_ident, synth_type) in synth_awc.fields.iter() {
+            for (synth_ident, synth_type) in synth_awc.fields().iter() {
                 match afm.get(synth_ident) {
                     Some(constraint_type) => resolve_types_static(
                         universe,
