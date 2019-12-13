@@ -1118,17 +1118,17 @@ fn fuse_width_constraints(
     })
 }
 
-/*
 /// Ensures that there are no conflicting constraints on a field
-fn fuse_field_width_constraints(
+fn fuse_field_width_constraints<'a, I>(
     universe: &Universe,
     scope: &ScopedData,
     typing_context: &TypingContext,
-    constraints: &[AbstractType],
-) -> Result<AbstractType, AnalysisError> {
+    constraints: I,
+) -> Result<AbstractType, AnalysisError> 
+where I: Iterator<Item=&'a AbstractType> + Clone {
     use super::error::TypeError;
 
-    let mut constraint_iter = constraints.into_iter();
+    let mut constraint_iter = constraints.clone();
     let first_constraint = constraint_iter
         .next()
         .expect("Always at least one constraint");
@@ -1164,16 +1164,14 @@ fn fuse_field_width_constraints(
         match constraint {
             AbstractType::WidthConstraint {
                 data: ref span,
-                width: AbstractWidthConstraint {
-                    ref fields,
-                }
+                width: ref inner_awc, 
             } => {
+                let inner_awc = inner_awc.clone().evaluate(universe)?;
                 if found_non_width_constraint {
                     // Error: found { foo: int } + { foo: { ... } }
                     // TODO: Make this collect only conflicting constraints
                     return Err(TypeError::ConflictingConstraints {
                         constraints: constraints
-                            .iter()
                             .map(|c| c.clone())
                             .collect(),
                     }
@@ -1181,7 +1179,7 @@ fn fuse_field_width_constraints(
                 }
 
                 // Gather internal field constraints to recurse later on
-                for (field, field_type) in fields {
+                for (field, field_type) in inner_awc.fields() {
                     internal_field_constraints
                         .entry(field.clone())
                         .or_insert(Vec::new())
@@ -1195,7 +1193,7 @@ fn fuse_field_width_constraints(
                     // TODO: Make this collect only conflicting constraints
                     return Err(TypeError::ConflictingConstraints {
                         constraints: constraints
-                            .iter()
+                            .clone()
                             .map(|c| c.clone())
                             .collect(),
                     }
@@ -1213,7 +1211,7 @@ fn fuse_field_width_constraints(
                 .map_err(|_e| {
                     TypeError::ConflictingConstraints {
                         constraints: constraints
-                            .iter()
+                            .clone()
                             .map(|c| c.clone())
                             .collect(),
                     }
@@ -1235,7 +1233,7 @@ fn fuse_field_width_constraints(
                 universe,
                 scope,
                 typing_context,
-                &constraints,
+                constraints.iter(),
             )?;
             if final_internal_map
                 .insert(field.clone(), field_constraint)
@@ -1247,10 +1245,7 @@ fn fuse_field_width_constraints(
 
         Ok(AbstractType::WidthConstraint {
             data: constraint_span,
-            width: AbstractWidthConstraint {
-                fields: final_internal_map,
-            }
+            width: AbstractWidthConstraint::new_evaluated(final_internal_map),
         })
     }
 }
-*/
