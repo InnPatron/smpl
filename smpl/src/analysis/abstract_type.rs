@@ -412,7 +412,7 @@ impl AbstractTypeX<Span> {
                 type_cons: ref type_cons_id,
                 args: ref type_args,
             } => {
-                let (ok_args, err) = type_args
+                let (ok_args, mut err) = type_args
                     .iter()
                     .map(|at| {
                         at.substitute_internal(
@@ -554,7 +554,7 @@ impl AbstractTypeX<Span> {
                 ref type_id,
                 ref abstract_field_map,
             } => {
-                let (ok_fields, err) = abstract_field_map
+                let (ok_fields, mut err) = abstract_field_map
                     .fields
                     .iter()
                     .map(|(f_id, ty)| {
@@ -619,7 +619,7 @@ impl AbstractTypeX<Span> {
                 ref parameters,
                 ref return_type,
             } => {
-                let (ok_parameters, errors) = parameters
+                let (ok_parameters, mut errors) = parameters
                     .iter()
                     .map(|p| {
                         p.substitute_internal(
@@ -686,7 +686,7 @@ impl AbstractTypeX<Span> {
                 let width_constraint = width_constraint
                     .clone()
                     .evaluate(universe)?;
-                let (ok_field_types, errors) = width_constraint
+                let (ok_field_types, mut errors) = width_constraint
                     .fields()
                     .iter()
                     .map(|(ident, at)| {
@@ -744,7 +744,7 @@ impl AbstractTypeX<Span> {
                 type_id, 
                 ref args 
             } => {
-                let (ok_args, errors) = args
+                let (ok_args, mut errors) = args
                     .iter()
                     .map(|a| {
                         a.substitute_internal(
