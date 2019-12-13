@@ -98,6 +98,12 @@ pub fn resolve_types_static(
                 width: ref constraint_awc,
             },
         ) => {
+            let constraint_awc = constraint_awc
+                .clone()
+                .evaluate(universe, scoped_data, typing_context)?;
+            let synth_awc = synth_awc
+                .clone()
+                .evaluate(universe, scoped_data, typing_context)?;
             for (constraint_ident, constraint_type) in
                 constraint_awc.fields().iter()
             {
@@ -139,6 +145,10 @@ pub fn resolve_types_static(
                 width: ref constraint_awc
             },
         ) => {
+            let constraint_awc = constraint_awc
+                .clone()
+                .evaluate(universe, scoped_data, typing_context)?;
+
             for (constraint_ident, constraint_type) in
                 constraint_awc.fields().iter()
             {
@@ -461,6 +471,13 @@ fn resolve_param_static(
                 width: ref constraint_awc,
             },
         ) => {
+            let constraint_awc = constraint_awc
+                .clone()
+                .evaluate(universe, scoped_data, typing_context)?;
+            let synth_awc = synth_awc
+                .clone()
+                .evaluate(universe, scoped_data, typing_context)?;
+
             for (synth_ident, synth_type) in synth_awc.fields().iter() {
                 match constraint_awc.fields().get(synth_ident) {
                     Some(constraint_type) => {
@@ -502,6 +519,10 @@ fn resolve_param_static(
                 ..
             },
         ) => {
+
+            let synth_awc = synth_awc
+                .clone()
+                .evaluate(universe, scoped_data, typing_context)?;
             for (synth_ident, synth_type) in synth_awc.fields().iter() {
                 match afm.get(synth_ident) {
                     Some(constraint_type) => resolve_types_static(

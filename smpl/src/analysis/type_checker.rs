@@ -1388,19 +1388,22 @@ fn resolve_field_access(
             AbstractType::WidthConstraint {
                 data: width_span,
                 width: awc,
-            } => Ok(Box::new(move |name| {
-                awc.fields().get(name).map(|t| t.clone()).ok_or(
-                    TypeError::UnknownField {
-                        name: name.clone(),
-                        struct_type: AbstractType::WidthConstraint {
-                            data: width_span.clone(),
-                            width: awc.clone(),
-                        },
-                        span: span.clone(),
-                    }
-                    .into(),
-                )
-            })),
+            } => {
+                let awc = awc.evaluate(universe, scope, context)?;
+                Ok(Box::new(move |name| {
+                    awc.fields().get(name).map(|t| t.clone()).ok_or(
+                        TypeError::UnknownField {
+                            name: name.clone(),
+                            struct_type: AbstractType::WidthConstraint {
+                                data: width_span.clone(),
+                                width: awc.clone(),
+                            },
+                            span: span.clone(),
+                        }
+                        .into(),
+                    )
+                }))
+            }
 
             AbstractType::Record {
                 data: record_span,

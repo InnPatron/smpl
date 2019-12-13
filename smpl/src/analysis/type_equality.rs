@@ -77,6 +77,13 @@ pub fn equal_types_static(
                 width: ref constraint_awc,
             },
         ) => {
+
+            let constraint_awc = constraint_awc
+                .clone()
+                .evaluate(universe, scoped_data, typing_context)?;
+            let synth_awc = synth_awc
+                .clone()
+                .evaluate(universe, scoped_data, typing_context)?;
             if constraint_awc.fields().len() != synth_awc.fields().len() {
                 return Err(TypeError::UnexpectedType {
                     found: synthesis.clone(),
