@@ -841,7 +841,7 @@ pub struct AbstractWidthConstraintX<X> {
     state: WidthConstraintState<X>
 }
 
-impl<X> AbstractWidthConstraintX<X> {
+impl<X> AbstractWidthConstraintX<X> where X: Clone {
 
     pub fn new_evaluated(map: HashMap<Ident, AbstractTypeX<X>>) -> Self {
         AbstractWidthConstraintX {
@@ -859,7 +859,49 @@ impl<X> AbstractWidthConstraintX<X> {
 
     pub(super) fn evaluate(self, universe: &Universe) -> Result<Self, AnalysisError> {
         match self.state {
-            WidthConstraintState::Unevaluated(fields, struct_bases) => {
+            WidthConstraintState::Unevaluated(mut constraint_map, struct_bases) => {
+
+                // Gather field constraints from bases
+                for base in struct_bases.into_iter() {
+                    match base {
+                        AbstractTypeX::Record {
+                            abstract_field_map:
+                                AbstractFieldMapX {
+                                    ref fields,
+                                    ref field_map,
+                                },
+                            ..
+                        } => {
+                            for (field_name, field_id) in field_map.iter() {
+                                let field_type: AbstractTypeX<X> = fields
+                                    .get(field_id)
+                                    .expect("Missing field id")
+                                    .clone();
+
+                                constraint_map
+                                    .entry(field_name.clone())
+                                    .or_insert(Vec::new())
+                                    .push(field_type);
+                            }
+                        }
+
+                        AbstractTypeX::WidthConstraint {
+                            ref width,
+                            ..
+                        } => {
+                            let width = width.clone().evaluate(universe)?;
+                            for (field_name, field_type) in width.fields() {
+                                constraint_map
+                                    .entry(field_name.clone())
+                                    .or_insert(vec![field_type.clone()])
+                                    .push(field_type.clone());
+                            }
+                        }
+
+                        _ => unimplemented!("Non-record/width constraint base"),
+                    }
+                }
+
                 unimplemented!();
             }
 
@@ -877,8 +919,10 @@ impl<X> AbstractWidthConstraintX<X> {
 
     pub fn fields_iter(&self) -> impl Iterator<Item=(&Ident, &AbstractTypeX<X>)> {
         eval_op!(self; ref fields => fields.iter())
-    }
+    } 
+}
 
+impl<X> AbstractWidthConstraintX<X> {
     pub fn downcast(self) -> AbstractWidthConstraintX<()> {
 
         let new_state = match self.state {
