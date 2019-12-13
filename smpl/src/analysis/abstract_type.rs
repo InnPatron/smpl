@@ -855,59 +855,7 @@ impl<X> AbstractWidthConstraintX<X> where X: Clone {
         } else {
             false
         }
-    }
-
-    pub(super) fn evaluate(self, universe: &Universe) -> Result<Self, AnalysisError> {
-        match self.state {
-            WidthConstraintState::Unevaluated(mut constraint_map, struct_bases) => {
-
-                // Gather field constraints from bases
-                for base in struct_bases.into_iter() {
-                    match base {
-                        AbstractTypeX::Record {
-                            abstract_field_map:
-                                AbstractFieldMapX {
-                                    ref fields,
-                                    ref field_map,
-                                },
-                            ..
-                        } => {
-                            for (field_name, field_id) in field_map.iter() {
-                                let field_type: AbstractTypeX<X> = fields
-                                    .get(field_id)
-                                    .expect("Missing field id")
-                                    .clone();
-
-                                constraint_map
-                                    .entry(field_name.clone())
-                                    .or_insert(Vec::new())
-                                    .push(field_type);
-                            }
-                        }
-
-                        AbstractTypeX::WidthConstraint {
-                            ref width,
-                            ..
-                        } => {
-                            let width = width.clone().evaluate(universe)?;
-                            for (field_name, field_type) in width.fields() {
-                                constraint_map
-                                    .entry(field_name.clone())
-                                    .or_insert(vec![field_type.clone()])
-                                    .push(field_type.clone());
-                            }
-                        }
-
-                        _ => unimplemented!("Non-record/width constraint base"),
-                    }
-                }
-
-                unimplemented!();
-            }
-
-            WidthConstraintState::Evaluated(..) => Ok(self),
-        }
-    }
+    } 
 
     pub fn len(&self) -> usize {
         eval_op!(self; ref fields => fields.len())
@@ -957,6 +905,60 @@ impl<X> AbstractWidthConstraintX<X> {
 
         AbstractWidthConstraintX {
             state: new_state
+        }
+    }
+}
+
+impl AbstractWidthConstraint {
+    pub(super) fn evaluate(self, universe: &Universe) -> Result<Self, AnalysisError> {
+        match self.state {
+            WidthConstraintState::Unevaluated(mut constraint_map, struct_bases) => {
+
+                // Gather field constraints from bases
+                for base in struct_bases.into_iter() {
+                    match base {
+                        AbstractType::Record {
+                            abstract_field_map:
+                                AbstractFieldMapX {
+                                    ref fields,
+                                    ref field_map,
+                                },
+                            ..
+                        } => {
+                            for (field_name, field_id) in field_map.iter() {
+                                let field_type = fields
+                                    .get(field_id)
+                                    .expect("Missing field id")
+                                    .clone();
+
+                                constraint_map
+                                    .entry(field_name.clone())
+                                    .or_insert(Vec::new())
+                                    .push(field_type);
+                            }
+                        }
+
+                        AbstractType::WidthConstraint {
+                            ref width,
+                            ..
+                        } => {
+                            let width = width.clone().evaluate(universe)?;
+                            for (field_name, field_type) in width.fields() {
+                                constraint_map
+                                    .entry(field_name.clone())
+                                    .or_insert(vec![field_type.clone()])
+                                    .push(field_type.clone());
+                            }
+                        }
+
+                        _ => unimplemented!("Non-record/width constraint base"),
+                    }
+                }
+
+                unimplemented!();
+            }
+
+            WidthConstraintState::Evaluated(..) => Ok(self),
         }
     }
 }
