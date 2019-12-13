@@ -668,8 +668,11 @@ impl AbstractTypeX<Span> {
                 data: ref span,
                 width: ref width_constraint
             } => {
+                let width_constraint = width_constraint
+                    .clone()
+                    .evaluate(universe)?;
                 let (ok_field_types, errors) = width_constraint
-                    .fields
+                    .fields()
                     .iter()
                     .map(|(ident, at)| {
                         at.substitute_internal(
@@ -698,9 +701,7 @@ impl AbstractTypeX<Span> {
                     return Err(errors);
                 }
 
-                let new_width = AbstractWidthConstraint {
-                    fields: ok_field_types,
-                };
+                let new_width = AbstractWidthConstraint::new_evaluated(ok_field_types);
 
                 Ok(AbstractType::WidthConstraint {
                     data: span.clone(),
