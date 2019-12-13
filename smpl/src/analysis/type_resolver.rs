@@ -14,7 +14,7 @@ pub fn resolve_types(
     synthesis: &AbstractType,
     constraint: &AbstractType,
     span: Span,
-) -> Result<(), TypeError> {
+) -> Result<(), AnalysisError> {
     resolve_types_static(
         universe,
         scoped_data,
@@ -33,7 +33,7 @@ pub fn resolve_types_static(
     synthesis: &AbstractType,
     constraint: &AbstractType,
     span: Span,
-) -> Result<(), TypeError> {
+) -> Result<(), AnalysisError> {
     use super::abstract_type::AbstractTypeX::*;
 
     match (synthesis, constraint) {
@@ -399,7 +399,7 @@ fn resolve_param(
     synth: &AbstractType,
     constraint: &AbstractType,
     span: Span,
-) -> Result<(), TypeError> {
+) -> Result<(), AnalysisError> {
     resolve_param_static(
         universe,
         scoped_data,
@@ -417,7 +417,7 @@ fn resolve_param_static(
     synth: &AbstractType,
     constraint: &AbstractType,
     span: Span,
-) -> Result<(), TypeError> {
+) -> Result<(), AnalysisError> {
     use super::abstract_type::AbstractTypeX::*;
 
     match (synth, constraint) {
