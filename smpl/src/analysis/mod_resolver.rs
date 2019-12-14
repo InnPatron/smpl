@@ -307,7 +307,7 @@ fn map_usings(
     .collect();
 
     let mut dependency_map: HashMap<ModuleId, HashSet<ModuleId>> = HashMap::new();
-    for (id, raw_mod) in module_map {
+    for (id, raw_mod) in module_map.iter() {
 
         let mut dependencies = HashSet::new();
 
