@@ -1,5 +1,5 @@
 use failure::Error;
-use smpl::{ FnId, ModuleId };
+use smpl::prelude::{ Program, FnId, ModuleId };
 use smpl::metadata::Metadata;
 
 use std::collections::HashMap;
@@ -41,18 +41,23 @@ impl AVM {
             .map(|vmmod| {
                 builtins.push((vmmod.id(), vmmod.builtins));
                 vmmod.parsed
-            })
-            .collect();
+            });
 
-        let program = smpl::Program::create(modules)?;
+        let program = Program::from_parsed(modules)?;
 
         let mut compiled_fns = HashMap::new();
-        for (fn_id, raw_fn_ref) in program.compilable_fns() {
-            let compiled = byte_gen::compile_to_byte_code(&raw_fn_ref);
-            if compiled_fns.insert(fn_id, Arc::new(compiled)).is_some() {
-                panic!("Multiple functions with ID {}. Should not have passed check_program()", fn_id);
+
+        for module in program.compilable_modules() {
+            for compilable_fn in module.compilable_fns() {
+                let fn_id = compilable_fn.fn_id();
+                let compiled = byte_gen::compile_to_byte_code(&compilable_fn);
+                if compiled_fns.insert(fn_id, Arc::new(compiled)).is_some() {
+                    panic!("Multiple functions with ID {}. Should not have passed check_program()", fn_id);
+                }
             }
+
         }
+        
         let mut vm = AVM {
             metadata: Arc::new(program.metadata().clone()),
             compiled: Arc::new(compiled_fns),

@@ -1,7 +1,7 @@
 use failure::Fail;
 
 use smpl::ModuleId;
-use smpl::Error as StaticError;
+use smpl::error::Error as StaticError;
 use smpl::byte_gen::{ Instruction, InstructionPointerType };
 
 #[derive(Debug, Clone)]
