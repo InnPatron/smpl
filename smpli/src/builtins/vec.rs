@@ -1,5 +1,5 @@
 use failure::Error;
-use smpl::{UnparsedModule, parse_module};
+use smpl::prelude::{UnparsedModule, parse_module};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -267,7 +267,7 @@ async fn clear(args: Vec<Value>) -> Result<Value, Error> {
 #[cfg_attr(rustfmt, rustfmt_skip)]
 mod tests {
 
-use smpl::*;
+use smpl::prelude::*;
 use super::*;
 
 macro_rules! wrap_input {

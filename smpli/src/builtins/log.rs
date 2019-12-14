@@ -1,6 +1,6 @@
 use failure::Error;
 use std::io::Write;
-use smpl::{UnparsedModule, parse_module};
+use smpl::prelude::{UnparsedModule, parse_module};
 
 use crate::*;
 

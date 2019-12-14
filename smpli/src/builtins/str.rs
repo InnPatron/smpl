@@ -1,5 +1,5 @@
 use failure::Error;
-use smpl::{UnparsedModule, parse_module};
+use smpl::prelude::{UnparsedModule, parse_module};
 
 use crate::*;
 
@@ -83,7 +83,7 @@ async fn to_upper(args: Vec<Value>) -> Result<Value, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use smpl::*;
+    use smpl::prelude::*;
 
     macro_rules! wrap_input {
         ($input: expr) => {{

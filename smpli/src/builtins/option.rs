@@ -1,5 +1,5 @@
 use failure::Error;
-use smpl::{UnparsedModule, parse_module};
+use smpl::prelude::{UnparsedModule, parse_module};
 
 use crate::*;
 
@@ -200,7 +200,7 @@ async fn builtin_is_none(args: Vec<Value>) -> Result<Value, Error> {
 #[cfg_attr(rustfmt, rustfmt_skip)]
 mod tests {
 
-    use smpl::*;
+    use smpl::prelude::*;
     use super::*;
 
     macro_rules! option_test {
