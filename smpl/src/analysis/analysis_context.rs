@@ -12,14 +12,32 @@ use super::semantic_data::{
 
 pub struct GlobalData {
     id_counter: Cell<u64>,
+    int_type_id: TypeId,
+    float_type_id: TypeId,
+    bool_type_id: TypeId,
+    string_type_id: TypeId,
+    unit_type_id: TypeId,
 }
 
 impl GlobalData {
 
     pub fn new() -> GlobalData {
-        GlobalData {
-            id_counter: Cell::new(0)
-        }
+        let mut g = GlobalData {
+            id_counter: Cell::new(0),
+            int_type_id: TypeId(0),
+            float_type_id: TypeId(0),
+            bool_type_id: TypeId(0),
+            string_type_id: TypeId(0),
+            unit_type_id: TypeId(0),
+        };
+
+        g.unit_type_id = g.new_type_id();
+        g.int_type_id = g.new_type_id();
+        g.float_type_id = g.new_type_id();
+        g.string_type_id = g.new_type_id();
+        g.bool_type_id = g.new_type_id();
+
+        g
     }
 
     fn inc_counter(&self) -> u64 {
