@@ -17,7 +17,7 @@ pub fn flatten(universe: &mut Universe, e: AstExpr) -> Expr {
     expr
 }
 
-pub fn flatten_expr(
+fn flatten_expr(
     universe: &mut Universe,
     scope: &mut Expr,
     e: AstExpr,
