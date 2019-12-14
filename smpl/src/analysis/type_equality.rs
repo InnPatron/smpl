@@ -15,7 +15,7 @@ pub fn equal_types_static(
     synthesis: &AbstractType,
     constraint: &AbstractType,
     span: Span,
-) -> Result<(), TypeError> {
+) -> Result<(), AnalysisError> {
     use super::abstract_type::AbstractTypeX::*;
 
     match (synthesis, constraint) {
@@ -77,7 +77,14 @@ pub fn equal_types_static(
                 width: ref constraint_awc,
             },
         ) => {
-            if constraint_awc.fields.len() != synth_awc.fields.len() {
+
+            let constraint_awc = constraint_awc
+                .clone()
+                .evaluate(universe, scoped_data, typing_context)?;
+            let synth_awc = synth_awc
+                .clone()
+                .evaluate(universe, scoped_data, typing_context)?;
+            if constraint_awc.fields().len() != synth_awc.fields().len() {
                 return Err(TypeError::UnexpectedType {
                     found: synthesis.clone(),
                     expected: constraint.clone(),
@@ -87,9 +94,9 @@ pub fn equal_types_static(
             }
 
             for (constraint_ident, constraint_type) in
-                constraint_awc.fields.iter()
+                constraint_awc.fields().iter()
             {
-                match synth_awc.fields.get(constraint_ident) {
+                match synth_awc.fields().get(constraint_ident) {
                     Some(synth_type) => {
                         equal_types_static(
                             universe,

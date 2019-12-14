@@ -250,7 +250,6 @@ macro_rules! ann_to_type {
     ($self: expr, $ann: expr) => {{
         use super::abstract_type;
         abstract_type::type_from_ann(
-            $self.universe,
             $self.scopes.last().expect("Should always have a scope"),
             &$self.typing_context,
             $ann,
@@ -744,14 +743,14 @@ fn resolve_struct_init(
     let type_name = init.type_name();
     let tmp_type_name = type_name.clone().into();
     let struct_type_id = scope
-        .type_cons(universe, &tmp_type_name)
+        .type_cons(&tmp_type_name)
         .ok_or(AnalysisError::UnknownType(type_name.clone(), init_span.clone()))?;
 
     let type_args = init
         .type_args()
         .map(|vec| {
             vec.iter()
-                .map(|ann| type_from_ann(universe, scope, context, ann))
+                .map(|ann| type_from_ann(scope, context, ann))
                 .collect::<Result<Vec<_>, _>>()
         })
         .unwrap_or(Ok(Vec::new()))?;
@@ -873,21 +872,18 @@ fn resolve_anon_struct_init(
     init: &AnonStructInit,
     span: Span,
 ) -> Result<AbstractType, AnalysisError> {
-    let mut width_constraint = AbstractWidthConstraint {
-        fields: HashMap::new(),
-    };
-
+    
+    let mut fields: HashMap<_, AbstractType> = HashMap::new();
     // Map init'd field to its type
     let mut duplicate_fields = Vec::new();
     for (field_name, typed_tmp) in init.raw_field_init() {
         let tmp_type =
             context.tmp_type_map.get(typed_tmp).expect("Missing tmp");
 
-        if width_constraint.fields.contains_key(field_name) {
+        if fields.contains_key(field_name) {
             duplicate_fields.push(field_name.clone());
         } else {
-            width_constraint
-                .fields
+            fields
                 .insert(field_name.clone(), tmp_type.clone());
         }
     }
@@ -902,7 +898,7 @@ fn resolve_anon_struct_init(
 
     let width_type = AbstractType::WidthConstraint {
         data: span,
-        width: width_constraint
+        width: AbstractWidthConstraint::new_evaluated(fields),
     };
     Ok(width_type)
 }
@@ -1251,7 +1247,7 @@ fn resolve_type_inst(
     let type_args = type_inst
         .args()
         .iter()
-        .map(|ann| type_from_ann(universe, scope, context, ann))
+        .map(|ann| type_from_ann(scope, context, ann))
         .collect::<Result<Vec<_>, _>>()?;
 
     let inst_type = AbstractType::App {
@@ -1392,19 +1388,22 @@ fn resolve_field_access(
             AbstractType::WidthConstraint {
                 data: width_span,
                 width: awc,
-            } => Ok(Box::new(move |name| {
-                awc.fields.get(name).map(|t| t.clone()).ok_or(
-                    TypeError::UnknownField {
-                        name: name.clone(),
-                        struct_type: AbstractType::WidthConstraint {
-                            data: width_span.clone(),
-                            width: awc.clone(),
-                        },
-                        span: span.clone(),
-                    }
-                    .into(),
-                )
-            })),
+            } => {
+                let awc = awc.evaluate(universe, scope, context)?;
+                Ok(Box::new(move |name| {
+                    awc.fields().get(name).map(|t| t.clone()).ok_or(
+                        TypeError::UnknownField {
+                            name: name.clone(),
+                            struct_type: AbstractType::WidthConstraint {
+                                data: width_span.clone(),
+                                width: awc.clone(),
+                            },
+                            span: span.clone(),
+                        }
+                        .into(),
+                    )
+                }))
+            }
 
             AbstractType::Record {
                 data: record_span,
