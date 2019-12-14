@@ -1,3 +1,5 @@
+env:
+  - RUST_MIN_STACK=2500000
 language: rust
 rust:
   - stable
