@@ -152,7 +152,7 @@ pub fn check_modules(
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;
 
-            analysis_helpers::analyze_fn(universe, metadata, mod_id.clone(), fn_id)?;
+            analysis_helpers::analyze_fn(universe, metadata, &mut global_data, mod_id.clone(), fn_id)?;
         }
     } 
 

@@ -18,6 +18,7 @@ use super::analysis_context::{GlobalData, LocalData, AnalysisContext};
 pub fn analyze_fn(
     universe: &mut Universe,
     metadata: &mut Metadata,
+    global_data: &mut GlobalData,
     module_id: ModuleId,
     fn_id: FnId,
 ) -> Result<(), AnalysisError> {
@@ -26,7 +27,7 @@ pub fn analyze_fn(
     use super::type_checker;
 
     resolve_scope::resolve(universe, fn_id)?;
-    type_checker::type_check(universe, metadata, module_id, fn_id)?;
+    type_checker::type_check(universe, metadata, global_data, module_id, fn_id)?;
     return_trace::return_trace(universe, fn_id)?;
 
     Ok(())
