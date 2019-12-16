@@ -93,8 +93,7 @@ pub struct AnalyzableModule {
 
 pub struct AnalyzableFn {
    cfg: CFG, 
-   parent_typing_context: Option<TypingContext>,
-   parent_scope: Option<ScopedData>,
+   analysis_context: AnalysisContext,
 }
 
 #[derive(Clone, Debug)]
