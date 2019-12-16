@@ -11,6 +11,7 @@ pub use crate::ast::UniOp;
 
 use super::expr_flow;
 use super::semantic_data::*;
+use super::analysis_context::{GlobalData, AnonymousFn as AnonymousFnContainer};
 
 // TODO(alex): Remove Typed<T>
 // Types are stored within type_checker::TypingContext instead
@@ -422,6 +423,20 @@ impl FieldAccess {
         }
     }
 
+    // TODO: Make new_prime() the only constructor
+    pub fn new_prime(global_data: &mut GlobalData, path: ast::Path) 
+        -> (Vec<AnonymousFnContainer>, Self) {
+
+        let (anon, new_path) = self::Path::new_prime(global_data, path.clone());
+
+        let f = FieldAccess {
+            raw_path: path,
+            path: new_path,
+        };
+
+        (anon, f)
+    }
+
     pub fn raw_path(&self) -> &ast::Path {
         &self.raw_path
     }
@@ -510,6 +525,51 @@ pub struct Path {
 }
 
 impl self::Path {
+    // TODO: Make new_prime() the only constructor
+    fn new_prime(global_data: &mut GlobalData, path: ast::Path) 
+        -> (Vec<AnonymousFnContainer>, self::Path) {
+
+        let mut path_iter = path.0.into_iter();
+        let root = path_iter.next().unwrap();
+
+        let mut buff = Vec::new();
+
+        let (name, indexing) = match root {
+            ast::PathSegment::Ident(i) => (i, None),
+            ast::PathSegment::Indexing(i, e) => {
+                let (mut anon, expr) = expr_flow::flatten_prime(global_data, *e);
+                buff.append(&mut anon);
+                (i, Some(expr))
+            }
+        };
+
+        let path = path_iter
+           .map(|ps| match ps {
+                ast::PathSegment::Ident(i) => {
+                    self::PathSegment::Ident(Field::new(i))
+                }
+                ast::PathSegment::Indexing(i, e) => {
+                    let (mut anon, expr) = expr_flow::flatten_prime(global_data, *e);
+                    buff.append(&mut anon);
+
+                    self::PathSegment::Indexing(
+                        Field::new(i),
+                        expr,
+                    )
+                }
+            })
+            .collect();
+
+        let path = self::Path {
+            root_name: name,
+            root_indexing: indexing,
+            root_var: None,
+            path: path,
+        };
+
+        (buff, path)
+    }
+
     fn new(universe: &mut Universe, path: ast::Path) -> self::Path {
         let mut path_iter = path.0.into_iter();
         let root = path_iter.next().unwrap();

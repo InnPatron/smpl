@@ -7,6 +7,7 @@ use crate::span::Span;
 use crate::ast::{
     ArrayInit as AstArrayInit, AstNode, Expr as AstExpr, TypedPath,
 };
+use super::analysis_context::{GlobalData, AnonymousFn as AnonymousFnContainer};
 
 pub fn flatten(universe: &mut Universe, e: AstExpr) -> Expr {
     let mut expr = Expr::new();
@@ -244,6 +245,279 @@ fn flatten_expr(
 
                 let (fn_call_result, next_span) =
                     flatten_expr(universe, scope, fn_call_expr);
+
+                let fn_call = scope.get_tmp_mut(fn_call_result);
+
+                let fn_call = irmatch!(fn_call.value_mut().data_mut(); 
+                                       Value::FnCall(ref mut call) => call);
+
+                // Use the result of the function call as the first argument
+                // of the next function.
+                let first_arg = Typed::untyped(previous_result);
+
+                let args = fn_call.args_mut();
+
+                match args {
+                    Some(ref mut vec) => vec.insert(0, first_arg),
+
+                    None => *args = Some(vec![first_arg]),
+                }
+
+                previous_result = fn_call_result;
+                span = next_span;
+            }
+
+            (previous_result, span)
+        }
+    }
+}
+
+// TODO: Make this the only expression flattening function
+pub fn flatten_prime(global_data: &mut GlobalData, e: AstExpr) 
+    -> (Vec<AnonymousFnContainer>, Expr) {
+
+    let mut expr = Expr::new();
+
+    let mut buff = Vec::new();
+    let (_, span) = flatten_expr_prime(global_data, &mut buff, &mut expr, e);
+    expr.set_span(span);
+
+    (buff, expr)
+}
+
+fn flatten_expr_prime(
+    global_data: &mut GlobalData,
+    anonymous_fns: &mut Vec<AnonymousFnContainer>,
+    scope: &mut Expr,
+    e: AstExpr,
+) -> (TmpId, Span) {
+    match e {
+        AstExpr::Bin(bin) => {
+            let (bin, span) = bin.to_data();
+            let (lhs, _) = flatten_expr_prime(global_data, anonymous_fns, scope, *bin.lhs);
+            let (rhs, _) = flatten_expr_prime(global_data, anonymous_fns, scope, *bin.rhs);
+            (
+                scope.map_tmp(
+                    global_data.new_tmp_id(),
+                    Value::BinExpr(
+                        bin.op,
+                        Typed::untyped(lhs),
+                        Typed::untyped(rhs),
+                    ),
+                    span.clone(),
+                ),
+                span,
+            )
+        }
+
+        AstExpr::Uni(uni) => {
+            let (uni, span) = uni.to_data();
+            let expr = flatten_expr_prime(global_data, anonymous_fns, scope, *uni.expr).0;
+            (
+                scope.map_tmp(
+                    global_data.new_tmp_id(),
+                    Value::UniExpr(uni.op, Typed::untyped(expr)),
+                    span.clone(),
+                ),
+                span,
+            )
+        }
+
+        AstExpr::Literal(literal) => {
+            let (literal, span) = literal.to_data();
+            (scope.map_tmp(global_data.new_tmp_id(), Value::Literal(literal), span.clone()), span)
+        }
+
+        AstExpr::StructInit(init) => {
+            let (init, span) = init.to_data();
+            let struct_name = init.struct_name;
+            let field_init = init
+                .field_init
+                .into_iter()
+                .map(|(name, expr)| {
+                    let expr =
+                        Typed::untyped(flatten_expr_prime(global_data, anonymous_fns, scope, *expr).0);
+                    (name.data().clone(), expr)
+                })
+                .collect::<Vec<_>>();
+            (
+                scope.map_tmp(
+                    global_data.new_tmp_id(),
+                    Value::StructInit(StructInit::new(struct_name, field_init)),
+                    span.clone(),
+                ),
+                span,
+            )
+        }
+
+        AstExpr::AnonStructInit(init) => {
+            let (init, span) = init.to_data();
+            let field_init = init
+                .field_init
+                .into_iter()
+                .map(|(name, expr)| {
+                    let expr = flatten_expr_prime(global_data, anonymous_fns, scope, *expr).0;
+                    (name.data().clone(), expr)
+                })
+                .collect::<Vec<_>>();
+            (
+                scope.map_tmp(
+                    global_data.new_tmp_id(),
+                    Value::AnonStructInit(AnonStructInit::new(field_init)),
+                    span.clone(),
+                ),
+                span,
+            )
+        }
+
+        AstExpr::Binding(ident) => {
+            let span = ident.span();
+            (
+                scope.map_tmp(
+                    global_data.new_tmp_id(),
+                    Value::Binding(TypedBinding::new(ident)),
+                    span.clone(),
+                ),
+                span,
+            )
+        }
+
+        AstExpr::FieldAccess(path) => {
+            let (path, span) = path.to_data();
+            let (mut anon, field_access) = FieldAccess::new_prime(global_data, path);
+            anonymous_fns.append(&mut anon);
+            (
+                scope.map_tmp(global_data.new_tmp_id(), 
+                    Value::FieldAccess(field_access), 
+                    span.clone()),
+                span,
+            )
+        }
+
+        AstExpr::FnCall(fn_call) => {
+            let (fn_call, span) = fn_call.to_data();
+            let path = fn_call.path;
+            let (fn_val, _fn_val_span) =
+                flatten_expr_prime(global_data, anonymous_fns, scope, AstExpr::Path(path));
+            let args = fn_call.args.map(|vec| {
+                vec.into_iter()
+                    .map(|e| Typed::untyped(flatten_expr_prime(global_data, anonymous_fns, scope, e).0))
+                    .collect::<Vec<_>>()
+            });
+
+            let fn_call = FnCall::new(fn_val, args);
+
+            (scope.map_tmp(global_data.new_tmp_id(), Value::FnCall(fn_call), span.clone()), span)
+        }
+
+        AstExpr::ArrayInit(init) => {
+            let (init, span) = init.to_data();
+            match init {
+                AstArrayInit::InitList(vec) => {
+                    let list = vec
+                        .into_iter()
+                        .map(|element| {
+                            Typed::untyped(
+                                flatten_expr_prime(global_data, anonymous_fns, scope, element).0,
+                            )
+                        })
+                        .collect();
+
+                    let init = ArrayInit::List(list);
+
+                    (
+                        scope.map_tmp(global_data.new_tmp_id(), Value::ArrayInit(init), span.clone()),
+                        span,
+                    )
+                }
+                AstArrayInit::Value(expr, size) => {
+                    let value =
+                        Typed::untyped(flatten_expr_prime(global_data, anonymous_fns, scope, *expr).0);
+                    let init = ArrayInit::Value(value, size);
+
+                    (
+                        scope.map_tmp(global_data.new_tmp_id(), Value::ArrayInit(init), span.clone()),
+                        span,
+                    )
+                }
+            }
+        }
+
+        AstExpr::Indexing(indexing) => {
+            let (indexing, span) = indexing.to_data();
+            let array_expr = indexing.array;
+            let indexing_expr = indexing.indexer;
+
+            let array =
+                Typed::untyped(flatten_expr_prime(global_data, anonymous_fns, scope, *array_expr).0);
+            let indexer =
+                Typed::untyped(flatten_expr_prime(global_data, anonymous_fns, scope, *indexing_expr).0);
+
+            let indexing = Indexing {
+                array: array,
+                indexer: indexer,
+            };
+
+            (
+                scope.map_tmp(global_data.new_tmp_id(), Value::Indexing(indexing), span.clone()),
+                span,
+            )
+        }
+
+        AstExpr::Path(path) => {
+            let (path, span) = path.to_data();
+            let tmp = match path {
+                TypedPath::NillArity(mut path) => {
+                    // TODO: is this necessary? Figure out if path length always greater than 1
+                    if path.0.len() == 1 {
+                        Value::Binding(Binding::new(path.0.pop().unwrap()))
+                    } else {
+                        Value::ModAccess(ModAccess::new(path))
+                    }
+                }
+
+                TypedPath::Parameterized(path, args) => {
+                    Value::TypeInst(TypeInst::new(path, args))
+                }
+            };
+
+            (scope.map_tmp(global_data.new_tmp_id(), tmp, span.clone()), span)
+        }
+
+        AstExpr::AnonymousFn(a_fn) => {
+            let span = a_fn.span();
+            let fn_id = global_data.new_fn_id();
+            let a_fn = AnonymousFnContainer::Reserved(fn_id, a_fn);
+            anonymous_fns.push(a_fn);
+            (
+                scope.map_tmp(
+                    global_data.new_tmp_id(),
+                    Value::AnonymousFn(AnonymousFn::new(fn_id)),
+                    span.clone(),
+                ),
+                span,
+            )
+        }
+
+        AstExpr::FnCallChain(chain) => {
+            let (chain, _span) = chain.to_data();
+
+            let (base, span) = chain.base.to_data();
+            let base_expr = AstExpr::FnCall(AstNode::new(base, span));
+
+            let (base_result, span) = 
+                flatten_expr_prime(global_data, anonymous_fns, scope, base_expr);
+
+            let mut previous_result = base_result;
+            let mut span = span;
+
+            for fn_call in chain.chain.into_iter() {
+                let (call, next_span) = fn_call.to_data();
+                let fn_call_expr =
+                    AstExpr::FnCall(AstNode::new(call, next_span));
+
+                let (fn_call_result, next_span) =
+                    flatten_expr_prime(global_data, anonymous_fns, scope, fn_call_expr);
 
                 let fn_call = scope.get_tmp_mut(fn_call_result);
 
