@@ -149,7 +149,7 @@ pub struct SMPLFunction {
 
 #[derive(Clone, Debug)]
 pub enum AnonymousFn {
-    Reserved(AstNode<AstAnonymousFn>),
+    Reserved(FnId, AstNode<AstAnonymousFn>),
     Resolved {
         fn_type: AstNode<TypeId>,
         cfg: CFG,
@@ -164,7 +164,7 @@ impl AnonymousFn {
 
     pub fn fn_type(&self) -> Option<TypeId> {
         match self {
-            AnonymousFn::Reserved(_) => None,
+            AnonymousFn::Reserved(..) => None,
             AnonymousFn::Resolved { fn_type, .. } => {
                 Some(fn_type.data().clone())
             }
