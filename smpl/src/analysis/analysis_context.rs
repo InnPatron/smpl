@@ -88,14 +88,6 @@ impl GlobalData {
 
 }
 
-pub struct AnalyzableModule {
-}
-
-pub struct AnalyzableFn {
-   cfg: CFG, 
-   analysis_context: AnalysisContext,
-}
-
 #[derive(Clone, Debug)]
 pub struct AnalysisContext {
     parent_scope: ScopedData,
