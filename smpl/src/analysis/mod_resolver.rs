@@ -245,8 +245,11 @@ fn generate_analyzable_fns(
             let fn_decl = reserved_builtin.1.data();
             let fn_name = fn_decl.name.data();
 
+            let (universe, metadata, features) = program.analysis_context();
             let fn_type = type_cons_gen::generate_builtin_fn_type(
-                program,
+                universe,
+                metadata,
+                features,
                 global_data,
                 raw_program.scope_map.get(mod_id).unwrap(),
                 &TypingContext::empty(),
@@ -255,10 +258,10 @@ fn generate_analyzable_fns(
             )?;
 
             let fn_type_id = global_data.new_type_id();
-            program.universe_mut()
+            universe
                 .manual_insert_type_cons(fn_type_id, fn_type);
 
-            program.features_mut().add_feature(BUILTIN_FN);
+            features.add_feature(BUILTIN_FN);
 
             // TODO: Only insert into fn_map, not universe
             assert!(fn_map.insert(fn_id.clone(), Function::Builtin(BuiltinFunction {
@@ -267,19 +270,19 @@ fn generate_analyzable_fns(
                 type_id: fn_type_id.clone(),
             })).is_none());
 
-            program.universe_mut().insert_builtin_fn(
+            universe.insert_builtin_fn(
                 fn_id,
                 fn_name.clone(),
                 fn_type_id,
             ); 
 
-            program.metadata_mut().insert_builtin(fn_id);
-            program.metadata_mut().insert_module_fn(
+            metadata.insert_builtin(fn_id);
+            metadata.insert_module_fn(
                 mod_id.clone(),
                 fn_name.clone(),
                 fn_id,
             );
-            program.metadata_mut().set_fn_annotations(
+            metadata.set_fn_annotations(
                 fn_id,
                 &reserved_builtin.1.data().annotations,
             );
@@ -564,7 +567,7 @@ fn map_types(program: &mut Program,
             let type_id = reserved_struct.0;
             let (struct_type, field_ordering) =
                 type_cons_gen::generate_struct_type_cons(
-                    program,
+                    program.universe(),
                     global_data,
                     type_id,
                     raw_program.scope_map.get(mod_id).unwrap(),

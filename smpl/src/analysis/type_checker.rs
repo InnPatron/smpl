@@ -319,6 +319,11 @@ impl<'a> TypeChecker<'a> {
             }
 
             Value::AnonymousFn(ref a_fn) => {
+                self.anon_typing_context_storage
+                    .insert(a_fn.fn_id(), self.typing_context.clone());
+
+                // At this point, can generate anonymous function's type signature
+
                 unimplemented!();
             }
 

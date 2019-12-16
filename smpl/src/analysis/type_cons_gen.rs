@@ -20,14 +20,13 @@ use super::analysis_context::GlobalData;
 
 // TODO: Store type constructors in Program
 pub fn generate_struct_type_cons(
-    program: &mut Program,
+    universe: &Universe,
     global_data: &mut GlobalData,
     type_id: TypeId,
     scope: &ScopedData,
     typing_context: &TypingContext,
     struct_def: &Struct,
 ) -> Result<(TypeCons, Vec<FieldId>), AnalysisError> {
-    let (universe, _metadata, _features) = program.analysis_context();
 
     // Check no parameter naming conflicts
     let (type_params, type_param_scope, type_param_typing_context) =
@@ -155,14 +154,15 @@ pub fn generate_fn_type_cons(
 }
 
 pub fn generate_builtin_fn_type(
-    program: &mut Program,
+    universe: &Universe,
+    metadata: &mut Metadata,
+    features: &mut PresentFeatures,
     global_data: &mut GlobalData,
     outer_scope: &ScopedData,
     outer_typing_context: &TypingContext,
     fn_id: FnId,
     fn_def: &BuiltinFunction,
 ) -> Result<TypeCons, AnalysisError> {
-    let (universe, metadata, features) = program.analysis_context();
 
     let _fn_scope = outer_scope.clone();
     let _fn_typing_context = outer_typing_context.clone();
