@@ -11,7 +11,7 @@ pub use crate::ast::UniOp;
 
 use super::expr_flow;
 use super::semantic_data::*;
-use super::analysis_context::{GlobalData, AnonymousFn as AnonymousFnContainer};
+use super::analysis_context::{LocalData, GlobalData, AnonymousFn as AnonymousFnContainer};
 
 // TODO(alex): Remove Typed<T>
 // Types are stored within type_checker::TypingContext instead
@@ -50,12 +50,15 @@ pub struct Assignment {
 impl Assignment {
     pub fn new(
         global_data: &mut GlobalData,
+        local_data: &mut LocalData,
         assignment: ast::Assignment,
     ) -> (Vec<AnonymousFnContainer>, Self) {
         let (name, name_span) = assignment.name.to_data();
-        let (mut anon_1, field_access) = FieldAccess::new(global_data, name);
+        let (mut anon_1, field_access) = 
+            FieldAccess::new(global_data, local_data, name);
 
-        let (mut anon_2, value) = expr_flow::flatten(global_data, assignment.value);
+        let (mut anon_2, value) = 
+            expr_flow::flatten(global_data, local_data, assignment.value);
 
         anon_1.append(&mut anon_2);
         let anon = anon_1;
@@ -103,18 +106,19 @@ impl LocalVarDecl {
 
     pub fn new(
         global_data: &mut GlobalData,
+        local_data: &mut LocalData,
         decl: ast::LocalVarDecl,
         stmt_span: Span,
     ) -> (Vec<AnonymousFnContainer>, Self) {
 
         let (anon, var_init) = 
-            expr_flow::flatten(global_data, decl.var_init);
+            expr_flow::flatten(global_data, local_data, decl.var_init);
 
         let l = LocalVarDecl {
             type_ann: decl.var_type,
             var_name: decl.var_name,
             var_init,
-            var_id: global_data.new_var_id(),
+            var_id: local_data.new_var_id(),
             span: stmt_span,
         };
 
@@ -432,10 +436,10 @@ pub struct FieldAccess {
 
 impl FieldAccess {
 
-    pub fn new(global_data: &mut GlobalData, path: ast::Path) 
+    pub fn new(global_data: &mut GlobalData, local_data: &mut LocalData, path: ast::Path) 
         -> (Vec<AnonymousFnContainer>, Self) {
 
-        let (anon, new_path) = self::Path::new(global_data, path.clone());
+        let (anon, new_path) = self::Path::new(global_data, local_data, path.clone());
 
         let f = FieldAccess {
             raw_path: path,
@@ -533,7 +537,7 @@ pub struct Path {
 }
 
 impl self::Path {
-    fn new(global_data: &mut GlobalData, path: ast::Path) 
+    fn new(global_data: &mut GlobalData, local_data: &mut LocalData, path: ast::Path) 
         -> (Vec<AnonymousFnContainer>, self::Path) {
 
         let mut path_iter = path.0.into_iter();
@@ -544,7 +548,7 @@ impl self::Path {
         let (name, indexing) = match root {
             ast::PathSegment::Ident(i) => (i, None),
             ast::PathSegment::Indexing(i, e) => {
-                let (mut anon, expr) = expr_flow::flatten(global_data, *e);
+                let (mut anon, expr) = expr_flow::flatten(global_data, local_data, *e);
                 buff.append(&mut anon);
                 (i, Some(expr))
             }
@@ -556,7 +560,7 @@ impl self::Path {
                     self::PathSegment::Ident(Field::new(i))
                 }
                 ast::PathSegment::Indexing(i, e) => {
-                    let (mut anon, expr) = expr_flow::flatten(global_data, *e);
+                    let (mut anon, expr) = expr_flow::flatten(global_data, local_data, *e);
                     buff.append(&mut anon);
 
                     self::PathSegment::Indexing(

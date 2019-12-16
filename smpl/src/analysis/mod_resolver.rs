@@ -159,6 +159,7 @@ fn generate_analyzable_fns(
     let mut fn_map = HashMap::new();
     for (mod_id, raw_mod) in raw_program.module_map.iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
+            let mut local_data = LocalData::new();
             let fn_id = reserved_fn.0;
             let fn_span = reserved_fn.1.span();
             let fn_decl = reserved_fn.1.data();
@@ -184,10 +185,12 @@ fn generate_analyzable_fns(
                 reserved_fn.1.data(),
             )?;
 
+            // TODO: Store local_data? Is it even necessary?
             // TODO: Use anonymous functions
             let (anon_fns, cfg) = CFG::generate(
                 program.universe_mut(),
                 global_data,
+                &mut local_data,
                 fn_decl.body.clone(),
                 &fn_type_cons,
                 &analysis_context,

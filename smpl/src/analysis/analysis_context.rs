@@ -65,14 +65,35 @@ impl GlobalData {
 
     pub fn new_field_id(&self) -> FieldId {
         FieldId(self.inc_counter())
+    } 
+
+    pub fn new_fn_id(&self) -> FnId {
+        FnId(self.inc_counter())
+    }
+}
+
+pub struct LocalData {
+    id_counter: Cell<u64>,
+}
+
+impl LocalData {
+
+    pub fn new() -> Self {
+        LocalData {
+            id_counter: Cell::new(0)
+        }
+    }
+
+    fn inc_counter(&self) -> u64 {
+        let curr = self.id_counter.get();
+        let next = curr + 1;
+        self.id_counter.set(next);
+
+        curr
     }
 
     pub fn new_var_id(&self) -> VarId {
         VarId(self.inc_counter())
-    }
-
-    pub fn new_fn_id(&self) -> FnId {
-        FnId(self.inc_counter())
     }
 
     pub fn new_tmp_id(&self) -> TmpId {

@@ -1315,6 +1315,7 @@ fn resolve_anonymous_fn(
         let (anon_fns, cfg) = super::control_flow::CFG::generate(
             universe,
             unimplemented!("Type checker anonymous fn handling"),
+            unimplemented!("Type checker anonymous fn handling"),
             body,
             &fn_type_cons,
             &analysis_context,
