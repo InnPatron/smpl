@@ -49,26 +49,13 @@ pub struct Assignment {
 
 impl Assignment {
     pub fn new(
-        universe: &mut Universe,
-        assignment: ast::Assignment,
-    ) -> Assignment {
-        let (name, name_span) = assignment.name.to_data();
-        let field_access = FieldAccess::new(universe, name);
-        Assignment {
-            field_access: field_access,
-            value: expr_flow::flatten(universe, assignment.value),
-            access_span: name_span,
-        }
-    }
-
-    pub fn new_prime(
         global_data: &mut GlobalData,
         assignment: ast::Assignment,
     ) -> (Vec<AnonymousFnContainer>, Self) {
         let (name, name_span) = assignment.name.to_data();
-        let (mut anon_1, field_access) = FieldAccess::new_prime(global_data, name);
+        let (mut anon_1, field_access) = FieldAccess::new(global_data, name);
 
-        let (mut anon_2, value) = expr_flow::flatten_prime(global_data, assignment.value);
+        let (mut anon_2, value) = expr_flow::flatten(global_data, assignment.value);
 
         anon_1.append(&mut anon_2);
         let anon = anon_1;
@@ -113,28 +100,15 @@ pub struct LocalVarDecl {
 }
 
 impl LocalVarDecl {
-    pub fn new(
-        universe: &mut Universe,
-        decl: ast::LocalVarDecl,
-        stmt_span: Span,
-    ) -> LocalVarDecl {
-        LocalVarDecl {
-            type_ann: decl.var_type,
-            var_name: decl.var_name,
-            var_init: expr_flow::flatten(universe, decl.var_init),
-            var_id: universe.new_var_id(),
-            span: stmt_span,
-        }
-    }
 
-    pub fn new_prime(
+    pub fn new(
         global_data: &mut GlobalData,
         decl: ast::LocalVarDecl,
         stmt_span: Span,
     ) -> (Vec<AnonymousFnContainer>, Self) {
 
         let (anon, var_init) = 
-            expr_flow::flatten_prime(global_data, decl.var_init);
+            expr_flow::flatten(global_data, decl.var_init);
 
         let l = LocalVarDecl {
             type_ann: decl.var_type,
@@ -457,18 +431,11 @@ pub struct FieldAccess {
 }
 
 impl FieldAccess {
-    pub fn new(universe: &mut Universe, path: ast::Path) -> FieldAccess {
-        FieldAccess {
-            raw_path: path.clone(),
-            path: self::Path::new(universe, path),
-        }
-    }
 
-    // TODO: Make new_prime() the only constructor
-    pub fn new_prime(global_data: &mut GlobalData, path: ast::Path) 
+    pub fn new(global_data: &mut GlobalData, path: ast::Path) 
         -> (Vec<AnonymousFnContainer>, Self) {
 
-        let (anon, new_path) = self::Path::new_prime(global_data, path.clone());
+        let (anon, new_path) = self::Path::new(global_data, path.clone());
 
         let f = FieldAccess {
             raw_path: path,
@@ -566,8 +533,7 @@ pub struct Path {
 }
 
 impl self::Path {
-    // TODO: Make new_prime() the only constructor
-    fn new_prime(global_data: &mut GlobalData, path: ast::Path) 
+    fn new(global_data: &mut GlobalData, path: ast::Path) 
         -> (Vec<AnonymousFnContainer>, self::Path) {
 
         let mut path_iter = path.0.into_iter();
@@ -578,7 +544,7 @@ impl self::Path {
         let (name, indexing) = match root {
             ast::PathSegment::Ident(i) => (i, None),
             ast::PathSegment::Indexing(i, e) => {
-                let (mut anon, expr) = expr_flow::flatten_prime(global_data, *e);
+                let (mut anon, expr) = expr_flow::flatten(global_data, *e);
                 buff.append(&mut anon);
                 (i, Some(expr))
             }
@@ -590,7 +556,7 @@ impl self::Path {
                     self::PathSegment::Ident(Field::new(i))
                 }
                 ast::PathSegment::Indexing(i, e) => {
-                    let (mut anon, expr) = expr_flow::flatten_prime(global_data, *e);
+                    let (mut anon, expr) = expr_flow::flatten(global_data, *e);
                     buff.append(&mut anon);
 
                     self::PathSegment::Indexing(
@@ -609,39 +575,6 @@ impl self::Path {
         };
 
         (buff, path)
-    }
-
-    fn new(universe: &mut Universe, path: ast::Path) -> self::Path {
-        let mut path_iter = path.0.into_iter();
-        let root = path_iter.next().unwrap();
-
-        let (name, indexing) = match root {
-            ast::PathSegment::Ident(i) => (i, None),
-            ast::PathSegment::Indexing(i, e) => {
-                (i, Some(expr_flow::flatten(universe, *e)))
-            }
-        };
-
-        let path = path_iter
-            .map(|ps| match ps {
-                ast::PathSegment::Ident(i) => {
-                    self::PathSegment::Ident(Field::new(i))
-                }
-                ast::PathSegment::Indexing(i, e) => {
-                    self::PathSegment::Indexing(
-                        Field::new(i),
-                        expr_flow::flatten(universe, *e),
-                    )
-                }
-            })
-            .collect();
-
-        self::Path {
-            root_name: name,
-            root_indexing: indexing,
-            root_var: None,
-            path: path,
-        }
     }
 
     pub fn root_name(&self) -> &AstNode<ast::Ident> {
