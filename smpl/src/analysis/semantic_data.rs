@@ -19,7 +19,7 @@ use super::type_checker::TypingContext;
 use super::metadata::Metadata;
 use super::type_cons::TypeCons;
 use super::abstract_type::AbstractType;
-use super::analysis_context::AnalysisContext;
+use super::analysis_context::{GlobalData, AnalysisContext};
 
 pub const UNIT_TYPE: &'static str = "Unit";
 pub const INT_TYPE: &'static str = "int";
@@ -101,7 +101,6 @@ pub struct Universe {
     builtin_fn_set: HashSet<FnId>,
     module_map: HashMap<ModuleId, Module>,
     module_name: HashMap<Ident, ModuleId>,
-    id_counter: Cell<u64>,
     std_scope: ScopedData,
     unit: TypeId,
     int: TypeId,
@@ -111,22 +110,23 @@ pub struct Universe {
 }
 
 impl Universe {
-    pub fn std() -> Universe {
+    pub fn std(global_data: &GlobalData) -> Universe {
         let unit =
-            (TypeId(0), internal_module_path!(UNIT_TYPE), TypeCons::Unit);
-        let int = (TypeId(1), internal_module_path!(INT_TYPE), TypeCons::Int);
+            (global_data.unit_type_id(), internal_module_path!(UNIT_TYPE), TypeCons::Unit);
+        let int = 
+            (global_data.int_type_id(), internal_module_path!(INT_TYPE), TypeCons::Int);
         let float = (
-            TypeId(2),
+            global_data.float_type_id(),
             internal_module_path!(FLOAT_TYPE),
             TypeCons::Float,
         );
         let string = (
-            TypeId(3),
+            global_data.string_type_id(),
             internal_module_path!(STRING_TYPE),
             TypeCons::String,
         );
         let boolean =
-            (TypeId(4), internal_module_path!(BOOL_TYPE), TypeCons::Bool);
+            (global_data.bool_type_id(), internal_module_path!(BOOL_TYPE), TypeCons::Bool);
 
         let type_map = vec![
             unit.clone(),
@@ -146,7 +146,6 @@ impl Universe {
             builtin_fn_set: HashSet::new(),
             module_map: HashMap::new(),
             module_name: HashMap::new(),
-            id_counter: Cell::new(5),
             std_scope: ScopedData::new(
                 type_map
                     .clone()
@@ -296,12 +295,6 @@ impl Universe {
         }
     }
 
-    pub fn insert_type_cons(&mut self, cons: TypeCons) -> TypeId {
-        let type_id = self.new_type_id();
-        self.manual_insert_type_cons(type_id, cons);
-        type_id
-    }
-
     pub fn get_type_cons(&self, id: TypeId) -> &TypeCons {
         self.type_cons_map
             .get(&id)
@@ -318,50 +311,6 @@ impl Universe {
 
     pub fn is_builtin_fn(&self, id: FnId) -> bool {
         self.builtin_fn_set.contains(&id)
-    }
-
-    fn inc_counter(&self) -> u64 {
-        let curr = self.id_counter.get();
-        let next = curr + 1;
-        self.id_counter.set(next);
-
-        curr
-    }
-
-    pub fn new_type_id(&self) -> TypeId {
-        TypeId(self.inc_counter())
-    }
-
-    pub fn new_type_param_id(&self) -> TypeParamId {
-        TypeParamId(self.inc_counter())
-    }
-
-    pub fn new_type_var_id(&self) -> TypeVarId {
-        TypeVarId(self.inc_counter())
-    }
-
-    pub fn new_field_id(&self) -> FieldId {
-        FieldId(self.inc_counter())
-    }
-
-    pub fn new_var_id(&self) -> VarId {
-        VarId(self.inc_counter())
-    }
-
-    pub fn new_fn_id(&self) -> FnId {
-        FnId(self.inc_counter())
-    }
-
-    pub fn new_tmp_id(&self) -> TmpId {
-        TmpId(self.inc_counter())
-    }
-
-    pub fn new_loop_id(&self) -> LoopId {
-        LoopId(self.inc_counter())
-    }
-
-    pub fn new_branching_id(&self) -> BranchingId {
-        BranchingId(self.inc_counter())
     }
 
     pub fn static_types(&self) -> Vec<(TypeId, TypeCons)> {

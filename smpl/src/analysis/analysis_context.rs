@@ -43,6 +43,26 @@ impl GlobalData {
         g
     }
 
+    pub fn int_type_id(&self) -> TypeId {
+        self.int_type_id.clone()
+    }
+
+    pub fn float_type_id(&self) -> TypeId {
+        self.float_type_id.clone()
+    }
+
+    pub fn bool_type_id(&self) -> TypeId {
+        self.bool_type_id.clone()
+    }
+
+    pub fn string_type_id(&self) -> TypeId {
+        self.string_type_id.clone()
+    }
+
+    pub fn unit_type_id(&self) -> TypeId {
+        self.unit_type_id.clone()
+    }
+
     fn inc_counter(&self) -> u64 {
         let curr = self.id_counter.get();
         let next = curr + 1;

@@ -13,7 +13,7 @@ use super::semantic_data::{
 use super::type_checker::TypingContext;
 use super::type_cons::{TypeCons, TypeParams};
 use super::abstract_type::AbstractType;
-use super::analysis_context::AnalysisContext;
+use super::analysis_context::{GlobalData, LocalData, AnalysisContext};
 
 pub fn analyze_fn(
     universe: &mut Universe,
@@ -60,6 +60,8 @@ impl<'a> From<&'a ast::AnonymousFn> for ContextData<'a> {
 
 pub fn generate_fn_analysis_data<'a, 'b, 'c, 'd, 'e, T>(
     universe: &'a Universe,
+    global_data: &'a mut GlobalData,
+    local_data: &'a mut LocalData,
     outer_scope: &'b ScopedData,
     outer_context: &'c TypingContext,
     fn_type_cons: &'d TypeCons,
@@ -90,7 +92,7 @@ where
                 for (param_name, (type_param_id, constraint)) in
                     tps.params.iter().zip(type_params.iter())
                 {
-                    let existential_type_var = universe.new_type_var_id();
+                    let existential_type_var = global_data.new_type_var_id();
                     let placeholder_variable =
                         type_params.placeholder_type_var(type_param_id);
 
@@ -120,7 +122,7 @@ where
                 for (formal_param, formal_param_type) in
                     formal_params.iter().zip(parameters.iter())
                 {
-                    let formal_param_var_id = universe.new_var_id();
+                    let formal_param_var_id = local_data.new_var_id();
                     let formal_param_type = formal_param_type.substitute_with(
                         universe,
                         outer_scope,

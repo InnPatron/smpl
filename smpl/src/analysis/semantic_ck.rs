@@ -8,14 +8,9 @@ use super::semantic_data::*;
 
 pub fn check_program(
     modules: Vec<ParsedModule>,
-) -> Result<Program, AnalysisError> {
-    let metadata = Metadata::new();
-    let universe = Universe::std();
-    let features = PresentFeatures::new();
+) -> Result<Program, AnalysisError> { 
 
-    let mut program = Program::new(universe, metadata, features);
-
-    mod_resolver::check_modules(&mut program, modules)?;
+    let mut program = mod_resolver::check_modules(modules)?;
 
     Metadata::find_main(&mut program)?;
 

@@ -75,11 +75,19 @@ struct ReservedFn(FnId, AstNode<AstFunction>);
 struct ReservedBuiltinFn(FnId, AstNode<AstBuiltinFunction>);
 
 pub fn check_modules(
-    program: &mut Program,
     modules: Vec<ParsedModule>,
-) -> Result<(), AnalysisError> {
+) -> Result<Program, AnalysisError> {
 
     let mut global_data = GlobalData::new();
+    let mut program_origin = {
+        let metadata = Metadata::new();
+        let universe = Universe::std(&mut global_data);
+        let features = PresentFeatures::new();
+
+        Program::new(universe, metadata, features)
+    };
+    
+    let program = &mut program_origin;
     let unscoped_raw_program = raw_mod_data(&mut global_data, modules)?;
 
     let internally_scoped_raw_program = 
@@ -134,7 +142,8 @@ pub fn check_modules(
     //     program.universe_mut().map_module(mod_id.clone(), name.clone(), module);
     // } 
     
-    let typable_raw_program = map_types(program, dependent_raw_program)?; 
+    let typable_raw_program = 
+        map_types(program, &mut global_data, dependent_raw_program)?; 
     let analyzable_raw_program = 
         generate_analyzable_fns(&mut global_data, program, typable_raw_program)?;
 
@@ -147,7 +156,7 @@ pub fn check_modules(
         }
     } 
 
-    Ok(())
+    Ok(program_origin)
 }
 
 fn generate_analyzable_fns(
@@ -171,6 +180,7 @@ fn generate_analyzable_fns(
             let fn_type_cons = type_cons_gen::generate_fn_type_cons(
                 universe,
                 metadata,
+                global_data,
                 raw_program.scope_map.get(mod_id).unwrap(),
                 &TypingContext::empty(),
                 fn_id,
@@ -179,6 +189,8 @@ fn generate_analyzable_fns(
 
             let analysis_context = analysis_helpers::generate_fn_analysis_data(
                 universe,
+                global_data,
+                &mut local_data,
                 raw_program.scope_map.get(mod_id).unwrap(),
                 &TypingContext::empty(),
                 &fn_type_cons,
@@ -196,9 +208,9 @@ fn generate_analyzable_fns(
                 &analysis_context,
             )?;
 
+            let fn_type_id = global_data.new_type_id();
             // TODO: Insert fn typing context
-            let fn_type_id =
-                program.universe_mut().insert_type_cons(fn_type_cons);
+            program.universe_mut().manual_insert_type_cons(fn_type_id, fn_type_cons);
 
             // TODO: Only insert into fn_map, not universe
             assert!(fn_map.insert(fn_id.clone(), Function::SMPL(SMPLFunction {
@@ -235,13 +247,16 @@ fn generate_analyzable_fns(
 
             let fn_type = type_cons_gen::generate_builtin_fn_type(
                 program,
+                global_data,
                 raw_program.scope_map.get(mod_id).unwrap(),
                 &TypingContext::empty(),
                 fn_id,
                 reserved_builtin.1.data(),
             )?;
 
-            let fn_type_id = program.universe_mut().insert_type_cons(fn_type);
+            let fn_type_id = global_data.new_type_id();
+            program.universe_mut()
+                .manual_insert_type_cons(fn_type_id, fn_type);
 
             program.features_mut().add_feature(BUILTIN_FN);
 
@@ -537,6 +552,7 @@ fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
 
 /// Insert types into the Universe and a separate type map
 fn map_types(program: &mut Program, 
+    global_data: &mut GlobalData,
     raw_program: DependentRawProgram) 
 
     -> Result<TypableRawProgram, AnalysisError> {
@@ -549,6 +565,7 @@ fn map_types(program: &mut Program,
             let (struct_type, field_ordering) =
                 type_cons_gen::generate_struct_type_cons(
                     program,
+                    global_data,
                     type_id,
                     raw_program.scope_map.get(mod_id).unwrap(),
                     &TypingContext::empty(),
@@ -572,6 +589,7 @@ fn map_types(program: &mut Program,
             let type_id = reserved_opaque.0;
             let opaque_type_cons = type_cons_gen::generate_opaque_type_cons(
                 program,
+                global_data,
                 type_id,
                 raw_program.scope_map.get(mod_id).unwrap(),
                 &TypingContext::empty(),

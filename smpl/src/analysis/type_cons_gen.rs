@@ -16,10 +16,12 @@ use super::semantic_data::{
 use super::type_checker::TypingContext;
 use super::type_cons::*;
 use super::abstract_type::*;
+use super::analysis_context::GlobalData;
 
 // TODO: Store type constructors in Program
 pub fn generate_struct_type_cons(
     program: &mut Program,
+    global_data: &mut GlobalData,
     type_id: TypeId,
     scope: &ScopedData,
     typing_context: &TypingContext,
@@ -31,6 +33,7 @@ pub fn generate_struct_type_cons(
     let (type_params, type_param_scope, type_param_typing_context) =
         type_param_map(
             universe,
+            global_data,
             struct_def.type_params.as_ref(),
             struct_def.where_clause.as_ref(),
             &scope,
@@ -43,7 +46,7 @@ pub fn generate_struct_type_cons(
     let mut order = Vec::new();
     if let Some(ref body) = struct_def.body.0 {
         for field in body.iter() {
-            let f_id = universe.new_field_id();
+            let f_id = global_data.new_field_id();
             let f_name = field.name.data().clone();
 
             let field_type_annotation = &field.field_type;
@@ -85,6 +88,7 @@ pub fn generate_struct_type_cons(
 pub fn generate_fn_type_cons(
     universe: &Universe,
     metadata: &mut Metadata,
+    global_data: &mut GlobalData,
     outer_scope: &ScopedData,
     outer_context: &TypingContext,
     fn_id: FnId,
@@ -93,6 +97,7 @@ pub fn generate_fn_type_cons(
     let (type_params, type_param_scope, type_param_typing_context) =
         type_param_map(
             universe,
+            global_data,
             fn_def.type_params.as_ref(),
             fn_def.where_clause.as_ref(),
             &outer_scope,
@@ -129,10 +134,9 @@ pub fn generate_fn_type_cons(
 
                 typed_formal_params.push(param_type);
 
-                param_metadata.push(FunctionParameter::new(
-                    param.name.data().clone(),
-                    universe.new_var_id(),
-                ));
+                // TODO: Insert param type metadata somewhere?
+                //   Probably in analyze_fn() when mapping paramaters into scope
+                //   ~770
             }
 
             typed_formal_params
@@ -152,6 +156,7 @@ pub fn generate_fn_type_cons(
 
 pub fn generate_builtin_fn_type(
     program: &mut Program,
+    global_data: &mut GlobalData,
     outer_scope: &ScopedData,
     outer_typing_context: &TypingContext,
     fn_id: FnId,
@@ -166,6 +171,7 @@ pub fn generate_builtin_fn_type(
     let (type_params, type_param_scope, type_param_typing_context) =
         type_param_map(
             universe,
+            global_data,
             fn_def.type_params.as_ref(),
             fn_def.where_clause.as_ref(),
             outer_scope,
@@ -207,10 +213,8 @@ pub fn generate_builtin_fn_type(
 
                     typed_params.push(param_type);
 
-                    param_metadata.push(FunctionParameter::new(
-                        param.name.data().clone(),
-                        universe.new_var_id(),
-                    ));
+                    // TODO: Insert param type metadata somewhere?
+
 
                     // TODO: Function signature scanner?
                 }
@@ -251,13 +255,14 @@ pub fn generate_builtin_fn_type(
 pub fn generate_anonymous_fn_type(
     universe: &Universe,
     metadata: &mut Metadata,
+    global_data: &mut GlobalData,
     outer_scope: &ScopedData,
     outer_context: &TypingContext,
     fn_id: FnId,
     fn_def: &AnonymousFn,
 ) -> Result<TypeCons, AnalysisError> {
     let (type_params, type_param_scope, type_param_typing_context) =
-        type_param_map(universe, None, None, &outer_scope, &outer_context)?;
+        type_param_map(universe, global_data, None, None, &outer_scope, &outer_context)?;
 
     let return_type = match fn_def.return_type {
         Some(ref ann) => {
@@ -289,10 +294,7 @@ pub fn generate_anonymous_fn_type(
 
                 typed_formal_params.push(param_type);
 
-                param_metadata.push(FunctionParameter::new(
-                    param.name.data().clone(),
-                    universe.new_var_id(),
-                ));
+                // TODO: Insert param type metadata somewhere?
             }
 
             typed_formal_params
@@ -312,6 +314,7 @@ pub fn generate_anonymous_fn_type(
 
 fn type_param_map(
     universe: &Universe,
+    global_data: &mut GlobalData,
     ast_type_params: Option<&AstTypeParams>,
     where_clause: Option<&WhereClause>,
     outer_scope: &ScopedData,
@@ -338,8 +341,8 @@ fn type_param_map(
                 }
                 .into());
             } else {
-                let type_param_id = universe.new_type_param_id();
-                let type_var_id = universe.new_type_var_id();
+                let type_param_id = global_data.new_type_param_id();
+                let type_var_id = global_data.new_type_var_id();
                 // Insert type parameter into set
                 internal_type_map
                     .insert(p.data().clone(), (p.span(), type_param_id, type_var_id));
@@ -445,6 +448,7 @@ fn type_param_map(
 
 pub fn generate_opaque_type_cons(
     program: &mut Program,
+    global_data: &mut GlobalData,
     type_id: TypeId,
     scope: &ScopedData,
     typing_context: &TypingContext,
@@ -456,6 +460,7 @@ pub fn generate_opaque_type_cons(
     let (type_params, _type_param_scope, _type_param_typing_context) =
         type_param_map(
             universe,
+            global_data,
             opaque_def.type_params.as_ref(),
             opaque_def.where_clause.as_ref(),
             &scope,

@@ -584,7 +584,7 @@ impl CFG {
 
                             let (block, _) = while_data.block.to_data();
 
-                            let loop_id = universe.new_loop_id();
+                            let loop_id = local_data.new_loop_id();
 
                             let expr_data = {
                                 let (conditional, con_span) =
@@ -769,7 +769,7 @@ impl CFG {
                                 match condition {
                                     Some(ast_condition) => {
                                         let branch_id =
-                                            universe.new_branching_id();
+                                            local_data.new_branching_id();
 
                                         let (conditional, con_span) =
                                             ast_condition.to_data();
