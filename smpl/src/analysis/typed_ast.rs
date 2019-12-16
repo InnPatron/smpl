@@ -61,6 +61,27 @@ impl Assignment {
         }
     }
 
+    pub fn new_prime(
+        global_data: &mut GlobalData,
+        assignment: ast::Assignment,
+    ) -> (Vec<AnonymousFnContainer>, Self) {
+        let (name, name_span) = assignment.name.to_data();
+        let (mut anon_1, field_access) = FieldAccess::new_prime(global_data, name);
+
+        let (mut anon_2, value) = expr_flow::flatten_prime(global_data, assignment.value);
+
+        anon_1.append(&mut anon_2);
+        let anon = anon_1;
+
+        let a = Assignment {
+            field_access: field_access,
+            value,
+            access_span: name_span,
+        };
+
+        (anon, a)
+    }
+
     pub fn access_span(&self) -> Span {
         self.access_span.clone()
     }
@@ -104,6 +125,26 @@ impl LocalVarDecl {
             var_id: universe.new_var_id(),
             span: stmt_span,
         }
+    }
+
+    pub fn new_prime(
+        global_data: &mut GlobalData,
+        decl: ast::LocalVarDecl,
+        stmt_span: Span,
+    ) -> (Vec<AnonymousFnContainer>, Self) {
+
+        let (anon, var_init) = 
+            expr_flow::flatten_prime(global_data, decl.var_init);
+
+        let l = LocalVarDecl {
+            type_ann: decl.var_type,
+            var_name: decl.var_name,
+            var_init,
+            var_id: global_data.new_var_id(),
+            span: stmt_span,
+        };
+
+        (anon, l)
     }
 
     pub fn span(&self) -> Span {
