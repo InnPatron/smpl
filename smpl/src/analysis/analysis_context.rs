@@ -1,6 +1,8 @@
 use std::cell::Cell;
 use std::collections::HashMap;
 
+use crate::ast::{Ident, AstNode, AnonymousFn as AstAnonymousFn};
+
 use super::semantic_data::ModuleId;
 use super::control_flow::CFG;
 use super::type_checker::TypingContext;
@@ -93,4 +95,62 @@ pub struct AnalyzableFn {
    cfg: CFG, 
    parent_typing_context: Option<TypingContext>,
    parent_scope: Option<ScopedData>,
+}
+
+#[derive(Clone, Debug)]
+pub struct AnalysisContext {
+    parent_scope: ScopedData,
+    parent_typing_context: TypingContext,
+    existential_type_vars: Vec<TypeVarId>,
+}
+
+impl AnalysisContext {
+    pub fn new(
+        parent_scope: ScopedData,
+        parent_typing_context: TypingContext,
+        existential_type_vars: Vec<TypeVarId>,
+    ) -> AnalysisContext {
+        AnalysisContext {
+            parent_scope,
+            parent_typing_context,
+            existential_type_vars,
+        }
+    }
+
+    pub fn parent_scope(&self) -> &ScopedData {
+        &self.parent_scope
+    }
+
+    pub fn parent_typing_context(&self) -> &TypingContext {
+        &self.parent_typing_context
+    }
+
+    pub fn existential_type_vars(&self) -> &[TypeVarId] {
+        &self.existential_type_vars
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum AnonymousFn {
+    Reserved(AstNode<AstAnonymousFn>),
+    Resolved {
+        fn_type: AstNode<TypeId>,
+        cfg: CFG,
+        analysis_context: AnalysisContext,
+    },
+}
+
+impl AnonymousFn {
+    pub fn name(&self) -> Option<&Ident> {
+        None
+    }
+
+    pub fn fn_type(&self) -> Option<TypeId> {
+        match self {
+            AnonymousFn::Reserved(_) => None,
+            AnonymousFn::Resolved { fn_type, .. } => {
+                Some(fn_type.data().clone())
+            }
+        }
+    }
 }
