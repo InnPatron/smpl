@@ -67,7 +67,7 @@ impl ScopeResolver {
                     AnonymousFunction::Resolved {
                         ref analysis_context,
                         ..
-                    } => analysis_context.fn_scope().clone(),
+                    } => analysis_context.parent_scope().clone(),
                 };
 
                 ScopeResolver {
@@ -78,7 +78,7 @@ impl ScopeResolver {
             Function::SMPL(smpl_function) => ScopeResolver {
                 scopes: vec![smpl_function
                     .analysis_context()
-                    .fn_scope()
+                    .parent_scope()
                     .clone()],
             },
         }

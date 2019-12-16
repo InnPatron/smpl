@@ -91,19 +91,19 @@ impl GlobalData {
 #[derive(Clone, Debug)]
 pub struct AnalysisContext {
     parent_scope: ScopedData,
-    parent_typing_context: TypingContext,
+    typing_context: TypingContext,
     existential_type_vars: Vec<TypeVarId>,
 }
 
 impl AnalysisContext {
     pub fn new(
         parent_scope: ScopedData,
-        parent_typing_context: TypingContext,
+        typing_context: TypingContext,
         existential_type_vars: Vec<TypeVarId>,
     ) -> AnalysisContext {
         AnalysisContext {
             parent_scope,
-            parent_typing_context,
+            typing_context,
             existential_type_vars,
         }
     }
@@ -112,8 +112,13 @@ impl AnalysisContext {
         &self.parent_scope
     }
 
-    pub fn parent_typing_context(&self) -> &TypingContext {
-        &self.parent_typing_context
+    pub fn typing_context(&self) -> &TypingContext {
+        &self.typing_context
+    }
+
+    // TODO: Restructure program to remove this function
+    pub fn set_typing_context(&mut self, tc: TypingContext) {
+        self.typing_context = tc;
     }
 
     pub fn existential_type_vars(&self) -> &[TypeVarId] {

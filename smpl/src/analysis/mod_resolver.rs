@@ -17,7 +17,7 @@ use super::semantic_data::*;
 use super::type_checker::TypingContext;
 use super::type_cons::TypeCons;
 use super::type_cons_gen;
-use super::analysis_context::GlobalData;
+use super::analysis_context::{AnalysisContext, GlobalData};
 
 use crate::feature::*;
 

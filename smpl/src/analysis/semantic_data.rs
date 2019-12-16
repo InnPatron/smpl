@@ -19,6 +19,7 @@ use super::type_checker::TypingContext;
 use super::metadata::Metadata;
 use super::type_cons::TypeCons;
 use super::abstract_type::AbstractType;
+use super::analysis_context::AnalysisContext;
 
 pub const UNIT_TYPE: &'static str = "Unit";
 pub const INT_TYPE: &'static str = "int";
@@ -426,43 +427,6 @@ impl Module {
 pub enum BindingInfo {
     Var(VarId, AbstractType),
     Fn(FnId),
-}
-
-#[derive(Clone, Debug)]
-pub struct AnalysisContext {
-    fn_scope: ScopedData,
-    typing_context: TypingContext,
-    existential_type_vars: Vec<TypeVarId>,
-}
-
-impl AnalysisContext {
-    pub fn new(
-        fn_scope: ScopedData,
-        typing_context: TypingContext,
-        existential_type_vars: Vec<TypeVarId>,
-    ) -> AnalysisContext {
-        AnalysisContext {
-            fn_scope: fn_scope,
-            typing_context: typing_context,
-            existential_type_vars: existential_type_vars,
-        }
-    }
-
-    pub fn fn_scope(&self) -> &ScopedData {
-        &self.fn_scope
-    }
-
-    pub fn typing_context(&self) -> &TypingContext {
-        &self.typing_context
-    }
-
-    pub fn set_typing_context(&mut self, tc: TypingContext) {
-        self.typing_context = tc;
-    }
-
-    pub fn existential_type_vars(&self) -> &[TypeVarId] {
-        &self.existential_type_vars
-    }
 }
 
 #[derive(Clone, Debug)]

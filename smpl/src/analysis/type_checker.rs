@@ -112,7 +112,7 @@ impl<'a> TypeChecker<'a> {
                     } => {
                         let typing_context =
                             analysis_context.typing_context().clone();
-                        let fn_scope = analysis_context.fn_scope().clone();
+                        let fn_scope = analysis_context.parent_scope().clone();
 
                         let return_type: AbstractType = {
                             let type_id = fn_type.clone();
@@ -155,7 +155,7 @@ impl<'a> TypeChecker<'a> {
                 let typing_context =
                     smpl_function.analysis_context().typing_context().clone();
                 let fn_scope =
-                    smpl_function.analysis_context().fn_scope().clone();
+                    smpl_function.analysis_context().parent_scope().clone();
 
                 let return_type: AbstractType = {
                     let type_id = smpl_function.fn_type();

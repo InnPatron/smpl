@@ -7,13 +7,13 @@ use super::error::AnalysisError;
 use super::metadata::*;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::{
-    AnalysisContext, FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId,
+    FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId,
     Universe, ModuleId,
 };
 use super::type_checker::TypingContext;
 use super::type_cons::{TypeCons, TypeParams};
 use super::abstract_type::AbstractType;
-
+use super::analysis_context::AnalysisContext;
 
 pub fn analyze_fn(
     universe: &mut Universe,

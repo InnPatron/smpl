@@ -9,12 +9,13 @@ use crate::span::Span;
 use super::error::{AnalysisError, ControlFlowError};
 use super::expr_flow;
 
-use super::semantic_data::{AnalysisContext, LoopId, Universe};
+use super::semantic_data::{LoopId, Universe};
 use super::type_cons::TypeCons;
 use super::abstract_type::AbstractType;
 
 use super::type_checker::TypingContext;
 use super::typed_ast;
+use super::analysis_context::AnalysisContext;
 
 use super::control_data::*;
 
