@@ -2,8 +2,9 @@ use std::cell::Cell;
 use std::collections::HashMap;
 
 use crate::ast::{Ident, AstNode, AnonymousFn as AstAnonymousFn};
+use crate::span::Span;
 
-use super::semantic_data::ModuleId;
+use super::semantic_data::*;
 use super::control_flow::CFG;
 use super::type_checker::TypingContext;
 use super::resolve_scope::ScopedData;
@@ -124,6 +125,26 @@ impl AnalysisContext {
     pub fn existential_type_vars(&self) -> &[TypeVarId] {
         &self.existential_type_vars
     }
+}
+
+pub enum Function {
+    SMPL(SMPLFunction),
+    Builtin(BuiltinFunction),
+}
+
+pub struct BuiltinFunction {
+    pub(super) fn_id: FnId,
+    pub(super) name: Ident,
+    pub(super) type_id: TypeId,
+}
+
+pub struct SMPLFunction {
+    pub(super) fn_id: FnId,
+    pub(super) name: Ident,
+    pub(super) type_id: TypeId,
+    pub(super) cfg: CFG,
+    pub(super) analysis_context: AnalysisContext,
+    pub(super) span: Span,
 }
 
 #[derive(Clone, Debug)]

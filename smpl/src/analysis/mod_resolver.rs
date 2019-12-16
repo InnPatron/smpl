@@ -17,7 +17,8 @@ use super::semantic_data::*;
 use super::type_checker::TypingContext;
 use super::type_cons::TypeCons;
 use super::type_cons_gen;
-use super::analysis_context::{AnalysisContext, GlobalData};
+use super::analysis_context::*;
+use super::analysis_context::SMPLFunction;
 
 use crate::feature::*;
 
@@ -49,26 +50,6 @@ struct AnalyzableRawProgram {
     dependency_map: HashMap<ModuleId, HashSet<ModuleId>>,
     type_map: HashMap<TypeId, TypeCons>,
     fn_map: HashMap<FnId, Function>,
-}
-
-enum Function {
-    SMPL(SMPLFunction),
-    Builtin(BuiltinFunction),
-}
-
-pub struct BuiltinFunction {
-    fn_id: FnId,
-    name: Ident,
-    type_id: TypeId,
-}
-
-struct SMPLFunction {
-    fn_id: FnId,
-    name: Ident,
-    type_id: TypeId,
-    cfg: CFG,
-    analysis_context: AnalysisContext,
-    span: Span,
 }
 
 struct RawProgram {
