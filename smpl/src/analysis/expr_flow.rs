@@ -29,7 +29,7 @@ fn flatten_expr(
             let (rhs, _) = flatten_expr(universe, scope, *bin.rhs);
             (
                 scope.map_tmp(
-                    universe,
+                    universe.new_tmp_id(),
                     Value::BinExpr(
                         bin.op,
                         Typed::untyped(lhs),
@@ -46,7 +46,7 @@ fn flatten_expr(
             let expr = flatten_expr(universe, scope, *uni.expr).0;
             (
                 scope.map_tmp(
-                    universe,
+                    universe.new_tmp_id(),
                     Value::UniExpr(uni.op, Typed::untyped(expr)),
                     span.clone(),
                 ),
@@ -56,7 +56,7 @@ fn flatten_expr(
 
         AstExpr::Literal(literal) => {
             let (literal, span) = literal.to_data();
-            (scope.map_tmp(universe, Value::Literal(literal), span.clone()), span)
+            (scope.map_tmp(universe.new_tmp_id(), Value::Literal(literal), span.clone()), span)
         }
 
         AstExpr::StructInit(init) => {
@@ -73,7 +73,7 @@ fn flatten_expr(
                 .collect::<Vec<_>>();
             (
                 scope.map_tmp(
-                    universe,
+                    universe.new_tmp_id(),
                     Value::StructInit(StructInit::new(struct_name, field_init)),
                     span.clone(),
                 ),
@@ -93,7 +93,7 @@ fn flatten_expr(
                 .collect::<Vec<_>>();
             (
                 scope.map_tmp(
-                    universe,
+                    universe.new_tmp_id(),
                     Value::AnonStructInit(AnonStructInit::new(field_init)),
                     span.clone(),
                 ),
@@ -105,7 +105,7 @@ fn flatten_expr(
             let span = ident.span();
             (
                 scope.map_tmp(
-                    universe,
+                    universe.new_tmp_id(),
                     Value::Binding(TypedBinding::new(ident)),
                     span.clone(),
                 ),
@@ -117,7 +117,7 @@ fn flatten_expr(
             let (path, span) = path.to_data();
             let field_access = FieldAccess::new(universe, path);
             (
-                scope.map_tmp(universe, Value::FieldAccess(field_access), span.clone()),
+                scope.map_tmp(universe.new_tmp_id(), Value::FieldAccess(field_access), span.clone()),
                 span,
             )
         }
@@ -135,7 +135,7 @@ fn flatten_expr(
 
             let fn_call = FnCall::new(fn_val, args);
 
-            (scope.map_tmp(universe, Value::FnCall(fn_call), span.clone()), span)
+            (scope.map_tmp(universe.new_tmp_id(), Value::FnCall(fn_call), span.clone()), span)
         }
 
         AstExpr::ArrayInit(init) => {
@@ -154,7 +154,7 @@ fn flatten_expr(
                     let init = ArrayInit::List(list);
 
                     (
-                        scope.map_tmp(universe, Value::ArrayInit(init), span.clone()),
+                        scope.map_tmp(universe.new_tmp_id(), Value::ArrayInit(init), span.clone()),
                         span,
                     )
                 }
@@ -164,7 +164,7 @@ fn flatten_expr(
                     let init = ArrayInit::Value(value, size);
 
                     (
-                        scope.map_tmp(universe, Value::ArrayInit(init), span.clone()),
+                        scope.map_tmp(universe.new_tmp_id(), Value::ArrayInit(init), span.clone()),
                         span,
                     )
                 }
@@ -187,7 +187,7 @@ fn flatten_expr(
             };
 
             (
-                scope.map_tmp(universe, Value::Indexing(indexing), span.clone()),
+                scope.map_tmp(universe.new_tmp_id(), Value::Indexing(indexing), span.clone()),
                 span,
             )
         }
@@ -209,7 +209,7 @@ fn flatten_expr(
                 }
             };
 
-            (scope.map_tmp(universe, tmp, span.clone()), span)
+            (scope.map_tmp(universe.new_tmp_id(), tmp, span.clone()), span)
         }
 
         AstExpr::AnonymousFn(a_fn) => {
@@ -218,7 +218,7 @@ fn flatten_expr(
             universe.reserve_anonymous_fn(fn_id, a_fn);
             (
                 scope.map_tmp(
-                    universe,
+                    universe.new_tmp_id(),
                     Value::AnonymousFn(AnonymousFn::new(fn_id)),
                     span.clone(),
                 ),

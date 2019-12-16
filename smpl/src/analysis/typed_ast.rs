@@ -191,12 +191,12 @@ impl Expr {
 
     pub fn map_tmp(
         &mut self,
-        universe: &Universe,
+        tmp_id: TmpId,
         val: Value,
         span: Span,
     ) -> TmpId {
         let tmp = Tmp {
-            id: universe.new_tmp_id(),
+            id: tmp_id,
             value: Typed { data: val },
             span: span,
         };
