@@ -15,7 +15,7 @@ use super::abstract_type::AbstractType;
 
 use super::type_checker::TypingContext;
 use super::typed_ast;
-use super::analysis_context::AnalysisContext;
+use super::analysis_context::{AnonymousFn as AnonymousFnContainer, AnalysisContext, GlobalData};
 
 use super::control_data::*;
 
@@ -322,10 +322,11 @@ impl CFG {
     ///
     pub fn generate(
         universe: &mut Universe,
+        global_data: &mut GlobalData,
         body: ast::AstNode<ast::Block>,
         fn_type: &TypeCons,
         _analysis_context: &AnalysisContext,
-    ) -> Result<Self, AnalysisError> {
+    ) -> Result<(Vec<AnonymousFnContainer>, Self), AnalysisError> {
         let mut cfg = {
             let mut graph = graph::Graph::new();
             let start = graph.add_node(Node::Start);
@@ -342,8 +343,12 @@ impl CFG {
 
         let (body, _) = body.to_data();
         let instructions = body.0;
+        // TODO: Return anonymous functions
+        let mut anonymous_fns = Vec::new();
         let function_body = cfg.generate_scoped_block(
             universe,
+            global_data,
+            &mut anonymous_fns,
             instructions.into_iter(),
             None,
         )?;
@@ -387,7 +392,7 @@ impl CFG {
         append_node!(cfg, head, previous, Node::ExitScope);
         append_node_index!(cfg, head, previous, cfg.end);
 
-        Ok(cfg)
+        Ok((anonymous_fns, cfg))
     }
 
     ///
@@ -400,6 +405,8 @@ impl CFG {
     fn generate_scoped_block<'a, 'b, T>(
         &'a mut self,
         universe: &'b mut Universe,
+        global_data: &'b mut GlobalData,
+        anonymous_fns: &mut Vec<AnonymousFnContainer>,
         mut instructions: T,
         loop_data: InternalLoopData,
     ) -> Result<BranchData, ControlFlowError>
@@ -418,7 +425,8 @@ impl CFG {
                 // Added to current basic block
                 Stmt::Expr(expr) => {
                     let (ast_expr, span) = expr.to_data();
-                    let expr = expr_flow::flatten(universe, ast_expr);
+                    let (mut anon, expr) = expr_flow::flatten(global_data, ast_expr);
+                    anonymous_fns.append(&mut anon);
                     current_block.append(BlockNode::Expr(ExprData {
                         expr: expr,
                         span: span,
@@ -430,9 +438,10 @@ impl CFG {
                     match expr_stmt {
                         // Append assignment node to current basic block
                         ExprStmt::Assignment(assignment) => {
-                            let assignment = typed_ast::Assignment::new(
-                                universe, assignment,
+                            let (mut anon_fn, assignment) = typed_ast::Assignment::new(
+                                global_data, assignment,
                             );
+                            anonymous_fns.append(&mut anon_fn);
                             current_block.append(BlockNode::Assignment(
                                 AssignmentData {
                                     assignment: assignment,
@@ -443,11 +452,12 @@ impl CFG {
 
                         // Append local variable declaration node to current basic block
                         ExprStmt::LocalVarDecl(decl) => {
-                            let decl = typed_ast::LocalVarDecl::new(
-                                universe,
+                            let (mut anon_fn, decl) = typed_ast::LocalVarDecl::new(
+                                global_data,
                                 decl,
                                 expr_stmt_span.clone(),
                             );
+                            anonymous_fns.append(&mut anon_fn);
                             current_block.append(BlockNode::LocalVarDecl(
                                 LocalVarDeclData {
                                     decl: decl,
@@ -468,7 +478,12 @@ impl CFG {
                                 current_block = BasicBlock::new();
                             }
                             let expr = expr
-                                .map(|expr| expr_flow::flatten(universe, expr));
+                                .map(|expr| {
+                                    let (mut anon_fn, expr) = 
+                                        expr_flow::flatten(global_data, expr);
+                                    anonymous_fns.append(&mut anon_fn);
+                                    expr
+                                });
                             append_node!(
                                 self,
                                 head,
@@ -562,8 +577,10 @@ impl CFG {
                             let expr_data = {
                                 let (conditional, con_span) =
                                     while_data.conditional.to_data();
-                                let expr =
-                                    expr_flow::flatten(universe, conditional);
+                                let (mut anon_fn, expr) =
+                                    expr_flow::flatten(global_data, conditional);
+                                anonymous_fns.append(&mut anon_fn);
+
                                 ExprData {
                                     expr: expr,
                                     span: con_span,
@@ -593,6 +610,8 @@ impl CFG {
                             let instructions = block.0;
                             let loop_body = self.generate_scoped_block(
                                 universe,
+                                global_data,
+                                anonymous_fns,
                                 instructions.into_iter(),
                                 Some((loop_head, loop_foot, loop_id)),
                             )?;
@@ -666,6 +685,8 @@ impl CFG {
                             fn generate_branch(
                                 cfg: &mut CFG,
                                 universe: &mut Universe,
+                                global_data: &mut GlobalData,
+                                anonymous_fns: &mut Vec<AnonymousFnContainer>,
                                 body: AstNode<Block>,
                                 condition: Option<AstNode<Expr>>,
                                 loop_data: InternalLoopData,
@@ -676,6 +697,8 @@ impl CFG {
                                 // Generate the branch subgraph
                                 let branch_graph = cfg.generate_scoped_block(
                                     universe,
+                                    global_data,
+                                    anonymous_fns,
                                     instructions.into_iter(),
                                     loop_data,
                                 )?;
@@ -735,10 +758,11 @@ impl CFG {
 
                                         let (conditional, con_span) =
                                             ast_condition.to_data();
-                                        let expr = expr_flow::flatten(
-                                            universe,
+                                        let (mut anon, expr) = expr_flow::flatten(
+                                            global_data,
                                             conditional,
                                         );
+                                        anonymous_fns.append(&mut anon);
                                         let expr_data = ExprData {
                                             expr: expr,
                                             span: con_span,
@@ -802,6 +826,8 @@ impl CFG {
                             let first_branch = generate_branch(
                                 self,
                                 universe,
+                                global_data,
+                                anonymous_fns,
                                 first_branch.block,
                                 Some(first_branch.conditional),
                                 loop_data,
@@ -827,6 +853,8 @@ impl CFG {
                                 let branch = generate_branch(
                                     self,
                                     universe,
+                                    global_data,
+                                    anonymous_fns,
                                     branch.block,
                                     Some(branch.conditional),
                                     loop_data,
@@ -875,7 +903,13 @@ impl CFG {
                                 Some(block) => {
                                     // Found an "else" branch
                                     let else_branch = generate_branch(
-                                        self, universe, block, None, loop_data,
+                                        self,
+                                        universe,
+                                        global_data,
+                                        anonymous_fns,
+                                        block,
+                                        None,
+                                        loop_data,
                                     )?;
                                     let else_head = else_branch.head
                                         .expect("generate_branch() head should always be Some");

@@ -135,7 +135,8 @@ pub fn check_modules(
     // } 
     
     let typable_raw_program = map_types(program, dependent_raw_program)?; 
-    let analyzable_raw_program = generate_analyzable_fns(program, typable_raw_program)?;
+    let analyzable_raw_program = 
+        generate_analyzable_fns(&mut global_data, program, typable_raw_program)?;
 
     for (mod_id, raw_mod) in analyzable_raw_program.module_map.iter() {
         let (universe, metadata, _) = program.analysis_context();
@@ -149,7 +150,10 @@ pub fn check_modules(
     Ok(())
 }
 
-fn generate_analyzable_fns(program: &mut Program, raw_program: TypableRawProgram)
+fn generate_analyzable_fns(
+    global_data: &mut GlobalData, 
+    program: &mut Program, 
+    raw_program: TypableRawProgram)
     -> Result<AnalyzableRawProgram, AnalysisError> {
 
     let mut fn_map = HashMap::new();
@@ -180,8 +184,10 @@ fn generate_analyzable_fns(program: &mut Program, raw_program: TypableRawProgram
                 reserved_fn.1.data(),
             )?;
 
-            let cfg = CFG::generate(
+            // TODO: Use anonymous functions
+            let (anon_fns, cfg) = CFG::generate(
                 program.universe_mut(),
+                global_data,
                 fn_decl.body.clone(),
                 &fn_type_cons,
                 &analysis_context,

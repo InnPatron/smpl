@@ -1311,8 +1311,10 @@ fn resolve_anonymous_fn(
     // Needed to get around possible future borrow checker error
     // See issue #59159 (mutable_borrow_reservation_conflict)
     if let Some((body, analysis_context, fn_type_cons, anon_span)) = carry_data {
-        let cfg = super::control_flow::CFG::generate(
+        // TODO: Use anonymous functions
+        let (anon_fns, cfg) = super::control_flow::CFG::generate(
             universe,
+            unimplemented!("Type checker anonymous fn handling"),
             body,
             &fn_type_cons,
             &analysis_context,
