@@ -83,7 +83,7 @@ pub fn type_check(
 }
 
 struct TypeChecker<'a> {
-    universe: &'a mut Universe,
+    universe: &'a Universe,
     metadata: &'a mut Metadata,
     global_data: &'a mut GlobalData,
     module_id: ModuleId,
@@ -99,7 +99,7 @@ impl<'a> TypeChecker<'a> {
     // TODO: Add function parameters somewhere
     // TODO: Put formal parameters into function scope within Universe
     pub fn new<'b>(
-        universe: &'b mut Universe,
+        universe: &'b Universe,
         metadata: &'b mut Metadata,
         global_data: &'b mut GlobalData,
         module_id: ModuleId,
@@ -413,9 +413,6 @@ impl<'a> TypeChecker<'a> {
 
             match decision {
                 Either::Left((_fn_type_id, fn_type_cons)) => {
-                    // TODO: Insertion no longer necessary
-                    self.universe
-                        .manual_insert_type_cons(_fn_type_id, fn_type_cons.clone());
 
                     // Store type constructor locally.
                     // TODO: Insert anonymous type constructor into Universe 
