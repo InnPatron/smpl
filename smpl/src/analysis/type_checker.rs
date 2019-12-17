@@ -81,6 +81,62 @@ pub fn type_check(
     Ok(())
 }
 
+pub fn type_check_prime(
+    to_check: &mut Function,
+    universe: &Universe,
+    metadata: &mut Metadata,
+    global_data: &mut GlobalData,
+    module_id: ModuleId,
+) -> Result<(AnonStorage<TypingContext>, AnonStorage<TypeCons>), AnalysisError> {
+    use super::semantic_data::Function;
+
+    let cfg = {
+        match to_check {
+            Function::SMPL(ref smpl_fn) => smpl_fn.cfg(),
+            Function::Anonymous(ref afn) => match afn {
+                SemanticAnonymousFn::Reserved(..) => {
+                    panic!("Anonymous function should be resolved")
+                }
+
+                SemanticAnonymousFn::Resolved { ref cfg, .. } => cfg,
+            },
+
+            _ => panic!("Not a function with a type-checkable body"),
+        }
+    };
+
+    let mut type_checker = 
+        TypeChecker::new_prime(to_check, universe, metadata, global_data, module_id)?;
+    let traverser = Traverser::new(cfg, &mut type_checker);
+    traverser.traverse()?;
+
+    // Update the typing context
+    let typing_context = type_checker.typing_context;
+    {
+        match to_check {
+            Function::SMPL(ref mut smpl_fn) => {
+                smpl_fn
+                    .analysis_context_mut()
+                    .set_typing_context(typing_context);
+            }
+            Function::Anonymous(ref mut afn) => match afn {
+                SemanticAnonymousFn::Reserved(..) => unreachable!(),
+
+                SemanticAnonymousFn::Resolved {
+                    ref mut analysis_context,
+                    ..
+                } => {
+                    analysis_context.set_typing_context(typing_context);
+                }
+            },
+
+            _ => unreachable!(),
+        }
+    };
+
+    Ok((type_checker.anon_typing_context_storage, type_checker.anon_type_cons_storage))
+}
+
 struct TypeChecker<'a> {
     universe: &'a Universe,
     metadata: &'a mut Metadata,
@@ -166,6 +222,127 @@ impl<'a> TypeChecker<'a> {
             }
 
             Function::SMPL(smpl_function) => {
+                let typing_context =
+                    smpl_function.analysis_context().typing_context().clone();
+                let fn_scope =
+                    smpl_function.analysis_context().parent_scope().clone();
+
+                let return_type: AbstractType = {
+                    let type_id = smpl_function.type_id();
+
+                    let decl_span = smpl_function.span();
+                    let fn_type = AbstractType::App {
+                        data: decl_span.clone(),
+                        type_cons: type_id,
+                        args: smpl_function
+                            .analysis_context()
+                            .existential_type_vars()
+                            .iter()
+                            .map(|id| AbstractType::TypeVar(decl_span.clone(), id.clone()))
+                            .collect::<Vec<_>>(),
+                    }
+                    .substitute(
+                        universe,
+                        &fn_scope,
+                        &typing_context,
+                    )?;
+                    // TODO: Should this be the module context/scope
+
+                    match fn_type {
+                        AbstractType::Function {
+                            ref return_type, ..
+                        } => *return_type.clone(),
+
+                        _ => {
+                            panic!("Non-function type constructor for function")
+                        }
+                    }
+                };
+
+                Ok(TypeChecker {
+                    scopes: vec![fn_scope],
+                    typing_context: typing_context,
+                    module_id: module_id,
+                    universe: universe,
+                    metadata: metadata,
+                    global_data,
+                    return_type: return_type,
+                    anon_typing_context_storage: AnonStorage::new(),
+                    anon_type_cons_storage: AnonStorage::new(),
+                })
+            }
+        }
+    }
+
+    pub fn new_prime<'b>(
+        to_check: &Function,
+        universe: &'b Universe,
+        metadata: &'b mut Metadata,
+        global_data: &'b mut GlobalData,
+        module_id: ModuleId,
+    ) -> Result<TypeChecker<'b>, AnalysisError> {
+        use super::semantic_data::Function;
+
+        match to_check {
+            Function::Builtin(..) => unimplemented!(),
+
+            Function::Anonymous(ref anonymous_fn) => {
+                match anonymous_fn {
+                    SemanticAnonymousFn::Reserved(..) => {
+                        panic!("Expected anonymous functions to already be resolved");
+                    }
+
+                    SemanticAnonymousFn::Resolved {
+                        ref type_id,
+                        ref analysis_context,
+                        ..
+                    } => {
+                        let typing_context =
+                            analysis_context.typing_context().clone();
+                        let fn_scope = analysis_context.parent_scope().clone();
+
+                        let return_type: AbstractType = {
+                            let fn_type_span = type_id.span();
+                            let type_id = type_id.data().clone();
+
+                            let fn_type = AbstractType::App {
+                                data: fn_type_span,
+                                type_cons: type_id,
+                                args: analysis_context
+                                    .existential_type_vars()
+                                    .iter()
+                                    .map(|id| AbstractType::TypeVar(Span::dummy(), id.clone()))
+                                    .collect::<Vec<_>>(),
+                            }
+                            .substitute(universe, &fn_scope, &typing_context)?;
+                            // TODO: Should this be the module context/scope
+
+                            match fn_type {
+                                AbstractType::Function {
+                                    ref return_type,
+                                    ..
+                                } => *return_type.clone(),
+
+                                _ => panic!("Non-function type constructor for function"),
+                            }
+                        };
+
+                        Ok(TypeChecker {
+                            universe: universe,
+                            metadata: metadata,
+                            global_data,
+                            module_id: module_id,
+                            scopes: vec![fn_scope],
+                            typing_context: typing_context,
+                            return_type: return_type,
+                            anon_typing_context_storage: AnonStorage::new(),
+                            anon_type_cons_storage: AnonStorage::new(),
+                        })
+                    }
+                }
+            }
+
+            Function::SMPL(ref smpl_function) => {
                 let typing_context =
                     smpl_function.analysis_context().typing_context().clone();
                 let fn_scope =
