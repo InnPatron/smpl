@@ -13,6 +13,7 @@ use super::semantic_data::{
 };
 use super::typed_ast::*;
 use super::anon_storage::AnonStorage;
+use super::semantic_data::Function;
 
 pub fn resolve(
     universe: &mut Universe,
@@ -45,12 +46,76 @@ pub fn resolve(
     }
 }
 
+pub fn resolve_prime(to_resolve: &mut Function) 
+    -> Result<AnonStorage<ScopedData>, AnalysisError> {
+
+    let mut scope_resolver = ScopeResolver::new_prime(to_resolve);
+
+    let result: Result<(), _> = match to_resolve {
+        Function::SMPL(ref mut smpl_fn) => {
+            let cfg = &mut smpl_fn.cfg;
+            traverse(cfg, &mut scope_resolver)
+        }
+
+        Function::Anonymous(ref mut anon_fn) => match anon_fn {
+            AnonymousFn::Reserved(..) => {
+                panic!("Anonymous function should be resolved")
+            }
+            AnonymousFn::Resolved { ref mut cfg, .. } => {
+                traverse(cfg, &mut scope_resolver)
+            }
+        },
+
+        Function::Builtin(..) => {
+            panic!("Unable to resolve scope of builtin functions")
+        }
+    };
+
+    result.map(|_| scope_resolver.anon_scope_storage)
+}
+
 struct ScopeResolver {
     anon_scope_storage: AnonStorage<ScopedData>,
     scopes: Vec<ScopedData>,
 }
 
 impl ScopeResolver {
+
+    // Formal parameters should already be in the function scope
+    //  (in generate_fn_type())
+    pub fn new_prime(to_resolve: &Function) -> ScopeResolver {
+
+        match to_resolve {
+            Function::Builtin(_) => unimplemented!(),
+            Function::Anonymous(ref anonymous_fn) => {
+                let fn_scope = match anonymous_fn {
+                    AnonymousFn::Reserved(..) => {
+                        panic!("Expected anonymous functions to already be resolved");
+                    }
+
+                    AnonymousFn::Resolved {
+                        ref analysis_context,
+                        ..
+                    } => analysis_context.parent_scope().clone(),
+                };
+
+                ScopeResolver {
+                    anon_scope_storage: AnonStorage::new(),
+                    scopes: vec![fn_scope],
+                }
+            }
+
+            Function::SMPL(ref smpl_function) => ScopeResolver {
+                anon_scope_storage: AnonStorage::new(),
+                scopes: vec![smpl_function
+                    .analysis_context()
+                    .parent_scope()
+                    .clone()],
+            },
+        }
+    }
+
+
     // Formal parameters should already be in the function scope
     //  (in generate_fn_type())
     pub fn new(universe: &Universe, fn_id: FnId) -> ScopeResolver {
