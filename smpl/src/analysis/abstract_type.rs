@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use either::Either;
+
 use crate::ast::{AstNode, Ident, TypeAnnotation, WidthConstraint};
 use crate::span::Span;
 
@@ -253,15 +255,15 @@ impl AbstractTypeX<Span> {
         self.data()
     }
 
-    pub fn type_cons(&self) -> Option<TypeId> {
+    pub fn type_cons(&self) -> Option<Either<TypeId, &TypeCons>> {
         match *self {
             AbstractType::App {
                 type_cons: ref tc, ..
-            } => Some(tc.clone()),
+            } => Some(Either::Left(tc.clone())),
 
             AbstractType::App2 {
                 type_cons: ref tc, ..
-            } => unimplemented!(),
+            } => Some(Either::Right(tc)),
 
             _ => None,
         }
