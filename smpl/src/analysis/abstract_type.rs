@@ -30,6 +30,12 @@ pub enum AbstractTypeX<X> {
         args: Vec<AbstractTypeX<X>>,
     },
 
+    App2 {
+        data: X,
+        type_cons: Box<TypeCons>,
+        args: Vec<AbstractTypeX<X>>,
+    },
+
     Array {
         data: X,
         element_type: Box<AbstractTypeX<X>>,
@@ -91,6 +97,21 @@ impl<T> AbstractTypeX<T> {
                 ..
             } => {
                 App {
+                    data: (),
+                    type_cons,
+                    args: args
+                        .into_iter()
+                        .map(|t| t.downcast())
+                        .collect(),
+                }
+            }
+
+            App2 {
+                type_cons,
+                args,
+                ..
+            } => {
+                App2 {
                     data: (),
                     type_cons,
                     args: args
@@ -185,6 +206,11 @@ impl<T> AbstractTypeX<T> {
                 ..
             } => data,
 
+            App2 {
+                ref data,
+                ..
+            } => data,
+
             Array {
                 ref data,
                 ..
@@ -232,6 +258,10 @@ impl AbstractTypeX<Span> {
             AbstractType::App {
                 type_cons: ref tc, ..
             } => Some(tc.clone()),
+
+            AbstractType::App2 {
+                type_cons: ref tc, ..
+            } => unimplemented!(),
 
             _ => None,
         }
@@ -406,148 +436,160 @@ impl AbstractTypeX<Span> {
         typing_context: &TypingContext,
         map: &HashMap<TypeVarId, AbstractType>,
     ) -> Result<AbstractType, AnalysisError> {
+
+
+        let applier = |type_cons: &TypeCons, type_args: &[AbstractType], app_span| {
+            let (ok_args, mut err) = type_args
+                .iter()
+                .map(|at| {
+                    at.substitute_internal(
+                        universe,
+                        scoped_data,
+                        typing_context,
+                        map,
+                    )
+                })
+                .fold(
+                    (Vec::new(), Vec::new()),
+                    |(mut ok, mut err), apply_result| {
+                        match apply_result {
+                            Ok(app) => ok.push(app),
+                            Err(e) => err.push(e),
+                        }
+
+                        (ok, err)
+                    },
+                );
+
+            if err.len() > 1 {
+                return Err(AnalysisError::Errors(err
+                        .into_iter().map(|e| e.into()).collect()));
+            } else if err.len() == 1 {
+                return Err(err.remove(0));
+            }
+
+            // Check if args match constraints
+            if let Some(type_params) = type_cons.type_params() {
+                if ok_args.len() != type_params.len() {
+                    return Err(AnalysisError::TypeError(ATypeError::ApplicationError(
+                        ApplicationError::Arity {
+                            expected: type_params.len(),
+                            found: ok_args.len(),
+                        },
+                    )));
+                }
+
+                // Need to substitute all args into constraints
+                let (constraints, constraint_sub_map) = {
+                    let mut constraints = Vec::new();
+                    let mut constraint_errors = Vec::new();
+                    let mut constraint_sub_map = HashMap::new();
+
+                    // Build substitution map for constraints
+                    for ((type_param_id, _), arg_type) in
+                        type_params.iter().zip(ok_args.iter())
+                    {
+                        let placeholder_type_var =
+                            type_params.placeholder_type_var(type_param_id);
+
+                        constraint_sub_map
+                            .insert(placeholder_type_var, arg_type.clone());
+                    }
+
+                    // Substitute constraint
+                    for (_, constraint) in type_params.iter() {
+                        let constraint = constraint.substitute_internal(
+                            universe,
+                            scoped_data,
+                            typing_context,
+                            &constraint_sub_map,
+                        );
+
+                        match constraint {
+                            Ok(c) => constraints.push(c),
+                            Err(e) => constraint_errors.push(e),
+                        }
+                    }
+
+                    if constraint_errors.len() > 1 {
+                        return Err(AnalysisError::Errors(constraint_errors
+                                .into_iter().map(|e| e.into()).collect()));
+                    } else if constraint_errors.len() == 1 {
+                        return Err(constraint_errors.remove(0));
+                    } else {
+                        (constraints, constraint_sub_map)
+                    }
+                };
+
+                let mut arg_constraint_errors = Vec::new();
+                for (arg_type, constraint) in
+                    ok_args.iter().zip(constraints.iter())
+                {
+                    // TODO: Pass the correct Span
+                    match super::type_resolver::resolve_types_static(
+                        universe,
+                        scoped_data,
+                        typing_context,
+                        arg_type,
+                        &constraint,
+                        crate::span::Span::dummy(),
+                    ) {
+                        Ok(_) => (),
+
+                        Err(e) => arg_constraint_errors.push(e),
+                    }
+                }
+
+                if arg_constraint_errors.len() > 1 {
+                    return Err(AnalysisError::Errors(arg_constraint_errors
+                            .into_iter().map(|e| e.into()).collect()));
+                } else if arg_constraint_errors.len() == 1 {
+                    return Err(arg_constraint_errors.remove(0).into());
+                }
+
+                AbstractType::apply_internal(
+                    type_cons,
+                    universe,
+                    scoped_data,
+                    typing_context,
+                    &constraint_sub_map,
+                    app_span,
+                )
+            } else if ok_args.len() != 0 {
+                return Err(AnalysisError::TypeError(ATypeError::ApplicationError(
+                    ApplicationError::Arity {
+                        expected: 0,
+                        found: ok_args.len(),
+                    },
+                )));
+            } else {
+                AbstractType::apply_internal(
+                    type_cons,
+                    universe,
+                    scoped_data,
+                    typing_context,
+                    &HashMap::new(),
+                    app_span,
+                )
+            }
+        };
+
         match *self {
             AbstractType::App {
                 data: ref app_span,
                 type_cons: ref type_cons_id,
                 args: ref type_args,
             } => {
-                let (ok_args, mut err) = type_args
-                    .iter()
-                    .map(|at| {
-                        at.substitute_internal(
-                            universe,
-                            scoped_data,
-                            typing_context,
-                            map,
-                        )
-                    })
-                    .fold(
-                        (Vec::new(), Vec::new()),
-                        |(mut ok, mut err), apply_result| {
-                            match apply_result {
-                                Ok(app) => ok.push(app),
-                                Err(e) => err.push(e),
-                            }
-
-                            (ok, err)
-                        },
-                    );
-
-                if err.len() > 1 {
-                    return Err(AnalysisError::Errors(err
-                            .into_iter().map(|e| e.into()).collect()));
-                } else if err.len() == 1 {
-                    return Err(err.remove(0));
-                }
-
                 let type_cons = universe.get_type_cons(*type_cons_id);
 
-                // Check if args match constraints
-                if let Some(type_params) = type_cons.type_params() {
-                    if ok_args.len() != type_params.len() {
-                        return Err(AnalysisError::TypeError(ATypeError::ApplicationError(
-                            ApplicationError::Arity {
-                                expected: type_params.len(),
-                                found: ok_args.len(),
-                            },
-                        )));
-                    }
-
-                    // Need to substitute all args into constraints
-                    let (constraints, constraint_sub_map) = {
-                        let mut constraints = Vec::new();
-                        let mut constraint_errors = Vec::new();
-                        let mut constraint_sub_map = HashMap::new();
-
-                        // Build substitution map for constraints
-                        for ((type_param_id, _), arg_type) in
-                            type_params.iter().zip(ok_args.iter())
-                        {
-                            let placeholder_type_var =
-                                type_params.placeholder_type_var(type_param_id);
-
-                            constraint_sub_map
-                                .insert(placeholder_type_var, arg_type.clone());
-                        }
-
-                        // Substitute constraint
-                        for (_, constraint) in type_params.iter() {
-                            let constraint = constraint.substitute_internal(
-                                universe,
-                                scoped_data,
-                                typing_context,
-                                &constraint_sub_map,
-                            );
-
-                            match constraint {
-                                Ok(c) => constraints.push(c),
-                                Err(e) => constraint_errors.push(e),
-                            }
-                        }
-
-                        if constraint_errors.len() > 1 {
-                            return Err(AnalysisError::Errors(constraint_errors
-                                    .into_iter().map(|e| e.into()).collect()));
-                        } else if constraint_errors.len() == 1 {
-                            return Err(constraint_errors.remove(0));
-                        } else {
-                            (constraints, constraint_sub_map)
-                        }
-                    };
-
-                    let mut arg_constraint_errors = Vec::new();
-                    for (arg_type, constraint) in
-                        ok_args.iter().zip(constraints.iter())
-                    {
-                        // TODO: Pass the correct Span
-                        match super::type_resolver::resolve_types_static(
-                            universe,
-                            scoped_data,
-                            typing_context,
-                            arg_type,
-                            &constraint,
-                            crate::span::Span::dummy(),
-                        ) {
-                            Ok(_) => (),
-
-                            Err(e) => arg_constraint_errors.push(e),
-                        }
-                    }
-
-                    if arg_constraint_errors.len() > 1 {
-                        return Err(AnalysisError::Errors(arg_constraint_errors
-                                .into_iter().map(|e| e.into()).collect()));
-                    } else if arg_constraint_errors.len() == 1 {
-                        return Err(arg_constraint_errors.remove(0).into());
-                    }
-
-                    AbstractType::apply_internal(
-                        type_cons,
-                        universe,
-                        scoped_data,
-                        typing_context,
-                        &constraint_sub_map,
-                        app_span,
-                    )
-                } else if ok_args.len() != 0 {
-                    return Err(AnalysisError::TypeError(ATypeError::ApplicationError(
-                        ApplicationError::Arity {
-                            expected: 0,
-                            found: ok_args.len(),
-                        },
-                    )));
-                } else {
-                    AbstractType::apply_internal(
-                        type_cons,
-                        universe,
-                        scoped_data,
-                        typing_context,
-                        &HashMap::new(),
-                        app_span,
-                    )
-                }
+                applier(type_cons, type_args, app_span)
             }
+
+            AbstractType::App2 {
+                data: ref app_span,
+                ref type_cons,
+                args: ref type_args,
+            } => applier(type_cons, type_args, app_span),
 
             AbstractType::Record {
                 data: ref record_span,
@@ -1208,6 +1250,7 @@ where I: Iterator<Item=&'a AbstractType> + Clone {
     let is_first_non_width_constraint = match first_constraint {
         AbstractType::Record { .. }
         | AbstractType::App { .. }
+        | AbstractType::App2 { .. }
         | AbstractType::Array { .. }
         | AbstractType::Function { .. }
         | AbstractType::UncheckedFunction { .. }
