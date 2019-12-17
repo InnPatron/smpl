@@ -44,6 +44,38 @@ pub fn return_trace(
     }
 }
 
+pub fn return_trace_prime(
+    to_trace: &Function,
+) -> Result<(), AnalysisError> {
+
+    match to_trace {
+        Function::SMPL(ref smpl_fn) => {
+            let cfg = smpl_fn.cfg();
+            let fn_span = &smpl_fn.span();
+            check_returns_form(cfg, fn_span)
+        }
+
+        Function::Anonymous(ref anon_fn) => match anon_fn {
+            AnonymousFn::Reserved(..) => {
+                panic!("Anonymous function should be resolved")
+            }
+
+            AnonymousFn::Resolved { 
+                ref cfg,
+                ref type_id,
+                ..
+            } => {
+                let fn_span = &type_id.span();
+                check_returns_form(cfg, fn_span)
+            }
+        },
+
+        Function::Builtin(..) => {
+            panic!("Unable to return trace builtin functions")
+        }
+    }
+}
+
 fn check_returns_form(
     cfg: &CFG, 
     fn_span: &Span,
