@@ -7,10 +7,11 @@ use crate::span::Span;
 use crate::ast::{
     ArrayInit as AstArrayInit, AstNode, Expr as AstExpr, TypedPath,
 };
-use super::analysis_context::{LocalData, GlobalData, AnonymousFn as AnonymousFnContainer};
+use super::analysis_context::{LocalData, GlobalData};
+use super::semantic_data::AnonymousFn as SemanticAnonymousFn;
 
 pub fn flatten(global_data: &mut GlobalData, local_data: &mut LocalData, e: AstExpr) 
-    -> (Vec<AnonymousFnContainer>, Expr) {
+    -> (Vec<SemanticAnonymousFn>, Expr) {
 
     let mut expr = Expr::new();
 
@@ -24,7 +25,7 @@ pub fn flatten(global_data: &mut GlobalData, local_data: &mut LocalData, e: AstE
 fn flatten_expr(
     global_data: &mut GlobalData,
     local_data: &mut LocalData,
-    anonymous_fns: &mut Vec<AnonymousFnContainer>,
+    anonymous_fns: &mut Vec<SemanticAnonymousFn>,
     scope: &mut Expr,
     e: AstExpr,
 ) -> (TmpId, Span) {
@@ -227,12 +228,12 @@ fn flatten_expr(
         AstExpr::AnonymousFn(a_fn) => {
             let span = a_fn.span();
             let fn_id = global_data.new_fn_id();
-            let a_fn = AnonymousFnContainer::Reserved(fn_id, a_fn);
+            let a_fn = SemanticAnonymousFn::Reserved(fn_id, a_fn);
             anonymous_fns.push(a_fn);
             (
                 scope.map_tmp(
                     local_data.new_tmp_id(),
-                    Value::AnonymousFn(AnonymousFn::new(fn_id)),
+                    Value::AnonymousFn(AnonymousFnValue::new(fn_id)),
                     span.clone(),
                 ),
                 span,

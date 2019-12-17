@@ -9,7 +9,7 @@ use super::unique_linear_cfg_traversal::*;
 
 use super::error::AnalysisError;
 use super::semantic_data::{
-    AnonymousFunction, FnId, ModulePath, TypeId, TypeVarId, Universe, VarId,
+    AnonymousFn, FnId, ModulePath, TypeId, TypeVarId, Universe, VarId,
 };
 use super::typed_ast::*;
 use super::anon_storage::AnonStorage;
@@ -26,18 +26,16 @@ pub fn resolve(
 
     match fn_to_resolve {
         Function::SMPL(ref mut smpl_fn) => {
-            let cfg = smpl_fn.cfg();
-            let mut cfg_mut = cfg.borrow_mut();
-            traverse(&mut *cfg_mut, &mut scope_resolver)
+            let cfg = &mut smpl_fn.cfg;
+            traverse(cfg, &mut scope_resolver)
         }
 
         Function::Anonymous(ref mut anon_fn) => match anon_fn {
-            AnonymousFunction::Reserved(..) => {
+            AnonymousFn::Reserved(..) => {
                 panic!("Anonymous function should be resolved")
             }
-            AnonymousFunction::Resolved { ref cfg, .. } => {
-                let mut cfg_mut = cfg.borrow_mut();
-                traverse(&mut *cfg_mut, &mut scope_resolver)
+            AnonymousFn::Resolved { ref mut cfg, .. } => {
+                traverse(cfg, &mut scope_resolver)
             }
         },
 
@@ -62,11 +60,11 @@ impl ScopeResolver {
             Function::Builtin(_) => unimplemented!(),
             Function::Anonymous(anonymous_fn) => {
                 let fn_scope = match anonymous_fn {
-                    AnonymousFunction::Reserved(..) => {
+                    AnonymousFn::Reserved(..) => {
                         panic!("Expected anonymous functions to already be resolved");
                     }
 
-                    AnonymousFunction::Resolved {
+                    AnonymousFn::Resolved {
                         ref analysis_context,
                         ..
                     } => analysis_context.parent_scope().clone(),

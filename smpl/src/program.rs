@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use crate::analysis::error::AnalysisError;
 use crate::analysis::{
-    check_program, AnonymousFunction, FnId, Function,
+    check_program, AnonymousFn, FnId, Function,
     Program as AnalyzedProgram, TypingContext, CFG,
     ModuleId, Module as AnalyzedModule,
 };
@@ -136,24 +136,26 @@ impl<'a> CompilableModule<'a> {
             Function::SMPL(f) => {
                 let c_fn = CompilableFn {
                     fn_id: f_id.clone(),
-                    cfg: f.cfg(),
+                    // TODO: Temporary measure
+                    //  Change this to something else?
+                    cfg: Rc::new(RefCell::new(f.cfg().clone())),
                     typing_context: f.analysis_context().typing_context(),
                 };
                 c_fn
             },
 
-            Function::Anonymous(AnonymousFunction::Reserved(_)) => {
+            Function::Anonymous(AnonymousFn::Reserved(..)) => {
                 panic!("All anonymous functions should be resolved after analysis");
             }
 
-            Function::Anonymous(AnonymousFunction::Resolved {
+            Function::Anonymous(AnonymousFn::Resolved {
                 ref cfg,
                 ref analysis_context,
                 ..
             }) => {
                 let c_fn = CompilableFn {
                     fn_id: f_id.clone(),
-                    cfg: cfg.clone(),
+                    cfg: Rc::new(RefCell::new(cfg.clone())),
                     typing_context: analysis_context.typing_context()
                 };
 

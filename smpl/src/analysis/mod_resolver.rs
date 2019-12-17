@@ -14,11 +14,11 @@ use super::metadata::*;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::Module;
 use super::semantic_data::*;
+use super::semantic_data::{AnonymousFn, Function, BuiltinFunction};
 use super::type_checker::TypingContext;
 use super::type_cons::TypeCons;
 use super::type_cons_gen;
 use super::analysis_context::*;
-use super::analysis_context::SMPLFunction;
 
 use crate::feature::*;
 

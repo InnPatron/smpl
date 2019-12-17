@@ -7,8 +7,8 @@ use crate::span::Span;
 use super::control_data::Node;
 use super::control_flow::CFG;
 use super::error::{AnalysisError, ControlFlowError};
-use super::semantic_data::Function;
 use super::semantic_data::*;
+use super::semantic_data::{AnonymousFn, Function};
 
 pub fn return_trace(
     universe: &Universe,
@@ -19,24 +19,22 @@ pub fn return_trace(
     match fn_to_resolve {
         Function::SMPL(ref smpl_fn) => {
             let cfg = smpl_fn.cfg();
-            let cfg = cfg.borrow();
             let fn_span = &smpl_fn.span();
-            check_returns_form(&*cfg, fn_span)
+            check_returns_form(cfg, fn_span)
         }
 
         Function::Anonymous(ref anon_fn) => match anon_fn {
-            AnonymousFunction::Reserved(..) => {
+            AnonymousFn::Reserved(..) => {
                 panic!("Anonymous function should be resolved")
             }
 
-            AnonymousFunction::Resolved { 
+            AnonymousFn::Resolved { 
                 ref cfg,
-                ref fn_type,
+                ref type_id,
                 ..
             } => {
-                let cfg = cfg.borrow();
-                let fn_span = &fn_type.span();
-                check_returns_form(&*cfg, fn_span)
+                let fn_span = &type_id.span();
+                check_returns_form(cfg, fn_span)
             }
         },
 

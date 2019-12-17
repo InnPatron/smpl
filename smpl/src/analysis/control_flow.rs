@@ -9,14 +9,13 @@ use crate::span::Span;
 use super::error::{AnalysisError, ControlFlowError};
 use super::expr_flow;
 
-use super::semantic_data::{LoopId, Universe};
+use super::semantic_data::{LoopId, Universe, AnonymousFn as SemanticAnonymousFn};
 use super::type_cons::TypeCons;
 use super::abstract_type::AbstractType;
 
 use super::type_checker::TypingContext;
 use super::typed_ast;
 use super::analysis_context::{
-    AnonymousFn as AnonymousFnContainer, 
     AnalysisContext, 
     GlobalData,
     LocalData,
@@ -332,7 +331,7 @@ impl CFG {
         body: ast::AstNode<ast::Block>,
         fn_type: &TypeCons,
         _analysis_context: &AnalysisContext,
-    ) -> Result<(Vec<AnonymousFnContainer>, Self), AnalysisError> {
+    ) -> Result<(Vec<SemanticAnonymousFn>, Self), AnalysisError> {
         let mut cfg = {
             let mut graph = graph::Graph::new();
             let start = graph.add_node(Node::Start);
@@ -414,7 +413,7 @@ impl CFG {
         universe: &'b mut Universe,
         global_data: &'b mut GlobalData,
         local_data: &'b mut LocalData,
-        anonymous_fns: &mut Vec<AnonymousFnContainer>,
+        anonymous_fns: &mut Vec<SemanticAnonymousFn>,
         mut instructions: T,
         loop_data: InternalLoopData,
     ) -> Result<BranchData, ControlFlowError>
@@ -700,7 +699,7 @@ impl CFG {
                                 universe: &mut Universe,
                                 global_data: &mut GlobalData,
                                 local_data: &mut LocalData,
-                                anonymous_fns: &mut Vec<AnonymousFnContainer>,
+                                anonymous_fns: &mut Vec<SemanticAnonymousFn>,
                                 body: AstNode<Block>,
                                 condition: Option<AstNode<Expr>>,
                                 loop_data: InternalLoopData,

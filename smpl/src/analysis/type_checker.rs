@@ -13,8 +13,8 @@ use super::analysis_helpers;
 use super::error::*;
 use super::metadata::Metadata;
 use super::resolve_scope::ScopedData;
-use super::semantic_data::Function;
 use super::semantic_data::*;
+use super::semantic_data::{AnonymousFn as SemanticAnonymousFn, Function};
 use super::abstract_type::*;
 use super::type_cons_gen;
 use super::type_cons::TypeCons;
@@ -37,11 +37,11 @@ pub fn type_check(
         match fn_to_resolve {
             Function::SMPL(ref smpl_fn) => smpl_fn.cfg(),
             Function::Anonymous(ref afn) => match afn {
-                AnonymousFunction::Reserved(_) => {
+                SemanticAnonymousFn::Reserved(..) => {
                     panic!("Anonymous function should be resolved")
                 }
 
-                AnonymousFunction::Resolved { ref cfg, .. } => cfg.clone(),
+                SemanticAnonymousFn::Resolved { ref cfg, .. } => cfg,
             },
 
             _ => panic!("Not a function with a type-checkable body"),
@@ -50,8 +50,7 @@ pub fn type_check(
 
     let mut type_checker = 
         TypeChecker::new(universe, metadata, global_data, module_id, fn_id)?;
-    let cfg = cfg.borrow();
-    let traverser = Traverser::new(&*cfg, &mut type_checker);
+    let traverser = Traverser::new(cfg, &mut type_checker);
     traverser.traverse()?;
 
     // Update the typing context
@@ -65,9 +64,9 @@ pub fn type_check(
                     .set_typing_context(typing_context);
             }
             Function::Anonymous(ref mut afn) => match afn {
-                AnonymousFunction::Reserved(_) => unreachable!(),
+                SemanticAnonymousFn::Reserved(..) => unreachable!(),
 
-                AnonymousFunction::Resolved {
+                SemanticAnonymousFn::Resolved {
                     ref mut analysis_context,
                     ..
                 } => {
@@ -112,12 +111,12 @@ impl<'a> TypeChecker<'a> {
 
             Function::Anonymous(anonymous_fn) => {
                 match anonymous_fn {
-                    AnonymousFunction::Reserved(..) => {
+                    SemanticAnonymousFn::Reserved(..) => {
                         panic!("Expected anonymous functions to already be resolved");
                     }
 
-                    AnonymousFunction::Resolved {
-                        ref fn_type,
+                    SemanticAnonymousFn::Resolved {
+                        ref type_id,
                         ref analysis_context,
                         ..
                     } => {
@@ -126,11 +125,12 @@ impl<'a> TypeChecker<'a> {
                         let fn_scope = analysis_context.parent_scope().clone();
 
                         let return_type: AbstractType = {
-                            let type_id = fn_type.clone();
+                            let fn_type_span = type_id.span();
+                            let type_id = type_id.data().clone();
 
                             let fn_type = AbstractType::App {
-                                data: fn_type.span(),
-                                type_cons: type_id.data().clone(),
+                                data: fn_type_span,
+                                type_cons: type_id,
                                 args: analysis_context
                                     .existential_type_vars()
                                     .iter()
@@ -172,7 +172,7 @@ impl<'a> TypeChecker<'a> {
                     smpl_function.analysis_context().parent_scope().clone();
 
                 let return_type: AbstractType = {
-                    let type_id = smpl_function.fn_type();
+                    let type_id = smpl_function.type_id();
 
                     let decl_span = smpl_function.span();
                     let fn_type = AbstractType::App {
@@ -360,7 +360,7 @@ impl<'a> TypeChecker<'a> {
     ///        is resolved
     ///      Handling that will also simplify function signature creation
     ///   4) Apply the type constructor and return the function type
-    fn resolve_anonymous_fn(&mut self, a_fn: &AnonymousFn, tmp_span: Span)
+    fn resolve_anonymous_fn(&mut self, a_fn: &AnonymousFnValue, tmp_span: Span)
         -> Result<AbstractType, AnalysisError> { 
 
         let fn_id = a_fn.fn_id(); 
@@ -371,7 +371,7 @@ impl<'a> TypeChecker<'a> {
             let decision: Either<_, _> = match afn {
                 Function::Anonymous(ref afn) => {
                     match afn {
-                        AnonymousFunction::Reserved(ref ast_afn) => {
+                        SemanticAnonymousFn::Reserved(_, ref ast_afn) => {
 
                             // Store the snapshot
                             self.anon_typing_context_storage
@@ -398,11 +398,11 @@ impl<'a> TypeChecker<'a> {
                             Either::Left((fn_type_id, fn_type_cons))
                         }
 
-                        AnonymousFunction::Resolved {
-                            ref fn_type,
+                        SemanticAnonymousFn::Resolved {
+                            ref type_id,
                             ..
                         } => {
-                            Either::Right(fn_type.data().clone()) 
+                            Either::Right(type_id.data().clone()) 
                         }
 
                     }

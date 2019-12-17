@@ -225,24 +225,7 @@ impl Universe {
         cfg: CFG,
         span: Span,
     ) {
-        let function = SMPLFunction {
-            name: name,
-            fn_type: type_id,
-            cfg: Rc::new(RefCell::new(cfg)),
-            analysis_context: analysis_context,
-            span: span,
-        };
-
-        if self
-            .fn_map
-            .insert(fn_id, Function::SMPL(function))
-            .is_some()
-        {
-            panic!(
-                "Attempting to override Function with FnId {} in the Universe",
-                fn_id.0
-            );
-        }
+        unimplemented!();
     }
 
     pub fn insert_builtin_fn(
@@ -251,23 +234,7 @@ impl Universe {
         name: Ident,
         fn_type: TypeId,
     ) {
-        let builtin = BuiltinFunction {
-            name: name,
-            fn_type: fn_type,
-        };
-
-        self.builtin_fn_set.insert(fn_id);
-
-        if self
-            .fn_map
-            .insert(fn_id, Function::Builtin(builtin))
-            .is_some()
-        {
-            panic!(
-                "Attempting to override builtin function with FnId {} in the Universe",
-                fn_id.0
-            );
-        }
+        unimplemented!();
     }
 
     pub fn reserve_anonymous_fn(
@@ -275,18 +242,7 @@ impl Universe {
         fn_id: FnId,
         ast_fn: AstNode<AstAnonymousFn>,
     ) {
-        let anon_fn = AnonymousFunction::Reserved(ast_fn);
-
-        if self
-            .fn_map
-            .insert(fn_id, Function::Anonymous(anon_fn))
-            .is_some()
-        {
-            panic!(
-                "Attempting to override function with FnId {} in the Universe",
-                fn_id.0
-            );
-        }
+        unimplemented!();
     }
 
     pub fn manual_insert_type_cons(&mut self, type_id: TypeId, cons: TypeCons) {
@@ -382,15 +338,15 @@ pub enum BindingInfo {
 pub enum Function {
     Builtin(BuiltinFunction),
     SMPL(SMPLFunction),
-    Anonymous(AnonymousFunction),
+    Anonymous(AnonymousFn),
 }
 
 impl Function {
     pub fn fn_type(&self) -> Option<TypeId> {
         match self {
-            Function::Builtin(ref bf) => Some(bf.fn_type()),
-            Function::SMPL(ref sf) => Some(sf.fn_type()),
-            Function::Anonymous(ref af) => af.fn_type(),
+            Function::Builtin(ref bf) => Some(bf.type_id()),
+            Function::SMPL(ref sf) => Some(sf.type_id()),
+            Function::Anonymous(ref af) => af.type_id(),
         }
     }
 
@@ -404,25 +360,25 @@ impl Function {
 }
 
 #[derive(Clone, Debug)]
-pub enum AnonymousFunction {
-    Reserved(AstNode<AstAnonymousFn>),
+pub enum AnonymousFn {
+    Reserved(FnId, AstNode<AstAnonymousFn>),
     Resolved {
-        fn_type: AstNode<TypeId>,
-        cfg: Rc<RefCell<CFG>>,
+        type_id: AstNode<TypeId>,
+        cfg: CFG,
         analysis_context: AnalysisContext,
     },
 }
 
-impl AnonymousFunction {
+impl AnonymousFn {
     pub fn name(&self) -> Option<&Ident> {
         None
     }
 
-    pub fn fn_type(&self) -> Option<TypeId> {
+    pub fn type_id(&self) -> Option<TypeId> {
         match self {
-            AnonymousFunction::Reserved(_) => None,
-            AnonymousFunction::Resolved { fn_type, .. } => {
-                Some(fn_type.data().clone())
+            AnonymousFn::Reserved(..) => None,
+            AnonymousFn::Resolved { type_id, .. } => {
+                Some(type_id.data().clone())
             }
         }
     }
@@ -430,27 +386,35 @@ impl AnonymousFunction {
 
 #[derive(Clone, Debug)]
 pub struct BuiltinFunction {
-    name: Ident,
-    fn_type: TypeId,
+    pub(super) fn_id: FnId,
+    pub(super) name: Ident,
+    pub(super) type_id: TypeId,
 }
 
 impl BuiltinFunction {
+
+    pub fn fn_id(&self) -> FnId {
+        self.fn_id
+    }
+
     pub fn name(&self) -> &Ident {
         &self.name
     }
 
-    pub fn fn_type(&self) -> TypeId {
-        self.fn_type
+    pub fn type_id(&self) -> TypeId {
+        self.type_id
     }
 }
 
+
 #[derive(Clone, Debug)]
 pub struct SMPLFunction {
-    name: Ident,
-    fn_type: TypeId,
-    cfg: Rc<RefCell<CFG>>,
-    analysis_context: AnalysisContext,
-    span: Span,
+    pub(super) fn_id: FnId,
+    pub(super) name: Ident,
+    pub(super) type_id: TypeId,
+    pub(super) cfg: CFG,
+    pub(super) analysis_context: AnalysisContext,
+    pub(super) span: Span,
 }
 
 impl SMPLFunction {
@@ -458,12 +422,12 @@ impl SMPLFunction {
         &self.name
     }
 
-    pub fn fn_type(&self) -> TypeId {
-        self.fn_type
+    pub fn type_id(&self) -> TypeId {
+        self.type_id
     }
 
-    pub fn cfg(&self) -> Rc<RefCell<CFG>> {
-        self.cfg.clone()
+    pub fn cfg(&self) -> &CFG {
+        &self.cfg
     }
 
     pub fn span(&self) -> Span {

@@ -11,7 +11,8 @@ pub use crate::ast::UniOp;
 
 use super::expr_flow;
 use super::semantic_data::*;
-use super::analysis_context::{LocalData, GlobalData, AnonymousFn as AnonymousFnContainer};
+use super::semantic_data::{AnonymousFn as SemanticAnonymousFn};
+use super::analysis_context::{LocalData, GlobalData};
 
 // TODO(alex): Remove Typed<T>
 // Types are stored within type_checker::TypingContext instead
@@ -52,7 +53,7 @@ impl Assignment {
         global_data: &mut GlobalData,
         local_data: &mut LocalData,
         assignment: ast::Assignment,
-    ) -> (Vec<AnonymousFnContainer>, Self) {
+    ) -> (Vec<SemanticAnonymousFn>, Self) {
         let (name, name_span) = assignment.name.to_data();
         let (mut anon_1, field_access) = 
             FieldAccess::new(global_data, local_data, name);
@@ -109,7 +110,7 @@ impl LocalVarDecl {
         local_data: &mut LocalData,
         decl: ast::LocalVarDecl,
         stmt_span: Span,
-    ) -> (Vec<AnonymousFnContainer>, Self) {
+    ) -> (Vec<SemanticAnonymousFn>, Self) {
 
         let (anon, var_init) = 
             expr_flow::flatten(global_data, local_data, decl.var_init);
@@ -270,7 +271,7 @@ pub enum Value {
     ArrayInit(self::ArrayInit),
     Indexing(Indexing),
     ModAccess(self::ModAccess),
-    AnonymousFn(self::AnonymousFn),
+    AnonymousFn(self::AnonymousFnValue),
     TypeInst(self::TypeInst),
 }
 
@@ -437,7 +438,7 @@ pub struct FieldAccess {
 impl FieldAccess {
 
     pub fn new(global_data: &mut GlobalData, local_data: &mut LocalData, path: ast::Path) 
-        -> (Vec<AnonymousFnContainer>, Self) {
+        -> (Vec<SemanticAnonymousFn>, Self) {
 
         let (anon, new_path) = self::Path::new(global_data, local_data, path.clone());
 
@@ -538,7 +539,7 @@ pub struct Path {
 
 impl self::Path {
     fn new(global_data: &mut GlobalData, local_data: &mut LocalData, path: ast::Path) 
-        -> (Vec<AnonymousFnContainer>, self::Path) {
+        -> (Vec<SemanticAnonymousFn>, self::Path) {
 
         let mut path_iter = path.0.into_iter();
         let root = path_iter.next().unwrap();
@@ -658,13 +659,13 @@ impl Field {
 }
 
 #[derive(Clone, Debug)]
-pub struct AnonymousFn {
+pub struct AnonymousFnValue {
     fn_id: FnId,
 }
 
-impl AnonymousFn {
-    pub fn new(fn_id: FnId) -> AnonymousFn {
-        AnonymousFn { fn_id: fn_id }
+impl AnonymousFnValue {
+    pub fn new(fn_id: FnId) -> Self {
+        AnonymousFnValue { fn_id: fn_id }
     }
 
     pub fn fn_id(&self) -> FnId {

@@ -33,6 +33,6 @@ pub(crate) use self::control_flow::CFG;
 pub(crate) use self::linear_cfg_traversal::{Passenger, Traverser};
 pub(crate) use self::semantic_ck::check_program;
 pub(crate) use self::semantic_data::*;
-pub(crate) use self::semantic_data::{Function, Module, Program};
+pub(crate) use self::semantic_data::{Function, AnonymousFn, Module, Program};
 pub(crate) use self::type_checker::TypingContext;
 pub(crate) use self::typed_ast::*;
