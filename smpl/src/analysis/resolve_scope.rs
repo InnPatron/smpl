@@ -12,6 +12,7 @@ use super::semantic_data::{
     AnonymousFunction, FnId, ModulePath, TypeId, TypeVarId, Universe, VarId,
 };
 use super::typed_ast::*;
+use super::anon_storage::AnonStorage;
 
 pub fn resolve(
     universe: &mut Universe,
@@ -47,7 +48,7 @@ pub fn resolve(
 }
 
 struct ScopeResolver {
-    anon_scope_storage: AnonymousScopeStorage,
+    anon_scope_storage: AnonStorage<ScopedData>,
     scopes: Vec<ScopedData>,
 }
 
@@ -72,13 +73,13 @@ impl ScopeResolver {
                 };
 
                 ScopeResolver {
-                    anon_scope_storage: AnonymousScopeStorage::new(),
+                    anon_scope_storage: AnonStorage::new(),
                     scopes: vec![fn_scope],
                 }
             }
 
             Function::SMPL(smpl_function) => ScopeResolver {
-                anon_scope_storage: AnonymousScopeStorage::new(),
+                anon_scope_storage: AnonStorage::new(),
                 scopes: vec![smpl_function
                     .analysis_context()
                     .parent_scope()
@@ -461,20 +462,4 @@ impl ScopedData {
 pub enum BindingInfo {
     Var(VarId),
     Fn(FnId),
-}
-
-struct AnonymousScopeStorage(HashMap<FnId, ScopedData>);
-
-impl AnonymousScopeStorage {
-    fn new() -> Self {
-        AnonymousScopeStorage(HashMap::new())
-    }
-
-    fn insert(&mut self, fn_id: FnId, parent_scope: ScopedData) {
-        if self.0.insert(fn_id, parent_scope).is_some() {
-            panic!("Overriding anonymous scope storage for {}", fn_id);
-        }
-    }
-
-    // pub fn data(&self) -> impl Iterator<Item=(&FnId,
 }

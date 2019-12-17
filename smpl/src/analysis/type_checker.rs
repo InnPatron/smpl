@@ -20,6 +20,7 @@ use super::type_cons_gen;
 use super::type_resolver;
 use super::typed_ast::*;
 use super::analysis_context::GlobalData;
+use super::anon_storage::AnonStorage;
 
 pub fn type_check(
     universe: &mut Universe,
@@ -88,7 +89,7 @@ struct TypeChecker<'a> {
     scopes: Vec<ScopedData>,
     typing_context: TypingContext,
     return_type: AbstractType,
-    anon_typing_context_storage: AnonymousTypingContextStorage,
+    anon_typing_context_storage: AnonStorage<TypingContext>,
 }
 
 impl<'a> TypeChecker<'a> {
@@ -155,7 +156,7 @@ impl<'a> TypeChecker<'a> {
                             scopes: vec![fn_scope],
                             typing_context: typing_context,
                             return_type: return_type,
-                            anon_typing_context_storage: AnonymousTypingContextStorage::new(),
+                            anon_typing_context_storage: AnonStorage::new(),
                         })
                     }
                 }
@@ -207,7 +208,7 @@ impl<'a> TypeChecker<'a> {
                     metadata: metadata,
                     global_data,
                     return_type: return_type,
-                    anon_typing_context_storage: AnonymousTypingContextStorage::new(),
+                    anon_typing_context_storage: AnonStorage::new(),
                 })
             }
         }
@@ -1555,20 +1556,4 @@ impl TypingContext {
             .get(&tmp_id)
             .expect("Missing type for tmp")
     }
-}
-
-struct AnonymousTypingContextStorage(HashMap<FnId, TypingContext>);
-
-impl AnonymousTypingContextStorage {
-    fn new() -> Self {
-        AnonymousTypingContextStorage(HashMap::new())
-    }
-
-    fn insert(&mut self, fn_id: FnId, parent_context: TypingContext) {
-        if self.0.insert(fn_id, parent_context).is_some() {
-            panic!("Overriding anonymous typing context storage for {}", fn_id);
-        }
-    }
-
-    // pub fn data(&self) -> impl Iterator<Item=(&FnId,
 }

@@ -18,6 +18,7 @@ mod type_equality;
 mod type_resolver;
 mod unique_linear_cfg_traversal;
 mod analysis_context;
+mod anon_storage;
 
 pub mod error;
 pub mod metadata;
