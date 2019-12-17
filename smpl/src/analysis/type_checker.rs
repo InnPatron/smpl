@@ -17,6 +17,7 @@ use super::semantic_data::Function;
 use super::semantic_data::*;
 use super::abstract_type::*;
 use super::type_cons_gen;
+use super::type_cons::TypeCons;
 use super::type_resolver;
 use super::typed_ast::*;
 use super::analysis_context::GlobalData;
@@ -90,6 +91,7 @@ struct TypeChecker<'a> {
     typing_context: TypingContext,
     return_type: AbstractType,
     anon_typing_context_storage: AnonStorage<TypingContext>,
+    anon_type_cons_storage: AnonStorage<TypeCons>,
 }
 
 impl<'a> TypeChecker<'a> {
@@ -157,6 +159,7 @@ impl<'a> TypeChecker<'a> {
                             typing_context: typing_context,
                             return_type: return_type,
                             anon_typing_context_storage: AnonStorage::new(),
+                            anon_type_cons_storage: AnonStorage::new(),
                         })
                     }
                 }
@@ -209,6 +212,7 @@ impl<'a> TypeChecker<'a> {
                     global_data,
                     return_type: return_type,
                     anon_typing_context_storage: AnonStorage::new(),
+                    anon_type_cons_storage: AnonStorage::new(),
                 })
             }
         }
@@ -407,24 +411,35 @@ impl<'a> TypeChecker<'a> {
                 _ => panic!("FN ID did not refer to an anonymous function"),
             };
 
-            let fn_type_id: TypeId =  match decision {
-                Either::Left((fn_type_id, fn_type_cons)) => {
-                    // Required for substitution to work
+            match decision {
+                Either::Left((_fn_type_id, fn_type_cons)) => {
+                    // TODO: Insertion no longer necessary
                     self.universe
-                        .manual_insert_type_cons(fn_type_id, fn_type_cons);
+                        .manual_insert_type_cons(_fn_type_id, fn_type_cons.clone());
 
-                    fn_type_id
+                    // Store type constructor locally.
+                    // TODO: Insert anonymous type constructor into Universe 
+                    //   after current type checking is completed
+                    self.anon_type_cons_storage
+                        .insert(fn_id, fn_type_cons.clone());
+
+                    AbstractType::App2 {
+                        data: tmp_span,
+                        type_cons: Box::new(fn_type_cons),
+                        args: Vec::new(),
+                    }
+                    .substitute(self.universe, self.current(), &self.typing_context)?
                 }
 
-                Either::Right(fn_type_id) => fn_type_id,
-            };
-
-            AbstractType::App {
-                data: tmp_span,
-                type_cons: fn_type_id,
-                args: Vec::new(),
+                Either::Right(fn_type_id) => {
+                    AbstractType::App {
+                        data: tmp_span,
+                        type_cons: fn_type_id,
+                        args: Vec::new(),
+                    }
+                    .substitute(self.universe, self.current(), &self.typing_context)?
+                }
             }
-            .substitute(self.universe, self.current(), &self.typing_context)?
         };
 
         Ok(fn_type)
