@@ -19,6 +19,7 @@ use super::type_checker::TypingContext;
 use super::type_cons::TypeCons;
 use super::type_cons_gen;
 use super::analysis_context::*;
+use super::anon_storage::AnonStorage;
 
 use crate::feature::*;
 
@@ -50,6 +51,7 @@ struct AnalyzableRawProgram {
     dependency_map: HashMap<ModuleId, HashSet<ModuleId>>,
     type_map: HashMap<TypeId, TypeCons>,
     fn_map: HashMap<FnId, Function>,
+    anon_fns: AnonStorage<ReservedAnonymousFn>,
 }
 
 struct RawProgram {
@@ -165,6 +167,7 @@ fn generate_analyzable_fns(
     raw_program: TypableRawProgram)
     -> Result<AnalyzableRawProgram, AnalysisError> {
 
+    let mut anon_fn_buff = AnonStorage::new();
     let mut fn_map = HashMap::new();
     for (mod_id, raw_mod) in raw_program.module_map.iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
@@ -198,8 +201,7 @@ fn generate_analyzable_fns(
             )?;
 
             // TODO: Store local_data? Is it even necessary?
-            // TODO: Use anonymous functions
-            let (anon_fns, cfg) = CFG::generate(
+            let (mut anon_fns, cfg) = CFG::generate(
                 program.universe_mut(),
                 global_data,
                 &mut local_data,
@@ -207,6 +209,8 @@ fn generate_analyzable_fns(
                 &fn_type_cons,
                 &analysis_context,
             )?;
+
+            anon_fn_buff.append(&mut anon_fns);
 
             let fn_type_id = global_data.new_type_id();
             // TODO: Insert fn typing context
@@ -295,6 +299,7 @@ fn generate_analyzable_fns(
         dependency_map: raw_program.dependency_map,
         type_map: raw_program.type_map,
         fn_map: fn_map,
+        anon_fns: anon_fn_buff,
     })
 }
 
