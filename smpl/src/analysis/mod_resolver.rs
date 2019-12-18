@@ -153,7 +153,6 @@ pub fn check_modules(
         let (universe, metadata, _) = program.analysis_context();
         for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
             let fn_id = reserved_fn.0;
-
             analysis_helpers::analyze_fn(universe, metadata, &mut global_data, mod_id.clone(), fn_id)?;
         }
     }
@@ -596,7 +595,7 @@ fn map_types(program: &mut Program,
         for (_, reserved_opaque) in raw_mod.reserved_opaque.iter() {
             let type_id = reserved_opaque.0;
             let opaque_type_cons = type_cons_gen::generate_opaque_type_cons(
-                program,
+                program.universe(),
                 global_data,
                 type_id,
                 raw_program.scope_map.get(mod_id).unwrap(),

@@ -447,14 +447,13 @@ fn type_param_map(
 }
 
 pub fn generate_opaque_type_cons(
-    program: &mut Program,
+    universe: &Universe,
     global_data: &mut GlobalData,
     type_id: TypeId,
     scope: &ScopedData,
     typing_context: &TypingContext,
     opaque_def: &Opaque,
 ) -> Result<TypeCons, AnalysisError> {
-    let (universe, _metadata, _features) = program.analysis_context();
 
     // Check no parameter naming conflicts
     let (type_params, _type_param_scope, _type_param_typing_context) =
