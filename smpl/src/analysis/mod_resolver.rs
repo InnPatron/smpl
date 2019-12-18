@@ -151,6 +151,7 @@ pub fn check_modules(
     let mut analyzable_raw_program =
         generate_analyzable_fns(&mut global_data, program, typable_raw_program)?;
 
+    let reserved_anon_fns = analyzable_raw_program.anon_fns;
     let mut unresolved_anon_fns = AnonStorage::new();
     for (mod_id, raw_mod) in analyzable_raw_program.module_map.into_iter() {
         let (universe, metadata, _) = program.analysis_context();
@@ -167,7 +168,6 @@ pub fn check_modules(
                 .get_mut(&fn_id)
                 .expect(&format!("Missing local data function for {}", fn_id));
 
-            let reserved_anon_fns = &analyzable_raw_program.anon_fns;
 
             let mut this_anon_fns =
                 analysis_helpers::analyze_fn_prime(
@@ -176,11 +176,99 @@ pub fn check_modules(
                     metadata,
                     &mut global_data,
                     local_data,
-                    reserved_anon_fns,
+                    &reserved_anon_fns,
                     mod_id.clone(),
                 )?;
 
             unresolved_anon_fns.append(&mut this_anon_fns);
+        }
+    }
+
+    // Analyze all currently unresolved anonymous functions.
+    //   Any nested anonymous functions are analyzed on the next iteration
+    //   and so on until there are no more unresolved anonymous functions
+    let mut reserved_anon_fns = reserved_anon_fns;
+    loop {
+
+        let (universe, metadata, _) = program.analysis_context();
+        if unresolved_anon_fns.len() == 0 {
+            break;
+        }
+
+        let mut anon_fns_to_resolve = unresolved_anon_fns.data();
+        unresolved_anon_fns = AnonStorage::new();
+
+        for (to_resolve_fn_id, (analysis_context, type_cons, mod_id)) in anon_fns_to_resolve {
+
+            let span = reserved_anon_fns
+                .get(to_resolve_fn_id)
+                .ast
+                .span();
+
+            let anon_fn_decl = reserved_anon_fns
+                .get(to_resolve_fn_id)
+                .ast
+                .data()
+                .body
+                .clone();
+
+            let type_id = global_data.new_type_id();
+            let parent_fn_id = analyzable_raw_program
+                .anon_fn_parents
+                .get(to_resolve_fn_id)
+                .clone();
+            let local_data = analyzable_raw_program
+                .local_data_map
+                .get_mut(&parent_fn_id)
+                .expect("Missing local data for function");
+
+            let (mut nested_unresolved_anon_fns, cfg) = CFG::generate(
+                universe,
+                &mut global_data,
+                local_data,
+                anon_fn_decl,
+                &type_cons,
+                &analysis_context,
+            )?;
+
+            // Reserve nested unresolved anonymous functions
+            for (nested_anon_fn_id, _) in nested_unresolved_anon_fns.ref_data() {
+                analyzable_raw_program.anon_fn_parents
+                    .insert(nested_anon_fn_id.clone(), parent_fn_id);
+            }
+            reserved_anon_fns.append(&mut nested_unresolved_anon_fns);
+
+            // Insert anonymous function type constructors into the universe
+            universe
+                .manual_insert_type_cons(type_id, type_cons);
+
+            let mut to_analyze = Function::Anonymous(AnonymousFn::Resolved {
+                span,
+                type_id,
+                cfg,
+                analysis_context,
+            });
+
+            let mut this_unresolved_anon_fns =
+                analysis_helpers::analyze_fn_prime(
+                    &mut to_analyze,
+                    universe,
+                    metadata,
+                    &mut global_data,
+                    local_data,
+                    &reserved_anon_fns,
+                    mod_id.clone(),
+                )?;
+
+
+            if analyzable_raw_program.fn_map
+                .insert(to_resolve_fn_id, to_analyze)
+                .is_some() {
+                panic!("Overriding FN ID");
+            }
+
+            // Mark nested anonymous functions as unresolved
+            unresolved_anon_fns.append(&mut this_unresolved_anon_fns);
         }
     }
 
