@@ -272,6 +272,11 @@ pub fn check_modules(
         }
     }
 
+    for (fn_id, func) in analyzable_raw_program.fn_map.into_iter() {
+        program.universe_mut()
+            .insert_fn(fn_id, func);
+    }
+
     Ok(program_origin)
 }
 

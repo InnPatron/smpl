@@ -222,6 +222,12 @@ impl Universe {
             .expect("Expected TypeID to always resolve to a TypeCons")
     }
 
+    pub fn insert_fn(&mut self, id: FnId, func: Function) {
+        if self.fn_map.insert(id, func).is_some() {
+            panic!("Overwriting function");
+        }
+    }
+
     pub fn get_fn(&self, id: FnId) -> &Function {
         self.fn_map.get(&id).unwrap()
     }
