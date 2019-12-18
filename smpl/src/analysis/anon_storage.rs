@@ -41,4 +41,10 @@ impl<T> AnonStorage<T> {
             .expect(&format!("No data for anonymous fn: {}", fn_id))
     }
 
+    pub(super) fn get(&self, fn_id: FnId) -> &T {
+        self.0
+            .get(&fn_id)
+            .expect(&format!("No data for anonymous fn: {}", fn_id))
+    }
+
 }
