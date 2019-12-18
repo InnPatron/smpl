@@ -52,6 +52,8 @@ struct AnalyzableRawProgram {
     type_map: HashMap<TypeId, TypeCons>,
     fn_map: HashMap<FnId, Function>,
     anon_fns: AnonStorage<ReservedAnonymousFn>,
+    anon_fn_parents: AnonStorage<FnId>,
+    local_data_map: HashMap<FnId, LocalData>,
 }
 
 struct RawProgram {
@@ -166,6 +168,8 @@ fn generate_analyzable_fns(
     raw_program: TypableRawProgram)
     -> Result<AnalyzableRawProgram, AnalysisError> {
 
+    let mut local_data_map = HashMap::new();
+    let mut anon_fn_parent_buff = AnonStorage::new();
     let mut anon_fn_buff = AnonStorage::new();
     let mut fn_map = HashMap::new();
     for (mod_id, raw_mod) in raw_program.module_map.iter() {
@@ -209,7 +213,15 @@ fn generate_analyzable_fns(
                 &analysis_context,
             )?;
 
+            // Get reference to anonymous function's enclosing function for access
+            //   to its LocalData
+            let parent_fn_id = fn_id;
+            for (anon_fn_id, _) in anon_fns.ref_data() {
+                anon_fn_parent_buff.insert(anon_fn_id, parent_fn_id);
+            }
+
             anon_fn_buff.append(&mut anon_fns);
+            local_data_map.insert(parent_fn_id, local_data);
 
             let fn_type_id = global_data.new_type_id();
             // TODO: Insert fn typing context
@@ -299,6 +311,8 @@ fn generate_analyzable_fns(
         type_map: raw_program.type_map,
         fn_map: fn_map,
         anon_fns: anon_fn_buff,
+        anon_fn_parents: anon_fn_parent_buff,
+        local_data_map,
     })
 }
 
