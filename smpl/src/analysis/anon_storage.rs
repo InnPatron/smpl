@@ -31,6 +31,11 @@ impl<T> AnonStorage<T> {
             .for_each(|(fn_id, t)| self.insert(fn_id, t));
     }
 
+    pub(super) fn append_iter<I>(&mut self, other: I) where I: Iterator<Item=(FnId, T)> {
+        other
+            .for_each(|(fn_id, t)| self.insert(fn_id, t));
+    }
+
     pub(super) fn data(self) -> impl Iterator<Item=(FnId, T)> {
         self.0.into_iter()
     }
