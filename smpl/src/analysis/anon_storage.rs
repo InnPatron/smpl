@@ -22,7 +22,9 @@ impl<T> AnonStorage<T> {
     }
 
     pub(super) fn append(&mut self, other: &mut AnonStorage<T>) {
-
+        other.0
+            .drain()
+            .for_each(|(fn_id, t)| self.insert(fn_id, t));
     }
 
     pub(super) fn data(self) -> impl Iterator<Item=(FnId, T)> {
