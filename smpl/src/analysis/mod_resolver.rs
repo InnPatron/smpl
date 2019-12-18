@@ -75,8 +75,8 @@ struct RawModData {
 
 struct ReservedOpaque(TypeId, AstNode<Opaque>);
 struct ReservedStruct(TypeId, AstNode<Struct>);
-struct ReservedFn(FnId, AstNode<AstFunction>);
-struct ReservedBuiltinFn(FnId, AstNode<AstBuiltinFunction>);
+struct ReservedFn(FnId, AstNode<AstFunction>, TypeId,);
+struct ReservedBuiltinFn(FnId, AstNode<AstBuiltinFunction>, TypeId);
 
 pub fn check_modules(
     modules: Vec<ParsedModule>,
@@ -223,7 +223,7 @@ fn generate_analyzable_fns(
             anon_fn_buff.append(&mut anon_fns);
             local_data_map.insert(parent_fn_id, local_data);
 
-            let fn_type_id = global_data.new_type_id();
+            let fn_type_id = reserved_fn.2;
             // TODO: Insert fn typing context
             program.universe_mut().manual_insert_type_cons(fn_type_id, fn_type_cons);
 
@@ -272,7 +272,7 @@ fn generate_analyzable_fns(
                 reserved_builtin.1.data(),
             )?;
 
-            let fn_type_id = global_data.new_type_id();
+            let fn_type_id = reserved_builtin.2;
             universe
                 .manual_insert_type_cons(fn_type_id, fn_type);
 
@@ -460,7 +460,7 @@ fn raw_mod_data(
                     if fn_reserve
                         .insert(
                             name.clone(),
-                            ReservedFn(global_data.new_fn_id(), d),
+                            ReservedFn(global_data.new_fn_id(), d, global_data.new_type_id()),
                         )
                         .is_some()
                         || builtin_fn_reserve.contains_key(&name)
@@ -478,6 +478,7 @@ fn raw_mod_data(
                             ReservedBuiltinFn(
                                 global_data.new_fn_id(),
                                 d,
+                                global_data.new_type_id(),
                             ),
                         )
                         .is_some()
