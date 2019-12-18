@@ -51,4 +51,8 @@ impl<T> AnonStorage<T> {
             .expect(&format!("No data for anonymous fn: {}", fn_id))
     }
 
+    pub(super) fn len(&self) -> usize {
+        self.0.len()
+    }
+
 }
