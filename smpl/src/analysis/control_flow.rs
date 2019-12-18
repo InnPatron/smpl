@@ -1031,21 +1031,33 @@ mod tests {
 let a: int = 2;
 let b: int = 3;
 }";
+
+        let mut global_data = GlobalData::new();
+        let mut local_data = LocalData::new();
+
         let source = ModuleSource::Anonymous(None);
         let mut input = buffer_input(&source, input);
-        let mut universe = Universe::std();
+        let mut universe = Universe::std(&mut global_data);
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
         let analysis_context =
-            generate_fn_analysis_data(&universe,
+            generate_fn_analysis_data(
+                &universe,
+                &mut global_data,
+                &mut local_data,
                 &universe.std_scope(),
                 &TypingContext::empty(),
                 &fn_type,
                 &fn_def
                 ).unwrap();
-        let cfg = CFG::generate(&mut universe,
-                fn_def.body.clone(), &fn_type, &analysis_context)
-            .unwrap();
+        let (_, cfg) = CFG::generate(
+            &universe,
+            &mut global_data,
+            &mut local_data,
+            fn_def.body.clone(),
+            &fn_type,
+            &analysis_context)
+        .unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -1102,21 +1114,32 @@ if (test) {
     let c: int = 4;
 }
 }";
+
+        let mut global_data = GlobalData::new();
+        let mut local_data = LocalData::new();
         let source = ModuleSource::Anonymous(None);
         let mut input = buffer_input(&source, input);
 
-        let mut universe = Universe::std();
+        let mut universe = Universe::std(&mut global_data);
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
         let analysis_context =
-            generate_fn_analysis_data(&universe,
+            generate_fn_analysis_data(
+                &universe,
+                &mut global_data,
+                &mut local_data,
                 &universe.std_scope(),
                 &TypingContext::empty(),
                 &fn_type,
                 &fn_def
                 ).unwrap();
-        let cfg = CFG::generate(
-                &mut universe, fn_def.body.clone(), &fn_type, &analysis_context,
+        let (_, cfg) = CFG::generate(
+                &universe,
+                &mut global_data,
+                &mut local_data,
+                fn_def.body.clone(),
+                &fn_type,
+                &analysis_context,
             )
             .unwrap();
 
@@ -1260,21 +1283,31 @@ if (test) {
 
     }
 }";
+        let mut global_data = GlobalData::new();
+        let mut local_data = LocalData::new();
+
         let source = ModuleSource::Anonymous(None);
         let mut input = buffer_input(&source, input);
-        let mut universe = Universe::std();
+        let mut universe = Universe::std(&mut global_data);
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
 
         let fn_def = testfn_decl(&mut input).unwrap();
         let analysis_context =
             generate_fn_analysis_data(&universe,
+                &mut global_data,
+                &mut local_data,
                 &universe.std_scope(),
                 &TypingContext::empty(),
                 &fn_type,
                 &fn_def
                 ).unwrap();
-        let cfg = CFG::generate(
-                &mut universe, fn_def.body.clone(), &fn_type, &analysis_context,
+        let (_, cfg) = CFG::generate(
+                &universe,
+                &mut global_data,
+                &mut local_data,
+                fn_def.body.clone(),
+                &fn_type,
+                &analysis_context,
             )
             .unwrap();
 
@@ -1477,22 +1510,33 @@ if (test) {
 
     }
 }";
+        let mut global_data = GlobalData::new();
+        let mut local_data = LocalData::new();
+
         let source = ModuleSource::Anonymous(None);
         let mut input = buffer_input(&source, input);
-        let mut universe = Universe::std();
+        let mut universe = Universe::std(&mut global_data);
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
 
         let fn_def = testfn_decl(&mut input).unwrap();
         let analysis_context =
-            generate_fn_analysis_data(&universe,
+            generate_fn_analysis_data(
+                &universe,
+                &mut global_data,
+                &mut local_data,
                 &universe.std_scope(),
                 &TypingContext::empty(),
                 &fn_type,
                 &fn_def
                 ).unwrap();
 
-        let cfg = CFG::generate(
-                &mut universe, fn_def.body.clone(), &fn_type, &analysis_context
+        let (_, cfg) = CFG::generate(
+                &universe,
+                &mut global_data,
+                &mut local_data,
+                fn_def.body.clone(),
+                &fn_type,
+                &analysis_context
             )
             .unwrap();
 

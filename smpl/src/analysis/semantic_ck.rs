@@ -165,7 +165,6 @@ mod tests {
         } else {
             panic!("Expected a SMPL function. Found {:?}", main);
         };
-        let cfg = cfg.borrow();
         let fn_call = {
             let scope_enter = cfg.after_start();
             cfg.next(scope_enter)

@@ -298,18 +298,23 @@ mod tests {
     use crate::parser::expr_parser::*;
     use crate::parser::*;
     use crate::module::ModuleSource;
+    use super::super::analysis_context::{GlobalData, LocalData};
 
     #[test]
     fn expr_exec_order_ck() {
+
+        let mut global_data = GlobalData::new();
+        let mut local_data = LocalData::new();
+
         let input = "5 + 2 / 3";
         let source = ModuleSource::Anonymous(None);
 
         let mut input = buffer_input(&source, input);
         let expr = piped_expr(&mut input, &[]).unwrap().to_data().0;
 
-        let mut universe = Universe::std();
+        let mut universe = Universe::std(&mut global_data);
 
-        let expr = flatten(&mut universe, expr);
+        let (_, expr) = flatten(&mut global_data, &mut local_data, expr);
 
         let mut order = expr.execution_order();
 
