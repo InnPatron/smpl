@@ -148,8 +148,20 @@ pub fn check_modules(
 
     let typable_raw_program =
         map_types(program, &mut global_data, dependent_raw_program)?;
-    let mut analyzable_raw_program =
+    let analyzable_raw_program =
         generate_analyzable_fns(&mut global_data, program, typable_raw_program)?;
+
+    analyze_fns(program, &mut global_data, analyzable_raw_program);
+
+    Ok(program_origin)
+}
+
+fn analyze_fns(
+    program: &mut Program,
+    global_data: &mut GlobalData,
+    mut analyzable_raw_program: AnalyzableRawProgram,
+
+    ) -> Result<(), AnalysisError> {
 
     let reserved_anon_fns = analyzable_raw_program.anon_fns;
     let mut unresolved_anon_fns = AnonStorage::new();
@@ -174,7 +186,7 @@ pub fn check_modules(
                     fn_to_analyze,
                     universe,
                     metadata,
-                    &mut global_data,
+                    global_data,
                     local_data,
                     &reserved_anon_fns,
                     mod_id.clone(),
@@ -224,7 +236,7 @@ pub fn check_modules(
 
             let (mut nested_unresolved_anon_fns, cfg) = CFG::generate(
                 universe,
-                &mut global_data,
+                global_data,
                 local_data,
                 anon_fn_decl,
                 &type_cons,
@@ -254,7 +266,7 @@ pub fn check_modules(
                     &mut to_analyze,
                     universe,
                     metadata,
-                    &mut global_data,
+                    global_data,
                     local_data,
                     &reserved_anon_fns,
                     mod_id.clone(),
@@ -272,12 +284,13 @@ pub fn check_modules(
         }
     }
 
+    // Map ALL functions into the Universe
     for (fn_id, func) in analyzable_raw_program.fn_map.into_iter() {
         program.universe_mut()
             .insert_fn(fn_id, func);
     }
 
-    Ok(program_origin)
+    Ok(())
 }
 
 fn generate_analyzable_fns(
