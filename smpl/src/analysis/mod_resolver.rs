@@ -302,6 +302,11 @@ fn generate_analyzable_fns(
     })
 }
 
+///
+/// Reads a module's top-level using statements.
+/// If the using statement refers to an existing module, bring that module into scope
+///   while noting that 'used' module as a dependency.
+///
 fn map_usings(
     internally_scoped: ScopedRawProgram,
 ) -> Result<DependentRawProgram, AnalysisError> {
@@ -572,7 +577,7 @@ fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
     }
 }
 
-/// Insert types into the Universe and a separate type map
+/// Insert type constructors into the Universe and a separate type map
 fn map_types(program: &mut Program,
     global_data: &mut GlobalData,
     raw_program: DependentRawProgram)
