@@ -16,24 +16,6 @@ use super::abstract_type::AbstractType;
 use super::analysis_context::{GlobalData, LocalData, AnalysisContext};
 use super::anon_storage::AnonStorage;
 
-pub fn analyze_fn(
-    universe: &mut Universe,
-    metadata: &mut Metadata,
-    global_data: &mut GlobalData,
-    module_id: ModuleId,
-    fn_id: FnId,
-) -> Result<(), AnalysisError> {
-    use super::resolve_scope;
-    use super::return_trace;
-    use super::type_checker;
-
-    resolve_scope::resolve(universe, fn_id)?;
-    type_checker::type_check(universe, metadata, global_data, module_id, fn_id)?;
-    return_trace::return_trace(universe, fn_id)?;
-
-    Ok(())
-}
-
 pub fn analyze_fn_prime(
     to_analyze: &mut Function,
     universe: &Universe,
