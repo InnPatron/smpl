@@ -326,7 +326,7 @@ impl CFG {
     /// Only performs continue/break statement checking (necessary for CFG generation).
     ///
     pub fn generate(
-        universe: &mut Universe,
+        universe: &Universe,
         global_data: &mut GlobalData,
         local_data: &mut LocalData,
         body: ast::AstNode<ast::Block>,
@@ -411,7 +411,7 @@ impl CFG {
     ///
     fn generate_scoped_block<'a, 'b, T>(
         &'a mut self,
-        universe: &'b mut Universe,
+        universe: &'b Universe,
         global_data: &'b mut GlobalData,
         local_data: &'b mut LocalData,
         anonymous_fns: &mut AnonStorage<ReservedAnonymousFn>,
@@ -697,7 +697,7 @@ impl CFG {
                             //   BranchSplit or BranchMerge (keep ScopeEnter, ScopeExit)
                             fn generate_branch(
                                 cfg: &mut CFG,
-                                universe: &mut Universe,
+                                universe: &Universe,
                                 global_data: &mut GlobalData,
                                 local_data: &mut LocalData,
                                 anonymous_fns: &mut AnonStorage<ReservedAnonymousFn>,
