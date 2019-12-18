@@ -229,7 +229,10 @@ fn flatten_expr(
         AstExpr::AnonymousFn(a_fn) => {
             let span = a_fn.span();
             let fn_id = global_data.new_fn_id();
-            let a_fn = ReservedAnonymousFn(fn_id, a_fn);
+            let a_fn = ReservedAnonymousFn {
+                fn_id,
+                ast: a_fn
+            };
             anonymous_fns.insert(fn_id, a_fn);
             (
                 scope.map_tmp(

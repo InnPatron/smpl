@@ -385,7 +385,10 @@ impl AnonymousFn {
 }
 
 #[derive(Clone, Debug)]
-pub struct ReservedAnonymousFn(pub(super) FnId, pub(super) AstNode<AstAnonymousFn>);
+pub struct ReservedAnonymousFn {
+    pub(super) fn_id: FnId,
+    pub(super) ast: AstNode<AstAnonymousFn>,
+}
 
 #[derive(Clone, Debug)]
 pub struct BuiltinFunction {

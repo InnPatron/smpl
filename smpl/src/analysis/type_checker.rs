@@ -549,7 +549,10 @@ impl<'a> TypeChecker<'a> {
             let decision: Either<_, _> = match afn {
                 Function::Anonymous(ref afn) => {
                     match afn {
-                        SemanticAnonymousFn::Reserved(ReservedAnonymousFn(_, ref ast_afn)) => {
+                        SemanticAnonymousFn::Reserved(ReservedAnonymousFn {
+                            ast: ref ast_afn,
+                            ..
+                        }) => {
 
                             // Store the snapshot
                             self.anon_typing_context_storage
