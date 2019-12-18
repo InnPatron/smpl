@@ -361,7 +361,7 @@ impl Function {
 
 #[derive(Clone, Debug)]
 pub enum AnonymousFn {
-    Reserved(FnId, AstNode<AstAnonymousFn>),
+    Reserved(ReservedAnonymousFn),
     Resolved {
         type_id: AstNode<TypeId>,
         cfg: CFG,
@@ -383,6 +383,9 @@ impl AnonymousFn {
         }
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct ReservedAnonymousFn(pub(super) FnId, pub(super) AstNode<AstAnonymousFn>);
 
 #[derive(Clone, Debug)]
 pub struct BuiltinFunction {

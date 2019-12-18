@@ -539,6 +539,7 @@ impl<'a> TypeChecker<'a> {
     ///   4) Apply the type constructor and return the function type
     fn resolve_anonymous_fn(&mut self, a_fn: &AnonymousFnValue, tmp_span: Span)
         -> Result<AbstractType, AnalysisError> { 
+        use super::semantic_data::ReservedAnonymousFn;
 
         let fn_id = a_fn.fn_id(); 
 
@@ -548,7 +549,7 @@ impl<'a> TypeChecker<'a> {
             let decision: Either<_, _> = match afn {
                 Function::Anonymous(ref afn) => {
                     match afn {
-                        SemanticAnonymousFn::Reserved(_, ref ast_afn) => {
+                        SemanticAnonymousFn::Reserved(ReservedAnonymousFn(_, ref ast_afn)) => {
 
                             // Store the snapshot
                             self.anon_typing_context_storage

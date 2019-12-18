@@ -11,8 +11,9 @@ pub use crate::ast::UniOp;
 
 use super::expr_flow;
 use super::semantic_data::*;
-use super::semantic_data::{AnonymousFn as SemanticAnonymousFn};
+use super::semantic_data::ReservedAnonymousFn;
 use super::analysis_context::{LocalData, GlobalData};
+use super::anon_storage::AnonStorage;
 
 // TODO(alex): Remove Typed<T>
 // Types are stored within type_checker::TypingContext instead
@@ -53,7 +54,7 @@ impl Assignment {
         global_data: &mut GlobalData,
         local_data: &mut LocalData,
         assignment: ast::Assignment,
-    ) -> (Vec<SemanticAnonymousFn>, Self) {
+    ) -> (AnonStorage<ReservedAnonymousFn>, Self) {
         let (name, name_span) = assignment.name.to_data();
         let (mut anon_1, field_access) = 
             FieldAccess::new(global_data, local_data, name);
@@ -110,7 +111,7 @@ impl LocalVarDecl {
         local_data: &mut LocalData,
         decl: ast::LocalVarDecl,
         stmt_span: Span,
-    ) -> (Vec<SemanticAnonymousFn>, Self) {
+    ) -> (AnonStorage<ReservedAnonymousFn>, Self) {
 
         let (anon, var_init) = 
             expr_flow::flatten(global_data, local_data, decl.var_init);
@@ -438,7 +439,7 @@ pub struct FieldAccess {
 impl FieldAccess {
 
     pub fn new(global_data: &mut GlobalData, local_data: &mut LocalData, path: ast::Path) 
-        -> (Vec<SemanticAnonymousFn>, Self) {
+        -> (AnonStorage<ReservedAnonymousFn>, Self) {
 
         let (anon, new_path) = self::Path::new(global_data, local_data, path.clone());
 
@@ -539,12 +540,12 @@ pub struct Path {
 
 impl self::Path {
     fn new(global_data: &mut GlobalData, local_data: &mut LocalData, path: ast::Path) 
-        -> (Vec<SemanticAnonymousFn>, self::Path) {
+        -> (AnonStorage<ReservedAnonymousFn>, self::Path) {
 
         let mut path_iter = path.0.into_iter();
         let root = path_iter.next().unwrap();
 
-        let mut buff = Vec::new();
+        let mut buff = AnonStorage::new();
 
         let (name, indexing) = match root {
             ast::PathSegment::Ident(i) => (i, None),

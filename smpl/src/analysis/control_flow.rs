@@ -9,7 +9,7 @@ use crate::span::Span;
 use super::error::{AnalysisError, ControlFlowError};
 use super::expr_flow;
 
-use super::semantic_data::{LoopId, Universe, AnonymousFn as SemanticAnonymousFn};
+use super::semantic_data::{LoopId, Universe, ReservedAnonymousFn};
 use super::type_cons::TypeCons;
 use super::abstract_type::AbstractType;
 
@@ -22,6 +22,7 @@ use super::analysis_context::{
 };
 
 use super::control_data::*;
+use super::anon_storage::AnonStorage;
 
 type InternalLoopData = Option<(graph::NodeIndex, graph::NodeIndex, LoopId)>;
 
@@ -331,7 +332,7 @@ impl CFG {
         body: ast::AstNode<ast::Block>,
         fn_type: &TypeCons,
         _analysis_context: &AnalysisContext,
-    ) -> Result<(Vec<SemanticAnonymousFn>, Self), AnalysisError> {
+    ) -> Result<(AnonStorage<ReservedAnonymousFn>, Self), AnalysisError> {
         let mut cfg = {
             let mut graph = graph::Graph::new();
             let start = graph.add_node(Node::Start);
@@ -349,7 +350,7 @@ impl CFG {
         let (body, _) = body.to_data();
         let instructions = body.0;
         // TODO: Return anonymous functions
-        let mut anonymous_fns = Vec::new();
+        let mut anonymous_fns = AnonStorage::new();
         let function_body = cfg.generate_scoped_block(
             universe,
             global_data,
@@ -413,7 +414,7 @@ impl CFG {
         universe: &'b mut Universe,
         global_data: &'b mut GlobalData,
         local_data: &'b mut LocalData,
-        anonymous_fns: &mut Vec<SemanticAnonymousFn>,
+        anonymous_fns: &mut AnonStorage<ReservedAnonymousFn>,
         mut instructions: T,
         loop_data: InternalLoopData,
     ) -> Result<BranchData, ControlFlowError>
@@ -699,7 +700,7 @@ impl CFG {
                                 universe: &mut Universe,
                                 global_data: &mut GlobalData,
                                 local_data: &mut LocalData,
-                                anonymous_fns: &mut Vec<SemanticAnonymousFn>,
+                                anonymous_fns: &mut AnonStorage<ReservedAnonymousFn>,
                                 body: AstNode<Block>,
                                 condition: Option<AstNode<Expr>>,
                                 loop_data: InternalLoopData,
