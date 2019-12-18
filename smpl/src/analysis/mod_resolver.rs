@@ -151,7 +151,7 @@ pub fn check_modules(
     let analyzable_raw_program =
         generate_analyzable_fns(&mut global_data, program, typable_raw_program)?;
 
-    analyze_fns(program, &mut global_data, analyzable_raw_program);
+    let _ = analyze_fns(program, &mut global_data, analyzable_raw_program)?;
 
     Ok(program_origin)
 }
@@ -170,9 +170,9 @@ fn analyze_fns(
         for (_, reserved_fn) in raw_mod.reserved_fns.into_iter() {
             let fn_id = reserved_fn.0;
 
-            let fn_to_analyze = analyzable_raw_program
+            let mut fn_to_analyze = analyzable_raw_program
                 .fn_map
-                .get_mut(&fn_id)
+                .remove(&fn_id)
                 .expect(&format!("Missing analyzable function for {}", fn_id));
 
             let local_data = analyzable_raw_program
@@ -183,7 +183,7 @@ fn analyze_fns(
 
             let mut this_anon_fns =
                 analysis_helpers::analyze_fn_prime(
-                    fn_to_analyze,
+                    &mut fn_to_analyze,
                     universe,
                     metadata,
                     global_data,
@@ -193,6 +193,9 @@ fn analyze_fns(
                 )?;
 
             unresolved_anon_fns.append(&mut this_anon_fns);
+
+            universe
+                .insert_fn(fn_id, fn_to_analyze);
         }
     }
 
@@ -273,21 +276,12 @@ fn analyze_fns(
                 )?;
 
 
-            if analyzable_raw_program.fn_map
-                .insert(to_resolve_fn_id, to_analyze)
-                .is_some() {
-                panic!("Overriding FN ID");
-            }
+            universe
+                .insert_fn(to_resolve_fn_id, to_analyze);
 
             // Mark nested anonymous functions as unresolved
             unresolved_anon_fns.append(&mut this_unresolved_anon_fns);
         }
-    }
-
-    // Map ALL functions into the Universe
-    for (fn_id, func) in analyzable_raw_program.fn_map.into_iter() {
-        program.universe_mut()
-            .insert_fn(fn_id, func);
     }
 
     Ok(())
