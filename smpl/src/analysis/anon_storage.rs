@@ -9,11 +9,26 @@ impl<T> AnonStorage<T> {
         AnonStorage(HashMap::new())
     }
 
+    pub(super) fn from_iter<I>(i: I) -> Self 
+        where I: Iterator<Item=(FnId, T)> {
+
+        AnonStorage(i.collect())
+    }
+
     pub(super) fn insert(&mut self, fn_id: FnId, data: T) {
         if self.0.insert(fn_id, data).is_some() {
             panic!("Overriding anonymous storage for {}", fn_id);
         }
     }
 
-    // pub fn data(&self) -> impl Iterator<Item=(&FnId,
+    pub(super) fn data(self) -> impl Iterator<Item=(FnId, T)> {
+        self.0.into_iter()
+    }
+
+    pub(super) fn remove(&mut self, fn_id: FnId) -> T {
+        self.0
+            .remove(&fn_id)
+            .expect(&format!("No data for anonymous fn: {}", fn_id))
+    }
+
 }
