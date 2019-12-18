@@ -148,14 +148,39 @@ pub fn check_modules(
 
     let typable_raw_program =
         map_types(program, &mut global_data, dependent_raw_program)?;
-    let analyzable_raw_program =
+    let mut analyzable_raw_program =
         generate_analyzable_fns(&mut global_data, program, typable_raw_program)?;
 
-    for (mod_id, raw_mod) in analyzable_raw_program.module_map.iter() {
+    let mut unresolved_anon_fns = AnonStorage::new();
+    for (mod_id, raw_mod) in analyzable_raw_program.module_map.into_iter() {
         let (universe, metadata, _) = program.analysis_context();
-        for (_, reserved_fn) in raw_mod.reserved_fns.iter() {
+        for (_, reserved_fn) in raw_mod.reserved_fns.into_iter() {
             let fn_id = reserved_fn.0;
-            analysis_helpers::analyze_fn(universe, metadata, &mut global_data, mod_id.clone(), fn_id)?;
+
+            let fn_to_analyze = analyzable_raw_program
+                .fn_map
+                .get_mut(&fn_id)
+                .expect(&format!("Missing analyzable function for {}", fn_id));
+
+            let local_data = analyzable_raw_program
+                .local_data_map
+                .get_mut(&fn_id)
+                .expect(&format!("Missing local data function for {}", fn_id));
+
+            let reserved_anon_fns = &analyzable_raw_program.anon_fns;
+
+            let mut this_anon_fns =
+                analysis_helpers::analyze_fn_prime(
+                    fn_to_analyze,
+                    universe,
+                    metadata,
+                    &mut global_data,
+                    local_data,
+                    reserved_anon_fns,
+                    mod_id.clone(),
+                )?;
+
+            unresolved_anon_fns.append(&mut this_anon_fns);
         }
     }
 
