@@ -210,41 +210,6 @@ impl Universe {
         self.module_name.get(name).map(|id| id.clone())
     }
 
-    /// Only used when function analysis returns a recoverable error.
-    /// Unmap to not have a partial function.
-    pub fn unmap_fn(&mut self, fn_id: FnId) {
-        self.fn_map.remove(&fn_id);
-    }
-
-    pub fn insert_fn(
-        &mut self,
-        fn_id: FnId,
-        name: Ident,
-        type_id: TypeId,
-        analysis_context: AnalysisContext,
-        cfg: CFG,
-        span: Span,
-    ) {
-        unimplemented!();
-    }
-
-    pub fn insert_builtin_fn(
-        &mut self,
-        fn_id: FnId,
-        name: Ident,
-        fn_type: TypeId,
-    ) {
-        unimplemented!();
-    }
-
-    pub fn reserve_anonymous_fn(
-        &mut self,
-        fn_id: FnId,
-        ast_fn: AstNode<AstAnonymousFn>,
-    ) {
-        unimplemented!();
-    }
-
     pub fn manual_insert_type_cons(&mut self, type_id: TypeId, cons: TypeCons) {
         if self.type_cons_map.insert(type_id, cons).is_some() {
             panic!("Duplicate type constructor for type id");

@@ -350,14 +350,6 @@ fn generate_analyzable_fns(
                 span: fn_span.clone(),
             })).is_none());
 
-            program.universe_mut().insert_fn(
-                fn_id,
-                fn_name.clone(),
-                fn_type_id,
-                analysis_context,
-                cfg,
-                fn_span,
-            );
             program.metadata_mut().insert_module_fn(
                 mod_id.clone(),
                 fn_name.clone(),
@@ -397,12 +389,6 @@ fn generate_analyzable_fns(
                 name: fn_name.clone(),
                 type_id: fn_type_id.clone(),
             })).is_none());
-
-            universe.insert_builtin_fn(
-                fn_id,
-                fn_name.clone(),
-                fn_type_id,
-            );
 
             metadata.insert_builtin(fn_id);
             metadata.insert_module_fn(
