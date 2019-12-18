@@ -363,7 +363,8 @@ impl Function {
 pub enum AnonymousFn {
     Reserved(ReservedAnonymousFn),
     Resolved {
-        type_id: AstNode<TypeId>,
+        span: Span,
+        type_id: TypeId,
         cfg: CFG,
         analysis_context: AnalysisContext,
     },
@@ -378,7 +379,7 @@ impl AnonymousFn {
         match self {
             AnonymousFn::Reserved(..) => None,
             AnonymousFn::Resolved { type_id, .. } => {
-                Some(type_id.data().clone())
+                Some(type_id.clone())
             }
         }
     }

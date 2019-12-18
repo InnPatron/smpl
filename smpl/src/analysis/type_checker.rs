@@ -174,6 +174,7 @@ impl<'a> TypeChecker<'a> {
                     SemanticAnonymousFn::Resolved {
                         ref type_id,
                         ref analysis_context,
+                        ref span,
                         ..
                     } => {
                         let typing_context =
@@ -181,8 +182,8 @@ impl<'a> TypeChecker<'a> {
                         let fn_scope = analysis_context.parent_scope().clone();
 
                         let return_type: AbstractType = {
-                            let fn_type_span = type_id.span();
-                            let type_id = type_id.data().clone();
+                            let fn_type_span = span.clone();
+                            let type_id = type_id.clone();
 
                             let fn_type = AbstractType::App {
                                 data: fn_type_span,
@@ -295,6 +296,7 @@ impl<'a> TypeChecker<'a> {
                     SemanticAnonymousFn::Resolved {
                         ref type_id,
                         ref analysis_context,
+                        ref span,
                         ..
                     } => {
                         let typing_context =
@@ -302,8 +304,8 @@ impl<'a> TypeChecker<'a> {
                         let fn_scope = analysis_context.parent_scope().clone();
 
                         let return_type: AbstractType = {
-                            let fn_type_span = type_id.span();
-                            let type_id = type_id.data().clone();
+                            let fn_type_span = span.clone();
+                            let type_id = type_id.clone();
 
                             let fn_type = AbstractType::App {
                                 data: fn_type_span,
@@ -583,7 +585,7 @@ impl<'a> TypeChecker<'a> {
                             ref type_id,
                             ..
                         } => {
-                            Either::Right(type_id.data().clone())
+                            Either::Right(type_id.clone())
                         }
 
                     }

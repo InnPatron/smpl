@@ -30,11 +30,10 @@ pub fn return_trace(
 
             AnonymousFn::Resolved {
                 ref cfg,
-                ref type_id,
+                ref span,
                 ..
             } => {
-                let fn_span = &type_id.span();
-                check_returns_form(cfg, fn_span)
+                check_returns_form(cfg, span)
             }
         },
 
@@ -62,11 +61,10 @@ pub fn return_trace_prime(
 
             AnonymousFn::Resolved {
                 ref cfg,
-                ref type_id,
+                ref span,
                 ..
             } => {
-                let fn_span = &type_id.span();
-                check_returns_form(cfg, fn_span)
+                check_returns_form(cfg, span)
             }
         },
 
