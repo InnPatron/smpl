@@ -15,6 +15,10 @@ impl<T> AnonStorage<T> {
         AnonStorage(i.collect())
     }
 
+    pub(super) fn from_map(m: HashMap<FnId, T>) -> Self {
+        AnonStorage(m)
+    }
+
     pub(super) fn insert(&mut self, fn_id: FnId, data: T) {
         if self.0.insert(fn_id, data).is_some() {
             panic!("Overriding anonymous storage for {}", fn_id);
