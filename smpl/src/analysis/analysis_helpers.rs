@@ -8,7 +8,7 @@ use super::metadata::*;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::{
     FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId,
-    Universe, ModuleId, Function,
+    Universe, ModuleId, Function, ReservedAnonymousFn,
 };
 use super::type_checker::TypingContext;
 use super::type_cons::{TypeCons, TypeParams};
@@ -40,8 +40,9 @@ pub fn analyze_fn_prime(
     metadata: &mut Metadata,
     global_data: &mut GlobalData,
     local_data: &mut LocalData,
+    reserved_anon_fns: &AnonStorage<ReservedAnonymousFn>,
     module_id: ModuleId,
-) -> Result<(), AnalysisError> {
+) -> Result<AnonStorage<(AnalysisContext, TypeCons)>, AnalysisError> {
     use super::resolve_scope;
     use super::return_trace;
     use super::type_checker;
@@ -49,7 +50,8 @@ pub fn analyze_fn_prime(
     let anon_scopes: AnonStorage<ScopedData> =
         resolve_scope::resolve_prime(to_analyze)?;
 
-    let (anon_typing_contexts, anon_type_cons): (AnonStorage<TypingContext>, AnonStorage<TypeCons>) =
+    let (mut anon_typing_contexts, mut anon_type_cons):
+        (AnonStorage<TypingContext>, AnonStorage<TypeCons>) =
         type_checker::type_check_prime(
             to_analyze,
             universe,
@@ -60,7 +62,31 @@ pub fn analyze_fn_prime(
 
     let _ = return_trace::return_trace_prime(to_analyze)?;
 
-    Ok(())
+    let analyzable_anons: AnonStorage<(AnalysisContext, TypeCons)> = {
+
+        let map = anon_scopes
+            .data()
+            .map(|(fn_id, outer_scope)| {
+                let outer_typing_context: TypingContext = anon_typing_contexts.remove(fn_id);
+                let type_cons: TypeCons = anon_type_cons.remove(fn_id);
+                let reserved = reserved_anon_fns.get(fn_id);
+
+                generate_fn_analysis_data(
+                    universe,
+                    global_data,
+                    local_data,
+                    &outer_scope,
+                    &outer_typing_context,
+                    &type_cons,
+                    reserved.ast.data(),
+                ).map(|ac| (fn_id, (ac, type_cons)))
+            })
+        .collect::<Result<HashMap<_, _>, _>>()?;
+
+        AnonStorage::from_map(map)
+    };
+
+    Ok(analyzable_anons)
 }
 
 pub struct ContextData<'a> {
