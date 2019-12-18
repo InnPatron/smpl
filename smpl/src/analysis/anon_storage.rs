@@ -31,6 +31,10 @@ impl<T> AnonStorage<T> {
         self.0.into_iter()
     }
 
+    pub(super) fn ref_data(&self) -> impl Iterator<Item=(FnId, &T)> {
+        self.0.iter().map(|(fn_id, t)| (fn_id.clone(), t))
+    }
+
     pub(super) fn remove(&mut self, fn_id: FnId) -> T {
         self.0
             .remove(&fn_id)
