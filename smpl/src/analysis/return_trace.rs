@@ -28,7 +28,7 @@ pub fn return_trace(
                 panic!("Anonymous function should be resolved")
             }
 
-            AnonymousFn::Resolved { 
+            AnonymousFn::Resolved {
                 ref cfg,
                 ref type_id,
                 ..
@@ -60,7 +60,7 @@ pub fn return_trace_prime(
                 panic!("Anonymous function should be resolved")
             }
 
-            AnonymousFn::Resolved { 
+            AnonymousFn::Resolved {
                 ref cfg,
                 ref type_id,
                 ..
@@ -77,7 +77,7 @@ pub fn return_trace_prime(
 }
 
 fn check_returns_form(
-    cfg: &CFG, 
+    cfg: &CFG,
     fn_span: &Span,
 ) -> Result<(), AnalysisError> {
 

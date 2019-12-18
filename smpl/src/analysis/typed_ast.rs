@@ -56,10 +56,10 @@ impl Assignment {
         assignment: ast::Assignment,
     ) -> (AnonStorage<ReservedAnonymousFn>, Self) {
         let (name, name_span) = assignment.name.to_data();
-        let (mut anon_1, field_access) = 
+        let (mut anon_1, field_access) =
             FieldAccess::new(global_data, local_data, name);
 
-        let (mut anon_2, value) = 
+        let (mut anon_2, value) =
             expr_flow::flatten(global_data, local_data, assignment.value);
 
         anon_1.append(&mut anon_2);
@@ -113,7 +113,7 @@ impl LocalVarDecl {
         stmt_span: Span,
     ) -> (AnonStorage<ReservedAnonymousFn>, Self) {
 
-        let (anon, var_init) = 
+        let (anon, var_init) =
             expr_flow::flatten(global_data, local_data, decl.var_init);
 
         let l = LocalVarDecl {
@@ -438,7 +438,7 @@ pub struct FieldAccess {
 
 impl FieldAccess {
 
-    pub fn new(global_data: &mut GlobalData, local_data: &mut LocalData, path: ast::Path) 
+    pub fn new(global_data: &mut GlobalData, local_data: &mut LocalData, path: ast::Path)
         -> (AnonStorage<ReservedAnonymousFn>, Self) {
 
         let (anon, new_path) = self::Path::new(global_data, local_data, path.clone());
@@ -539,7 +539,7 @@ pub struct Path {
 }
 
 impl self::Path {
-    fn new(global_data: &mut GlobalData, local_data: &mut LocalData, path: ast::Path) 
+    fn new(global_data: &mut GlobalData, local_data: &mut LocalData, path: ast::Path)
         -> (AnonStorage<ReservedAnonymousFn>, self::Path) {
 
         let mut path_iter = path.0.into_iter();

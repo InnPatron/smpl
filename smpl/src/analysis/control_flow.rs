@@ -16,7 +16,7 @@ use super::abstract_type::AbstractType;
 use super::type_checker::TypingContext;
 use super::typed_ast;
 use super::analysis_context::{
-    AnalysisContext, 
+    AnalysisContext,
     GlobalData,
     LocalData,
 };
@@ -433,7 +433,7 @@ impl CFG {
                 // Added to current basic block
                 Stmt::Expr(expr) => {
                     let (ast_expr, span) = expr.to_data();
-                    let (mut anon, expr) = 
+                    let (mut anon, expr) =
                         expr_flow::flatten(global_data, local_data, ast_expr);
                     anonymous_fns.append(&mut anon);
                     current_block.append(BlockNode::Expr(ExprData {
@@ -491,7 +491,7 @@ impl CFG {
                             }
                             let expr = expr
                                 .map(|expr| {
-                                    let (mut anon_fn, expr) = 
+                                    let (mut anon_fn, expr) =
                                         expr_flow::flatten(global_data, local_data, expr);
                                     anonymous_fns.append(&mut anon_fn);
                                     expr
@@ -1036,14 +1036,14 @@ let b: int = 3;
         let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
-        let analysis_context = 
-            generate_fn_analysis_data(&universe, 
-                &universe.std_scope(), 
+        let analysis_context =
+            generate_fn_analysis_data(&universe,
+                &universe.std_scope(),
                 &TypingContext::empty(),
                 &fn_type,
                 &fn_def
                 ).unwrap();
-        let cfg = CFG::generate(&mut universe, 
+        let cfg = CFG::generate(&mut universe,
                 fn_def.body.clone(), &fn_type, &analysis_context)
             .unwrap();
 
@@ -1108,9 +1108,9 @@ if (test) {
         let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
-        let analysis_context = 
-            generate_fn_analysis_data(&universe, 
-                &universe.std_scope(), 
+        let analysis_context =
+            generate_fn_analysis_data(&universe,
+                &universe.std_scope(),
                 &TypingContext::empty(),
                 &fn_type,
                 &fn_def
@@ -1264,11 +1264,11 @@ if (test) {
         let mut input = buffer_input(&source, input);
         let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
-        
+
         let fn_def = testfn_decl(&mut input).unwrap();
-        let analysis_context = 
-            generate_fn_analysis_data(&universe, 
-                &universe.std_scope(), 
+        let analysis_context =
+            generate_fn_analysis_data(&universe,
+                &universe.std_scope(),
                 &TypingContext::empty(),
                 &fn_type,
                 &fn_def
@@ -1375,7 +1375,7 @@ if (test) {
 
             // condition b FALSE branch (branch_split_c)
             let branch_split_c = branch_split_c.expect("Missing false edge connecting to branch split C");
-            
+
             let branch_split_c_edges = edges!(cfg, branch_split_c);
             let mut truth_target = None;
             let mut false_target = None;
@@ -1474,18 +1474,18 @@ if (test) {
     fn while_loop_generation() {
         let input = "fn test(arg: int) {
     while (true) {
-        
+
     }
 }";
         let source = ModuleSource::Anonymous(None);
         let mut input = buffer_input(&source, input);
         let mut universe = Universe::std();
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
-        
+
         let fn_def = testfn_decl(&mut input).unwrap();
-        let analysis_context = 
-            generate_fn_analysis_data(&universe, 
-                &universe.std_scope(), 
+        let analysis_context =
+            generate_fn_analysis_data(&universe,
+                &universe.std_scope(),
                 &TypingContext::empty(),
                 &fn_type,
                 &fn_def
@@ -1526,7 +1526,7 @@ if (test) {
 
         let head_neighbors = neighbors!(cfg, loop_head);
         assert_eq!(head_neighbors.clone().count(), 2);
-        
+
         let head_edges = edges!(cfg, loop_head);
         assert_eq!(head_edges.clone().count(), 2);
 

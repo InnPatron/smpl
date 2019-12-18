@@ -88,11 +88,11 @@ pub fn check_modules(
 
         Program::new(universe, metadata, features)
     };
-    
+
     let program = &mut program_origin;
     let unscoped_raw_program = raw_mod_data(&mut global_data, modules)?;
 
-    let internally_scoped_raw_program = 
+    let internally_scoped_raw_program =
         scope_raw_data_internal(program.universe(), unscoped_raw_program);
 
     let dependent_raw_program = map_usings(internally_scoped_raw_program)?;
@@ -142,11 +142,11 @@ pub fn check_modules(
     //     };
 
     //     program.universe_mut().map_module(mod_id.clone(), name.clone(), module);
-    // } 
-    
-    let typable_raw_program = 
-        map_types(program, &mut global_data, dependent_raw_program)?; 
-    let analyzable_raw_program = 
+    // }
+
+    let typable_raw_program =
+        map_types(program, &mut global_data, dependent_raw_program)?;
+    let analyzable_raw_program =
         generate_analyzable_fns(&mut global_data, program, typable_raw_program)?;
 
     for (mod_id, raw_mod) in analyzable_raw_program.module_map.iter() {
@@ -156,14 +156,14 @@ pub fn check_modules(
 
             analysis_helpers::analyze_fn(universe, metadata, &mut global_data, mod_id.clone(), fn_id)?;
         }
-    } 
+    }
 
     Ok(program_origin)
 }
 
 fn generate_analyzable_fns(
-    global_data: &mut GlobalData, 
-    program: &mut Program, 
+    global_data: &mut GlobalData,
+    program: &mut Program,
     raw_program: TypableRawProgram)
     -> Result<AnalyzableRawProgram, AnalysisError> {
 
@@ -278,7 +278,7 @@ fn generate_analyzable_fns(
                 fn_id,
                 fn_name.clone(),
                 fn_type_id,
-            ); 
+            );
 
             metadata.insert_builtin(fn_id);
             metadata.insert_module_fn(
@@ -510,11 +510,11 @@ fn raw_mod_data(
 
 
     Ok(UnscopedRawProgram {
-        map: mod_map    
+        map: mod_map
     })
 }
 
-fn scope_raw_data_internal(universe: &Universe, unscoped_raw_program: UnscopedRawProgram) 
+fn scope_raw_data_internal(universe: &Universe, unscoped_raw_program: UnscopedRawProgram)
     -> ScopedRawProgram {
 
     let scope_map = unscoped_raw_program.map.iter()
@@ -559,9 +559,9 @@ fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
 }
 
 /// Insert types into the Universe and a separate type map
-fn map_types(program: &mut Program, 
+fn map_types(program: &mut Program,
     global_data: &mut GlobalData,
-    raw_program: DependentRawProgram) 
+    raw_program: DependentRawProgram)
 
     -> Result<TypableRawProgram, AnalysisError> {
 

@@ -46,7 +46,7 @@ pub fn resolve(
     }
 }
 
-pub fn resolve_prime(to_resolve: &mut Function) 
+pub fn resolve_prime(to_resolve: &mut Function)
     -> Result<AnonStorage<ScopedData>, AnalysisError> {
 
     let mut scope_resolver = ScopeResolver::new_prime(to_resolve);
@@ -170,7 +170,7 @@ impl ScopeResolver {
 
     fn resolve_expr_scope(&mut self,
         expr: &mut Expr,
-    ) -> Result<(), AnalysisError> { 
+    ) -> Result<(), AnalysisError> {
 
         for tmp_id in expr.execution_order() {
             let tmp = expr.get_tmp_mut(tmp_id);
@@ -201,7 +201,7 @@ impl ScopeResolver {
 
                     for segment in path.path_mut() {
                         match segment {
-                            PathSegment::Indexing(_, ref mut e) 
+                            PathSegment::Indexing(_, ref mut e)
                                 => self.resolve_expr_scope(e)?,
 
                             _ => (),

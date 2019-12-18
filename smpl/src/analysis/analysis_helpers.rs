@@ -134,7 +134,7 @@ where
 
                     existential_map.insert(
                         placeholder_variable,
-                        AbstractType::TypeVar(constraint.span().clone(), 
+                        AbstractType::TypeVar(constraint.span().clone(),
                             existential_type_var),
                     );
 

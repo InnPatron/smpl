@@ -56,12 +56,12 @@ pub enum AbstractTypeX<X> {
     },
 
     WidthConstraint {
-        data: X, 
+        data: X,
         width: AbstractWidthConstraintX<X>
     },
 
     Opaque {
-        data: X, 
+        data: X,
         type_id: TypeId,
         args: Vec<AbstractTypeX<X>>,
     },
@@ -132,7 +132,7 @@ impl<T> AbstractTypeX<T> {
                     data: (),
                     element_type: Box::new(element_type.downcast()),
                     size,
-                } 
+                }
             }
 
             UncheckedFunction {
@@ -175,7 +175,7 @@ impl<T> AbstractTypeX<T> {
                 ..
             } => {
                 Opaque {
-                    data: (), 
+                    data: (),
                     type_id,
                     args: args.into_iter()
                         .map(|t| t.downcast())
@@ -244,12 +244,12 @@ impl<T> AbstractTypeX<T> {
             Float(ref data) => data,
             String(ref data) => data,
             Bool(ref data) => data,
-            Unit(ref data) => data, 
+            Unit(ref data) => data,
         }
     }
 }
 
-impl AbstractTypeX<Span> { 
+impl AbstractTypeX<Span> {
 
     pub fn span(&self) -> &Span {
         self.data()
@@ -706,9 +706,9 @@ impl AbstractTypeX<Span> {
                 })
             }
 
-            AbstractType::UncheckedFunction { 
+            AbstractType::UncheckedFunction {
                 data: ref span,
-                ref return_type, 
+                ref return_type,
             } => {
                 let new_return = return_type.substitute_internal(
                     universe,
@@ -783,10 +783,10 @@ impl AbstractTypeX<Span> {
                 Ok(result)
             }
 
-            AbstractType::Opaque { 
+            AbstractType::Opaque {
                 data: ref span,
-                type_id, 
-                ref args 
+                type_id,
+                ref args
             } => {
                 let (ok_args, mut errors) = args
                     .iter()
@@ -876,7 +876,7 @@ enum WidthConstraintState<X> {
 
 ///
 /// To be marked as 'evaluated', the top level types for each field must be resolved
-///    to a single AbstractType. 
+///    to a single AbstractType.
 ///
 /// Unevaluated width constraints may hold conflicting/invalid constraints.
 ///
@@ -899,7 +899,7 @@ impl<X> AbstractWidthConstraintX<X> where X: Clone {
         } else {
             false
         }
-    } 
+    }
 
     pub fn len(&self) -> usize {
         eval_op!(self; ref fields => fields.len())
@@ -911,7 +911,7 @@ impl<X> AbstractWidthConstraintX<X> where X: Clone {
 
     pub fn fields_iter(&self) -> impl Iterator<Item=(&Ident, &AbstractTypeX<X>)> {
         eval_op!(self; ref fields => fields.iter())
-    } 
+    }
 }
 
 impl<X> AbstractWidthConstraintX<X> {
@@ -934,7 +934,7 @@ impl<X> AbstractWidthConstraintX<X> {
                         .map(|t| t.downcast())
                         .collect()
                     )
-                        
+
             }
 
             WidthConstraintState::Evaluated(fields) => {
@@ -1010,7 +1010,7 @@ impl AbstractWidthConstraint {
                     .map(|(field, constraints)| {
 
                         let constraint_iter = constraints.iter();
-                        let fused = fuse_field_width_constraints(universe, 
+                        let fused = fuse_field_width_constraints(universe,
                             scope,
                             typing_context,
                             constraint_iter
@@ -1030,13 +1030,13 @@ impl AbstractWidthConstraint {
 
 // TODO: Make AbstractWidthType generation LAZY
 //   Current width constraint based off of a struct (i.e. base STRUCT)
-//     eagerly evaluates the STRUCT name (which may not be inserted into 
+//     eagerly evaluates the STRUCT name (which may not be inserted into
 //     the Universe during type constructor generation)
 pub fn type_from_ann(
     scope: &ScopedData,
     typing_context: &TypingContext,
     anno: &AstNode<TypeAnnotation>,
-) -> Result<AbstractType, AnalysisError> 
+) -> Result<AbstractType, AnalysisError>
 
 {
     match anno.data() {
@@ -1239,7 +1239,7 @@ fn fuse_field_width_constraints<'a, I>(
     scope: &ScopedData,
     typing_context: &TypingContext,
     constraints: I,
-) -> Result<AbstractType, AnalysisError> 
+) -> Result<AbstractType, AnalysisError>
 where I: Iterator<Item=&'a AbstractType> + Clone {
     use super::error::TypeError;
 
@@ -1280,7 +1280,7 @@ where I: Iterator<Item=&'a AbstractType> + Clone {
         match constraint {
             AbstractType::WidthConstraint {
                 data: ref span,
-                width: ref inner_awc, 
+                width: ref inner_awc,
             } => {
                 let inner_awc = inner_awc
                     .clone()

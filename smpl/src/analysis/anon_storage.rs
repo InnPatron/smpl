@@ -9,7 +9,7 @@ impl<T> AnonStorage<T> {
         AnonStorage(HashMap::new())
     }
 
-    pub(super) fn from_iter<I>(i: I) -> Self 
+    pub(super) fn from_iter<I>(i: I) -> Self
         where I: Iterator<Item=(FnId, T)> {
 
         AnonStorage(i.collect())

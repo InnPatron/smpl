@@ -11,7 +11,7 @@ use super::analysis_context::{LocalData, GlobalData};
 use super::semantic_data::ReservedAnonymousFn;
 use super::anon_storage::AnonStorage;
 
-pub fn flatten(global_data: &mut GlobalData, local_data: &mut LocalData, e: AstExpr) 
+pub fn flatten(global_data: &mut GlobalData, local_data: &mut LocalData, e: AstExpr)
     -> (AnonStorage<ReservedAnonymousFn>, Expr) {
 
     let mut expr = Expr::new();
@@ -33,9 +33,9 @@ fn flatten_expr(
     match e {
         AstExpr::Bin(bin) => {
             let (bin, span) = bin.to_data();
-            let (lhs, _) = 
+            let (lhs, _) =
                 flatten_expr(global_data, local_data, anonymous_fns, scope, *bin.lhs);
-            let (rhs, _) = 
+            let (rhs, _) =
                 flatten_expr(global_data, local_data, anonymous_fns, scope, *bin.rhs);
             (
                 scope.map_tmp(
@@ -53,7 +53,7 @@ fn flatten_expr(
 
         AstExpr::Uni(uni) => {
             let (uni, span) = uni.to_data();
-            let expr = 
+            let expr =
                 flatten_expr(global_data, local_data, anonymous_fns, scope, *uni.expr).0;
             (
                 scope.map_tmp(
@@ -129,8 +129,8 @@ fn flatten_expr(
             let (mut anon, field_access) = FieldAccess::new(global_data, local_data, path);
             anonymous_fns.append(&mut anon);
             (
-                scope.map_tmp(local_data.new_tmp_id(), 
-                    Value::FieldAccess(field_access), 
+                scope.map_tmp(local_data.new_tmp_id(),
+                    Value::FieldAccess(field_access),
                     span.clone()),
                 span,
             )
@@ -247,7 +247,7 @@ fn flatten_expr(
             let (base, span) = chain.base.to_data();
             let base_expr = AstExpr::FnCall(AstNode::new(base, span));
 
-            let (base_result, span) = 
+            let (base_result, span) =
                 flatten_expr(global_data, local_data, anonymous_fns, scope, base_expr);
 
             let mut previous_result = base_result;
@@ -263,7 +263,7 @@ fn flatten_expr(
 
                 let fn_call = scope.get_tmp_mut(fn_call_result);
 
-                let fn_call = irmatch!(fn_call.value_mut().data_mut(); 
+                let fn_call = irmatch!(fn_call.value_mut().data_mut();
                                        Value::FnCall(ref mut call) => call);
 
                 // Use the result of the function call as the first argument

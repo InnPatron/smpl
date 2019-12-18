@@ -85,7 +85,7 @@ impl GlobalData {
 
     pub fn new_field_id(&self) -> FieldId {
         FieldId(self.inc_counter())
-    } 
+    }
 
     pub fn new_fn_id(&self) -> FnId {
         FnId(self.inc_counter())

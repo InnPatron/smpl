@@ -113,7 +113,7 @@ impl Universe {
     pub fn std(global_data: &GlobalData) -> Universe {
         let unit =
             (global_data.unit_type_id(), internal_module_path!(UNIT_TYPE), TypeCons::Unit);
-        let int = 
+        let int =
             (global_data.int_type_id(), internal_module_path!(INT_TYPE), TypeCons::Int);
         let float = (
             global_data.float_type_id(),

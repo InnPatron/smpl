@@ -48,7 +48,7 @@ pub fn type_check(
         }
     };
 
-    let mut type_checker = 
+    let mut type_checker =
         TypeChecker::new(universe, metadata, global_data, module_id, fn_id)?;
     let traverser = Traverser::new(cfg, &mut type_checker);
     traverser.traverse()?;
@@ -105,7 +105,7 @@ pub fn type_check_prime(
         }
     };
 
-    let mut type_checker = 
+    let mut type_checker =
         TypeChecker::new_prime(to_check, universe, metadata, global_data, module_id)?;
     let traverser = Traverser::new(cfg, &mut type_checker);
     traverser.traverse()?;
@@ -521,9 +521,9 @@ impl<'a> TypeChecker<'a> {
 
         Ok(tmp_type)
     }
-    
+
     /// Does NOT analyze the anonymous function and only generates the type signature.
-    ///   As a side effect, the anonymous function's type constructor is 
+    ///   As a side effect, the anonymous function's type constructor is
     ///   inserted into the Universe
     ///
     /// Steps to resolving an (unresolved) anonymous function:
@@ -538,10 +538,10 @@ impl<'a> TypeChecker<'a> {
     ///      Handling that will also simplify function signature creation
     ///   4) Apply the type constructor and return the function type
     fn resolve_anonymous_fn(&mut self, a_fn: &AnonymousFnValue, tmp_span: Span)
-        -> Result<AbstractType, AnalysisError> { 
+        -> Result<AbstractType, AnalysisError> {
         use super::semantic_data::ReservedAnonymousFn;
 
-        let fn_id = a_fn.fn_id(); 
+        let fn_id = a_fn.fn_id();
 
         let fn_type: AbstractType = {
             // Ugly hack to get around the borrow checker
@@ -562,12 +562,12 @@ impl<'a> TypeChecker<'a> {
                                     self.universe,
                                     self.metadata,
                                     self.global_data,
-                                    // According to the old implementation, 
+                                    // According to the old implementation,
                                     //   this is the correct scope
-                                    //   Maybe this scope needs to be retrieved 
+                                    //   Maybe this scope needs to be retrieved
                                     //   from scope resolution?
                                     current_scope,
-                                    &self.typing_context, 
+                                    &self.typing_context,
                                     fn_id,
                                     ast_afn.data(),
                                 )?;
@@ -580,11 +580,11 @@ impl<'a> TypeChecker<'a> {
                             ref type_id,
                             ..
                         } => {
-                            Either::Right(type_id.data().clone()) 
+                            Either::Right(type_id.data().clone())
                         }
 
                     }
-                } 
+                }
 
                 _ => panic!("FN ID did not refer to an anonymous function"),
             };
@@ -593,7 +593,7 @@ impl<'a> TypeChecker<'a> {
                 Either::Left((_fn_type_id, fn_type_cons)) => {
 
                     // Store type constructor locally.
-                    // TODO: Insert anonymous type constructor into Universe 
+                    // TODO: Insert anonymous type constructor into Universe
                     //   after current type checking is completed
                     self.anon_type_cons_storage
                         .insert(fn_id, fn_type_cons.clone());
@@ -683,7 +683,7 @@ impl<'a> TypeChecker<'a> {
 
             Eq | InEq => {
                 // TODO: Stricter equality check?
-                let current_scope = 
+                let current_scope =
                     self.scopes.last().expect("Should always have a scope");
 
                 type_resolver::resolve_types(
@@ -854,7 +854,7 @@ impl<'a> TypeChecker<'a> {
         for (field_id, field_type) in fields.iter() {
             let init_expr_type = init_expr_type_map.get(field_id).unwrap();
 
-            let current_scope = 
+            let current_scope =
                 self.scopes.last().expect("Should always have a scope");
 
             // TODO: If type inference is implemented, another pass needs to check
@@ -883,7 +883,7 @@ impl<'a> TypeChecker<'a> {
         init: &AnonStructInit,
         span: Span,
     ) -> Result<AbstractType, AnalysisError> {
-        
+
         let mut fields: HashMap<_, AbstractType> = HashMap::new();
         // Map init'd field to its type
         let mut duplicate_fields = Vec::new();
@@ -1028,7 +1028,7 @@ impl<'a> TypeChecker<'a> {
                 let arg_types = fn_call.args().map(|ref vec| {
                     vec.iter()
                         .map(|ref tmp_id| {
-                            self.typing_context 
+                            self.typing_context
                                 .tmp_type_map
                                 .get(tmp_id.data())
                                 .expect("Missing TMP")
@@ -1348,11 +1348,11 @@ impl<'a> TypeChecker<'a> {
                 }
 
                 AbstractType::TypeVar(ref span, ref type_var) => {
-                    let type_var_value = context 
+                    let type_var_value = context
                         .get_type_var(*type_var)
                         .expect(&format!("Missing type variable: {}", type_var));
 
-                    let type_var_value = 
+                    let type_var_value =
                         type_var_value.substitute(universe, scope, context)?;
 
                     generate_field_retriever(
