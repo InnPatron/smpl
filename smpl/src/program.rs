@@ -19,10 +19,10 @@ pub struct Program {
 
 impl Program {
 
-    /// 
+    ///
     /// Create a new `Program` from an iterator of unparsed SMPL modules.
     ///
-    pub fn from_unparsed<'a, I>(modules: I) -> Result<Program, Error> 
+    pub fn from_unparsed<'a, I>(modules: I) -> Result<Program, Error>
     where I: Iterator<Item=UnparsedModule<'a>> {
         use crate::parser::parse_module;
 
@@ -35,7 +35,7 @@ impl Program {
             .map_err(|e| e.into())
     }
 
-    /// 
+    ///
     /// Create a new `Program` from an iterator of pre-parsed SMPL modules.
     ///
     pub fn from_parsed<I>(
@@ -81,7 +81,7 @@ impl Program {
     }
 }
 
-/// 
+///
 /// Represents a fully analyzed SMPL module that can be compiled.
 ///
 pub struct CompilableModule<'a> {
@@ -113,7 +113,7 @@ impl<'a> CompilableModule<'a> {
             })
     }
 
-    pub fn compilable_fns(&self) -> 
+    pub fn compilable_fns(&self) ->
         impl Iterator<Item = CompilableFn> {
 
         self.module
@@ -167,7 +167,7 @@ impl<'a> CompilableModule<'a> {
     }
 }
 
-/// 
+///
 /// Represents a fully analyzed SMPL function that can be compiled.
 ///
 /// Does **NOT** include builtin functions.
