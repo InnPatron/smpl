@@ -393,6 +393,12 @@ fn map_usings(
     })
 }
 
+/// Splits ParsedModule's into a UnscopedRawProgram
+/// Per module:
+///   1) Checks for top-level name conflicts
+///   2) Assigns a TypeID to each type declaration
+///   3) Collects top-level use statements
+///   4) Assigns the module a ModuleID
 fn raw_mod_data(
     global_data: &mut GlobalData,
     modules: Vec<ParsedModule>,
@@ -402,10 +408,10 @@ fn raw_mod_data(
 
     let mut mod_map = HashMap::new();
     for module in modules {
-        let mut opaque_reserve = HashMap::new();
-        let mut struct_reserve = HashMap::new();
-        let mut fn_reserve = HashMap::new();
-        let mut builtin_fn_reserve = HashMap::new();
+        let mut opaque_reserve: HashMap<Ident, ReservedOpaque> = HashMap::new();
+        let mut struct_reserve: HashMap<Ident, ReservedStruct> = HashMap::new();
+        let mut fn_reserve: HashMap<Ident, ReservedFn>= HashMap::new();
+        let mut builtin_fn_reserve: HashMap<Ident, ReservedBuiltinFn> = HashMap::new();
         let mut uses = Vec::new();
 
         let ast_module = module.module;
@@ -513,6 +519,10 @@ fn raw_mod_data(
     })
 }
 
+///
+/// Creates a module-level scope per each module based off of the standard scope
+///   of the Universe and the module's top-level declarations.
+///
 fn scope_raw_data_internal(universe: &Universe, unscoped_raw_program: UnscopedRawProgram)
     -> ScopedRawProgram {
 
@@ -531,6 +541,11 @@ fn scope_raw_data_internal(universe: &Universe, unscoped_raw_program: UnscopedRa
     }
 }
 
+///
+/// Used by scope_raw_data_internal().
+///
+/// Reads a module's top-level declarations and maps them into the module's scope.
+///
 fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
     // TODO: Perform name collision check here?
     for (_ident, r) in raw.reserved_structs.iter() {
