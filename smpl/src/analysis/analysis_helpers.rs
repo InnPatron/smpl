@@ -8,12 +8,13 @@ use super::metadata::*;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::{
     FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId,
-    Universe, ModuleId,
+    Universe, ModuleId, Function,
 };
 use super::type_checker::TypingContext;
 use super::type_cons::{TypeCons, TypeParams};
 use super::abstract_type::AbstractType;
 use super::analysis_context::{GlobalData, LocalData, AnalysisContext};
+use super::anon_storage::AnonStorage;
 
 pub fn analyze_fn(
     universe: &mut Universe,
@@ -29,6 +30,35 @@ pub fn analyze_fn(
     resolve_scope::resolve(universe, fn_id)?;
     type_checker::type_check(universe, metadata, global_data, module_id, fn_id)?;
     return_trace::return_trace(universe, fn_id)?;
+
+    Ok(())
+}
+
+pub fn analyze_fn_prime(
+    to_analyze: &mut Function,
+    universe: &Universe,
+    metadata: &mut Metadata,
+    global_data: &mut GlobalData,
+    local_data: &mut LocalData,
+    module_id: ModuleId,
+) -> Result<(), AnalysisError> {
+    use super::resolve_scope;
+    use super::return_trace;
+    use super::type_checker;
+
+    let anon_scopes: AnonStorage<ScopedData> =
+        resolve_scope::resolve_prime(to_analyze)?;
+
+    let (anon_typing_contexts, anon_type_cons): (AnonStorage<TypingContext>, AnonStorage<TypeCons>) =
+        type_checker::type_check_prime(
+            to_analyze,
+            universe,
+            metadata,
+            global_data,
+            module_id,
+        )?;
+
+    let _ = return_trace::return_trace_prime(to_analyze)?;
 
     Ok(())
 }
