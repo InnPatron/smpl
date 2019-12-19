@@ -12,7 +12,7 @@ use super::resolve_scope::ScopedData;
 use super::type_cons::TypeCons;
 use super::semantic_data::{
     FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId, LoopId,
-    BranchingId, TmpId, VarId, Module, ModuleId, ModulePath,
+    BranchingId, TmpId, VarId, Module, ModuleId, ModulePath, AnonymousFn,
 };
 
 pub struct GlobalData {
@@ -173,7 +173,8 @@ impl AnalysisContext {
 #[derive(Clone, Debug)]
 pub struct AnalysisUniverse {
     type_cons_map: HashMap<TypeId, TypeCons>,
-    fn_map: HashMap<FnId, Function>,
+    fn_type_cons: HashMap<FnId, TypeCons>,
+    anon_fn_map: HashMap<FnId, AnonymousFn>,
     builtin_fn_set: HashSet<FnId>,
     module_map: HashMap<ModuleId, Module>,
     module_name: HashMap<Ident, ModuleId>,
@@ -218,7 +219,8 @@ impl AnalysisUniverse {
                 .into_iter()
                 .map(|(id, _, tc)| (id, tc))
                 .collect(),
-            fn_map: HashMap::new(),
+            fn_type_cons: HashMap::new(),
+            anon_fn_map: HashMap::new(),
             builtin_fn_set: HashSet::new(),
             module_map: HashMap::new(),
             module_name: HashMap::new(),
@@ -292,39 +294,39 @@ impl AnalysisUniverse {
         }
     }
 
+    pub fn insert_fn_type_cons(&mut self, fn_id: FnId, type_id: TypeId, cons: TypeCons) {
+        self.manual_insert_type_cons(type_id, cons.clone());
+        if self.fn_type_cons.insert(fn_id, cons).is_some() {
+            panic!("Duplicate type constructor for fn id");
+        }
+    }
+
+    pub fn get_fn_type_cons(&self, fn_id: FnId) -> Option<&TypeCons> {
+        self.fn_type_cons.get(&fn_id)
+    }
+
     pub fn get_type_cons(&self, id: TypeId) -> &TypeCons {
         self.type_cons_map
             .get(&id)
             .expect("Expected TypeID to always resolve to a TypeCons")
     }
 
-    pub fn insert_fn(&mut self, id: FnId, func: Function) {
-        if self.fn_map.insert(id, func).is_some() {
+    pub fn insert_anon_fn(&mut self, id: FnId, func: AnonymousFn) {
+        if self.anon_fn_map.insert(id, func).is_some() {
             panic!("Overwriting function");
         }
     }
 
-    pub fn get_fn(&self, id: FnId) -> &Function {
-        self.fn_map.get(&id).unwrap()
+    pub fn anon_get_fn(&self, id: FnId) -> &AnonymousFn {
+        self.anon_fn_map.get(&id).unwrap()
     }
 
-    pub fn get_fn_mut(&mut self, id: FnId) -> &mut Function {
-        self.fn_map.get_mut(&id).unwrap()
+    pub fn get_anon_fn_mut(&mut self, id: FnId) -> &mut AnonymousFn {
+        self.anon_fn_map.get_mut(&id).unwrap()
     }
 
     pub fn is_builtin_fn(&self, id: FnId) -> bool {
         self.builtin_fn_set.contains(&id)
-    }
-
-    pub fn static_types(&self) -> Vec<(TypeId, TypeCons)> {
-        self.type_cons_map
-            .iter()
-            .map(|(id, cons)| (id.clone(), cons.clone()))
-            .collect()
-    }
-
-    pub fn all_fns(&self) -> impl Iterator<Item = (FnId, &Function)> {
-        self.fn_map.iter().map(|(id, f)| (id.clone(), f))
     }
 
     pub fn all_modules(&self) -> impl Iterator<Item = (&Ident, ModuleId)> {
