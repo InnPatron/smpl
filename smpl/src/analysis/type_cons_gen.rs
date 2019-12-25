@@ -11,16 +11,16 @@ use super::error::{AnalysisError, TypeError};
 use super::metadata::*;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::{
-    FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId, Universe,
+    FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId,
 };
 use super::type_checker::TypingContext;
 use super::type_cons::*;
 use super::abstract_type::*;
-use super::analysis_context::GlobalData;
+use super::analysis_context::{ GlobalData, AnalysisUniverse };
 
 // TODO: Store type constructors in Program
 pub fn generate_struct_type_cons(
-    universe: &Universe,
+    universe: &AnalysisUniverse,
     global_data: &mut GlobalData,
     type_id: TypeId,
     scope: &ScopedData,
@@ -85,7 +85,7 @@ pub fn generate_struct_type_cons(
 }
 
 pub fn generate_fn_type_cons(
-    universe: &Universe,
+    universe: &AnalysisUniverse,
     metadata: &mut Metadata,
     global_data: &mut GlobalData,
     outer_scope: &ScopedData,
@@ -154,7 +154,7 @@ pub fn generate_fn_type_cons(
 }
 
 pub fn generate_builtin_fn_type(
-    universe: &Universe,
+    universe: &AnalysisUniverse,
     metadata: &mut Metadata,
     features: &mut PresentFeatures,
     global_data: &mut GlobalData,
@@ -253,7 +253,7 @@ pub fn generate_builtin_fn_type(
 }
 
 pub fn generate_anonymous_fn_type(
-    universe: &Universe,
+    universe: &AnalysisUniverse,
     metadata: &mut Metadata,
     global_data: &mut GlobalData,
     outer_scope: &ScopedData,
@@ -313,7 +313,7 @@ pub fn generate_anonymous_fn_type(
 }
 
 fn type_param_map(
-    universe: &Universe,
+    universe: &AnalysisUniverse,
     global_data: &mut GlobalData,
     ast_type_params: Option<&AstTypeParams>,
     where_clause: Option<&WhereClause>,
@@ -447,7 +447,7 @@ fn type_param_map(
 }
 
 pub fn generate_opaque_type_cons(
-    universe: &Universe,
+    universe: &AnalysisUniverse,
     global_data: &mut GlobalData,
     type_id: TypeId,
     scope: &ScopedData,
