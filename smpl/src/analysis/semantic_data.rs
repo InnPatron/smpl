@@ -332,10 +332,10 @@ impl Function {
 
 #[derive(Clone, Debug)]
 pub struct AnonymousFn {
-    pub(super) span: Span,
-    pub(super) type_id: TypeId,
-    pub(super) cfg: CFG,
-    pub(super) analysis_context: AnalysisContext,
+    pub span: Span,
+    pub type_id: TypeId,
+    pub cfg: CFG,
+    pub analysis_context: AnalysisContext,
 }
 
 impl AnonymousFn {
