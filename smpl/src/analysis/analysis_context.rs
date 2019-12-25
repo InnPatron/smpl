@@ -27,15 +27,15 @@ pub enum AnalyzableAnonymousFn {
     Resolved(ResolvedAnonymousFn),
 }
 
-impl AnonymousFn {
+impl AnalyzableAnonymousFn {
     pub fn name(&self) -> Option<&Ident> {
         None
     }
 
     pub fn type_id(&self) -> Option<TypeId> {
         match self {
-            AnonymousFn::Reserved(..) => None,
-            AnonymousFn::Resolved { type_id, .. } => {
+            AnalyzableAnonymousFn::Reserved(..) => None,
+            AnalyzableAnonymousFn::Resolved(ResolvedAnonymousFn { type_id, .. }) => {
                 Some(type_id.clone())
             }
         }
@@ -203,11 +203,10 @@ impl AnalysisContext {
     }
 }
 
-#[derive(Clone, Debug)]
 pub struct AnalysisUniverse {
     type_cons_map: HashMap<TypeId, TypeCons>,
     fn_type_cons: HashMap<FnId, TypeCons>,
-    anon_fn_map: HashMap<FnId, AnonymousFn>,
+    anon_fn_map: HashMap<FnId, AnalyzableAnonymousFn>,
     builtin_fn_set: HashSet<FnId>,
     module_map: HashMap<ModuleId, Module>,
     module_name: HashMap<Ident, ModuleId>,
@@ -344,17 +343,17 @@ impl AnalysisUniverse {
             .expect("Expected TypeID to always resolve to a TypeCons")
     }
 
-    pub fn insert_anon_fn(&mut self, id: FnId, func: AnonymousFn) {
+    pub fn insert_anon_fn(&mut self, id: FnId, func: AnalyzableAnonymousFn) {
         if self.anon_fn_map.insert(id, func).is_some() {
             panic!("Overwriting function");
         }
     }
 
-    pub fn get_anon_fn(&self, id: FnId) -> &AnonymousFn {
+    pub fn get_anon_fn(&self, id: FnId) -> &AnalyzableAnonymousFn {
         self.anon_fn_map.get(&id).unwrap()
     }
 
-    pub fn get_anon_fn_mut(&mut self, id: FnId) -> &mut AnonymousFn {
+    pub fn get_anon_fn_mut(&mut self, id: FnId) -> &mut AnalyzableAnonymousFn {
         self.anon_fn_map.get_mut(&id).unwrap()
     }
 
