@@ -8,16 +8,19 @@ use super::metadata::*;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::{
     FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId,
-    ModuleId, Function, ReservedAnonymousFn,
+    ModuleId,
 };
 use super::type_checker::TypingContext;
 use super::type_cons::{TypeCons, TypeParams};
 use super::abstract_type::AbstractType;
-use super::analysis_context::{GlobalData, LocalData, AnalysisContext, AnalysisUniverse};
+use super::analysis_context::{
+    GlobalData, LocalData, AnalysisContext, AnalysisUniverse,
+    ReservedAnonymousFn, UniverseFn
+};
 use super::anon_storage::AnonStorage;
 
 pub fn analyze_fn_prime(
-    to_analyze: &mut Function,
+    to_analyze: &mut UniverseFn,
     universe: &AnalysisUniverse,
     metadata: &mut Metadata,
     global_data: &mut GlobalData,

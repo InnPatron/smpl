@@ -9,7 +9,7 @@ use crate::span::Span;
 use super::error::{AnalysisError, ControlFlowError};
 use super::expr_flow;
 
-use super::semantic_data::{LoopId, ReservedAnonymousFn};
+use super::semantic_data::LoopId;
 use super::type_cons::TypeCons;
 use super::abstract_type::AbstractType;
 
@@ -20,6 +20,7 @@ use super::analysis_context::{
     AnalysisContext,
     GlobalData,
     LocalData,
+    ReservedAnonymousFn
 };
 
 use super::control_data::*;

@@ -8,34 +8,38 @@ use super::control_data::Node;
 use super::control_flow::CFG;
 use super::error::{AnalysisError, ControlFlowError};
 use super::semantic_data::*;
-use super::semantic_data::{AnonymousFn, Function};
+use super::semantic_data::{ AnonymousFn as ResolvedAnonymousFn };
+use super::analysis_context::{
+    UniverseFn,
+    AnalyzableAnonymousFn as AnonymousFn,
+};
 
 pub fn return_trace_prime(
-    to_trace: &Function,
+    to_trace: &UniverseFn,
 ) -> Result<(), AnalysisError> {
 
     match to_trace {
-        Function::SMPL(ref smpl_fn) => {
+        UniverseFn::SMPL(ref smpl_fn) => {
             let cfg = smpl_fn.cfg();
             let fn_span = &smpl_fn.span();
             check_returns_form(cfg, fn_span)
         }
 
-        Function::Anonymous(ref anon_fn) => match anon_fn {
+        UniverseFn::Anonymous(ref anon_fn) => match anon_fn {
             AnonymousFn::Reserved(..) => {
                 panic!("Anonymous function should be resolved")
             }
 
-            AnonymousFn::Resolved {
+            AnonymousFn::Resolved(ResolvedAnonymousFn {
                 ref cfg,
                 ref span,
                 ..
-            } => {
+            }) => {
                 check_returns_form(cfg, span)
             }
         },
 
-        Function::Builtin(..) => {
+        UniverseFn::Builtin(..) => {
             panic!("Unable to return trace builtin functions")
         }
     }

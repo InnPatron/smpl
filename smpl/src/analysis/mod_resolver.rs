@@ -14,11 +14,15 @@ use super::metadata::*;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::Module;
 use super::semantic_data::*;
-use super::semantic_data::{AnonymousFn, Function, BuiltinFunction};
+use super::semantic_data::{ AnonymousFn as ResolvedAnonymousFn, BuiltinFunction};
 use super::type_checker::TypingContext;
 use super::type_cons::TypeCons;
 use super::type_cons_gen;
 use super::analysis_context::*;
+use super::analysis_context::{
+    UniverseFn as Function,
+    AnalyzableAnonymousFn as AnonymousFn,
+};
 use super::anon_storage::AnonStorage;
 
 use crate::feature::*;
@@ -257,12 +261,14 @@ fn analyze_fns(
             universe
                 .manual_insert_type_cons(type_id, type_cons);
 
-            let mut to_analyze = Function::Anonymous(AnonymousFn::Resolved {
-                span,
-                type_id,
-                cfg,
-                analysis_context,
-            });
+            let mut to_analyze = Function::Anonymous(
+                AnalyzableAnonymousFn::Resolved(
+                    ResolvedAnonymousFn {
+                        span,
+                        type_id,
+                        cfg,
+                        analysis_context,
+                    }));
 
             let mut this_unresolved_anon_fns =
                 analysis_helpers::analyze_fn_prime(
