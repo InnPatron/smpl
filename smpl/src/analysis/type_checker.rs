@@ -20,12 +20,12 @@ use super::type_cons_gen;
 use super::type_cons::TypeCons;
 use super::type_resolver;
 use super::typed_ast::*;
-use super::analysis_context::GlobalData;
+use super::analysis_context::{AnalysisUniverse, GlobalData};
 use super::anon_storage::AnonStorage;
 
 pub fn type_check_prime(
     to_check: &mut Function,
-    universe: &Universe,
+    universe: &AnalysisUniverse,
     metadata: &mut Metadata,
     global_data: &mut GlobalData,
     module_id: ModuleId,
@@ -80,7 +80,7 @@ pub fn type_check_prime(
 }
 
 struct TypeChecker<'a> {
-    universe: &'a Universe,
+    universe: &'a AnalysisUniverse,
     metadata: &'a mut Metadata,
     global_data: &'a mut GlobalData,
     module_id: ModuleId,
@@ -94,10 +94,10 @@ struct TypeChecker<'a> {
 impl<'a> TypeChecker<'a> {
     // TODO: Store function (return) type somwhere
     // TODO: Add function parameters somewhere
-    // TODO: Put formal parameters into function scope within Universe
+    // TODO: Put formal parameters into function scope within AnalysisUniverse
     pub fn new_prime<'b>(
         to_check: &Function,
-        universe: &'b Universe,
+        universe: &'b AnalysisUniverse,
         metadata: &'b mut Metadata,
         global_data: &'b mut GlobalData,
         module_id: ModuleId,
@@ -346,13 +346,13 @@ impl<'a> TypeChecker<'a> {
 
     /// Does NOT analyze the anonymous function and only generates the type signature.
     ///   As a side effect, the anonymous function's type constructor is
-    ///   inserted into the Universe
+    ///   inserted into the AnalysisUniverse
     ///
     /// Steps to resolving an (unresolved) anonymous function:
     ///   1) Store a snapshot of the current typing context
     ///   2) Generate the type constructor
-    ///   3) Store the type constructor in the Universe (??)
-    ///      TODO: Somehow release &mut Universe requirement?
+    ///   3) Store the type constructor in the AnalysisUniverse (??)
+    ///      TODO: Somehow release &mut AnalysisUniverse requirement?
     ///      Option 1) Somehow make type application work without fully-created universe
     ///        (i.e. universe temp extension)
     ///      Option 2) Delay completing this type check until the anonymous function
@@ -367,58 +367,50 @@ impl<'a> TypeChecker<'a> {
 
         let fn_type: AbstractType = {
             // Ugly hack to get around the borrow checker
-            let afn = self.universe.get_fn(fn_id);
+            let afn = self.universe.get_anon_fn(fn_id);
             let decision: Either<_, _> = match afn {
-                Function::Anonymous(ref afn) => {
-                    match afn {
-                        SemanticAnonymousFn::Reserved(ReservedAnonymousFn {
-                            ast: ref ast_afn,
-                            ..
-                        }) => {
+                SemanticAnonymousFn::Reserved(ReservedAnonymousFn {
+                    ast: ref ast_afn,
+                    ..
+                }) => {
 
-                            // Store the snapshot
-                            self.anon_typing_context_storage
-                                .insert(fn_id, self.typing_context.clone());
+                    // Store the snapshot
+                    self.anon_typing_context_storage
+                        .insert(fn_id, self.typing_context.clone());
 
-                            let current_scope =
-                                self.scopes.last().expect("Expect a scope");
-                            let fn_type_cons =
-                                super::type_cons_gen::generate_anonymous_fn_type(
-                                    self.universe,
-                                    self.metadata,
-                                    self.global_data,
-                                    // According to the old implementation,
-                                    //   this is the correct scope
-                                    //   Maybe this scope needs to be retrieved
-                                    //   from scope resolution?
-                                    current_scope,
-                                    &self.typing_context,
-                                    fn_id,
-                                    ast_afn.data(),
-                                )?;
+                    let current_scope =
+                        self.scopes.last().expect("Expect a scope");
+                    let fn_type_cons =
+                        super::type_cons_gen::generate_anonymous_fn_type(
+                            self.universe,
+                            self.metadata,
+                            self.global_data,
+                            // According to the old implementation,
+                            //   this is the correct scope
+                            //   Maybe this scope needs to be retrieved
+                            //   from scope resolution?
+                            current_scope,
+                            &self.typing_context,
+                            fn_id,
+                            ast_afn.data(),
+                        )?;
 
-                            let fn_type_id = self.global_data.new_type_id();
-                            Either::Left((fn_type_id, fn_type_cons))
-                        }
-
-                        SemanticAnonymousFn::Resolved {
-                            ref type_id,
-                            ..
-                        } => {
-                            Either::Right(type_id.clone())
-                        }
-
-                    }
+                    Either::Left(fn_type_cons)
                 }
 
-                _ => panic!("FN ID did not refer to an anonymous function"),
+                SemanticAnonymousFn::Resolved {
+                    ref type_id,
+                    ..
+                } => {
+                    Either::Right(type_id.clone())
+                }
             };
 
             match decision {
-                Either::Left((_fn_type_id, fn_type_cons)) => {
+                Either::Left(fn_type_cons) => {
 
                     // Store type constructor locally.
-                    // TODO: Insert anonymous type constructor into Universe
+                    // TODO: Insert anonymous type constructor into AnalysisUniverse
                     //   after current type checking is completed
                     self.anon_type_cons_storage
                         .insert(fn_id, fn_type_cons.clone());
@@ -767,9 +759,8 @@ impl<'a> TypeChecker<'a> {
                 */
 
                 // TODO: builtin check
-                let fn_type_id = self.universe
-                    .get_fn(fn_id)
-                    .fn_type()
+                let fn_type_cons = self.universe
+                    .get_fn_type_cons(fn_id)
                     .expect(
                         "Expect anonymous function types to already be resolved",
                     )
@@ -784,9 +775,9 @@ impl<'a> TypeChecker<'a> {
                 };
                 */
 
-                let fn_type = AbstractType::App {
+                let fn_type = AbstractType::App2 {
                     data: bind_span,
-                    type_cons: fn_type_id,
+                    type_cons: Box::new(fn_type_cons),
                     args: Vec::new(),
                 }
                 .substitute(self.universe, self.current(), &self.typing_context)?;
@@ -816,14 +807,14 @@ impl<'a> TypeChecker<'a> {
         };
         */
 
-        let fn_type_id = self.universe
-            .get_fn(fn_id)
-            .fn_type()
-            .expect("Expect anonymous functions to already be resolved");
+        let fn_type_cons = self.universe
+            .get_fn_type_cons(fn_id)
+            .expect("Expect anonymous functions to already be resolved")
+            .clone();
 
-        let fn_type = AbstractType::App {
+        let fn_type = AbstractType::App2 {
             data: access_span,
-            type_cons: fn_type_id,
+            type_cons: Box::new(fn_type_cons),
             args: Vec::new(),
         }
         .substitute(
@@ -1078,10 +1069,10 @@ impl<'a> TypeChecker<'a> {
             .get_id()
             .expect("No FN ID. Should be caught in scope resolution");
 
-        let fn_type_id = self.universe
-            .get_fn(fn_id)
-            .fn_type()
-            .expect("Expect anonymous functions to already be resolved");
+        let fn_type_cons = self.universe
+            .get_fn_type_cons(fn_id)
+            .expect("Expect anonymous functions to already be resolved")
+            .clone();
 
         let type_args = type_inst
             .args()
@@ -1089,9 +1080,9 @@ impl<'a> TypeChecker<'a> {
             .map(|ann| type_from_ann(self.current(), &self.typing_context, ann))
             .collect::<Result<Vec<_>, _>>()?;
 
-        let inst_type = AbstractType::App {
+        let inst_type = AbstractType::App2 {
             data: inst_span,
-            type_cons: fn_type_id,
+            type_cons: Box::new(fn_type_cons),
             args: type_args,
         }
         .substitute(self.universe, self.current(), &self.typing_context)?;
@@ -1107,7 +1098,7 @@ impl<'a> TypeChecker<'a> {
         span: Span,
     ) -> Result<AbstractType, AnalysisError> {
         fn generate_field_retriever(
-            universe: &Universe,
+            universe: &AnalysisUniverse,
             scope: &ScopedData,
             context: &TypingContext,
             current_type: AbstractType,
