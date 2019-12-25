@@ -331,35 +331,22 @@ impl Function {
 }
 
 #[derive(Clone, Debug)]
-pub enum AnonymousFn {
-    Reserved(ReservedAnonymousFn),
-    Resolved {
-        span: Span,
-        type_id: TypeId,
-        cfg: CFG,
-        analysis_context: AnalysisContext,
-    },
+pub struct AnonymousFn {
+    pub(super) span: Span,
+    pub(super) type_id: TypeId,
+    pub(super) cfg: CFG,
+    pub(super) analysis_context: AnalysisContext,
 }
 
 impl AnonymousFn {
+    pub fn type_id(&self) -> Option<TypeId> {
+        // TODO: Remove option constraint
+        Some(self.type_id)
+    }
+
     pub fn name(&self) -> Option<&Ident> {
         None
     }
-
-    pub fn type_id(&self) -> Option<TypeId> {
-        match self {
-            AnonymousFn::Reserved(..) => None,
-            AnonymousFn::Resolved { type_id, .. } => {
-                Some(type_id.clone())
-            }
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct ReservedAnonymousFn {
-    pub(super) fn_id: FnId,
-    pub(super) ast: AstNode<AstAnonymousFn>,
 }
 
 #[derive(Clone, Debug)]

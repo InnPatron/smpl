@@ -12,8 +12,41 @@ use super::resolve_scope::ScopedData;
 use super::type_cons::TypeCons;
 use super::semantic_data::{
     FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId, LoopId,
-    BranchingId, TmpId, VarId, Module, ModuleId, ModulePath, AnonymousFn,
+    BranchingId, TmpId, VarId, Module, ModuleId, ModulePath,
+    AnonymousFn as ResolvedAnonymousFn, SMPLFunction, BuiltinFunction
 };
+
+pub enum UniverseFn {
+    SMPL(SMPLFunction),
+    Anonymous(AnalyzableAnonymousFn),
+    Builtin(BuiltinFunction),
+}
+
+pub enum AnalyzableAnonymousFn {
+    Reserved(ReservedAnonymousFn),
+    Resolved(ResolvedAnonymousFn),
+}
+
+impl AnonymousFn {
+    pub fn name(&self) -> Option<&Ident> {
+        None
+    }
+
+    pub fn type_id(&self) -> Option<TypeId> {
+        match self {
+            AnonymousFn::Reserved(..) => None,
+            AnonymousFn::Resolved { type_id, .. } => {
+                Some(type_id.clone())
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ReservedAnonymousFn {
+    pub(super) fn_id: FnId,
+    pub(super) ast: AstNode<AstAnonymousFn>,
+}
 
 pub struct GlobalData {
     id_counter: Cell<u64>,
