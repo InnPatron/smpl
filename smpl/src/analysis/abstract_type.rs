@@ -7,10 +7,11 @@ use crate::span::Span;
 
 use super::error::{AnalysisError, ApplicationError, TypeError as ATypeError};
 use super::resolve_scope::ScopedData;
-use super::semantic_data::{FieldId, TypeId, TypeParamId, TypeVarId, Universe};
+use super::semantic_data::{FieldId, TypeId, TypeParamId, TypeVarId};
 use super::type_checker::TypingContext;
 use super::type_resolver::resolve_types_static;
 use super::type_cons::{TypeCons, TypeParams};
+use super::analysis_context::AnalysisUniverse;
 
 pub type AbstractType = AbstractTypeX<Span>;
 pub type AbstractFieldMap = AbstractFieldMapX<Span>;
@@ -271,7 +272,7 @@ impl AbstractTypeX<Span> {
 
     pub fn substitute_with(
         &self,
-        universe: &Universe,
+        universe: &AnalysisUniverse,
         scoped_data: &ScopedData,
         typing_context: &TypingContext,
         map: &HashMap<TypeVarId, AbstractType>,
@@ -281,7 +282,7 @@ impl AbstractTypeX<Span> {
 
     pub fn substitute(
         &self,
-        universe: &Universe,
+        universe: &AnalysisUniverse,
         scoped_data: &ScopedData,
         typing_context: &TypingContext,
     ) -> Result<AbstractType, AnalysisError> {
@@ -314,7 +315,7 @@ impl AbstractTypeX<Span> {
     ///
     fn apply_internal(
         type_cons: &TypeCons,
-        universe: &Universe,
+        universe: &AnalysisUniverse,
         scoped_data: &ScopedData,
         typing_context: &TypingContext,
         map: &HashMap<TypeVarId, AbstractType>,
@@ -433,7 +434,7 @@ impl AbstractTypeX<Span> {
     ///
     fn substitute_internal(
         &self,
-        universe: &Universe,
+        universe: &AnalysisUniverse,
         scoped_data: &ScopedData,
         typing_context: &TypingContext,
         map: &HashMap<TypeVarId, AbstractType>,
@@ -954,7 +955,7 @@ impl<X> AbstractWidthConstraintX<X> {
 }
 
 impl AbstractWidthConstraint {
-    pub(super) fn evaluate(self, universe: &Universe,
+    pub(super) fn evaluate(self, universe: &AnalysisUniverse,
         scope: &ScopedData,
         typing_context: &TypingContext,
     ) -> Result<Self, AnalysisError> {
@@ -1031,7 +1032,7 @@ impl AbstractWidthConstraint {
 // TODO: Make AbstractWidthType generation LAZY
 //   Current width constraint based off of a struct (i.e. base STRUCT)
 //     eagerly evaluates the STRUCT name (which may not be inserted into
-//     the Universe during type constructor generation)
+//     the AnalysisUniverse during type constructor generation)
 pub fn type_from_ann(
     scope: &ScopedData,
     typing_context: &TypingContext,
@@ -1195,7 +1196,7 @@ fn fuse_width_constraints(
         match ast_constraint.data() {
             // base Struct/WidthConstraint
             // Lazy store abstract type. Only inspect type during type checking
-            //   Laziness required in order to remove Universe parameter on type_from_ann()
+            //   Laziness required in order to remove AnalysisUniverse parameter on type_from_ann()
             WidthConstraint::BaseStruct(ref ann) => {
                 let ann_type =
                     type_from_ann(scope, typing_context, ann)?;
@@ -1223,7 +1224,7 @@ fn fuse_width_constraints(
 
     // Do not validate width constraints here
     //   Only validate during type checking
-    //   Necessary to lift Universe parameter on type_from_ann()
+    //   Necessary to lift AnalysisUniverse parameter on type_from_ann()
     Ok(AbstractType::WidthConstraint {
         data: constraint_span
             .expect("Expect constraint span to be Some. Implies no constraints"),
@@ -1235,7 +1236,7 @@ fn fuse_width_constraints(
 
 /// Ensures that there are no conflicting constraints on a field
 fn fuse_field_width_constraints<'a, I>(
-    universe: &Universe,
+    universe: &AnalysisUniverse,
     scope: &ScopedData,
     typing_context: &TypingContext,
     constraints: I,
