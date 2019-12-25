@@ -8,17 +8,17 @@ use super::metadata::*;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::{
     FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId,
-    Universe, ModuleId, Function, ReservedAnonymousFn,
+    ModuleId, Function, ReservedAnonymousFn,
 };
 use super::type_checker::TypingContext;
 use super::type_cons::{TypeCons, TypeParams};
 use super::abstract_type::AbstractType;
-use super::analysis_context::{GlobalData, LocalData, AnalysisContext};
+use super::analysis_context::{GlobalData, LocalData, AnalysisContext, AnalysisUniverse};
 use super::anon_storage::AnonStorage;
 
 pub fn analyze_fn_prime(
     to_analyze: &mut Function,
-    universe: &Universe,
+    universe: &AnalysisUniverse,
     metadata: &mut Metadata,
     global_data: &mut GlobalData,
     local_data: &mut LocalData,
@@ -98,7 +98,7 @@ impl<'a> From<&'a ast::AnonymousFn> for ContextData<'a> {
 }
 
 pub fn generate_fn_analysis_data<'a, 'b, 'c, 'd, 'e, T>(
-    universe: &'a Universe,
+    universe: &'a AnalysisUniverse,
     global_data: &'a mut GlobalData,
     local_data: &'a mut LocalData,
     outer_scope: &'b ScopedData,
