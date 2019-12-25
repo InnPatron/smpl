@@ -11,8 +11,7 @@ pub use crate::ast::UniOp;
 
 use super::expr_flow;
 use super::semantic_data::*;
-use super::semantic_data::ReservedAnonymousFn;
-use super::analysis_context::{LocalData, GlobalData};
+use super::analysis_context::{LocalData, GlobalData, ReservedAnonymousFn};
 use super::anon_storage::AnonStorage;
 
 // TODO(alex): Remove Typed<T>

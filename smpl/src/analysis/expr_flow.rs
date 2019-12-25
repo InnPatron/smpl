@@ -7,8 +7,7 @@ use crate::span::Span;
 use crate::ast::{
     ArrayInit as AstArrayInit, AstNode, Expr as AstExpr, TypedPath,
 };
-use super::analysis_context::{LocalData, GlobalData};
-use super::semantic_data::ReservedAnonymousFn;
+use super::analysis_context::{LocalData, GlobalData, ReservedAnonymousFn};
 use super::anon_storage::AnonStorage;
 
 pub fn flatten(global_data: &mut GlobalData, local_data: &mut LocalData, e: AstExpr)
