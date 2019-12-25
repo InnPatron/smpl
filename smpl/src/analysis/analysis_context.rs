@@ -317,7 +317,7 @@ impl AnalysisUniverse {
         }
     }
 
-    pub fn anon_get_fn(&self, id: FnId) -> &AnonymousFn {
+    pub fn get_anon_fn(&self, id: FnId) -> &AnonymousFn {
         self.anon_fn_map.get(&id).unwrap()
     }
 
