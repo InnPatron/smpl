@@ -144,11 +144,7 @@ impl<'a> CompilableModule<'a> {
                 c_fn
             },
 
-            Function::Anonymous(AnonymousFn::Reserved(..)) => {
-                panic!("All anonymous functions should be resolved after analysis");
-            }
-
-            Function::Anonymous(AnonymousFn::Resolved {
+            Function::Anonymous( AnonymousFn {
                 ref cfg,
                 ref analysis_context,
                 ..
