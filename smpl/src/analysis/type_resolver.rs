@@ -2,13 +2,13 @@ use crate::span::Span;
 
 use super::error::*;
 use super::resolve_scope::ScopedData;
-use super::semantic_data::Universe;
+use super::analysis_context::AnalysisUniverse;
 use super::type_checker::TypingContext;
 use super::abstract_type::*;
 
 /// May or may not alter the typing context for inference purposes
 pub fn resolve_types(
-    universe: &Universe,
+    universe: &AnalysisUniverse,
     scoped_data: &ScopedData,
     typing_context: &mut TypingContext,
     synthesis: &AbstractType,
@@ -27,7 +27,7 @@ pub fn resolve_types(
 
 /// Will NOT perform any inferences
 pub fn resolve_types_static(
-    universe: &Universe,
+    universe: &AnalysisUniverse,
     scoped_data: &ScopedData,
     typing_context: &TypingContext,
     synthesis: &AbstractType,
@@ -403,7 +403,7 @@ pub fn resolve_types_static(
 }
 
 fn resolve_param(
-    universe: &Universe,
+    universe: &AnalysisUniverse,
     scoped_data: &ScopedData,
     typing_context: &mut TypingContext,
     synth: &AbstractType,
@@ -421,7 +421,7 @@ fn resolve_param(
 }
 
 fn resolve_param_static(
-    universe: &Universe,
+    universe: &AnalysisUniverse,
     scoped_data: &ScopedData,
     typing_context: &TypingContext,
     synth: &AbstractType,
