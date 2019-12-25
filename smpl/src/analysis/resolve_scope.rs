@@ -9,7 +9,7 @@ use super::unique_linear_cfg_traversal::*;
 
 use super::error::AnalysisError;
 use super::semantic_data::{
-    AnonymousFn, FnId, ModulePath, TypeId, TypeVarId, Universe, VarId,
+    AnonymousFn, FnId, ModulePath, TypeId, TypeVarId, VarId,
 };
 use super::typed_ast::*;
 use super::anon_storage::AnonStorage;
