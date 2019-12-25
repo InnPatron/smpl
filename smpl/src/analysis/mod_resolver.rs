@@ -83,19 +83,14 @@ pub fn check_modules(
 ) -> Result<Program, AnalysisError> {
 
     let mut global_data = GlobalData::new();
-    let mut program_origin = {
-        let metadata = Metadata::new();
-        let universe = Universe::std(&mut global_data);
-        let features = PresentFeatures::new();
+    let mut universe = AnalysisUniverse::std(&mut global_data);
+    let mut features = PresentFeatures::new();
+    let mut metadata = Metadata::new();
 
-        Program::new(universe, metadata, features)
-    };
-
-    let program = &mut program_origin;
     let unscoped_raw_program = raw_mod_data(&mut global_data, modules)?;
 
     let internally_scoped_raw_program =
-        scope_raw_data_internal(program.universe(), unscoped_raw_program);
+        scope_raw_data_internal(&universe, unscoped_raw_program);
 
     let dependent_raw_program = map_usings(internally_scoped_raw_program)?;
 
@@ -147,26 +142,33 @@ pub fn check_modules(
     // }
 
     let typable_raw_program =
-        map_types(program, &mut global_data, dependent_raw_program)?;
+        map_types(&mut universe, &mut metadata, &mut global_data, dependent_raw_program)?;
     let analyzable_raw_program =
-        generate_analyzable_fns(&mut global_data, program, typable_raw_program)?;
+        generate_analyzable_fns(&mut universe,
+            &mut metadata,
+            &mut features,
+            &mut global_data,
+            typable_raw_program)?;
 
-    let _ = analyze_fns(program, &mut global_data, analyzable_raw_program)?;
+    let _ = analyze_fns(&mut universe, &mut metadata, &mut global_data, analyzable_raw_program)?;
 
-    Ok(program_origin)
+
+    Ok(unimplemented!())
 }
 
 fn analyze_fns(
-    program: &mut Program,
+    universe: &mut AnalysisUniverse,
+    metadata: &mut Metadata,
     global_data: &mut GlobalData,
     mut analyzable_raw_program: AnalyzableRawProgram,
 
     ) -> Result<(), AnalysisError> {
 
+    let mut finished: HashMap<FnId, Function> = HashMap::new();
+
     let reserved_anon_fns = analyzable_raw_program.anon_fns;
     let mut unresolved_anon_fns = AnonStorage::new();
     for (mod_id, raw_mod) in analyzable_raw_program.module_map.into_iter() {
-        let (universe, metadata, _) = program.analysis_context();
         for (_, reserved_fn) in raw_mod.reserved_fns.into_iter() {
             let fn_id = reserved_fn.0;
 
@@ -194,8 +196,7 @@ fn analyze_fns(
 
             unresolved_anon_fns.append(&mut this_anon_fns);
 
-            universe
-                .insert_fn(fn_id, fn_to_analyze);
+            finished.insert(fn_id, fn_to_analyze);
         }
     }
 
@@ -205,7 +206,6 @@ fn analyze_fns(
     let mut reserved_anon_fns = reserved_anon_fns;
     loop {
 
-        let (universe, metadata, _) = program.analysis_context();
         if unresolved_anon_fns.len() == 0 {
             break;
         }
@@ -276,8 +276,8 @@ fn analyze_fns(
                 )?;
 
 
-            universe
-                .insert_fn(to_resolve_fn_id, to_analyze);
+            finished
+                .insert(to_resolve_fn_id, to_analyze);
 
             // Mark nested anonymous functions as unresolved
             unresolved_anon_fns.append(&mut this_unresolved_anon_fns);
@@ -288,8 +288,10 @@ fn analyze_fns(
 }
 
 fn generate_analyzable_fns(
+    universe: &mut AnalysisUniverse,
+    metadata: &mut Metadata,
+    features: &mut PresentFeatures,
     global_data: &mut GlobalData,
-    program: &mut Program,
     raw_program: TypableRawProgram)
     -> Result<AnalyzableRawProgram, AnalysisError> {
 
@@ -305,8 +307,6 @@ fn generate_analyzable_fns(
             let fn_decl = reserved_fn.1.data();
             let fn_name = fn_decl.name.data();
             // TODO: Store new function scope storing the type parameters
-
-            let (universe, metadata, _) = program.analysis_context();
 
             let fn_type_cons = type_cons_gen::generate_fn_type_cons(
                 universe,
@@ -330,7 +330,7 @@ fn generate_analyzable_fns(
 
             // TODO: Store local_data? Is it even necessary?
             let (mut anon_fns, cfg) = CFG::generate(
-                program.universe_mut(),
+                universe,
                 global_data,
                 &mut local_data,
                 fn_decl.body.clone(),
@@ -350,7 +350,8 @@ fn generate_analyzable_fns(
 
             let fn_type_id = reserved_fn.2;
             // TODO: Insert fn typing context
-            program.universe_mut().manual_insert_type_cons(fn_type_id, fn_type_cons);
+            universe
+                .insert_fn_type_cons(fn_id, fn_type_id, fn_type_cons);
 
             // TODO: Only insert into fn_map, not universe
             assert!(fn_map.insert(fn_id.clone(), Function::SMPL(SMPLFunction {
@@ -362,13 +363,13 @@ fn generate_analyzable_fns(
                 span: fn_span.clone(),
             })).is_none());
 
-            program.metadata_mut().insert_module_fn(
+            metadata
+                .insert_module_fn(
                 mod_id.clone(),
                 fn_name.clone(),
                 fn_id,
             );
-            program
-                .metadata_mut()
+            metadata
                 .set_fn_annotations(fn_id, &reserved_fn.1.data().annotations);
         }
 
@@ -377,7 +378,6 @@ fn generate_analyzable_fns(
             let fn_decl = reserved_builtin.1.data();
             let fn_name = fn_decl.name.data();
 
-            let (universe, metadata, features) = program.analysis_context();
             let fn_type = type_cons_gen::generate_builtin_fn_type(
                 universe,
                 metadata,
@@ -654,7 +654,7 @@ fn raw_mod_data(
 /// Creates a module-level scope per each module based off of the standard scope
 ///   of the Universe and the module's top-level declarations.
 ///
-fn scope_raw_data_internal(universe: &Universe, unscoped_raw_program: UnscopedRawProgram)
+fn scope_raw_data_internal(universe: &AnalysisUniverse, unscoped_raw_program: UnscopedRawProgram)
     -> ScopedRawProgram {
 
     let scope_map = unscoped_raw_program.map.iter()
@@ -704,7 +704,9 @@ fn map_internal_data(scope: &mut ScopedData, raw: &RawModData) {
 }
 
 /// Insert type constructors into the Universe and a separate type map
-fn map_types(program: &mut Program,
+fn map_types(
+    universe: &mut AnalysisUniverse,
+    metadata: &mut Metadata,
     global_data: &mut GlobalData,
     raw_program: DependentRawProgram)
 
@@ -717,7 +719,7 @@ fn map_types(program: &mut Program,
             let type_id = reserved_struct.0;
             let (struct_type, field_ordering) =
                 type_cons_gen::generate_struct_type_cons(
-                    program.universe(),
+                    universe,
                     global_data,
                     type_id,
                     raw_program.scope_map.get(mod_id).unwrap(),
@@ -727,12 +729,13 @@ fn map_types(program: &mut Program,
 
             // TODO: Insert type constructors into program? Or just type map
             assert!(type_map.insert(type_id, struct_type.clone()).is_none());
-            program.universe_mut().manual_insert_type_cons(type_id, struct_type);
+            universe.manual_insert_type_cons(type_id, struct_type);
 
             let field_ordering = FieldOrdering::new(type_id, field_ordering);
-            program.metadata_mut()
+            metadata
                 .insert_field_ordering(type_id, field_ordering);
-            program.metadata_mut().set_struct_annotations(
+            metadata
+                .set_struct_annotations(
                 type_id,
                 &reserved_struct.1.data().annotations,
             );
@@ -741,7 +744,7 @@ fn map_types(program: &mut Program,
         for (_, reserved_opaque) in raw_mod.reserved_opaque.iter() {
             let type_id = reserved_opaque.0;
             let opaque_type_cons = type_cons_gen::generate_opaque_type_cons(
-                program.universe(),
+                universe,
                 global_data,
                 type_id,
                 raw_program.scope_map.get(mod_id).unwrap(),
@@ -750,7 +753,8 @@ fn map_types(program: &mut Program,
             )?;
 
             assert!(type_map.insert(type_id, opaque_type_cons.clone()).is_none());
-            program.universe_mut().manual_insert_type_cons(type_id, opaque_type_cons);
+            universe
+                .manual_insert_type_cons(type_id, opaque_type_cons);
         }
     }
 
