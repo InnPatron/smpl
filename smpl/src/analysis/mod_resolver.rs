@@ -98,6 +98,22 @@ pub fn check_modules(
 
     let dependent_raw_program = map_usings(internally_scoped_raw_program)?;
 
+    let typable_raw_program =
+        map_types(&mut universe, &mut metadata, &mut global_data, dependent_raw_program)?;
+    let analyzable_raw_program =
+        generate_analyzable_fns(&mut universe,
+            &mut metadata,
+            &mut features,
+            &mut global_data,
+            typable_raw_program)?;
+
+    let _ = analyze_fns(&mut universe, &mut metadata, &mut global_data, analyzable_raw_program)?;
+
+
+    Ok(unimplemented!())
+}
+
+fn module_ownership() {
     // Insert modules BEFORE static analysis
     // Anonymous functions are marked as owned by a module during analysis
     // for (name, mod_id) in raw_program.raw_map.iter() {
@@ -144,20 +160,6 @@ pub fn check_modules(
 
     //     program.universe_mut().map_module(mod_id.clone(), name.clone(), module);
     // }
-
-    let typable_raw_program =
-        map_types(&mut universe, &mut metadata, &mut global_data, dependent_raw_program)?;
-    let analyzable_raw_program =
-        generate_analyzable_fns(&mut universe,
-            &mut metadata,
-            &mut features,
-            &mut global_data,
-            typable_raw_program)?;
-
-    let _ = analyze_fns(&mut universe, &mut metadata, &mut global_data, analyzable_raw_program)?;
-
-
-    Ok(unimplemented!())
 }
 
 fn analyze_fns(
