@@ -9,13 +9,14 @@ use crate::span::Span;
 use super::error::{AnalysisError, ControlFlowError};
 use super::expr_flow;
 
-use super::semantic_data::{LoopId, Universe, ReservedAnonymousFn};
+use super::semantic_data::{LoopId, ReservedAnonymousFn};
 use super::type_cons::TypeCons;
 use super::abstract_type::AbstractType;
 
 use super::type_checker::TypingContext;
 use super::typed_ast;
 use super::analysis_context::{
+    AnalysisUniverse,
     AnalysisContext,
     GlobalData,
     LocalData,
@@ -326,7 +327,7 @@ impl CFG {
     /// Only performs continue/break statement checking (necessary for CFG generation).
     ///
     pub fn generate(
-        universe: &Universe,
+        universe: &AnalysisUniverse,
         global_data: &mut GlobalData,
         local_data: &mut LocalData,
         body: ast::AstNode<ast::Block>,
@@ -411,7 +412,7 @@ impl CFG {
     ///
     fn generate_scoped_block<'a, 'b, T>(
         &'a mut self,
-        universe: &'b Universe,
+        universe: &'b AnalysisUniverse,
         global_data: &'b mut GlobalData,
         local_data: &'b mut LocalData,
         anonymous_fns: &mut AnonStorage<ReservedAnonymousFn>,
@@ -697,7 +698,7 @@ impl CFG {
                             //   BranchSplit or BranchMerge (keep ScopeEnter, ScopeExit)
                             fn generate_branch(
                                 cfg: &mut CFG,
-                                universe: &Universe,
+                                universe: &AnalysisUniverse,
                                 global_data: &mut GlobalData,
                                 local_data: &mut LocalData,
                                 anonymous_fns: &mut AnonStorage<ReservedAnonymousFn>,
@@ -992,7 +993,8 @@ mod tests {
     use petgraph::dot::{Config, Dot};
     use petgraph::Direction;
 
-    use super::super::semantic_data::{TypeId, Universe};
+    use super::super::semantic_data::TypeId;
+    use super::super::analysis_context::AnalysisUniverse;
     use super::super::type_cons::*;
 
     macro_rules! edges {
@@ -1037,7 +1039,7 @@ let b: int = 3;
 
         let source = ModuleSource::Anonymous(None);
         let mut input = buffer_input(&source, input);
-        let mut universe = Universe::std(&mut global_data);
+        let mut universe = AnalysisUniverse::std(&mut global_data);
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
         let analysis_context =
@@ -1120,7 +1122,7 @@ if (test) {
         let source = ModuleSource::Anonymous(None);
         let mut input = buffer_input(&source, input);
 
-        let mut universe = Universe::std(&mut global_data);
+        let mut universe = AnalysisUniverse::std(&mut global_data);
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
         let analysis_context =
@@ -1288,7 +1290,7 @@ if (test) {
 
         let source = ModuleSource::Anonymous(None);
         let mut input = buffer_input(&source, input);
-        let mut universe = Universe::std(&mut global_data);
+        let mut universe = AnalysisUniverse::std(&mut global_data);
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
 
         let fn_def = testfn_decl(&mut input).unwrap();
@@ -1515,7 +1517,7 @@ if (test) {
 
         let source = ModuleSource::Anonymous(None);
         let mut input = buffer_input(&source, input);
-        let mut universe = Universe::std(&mut global_data);
+        let mut universe = AnalysisUniverse::std(&mut global_data);
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
 
         let fn_def = testfn_decl(&mut input).unwrap();
