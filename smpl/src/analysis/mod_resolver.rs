@@ -60,6 +60,12 @@ struct AnalyzableRawProgram {
     local_data_map: HashMap<FnId, LocalData>,
 }
 
+struct AnalyzedProgram {
+    module_map: HashMap<ModuleId, Module>,
+    fn_map: HashMap<FnId, Function>,
+    type_map: HashMap<TypeId, TypeCons>,
+}
+
 struct RawProgram {
     scopes: HashMap<ModuleId, ScopedData>,
     dependencies: HashMap<ModuleId, HashSet<ModuleId>>,
@@ -107,11 +113,39 @@ pub fn check_modules(
             &mut global_data,
             typable_raw_program)?;
 
-    let _ = analyze_fns(&mut universe, &mut metadata, &mut global_data, analyzable_raw_program)?;
-
+    let analyzed = analyze_program(
+        &mut universe,
+        &mut metadata,
+        &mut global_data,
+        analyzable_raw_program
+    )?;
 
     Ok(unimplemented!())
 }
+
+fn analyze_program(
+    universe: &mut AnalysisUniverse,
+    metadata: &mut Metadata,
+    global_data: &mut GlobalData,
+    analyzable_raw_program: AnalyzableRawProgram,
+    ) -> Result<AnalyzedProgram, AnalysisError> {
+
+        let module_map =
+            module_ownership(&analyzable_raw_program);
+
+        let (fn_map, type_map) =
+            analyze_fns(
+                universe,
+                metadata,
+                global_data,
+                analyzable_raw_program)?;
+
+        Ok(AnalyzedProgram {
+            module_map,
+            fn_map,
+            type_map,
+        })
+    }
 
 fn module_ownership(
     raw_program: &AnalyzableRawProgram,
@@ -165,8 +199,7 @@ fn analyze_fns(
     metadata: &mut Metadata,
     global_data: &mut GlobalData,
     mut analyzable_raw_program: AnalyzableRawProgram,
-
-    ) -> Result<(), AnalysisError> {
+    ) -> Result<(HashMap<FnId, Function>, HashMap<TypeId, TypeCons>), AnalysisError> {
 
     let mut finished: HashMap<FnId, Function> = HashMap::new();
 
@@ -290,7 +323,7 @@ fn analyze_fns(
         }
     }
 
-    Ok(())
+    Ok((finished, analyzable_raw_program.type_map))
 }
 
 fn generate_analyzable_fns(
