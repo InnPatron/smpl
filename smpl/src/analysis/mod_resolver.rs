@@ -113,53 +113,51 @@ pub fn check_modules(
     Ok(unimplemented!())
 }
 
-fn module_ownership() {
+fn module_ownership(
+    raw_program: &AnalyzableRawProgram,
+    ) -> HashMap<ModuleId, Module> {
+
     // Insert modules BEFORE static analysis
     // Anonymous functions are marked as owned by a module during analysis
-    // for (name, mod_id) in raw_program.raw_map.iter() {
-    //     let module_data = raw_data.get(mod_id).unwrap();
+    let mut module_map = HashMap::new();
+    for (mod_id, module_data) in raw_program.module_map.iter() {
 
-    //     let owned_structs = module_data
-    //         .reserved_structs
-    //         .iter()
-    //         .map(|(_, r)| r.0)
-    //         .chain(module_data.reserved_opaque.iter().map(|(_, r)| r.0))
-    //         .collect::<HashSet<_>>();
-    //     let owned_fns = module_data
-    //         .reserved_fns
-    //         .iter()
-    //         .map(|(_, r)| r.0)
-    //         .chain(module_data.reserved_builtins.iter().map(|(_, r)| r.0))
-    //         .collect::<HashSet<_>>();
+        let name = module_data.name.data();
+        let owned_structs = module_data
+            .reserved_structs
+            .iter()
+            .map(|(_, r)| r.0)
+            .chain(module_data.reserved_opaque.iter().map(|(_, r)| r.0))
+            .collect::<HashSet<_>>();
+        let owned_fns = module_data
+            .reserved_fns
+            .iter()
+            .map(|(_, r)| r.0)
+            .chain(module_data.reserved_builtins.iter().map(|(_, r)| r.0))
+            .collect::<HashSet<_>>();
 
-    //     let module_scope = raw_program.scopes.get(&mod_id).unwrap();
+        let module_scope = raw_program.scope_map
+            .get(&mod_id)
+            .unwrap();
 
-    //     // Insert module scope metadata
-    //     let module_scope_meta = super::metadata::ModuleScope {
-    //         funcs: module_scope
-    //             .all_fns()
-    //             .map(|(_, fn_id)| fn_id.clone())
-    //             .collect(),
-    //     };
-    //     program
-    //         .metadata_mut()
-    //         .mod_metadata_mut()
-    //         .insert_module_scope(mod_id.clone(), module_scope_meta);
+        let dependencies = raw_program.dependency_map
+            .get(&mod_id)
+            .unwrap();
 
-    //     let dependencies = raw_program.dependencies.get(&mod_id).unwrap();
+        let module = Module {
+            name: name.clone(),
+            source: module_data.source.clone(),
+            id: mod_id.clone(),
+            module_scope: module_scope.clone(),
+            owned_types: owned_structs,
+            owned_fns: owned_fns,
+            dependencies: dependencies.clone(),
+        };
 
-    //     let module = Module {
-    //         name: name.clone(),
-    //         source: module_data.source.clone(),
-    //         id: mod_id.clone(),
-    //         module_scope: module_scope.clone(),
-    //         owned_types: owned_structs,
-    //         owned_fns: owned_fns,
-    //         dependencies: dependencies.clone(),
-    //     };
+        module_map.insert(mod_id.clone(), module);
+    }
 
-    //     program.universe_mut().map_module(mod_id.clone(), name.clone(), module);
-    // }
+    module_map
 }
 
 fn analyze_fns(
