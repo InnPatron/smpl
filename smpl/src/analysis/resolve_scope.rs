@@ -9,76 +9,78 @@ use super::unique_linear_cfg_traversal::*;
 
 use super::error::AnalysisError;
 use super::semantic_data::{
-    AnonymousFunction, FnId, ModulePath, TypeId, TypeVarId, Universe, VarId,
+    FnId, ModulePath, TypeId, TypeVarId, VarId, AnonymousFn as ResolvedAnonymousFn,
+};
+use super::analysis_context::{
+    AnalyzableFn, AnalyzableAnonymousFn as AnonymousFn,
 };
 use super::typed_ast::*;
+use super::anon_storage::AnonStorage;
 
-pub fn resolve(
-    universe: &mut Universe,
-    fn_id: FnId,
-) -> Result<(), AnalysisError> {
-    use super::semantic_data::Function;
+pub fn resolve(to_resolve: &mut AnalyzableFn)
+    -> Result<AnonStorage<ScopedData>, AnalysisError> {
 
-    let mut scope_resolver = ScopeResolver::new(universe, fn_id);
+    let mut scope_resolver = ScopeResolver::new(to_resolve);
 
-    let fn_to_resolve = universe.get_fn_mut(fn_id);
-
-    match fn_to_resolve {
-        Function::SMPL(ref mut smpl_fn) => {
-            let cfg = smpl_fn.cfg();
-            let mut cfg_mut = cfg.borrow_mut();
-            traverse(&mut *cfg_mut, &mut scope_resolver)
+    let result: Result<(), _> = match to_resolve {
+        AnalyzableFn::SMPL(ref mut smpl_fn) => {
+            let cfg = &mut smpl_fn.cfg;
+            traverse(cfg, &mut scope_resolver)
         }
 
-        Function::Anonymous(ref mut anon_fn) => match anon_fn {
-            AnonymousFunction::Reserved(..) => {
+        AnalyzableFn::Anonymous(ref mut anon_fn) => match anon_fn {
+            AnonymousFn::Reserved(..) => {
                 panic!("Anonymous function should be resolved")
             }
-            AnonymousFunction::Resolved { ref cfg, .. } => {
-                let mut cfg_mut = cfg.borrow_mut();
-                traverse(&mut *cfg_mut, &mut scope_resolver)
+            AnonymousFn::Resolved(ResolvedAnonymousFn { ref mut cfg, .. }) => {
+                traverse(cfg, &mut scope_resolver)
             }
         },
 
-        Function::Builtin(..) => {
+        AnalyzableFn::Builtin(..) => {
             panic!("Unable to resolve scope of builtin functions")
         }
-    }
+    };
+
+    result.map(|_| scope_resolver.anon_scope_storage)
 }
 
 struct ScopeResolver {
+    anon_scope_storage: AnonStorage<ScopedData>,
     scopes: Vec<ScopedData>,
 }
 
 impl ScopeResolver {
+
     // Formal parameters should already be in the function scope
     //  (in generate_fn_type())
-    pub fn new(universe: &Universe, fn_id: FnId) -> ScopeResolver {
-        use super::semantic_data::Function;
+    pub fn new(to_resolve: &AnalyzableFn) -> ScopeResolver {
 
-        match universe.get_fn(fn_id) {
-            Function::Builtin(_) => unimplemented!(),
-            Function::Anonymous(anonymous_fn) => {
+        match to_resolve {
+            AnalyzableFn::Builtin(_) => unimplemented!(),
+            AnalyzableFn::Anonymous(ref anonymous_fn) => {
                 let fn_scope = match anonymous_fn {
-                    AnonymousFunction::Reserved(..) => {
+                    AnonymousFn::Reserved(..) => {
                         panic!("Expected anonymous functions to already be resolved");
                     }
 
-                    AnonymousFunction::Resolved {
+                    AnonymousFn::Resolved(ResolvedAnonymousFn {
                         ref analysis_context,
                         ..
-                    } => analysis_context.fn_scope().clone(),
+                    }) => analysis_context.parent_scope().clone(),
                 };
 
                 ScopeResolver {
+                    anon_scope_storage: AnonStorage::new(),
                     scopes: vec![fn_scope],
                 }
             }
 
-            Function::SMPL(smpl_function) => ScopeResolver {
+            AnalyzableFn::SMPL(ref smpl_function) => ScopeResolver {
+                anon_scope_storage: AnonStorage::new(),
                 scopes: vec![smpl_function
                     .analysis_context()
-                    .fn_scope()
+                    .parent_scope()
                     .clone()],
             },
         }
@@ -100,6 +102,89 @@ impl ScopeResolver {
     fn pop_current(&mut self) -> ScopedData {
         self.scopes.pop().expect("Should always have a scope")
     }
+
+    fn resolve_expr_scope(&mut self,
+        expr: &mut Expr,
+    ) -> Result<(), AnalysisError> {
+
+        for tmp_id in expr.execution_order() {
+            let tmp = expr.get_tmp_mut(tmp_id);
+            match tmp.value_mut().data_mut() {
+                Value::Literal(ref mut _literal) => (),
+
+                Value::StructInit(ref mut _init) => (),
+
+                Value::AnonStructInit(ref mut _init) => (),
+
+                Value::Binding(ref mut var) => {
+                    let current_scope = self.current();
+
+                    match current_scope.binding_info(var.ident())? {
+                        BindingInfo::Var(var_id) => {
+                            var.set_id(var_id);
+                        }
+
+                        BindingInfo::Fn(fn_id) => {
+                            var.set_id(fn_id);
+                        }
+                    }
+                }
+
+                // TODO: FieldID resolution depends on types
+                Value::FieldAccess(ref mut field_access) => {
+                    let path = field_access.path_mut();
+
+                    for segment in path.path_mut() {
+                        match segment {
+                            PathSegment::Indexing(_, ref mut e)
+                                => self.resolve_expr_scope(e)?,
+
+                            _ => (),
+                        }
+                    }
+
+                    let current_scope = self.current();
+                    let var_id = current_scope.var_id(path.root_name())?;
+                    path.set_root_var(var_id);
+                }
+
+                Value::BinExpr(..) => (),
+
+                Value::UniExpr(..) => (),
+
+                Value::FnCall(..) => (),
+
+                Value::ArrayInit(..) => (),
+
+                Value::Indexing(..) => (),
+
+                Value::ModAccess(ref mut access) => {
+                    let current_scope = self.current();
+                    let fn_id = current_scope.get_fn(&access.path())?;
+                    access.set_fn_id(fn_id);
+                }
+
+                // TODO: Generate anonymous functions in a separate phase
+                //  Relies on type information
+                // FnId is generated in expr_flow
+                Value::AnonymousFn(anon_fn) => {
+                    let parent_scope = self.current().clone();
+                    let anon_fn_id = anon_fn.fn_id();
+                    self.anon_scope_storage
+                        .insert(anon_fn_id, parent_scope);
+                }
+
+                Value::TypeInst(ref mut type_inst) => {
+                    let current_scope = self.current();
+                    let fn_id = current_scope.get_fn(type_inst.path())?;
+
+                    type_inst.set_id(fn_id);
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 type E = AnalysisError;
@@ -119,7 +204,7 @@ impl UniquePassenger<E> for ScopeResolver {
         _ld: &mut LoopData,
         expr: &mut ExprData,
     ) -> Result<(), E> {
-        resolve_expr_scope(&mut expr.expr, self.current())?;
+        self.resolve_expr_scope(&mut expr.expr)?;
         Ok(())
     }
 
@@ -156,7 +241,7 @@ impl UniquePassenger<E> for ScopeResolver {
     ) -> Result<(), E> {
         let var_decl = &mut decl.decl;
 
-        resolve_expr_scope(var_decl.init_expr_mut(), self.current())?;
+        self.resolve_expr_scope(var_decl.init_expr_mut())?;
 
         let name = var_decl.var_name().clone();
         let var_id = var_decl.var_id();
@@ -179,28 +264,28 @@ impl UniquePassenger<E> for ScopeResolver {
 
         // Resolve expression scopes for root indexing expressions
         if let Some(root_index) = path.root_indexing_expr_mut() {
-            resolve_expr_scope(root_index, self.current())?;
+            self.resolve_expr_scope(root_index)?;
         }
 
         // Resolve expression scopes for inner indexing expressions
         for segment in path.path_mut() {
             if let PathSegment::Indexing(_, ref mut index_expr) = segment {
-                resolve_expr_scope(index_expr, self.current())?;
+                self.resolve_expr_scope(index_expr)?;
             }
         }
 
-        resolve_expr_scope(assignment.value_mut(), self.current())?;
+        self.resolve_expr_scope(assignment.value_mut())?;
         Ok(())
     }
 
     fn expr(&mut self, _id: NodeIndex, expr: &mut ExprData) -> Result<(), E> {
-        resolve_expr_scope(&mut expr.expr, self.current())?;
+        self.resolve_expr_scope(&mut expr.expr)?;
         Ok(())
     }
 
     fn ret(&mut self, _id: NodeIndex, rdata: &mut ReturnData) -> Result<(), E> {
         if let Some(ref mut return_data) = rdata.expr {
-            resolve_expr_scope(return_data, self.current())?;
+            self.resolve_expr_scope(return_data)?;
         }
         Ok(())
     }
@@ -219,7 +304,7 @@ impl UniquePassenger<E> for ScopeResolver {
         _b: &mut BranchingData,
         e: &mut ExprData,
     ) -> Result<(), E> {
-        resolve_expr_scope(&mut e.expr, self.current())?;
+        self.resolve_expr_scope(&mut e.expr)?;
         Ok(())
     }
 
@@ -254,79 +339,6 @@ impl UniquePassenger<E> for ScopeResolver {
     ) -> Result<(), E> {
         Ok(())
     }
-}
-
-fn resolve_expr_scope(
-    expr: &mut Expr,
-    current_scope: &ScopedData,
-) -> Result<(), AnalysisError> {
-    for tmp_id in expr.execution_order() {
-        let tmp = expr.get_tmp_mut(tmp_id);
-        match tmp.value_mut().data_mut() {
-            Value::Literal(ref mut _literal) => (),
-
-            Value::StructInit(ref mut _init) => (),
-
-            Value::AnonStructInit(ref mut _init) => (),
-
-            Value::Binding(ref mut var) => {
-                match current_scope.binding_info(var.ident())? {
-                    BindingInfo::Var(var_id) => {
-                        var.set_id(var_id);
-                    }
-
-                    BindingInfo::Fn(fn_id) => {
-                        var.set_id(fn_id);
-                    }
-                }
-            }
-
-            // TODO: FieldID resolution depends on types
-            Value::FieldAccess(ref mut field_access) => {
-                let path = field_access.path_mut();
-
-                for segment in path.path_mut() {
-                    match segment {
-                        PathSegment::Indexing(_, ref mut e) 
-                            => resolve_expr_scope(e, current_scope)?,
-
-                        _ => (),
-                    }
-                }
-
-                let var_id = current_scope.var_id(path.root_name())?;
-                path.set_root_var(var_id);
-            }
-
-            Value::BinExpr(..) => (),
-
-            Value::UniExpr(..) => (),
-
-            Value::FnCall(..) => (),
-
-            Value::ArrayInit(..) => (),
-
-            Value::Indexing(..) => (),
-
-            Value::ModAccess(ref mut access) => {
-                let fn_id = current_scope.get_fn(&access.path())?;
-                access.set_fn_id(fn_id);
-            }
-
-            // TODO: Generate anonymous functions in a separate phase
-            //  Relies on type information
-            // FnId is generated in expr_flow
-            Value::AnonymousFn(..) => (),
-
-            Value::TypeInst(ref mut type_inst) => {
-                let fn_id = current_scope.get_fn(type_inst.path())?;
-
-                type_inst.set_id(fn_id);
-            }
-        }
-    }
-
-    Ok(())
 }
 
 #[derive(Clone, Debug)]

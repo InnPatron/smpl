@@ -9,13 +9,8 @@ use super::semantic_data::*;
 pub fn check_program(
     modules: Vec<ParsedModule>,
 ) -> Result<Program, AnalysisError> {
-    let metadata = Metadata::new();
-    let universe = Universe::std();
-    let features = PresentFeatures::new();
 
-    let mut program = Program::new(universe, metadata, features);
-
-    mod_resolver::check_modules(&mut program, modules)?;
+    let mut program = mod_resolver::check_modules(modules)?;
 
     Metadata::find_main(&mut program)?;
 
@@ -61,7 +56,7 @@ mod tests {
     }
 
     macro_rules! wrap_input {
-        ($input: expr) => {{ 
+        ($input: expr) => {{
             UnparsedModule::anonymous($input)
         }}
     }
@@ -107,6 +102,7 @@ mod tests {
     test_pass_analysis!(mutually_recursive_check);
 
     test_pass_analysis!(anonymous_fn_call);
+    test_pass_analysis!(anonymous_fn_nested);
     test_pass_analysis!(anonymous_fn_arg);
     test_pass_analysis!(fn_piping);
 
@@ -138,9 +134,9 @@ mod tests {
     test_pass_analysis!(anonymous_struct_init);
 
     test_pass_analysis!(valid_fn_subtyping);
-    test_pass_analysis!(bind_fn_type_app); 
+    test_pass_analysis!(bind_fn_type_app);
 
-    test_pass_analysis!(array_path_assignment); 
+    test_pass_analysis!(array_path_assignment);
 
     #[test]
     fn call_fn_success() {
@@ -148,7 +144,7 @@ mod tests {
         use crate::analysis::*;
 
         let input = include_test!("call_fn_success.smpl");
-        
+
         let program = parse_module(wrap_input!(input)).unwrap();
         let program = check_program(vec![program]).unwrap();
 
@@ -164,13 +160,12 @@ mod tests {
 
         let main = program.universe().get_fn(main);
         let _called_fn = called_fn.unwrap();
-        
+
         let cfg = if let Function::SMPL(main) = main {
             main.cfg()
         } else {
             panic!("Expected a SMPL function. Found {:?}", main);
         };
-        let cfg = cfg.borrow();
         let fn_call = {
             let scope_enter = cfg.after_start();
             cfg.next(scope_enter)
@@ -202,7 +197,7 @@ mod tests {
                     ref n @ _ => panic!("Expected BlockNode::Expr. Found {:?}", n),
                 }
             }
-            
+
             ref n @ _ => panic!("Expected Node::Block. Found {:?}", n),
         }
     }
@@ -275,7 +270,7 @@ mod tests {
             let program = parse_module(wrap_input!(input[i])).unwrap();
             check_program(vec![program]).expect(&format!("Test  {} failed.", i));
         }
-    } 
+    }
 
     #[test]
     fn mods_out_of_order() {
@@ -344,7 +339,7 @@ mod tests {
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         let mod2 = parse_module(wrap_input!(mod2)).unwrap();
         check_program(vec![mod1, mod2]).unwrap();
-    } 
+    }
 
 /*
     #[test]
@@ -386,7 +381,7 @@ fn main() {
                 }
             }
         }
-    } 
+    }
 
     #[test]
     fn anonymous_fn_invalid() {
@@ -402,8 +397,8 @@ fn main() {
                 Err(e) => panic!("Expected a type error. Found {:?}", e),
             }
         }
-    } 
-    
+    }
+
     #[test]
     fn annotate_struct() {
         let input = include_test!("annotate_struct.smpl");
@@ -435,7 +430,7 @@ fn main() {
     #[test]
     fn opaque_struct() {
         let input = include_test!("opaque_struct.smpl");
-        
+
         let mod1 = parse_module(wrap_input!(input)).unwrap();
         let err = check_program(vec![mod1]);
 
@@ -454,7 +449,7 @@ fn main() {
                 }
             },
         }
-    } 
+    }
 
     #[test]
     fn opaque_type_invariance() {
@@ -470,7 +465,7 @@ fn main() {
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         error_variant!(check_program(vec![mod1]), AnalysisError::TypeError(_));
-    } 
+    }
 
     #[test]
     fn generic_struct_init_type_arg_error() {
@@ -478,8 +473,8 @@ fn main() {
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err());
-    } 
-        
+    }
+
     #[test]
     fn generic_fn_binding_invalid_type() {
         let mod1 = include_test!("generic_fn_binding_invalid_type.smpl");
@@ -487,7 +482,7 @@ fn main() {
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err());
     }
-    
+
     #[test]
     fn generic_width_constraint_invalid_bind() {
         let mod1 = include_test!("generic_width_constraint_invalid_bind.smpl");
@@ -534,7 +529,7 @@ fn main() {
 
         let mod1 = parse_module(wrap_input!(mod1)).unwrap();
         assert!(check_program(vec![mod1]).is_err());
-    } 
+    }
 
     #[test]
     fn anonymous_struct_init_invalid_type() {

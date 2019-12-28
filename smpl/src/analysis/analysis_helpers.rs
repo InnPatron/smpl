@@ -7,29 +7,71 @@ use super::error::AnalysisError;
 use super::metadata::*;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::{
-    AnalysisContext, FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId,
-    Universe, ModuleId,
+    FieldId, FnId, Program, TypeId, TypeParamId, TypeVarId,
+    ModuleId,
 };
 use super::type_checker::TypingContext;
 use super::type_cons::{TypeCons, TypeParams};
 use super::abstract_type::AbstractType;
-
+use super::analysis_context::{
+    GlobalData, LocalData, AnalysisContext, AnalysisUniverse,
+    ReservedAnonymousFn, AnalyzableFn
+};
+use super::anon_storage::AnonStorage;
 
 pub fn analyze_fn(
-    universe: &mut Universe,
+    to_analyze: &mut AnalyzableFn,
+    universe: &AnalysisUniverse,
     metadata: &mut Metadata,
+    global_data: &mut GlobalData,
+    local_data: &mut LocalData,
     module_id: ModuleId,
-    fn_id: FnId,
-) -> Result<(), AnalysisError> {
+) -> Result<AnonStorage<(AnalysisContext, TypeCons, ModuleId)>, AnalysisError> {
     use super::resolve_scope;
     use super::return_trace;
     use super::type_checker;
+    use super::analysis_context::AnalyzableAnonymousFn;
 
-    resolve_scope::resolve(universe, fn_id)?;
-    type_checker::type_check(universe, metadata, module_id, fn_id)?;
-    return_trace::return_trace(universe, fn_id)?;
+    let anon_scopes: AnonStorage<ScopedData> =
+        resolve_scope::resolve(to_analyze)?;
 
-    Ok(())
+    let (mut anon_typing_contexts, mut anon_type_cons):
+        (AnonStorage<TypingContext>, AnonStorage<TypeCons>) =
+        type_checker::type_check(
+            to_analyze,
+            universe,
+            metadata,
+            global_data,
+            module_id,
+        )?;
+
+    let _ = return_trace::return_trace(to_analyze)?;
+
+    let analyzable_anons: AnonStorage<(AnalysisContext, TypeCons, ModuleId)> = {
+
+        let map = anon_scopes
+            .data()
+            .map(|(fn_id, outer_scope)| {
+                let outer_typing_context: TypingContext = anon_typing_contexts.remove(fn_id);
+                let type_cons: TypeCons = anon_type_cons.remove(fn_id);
+                let reserved_ast = universe.get_reserved_anon_fn(fn_id);
+
+                generate_fn_analysis_data(
+                    universe,
+                    global_data,
+                    local_data,
+                    &outer_scope,
+                    &outer_typing_context,
+                    &type_cons,
+                    reserved_ast.ast().data(),
+                ).map(|ac| (fn_id, (ac, type_cons, module_id)))
+            })
+        .collect::<Result<HashMap<_, _>, _>>()?;
+
+        AnonStorage::from_map(map)
+    };
+
+    Ok(analyzable_anons)
 }
 
 pub struct ContextData<'a> {
@@ -59,7 +101,9 @@ impl<'a> From<&'a ast::AnonymousFn> for ContextData<'a> {
 }
 
 pub fn generate_fn_analysis_data<'a, 'b, 'c, 'd, 'e, T>(
-    universe: &'a Universe,
+    universe: &'a AnalysisUniverse,
+    global_data: &'a mut GlobalData,
+    local_data: &'a mut LocalData,
     outer_scope: &'b ScopedData,
     outer_context: &'c TypingContext,
     fn_type_cons: &'d TypeCons,
@@ -90,7 +134,7 @@ where
                 for (param_name, (type_param_id, constraint)) in
                     tps.params.iter().zip(type_params.iter())
                 {
-                    let existential_type_var = universe.new_type_var_id();
+                    let existential_type_var = global_data.new_type_var_id();
                     let placeholder_variable =
                         type_params.placeholder_type_var(type_param_id);
 
@@ -101,7 +145,7 @@ where
 
                     existential_map.insert(
                         placeholder_variable,
-                        AbstractType::TypeVar(constraint.span().clone(), 
+                        AbstractType::TypeVar(constraint.span().clone(),
                             existential_type_var),
                     );
 
@@ -120,7 +164,7 @@ where
                 for (formal_param, formal_param_type) in
                     formal_params.iter().zip(parameters.iter())
                 {
-                    let formal_param_var_id = universe.new_var_id();
+                    let formal_param_var_id = local_data.new_var_id();
                     let formal_param_type = formal_param_type.substitute_with(
                         universe,
                         outer_scope,

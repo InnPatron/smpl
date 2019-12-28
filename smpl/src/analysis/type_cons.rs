@@ -5,7 +5,7 @@ use crate::span::Span;
 
 use super::abstract_type::*;
 use super::error::{AnalysisError, ApplicationError, TypeError as ATypeError};
-use super::semantic_data::{FieldId, TypeId, TypeParamId, TypeVarId, Universe};
+use super::semantic_data::{FieldId, TypeId, TypeParamId, TypeVarId};
 
 macro_rules! nill_check {
     ($type_args: expr) => {{

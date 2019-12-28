@@ -7,47 +7,46 @@ use crate::span::Span;
 use super::control_data::Node;
 use super::control_flow::CFG;
 use super::error::{AnalysisError, ControlFlowError};
-use super::semantic_data::Function;
 use super::semantic_data::*;
+use super::semantic_data::{ AnonymousFn as ResolvedAnonymousFn };
+use super::analysis_context::{
+    AnalyzableFn,
+    AnalyzableAnonymousFn as AnonymousFn,
+};
 
 pub fn return_trace(
-    universe: &Universe,
-    fn_id: FnId,
+    to_trace: &AnalyzableFn,
 ) -> Result<(), AnalysisError> {
-    let fn_to_resolve = universe.get_fn(fn_id);
 
-    match fn_to_resolve {
-        Function::SMPL(ref smpl_fn) => {
+    match to_trace {
+        AnalyzableFn::SMPL(ref smpl_fn) => {
             let cfg = smpl_fn.cfg();
-            let cfg = cfg.borrow();
             let fn_span = &smpl_fn.span();
-            check_returns_form(&*cfg, fn_span)
+            check_returns_form(cfg, fn_span)
         }
 
-        Function::Anonymous(ref anon_fn) => match anon_fn {
-            AnonymousFunction::Reserved(..) => {
+        AnalyzableFn::Anonymous(ref anon_fn) => match anon_fn {
+            AnonymousFn::Reserved(..) => {
                 panic!("Anonymous function should be resolved")
             }
 
-            AnonymousFunction::Resolved { 
+            AnonymousFn::Resolved(ResolvedAnonymousFn {
                 ref cfg,
-                ref fn_type,
+                ref span,
                 ..
-            } => {
-                let cfg = cfg.borrow();
-                let fn_span = &fn_type.span();
-                check_returns_form(&*cfg, fn_span)
+            }) => {
+                check_returns_form(cfg, span)
             }
         },
 
-        Function::Builtin(..) => {
+        AnalyzableFn::Builtin(..) => {
             panic!("Unable to return trace builtin functions")
         }
     }
 }
 
 fn check_returns_form(
-    cfg: &CFG, 
+    cfg: &CFG,
     fn_span: &Span,
 ) -> Result<(), AnalysisError> {
 

@@ -11,6 +11,8 @@ pub use crate::ast::UniOp;
 
 use super::expr_flow;
 use super::semantic_data::*;
+use super::analysis_context::{LocalData, GlobalData, ReservedAnonymousFn};
+use super::anon_storage::AnonStorage;
 
 // TODO(alex): Remove Typed<T>
 // Types are stored within type_checker::TypingContext instead
@@ -48,16 +50,27 @@ pub struct Assignment {
 
 impl Assignment {
     pub fn new(
-        universe: &mut Universe,
+        global_data: &mut GlobalData,
+        local_data: &mut LocalData,
         assignment: ast::Assignment,
-    ) -> Assignment {
+    ) -> (AnonStorage<ReservedAnonymousFn>, Self) {
         let (name, name_span) = assignment.name.to_data();
-        let field_access = FieldAccess::new(universe, name);
-        Assignment {
+        let (mut anon_1, field_access) =
+            FieldAccess::new(global_data, local_data, name);
+
+        let (mut anon_2, value) =
+            expr_flow::flatten(global_data, local_data, assignment.value);
+
+        anon_1.append(&mut anon_2);
+        let anon = anon_1;
+
+        let a = Assignment {
             field_access: field_access,
-            value: expr_flow::flatten(universe, assignment.value),
+            value,
             access_span: name_span,
-        }
+        };
+
+        (anon, a)
     }
 
     pub fn access_span(&self) -> Span {
@@ -91,18 +104,26 @@ pub struct LocalVarDecl {
 }
 
 impl LocalVarDecl {
+
     pub fn new(
-        universe: &mut Universe,
+        global_data: &mut GlobalData,
+        local_data: &mut LocalData,
         decl: ast::LocalVarDecl,
         stmt_span: Span,
-    ) -> LocalVarDecl {
-        LocalVarDecl {
+    ) -> (AnonStorage<ReservedAnonymousFn>, Self) {
+
+        let (anon, var_init) =
+            expr_flow::flatten(global_data, local_data, decl.var_init);
+
+        let l = LocalVarDecl {
             type_ann: decl.var_type,
             var_name: decl.var_name,
-            var_init: expr_flow::flatten(universe, decl.var_init),
-            var_id: universe.new_var_id(),
+            var_init,
+            var_id: local_data.new_var_id(),
             span: stmt_span,
-        }
+        };
+
+        (anon, l)
     }
 
     pub fn span(&self) -> Span {
@@ -191,12 +212,12 @@ impl Expr {
 
     pub fn map_tmp(
         &mut self,
-        universe: &Universe,
+        tmp_id: TmpId,
         val: Value,
         span: Span,
     ) -> TmpId {
         let tmp = Tmp {
-            id: universe.new_tmp_id(),
+            id: tmp_id,
             value: Typed { data: val },
             span: span,
         };
@@ -250,7 +271,7 @@ pub enum Value {
     ArrayInit(self::ArrayInit),
     Indexing(Indexing),
     ModAccess(self::ModAccess),
-    AnonymousFn(self::AnonymousFn),
+    AnonymousFn(self::AnonymousFnValue),
     TypeInst(self::TypeInst),
 }
 
@@ -415,11 +436,18 @@ pub struct FieldAccess {
 }
 
 impl FieldAccess {
-    pub fn new(universe: &mut Universe, path: ast::Path) -> FieldAccess {
-        FieldAccess {
-            raw_path: path.clone(),
-            path: self::Path::new(universe, path),
-        }
+
+    pub fn new(global_data: &mut GlobalData, local_data: &mut LocalData, path: ast::Path)
+        -> (AnonStorage<ReservedAnonymousFn>, Self) {
+
+        let (anon, new_path) = self::Path::new(global_data, local_data, path.clone());
+
+        let f = FieldAccess {
+            raw_path: path,
+            path: new_path,
+        };
+
+        (anon, f)
     }
 
     pub fn raw_path(&self) -> &ast::Path {
@@ -510,37 +538,48 @@ pub struct Path {
 }
 
 impl self::Path {
-    fn new(universe: &mut Universe, path: ast::Path) -> self::Path {
+    fn new(global_data: &mut GlobalData, local_data: &mut LocalData, path: ast::Path)
+        -> (AnonStorage<ReservedAnonymousFn>, self::Path) {
+
         let mut path_iter = path.0.into_iter();
         let root = path_iter.next().unwrap();
+
+        let mut buff = AnonStorage::new();
 
         let (name, indexing) = match root {
             ast::PathSegment::Ident(i) => (i, None),
             ast::PathSegment::Indexing(i, e) => {
-                (i, Some(expr_flow::flatten(universe, *e)))
+                let (mut anon, expr) = expr_flow::flatten(global_data, local_data, *e);
+                buff.append(&mut anon);
+                (i, Some(expr))
             }
         };
 
         let path = path_iter
-            .map(|ps| match ps {
+           .map(|ps| match ps {
                 ast::PathSegment::Ident(i) => {
                     self::PathSegment::Ident(Field::new(i))
                 }
                 ast::PathSegment::Indexing(i, e) => {
+                    let (mut anon, expr) = expr_flow::flatten(global_data, local_data, *e);
+                    buff.append(&mut anon);
+
                     self::PathSegment::Indexing(
                         Field::new(i),
-                        expr_flow::flatten(universe, *e),
+                        expr,
                     )
                 }
             })
             .collect();
 
-        self::Path {
+        let path = self::Path {
             root_name: name,
             root_indexing: indexing,
             root_var: None,
             path: path,
-        }
+        };
+
+        (buff, path)
     }
 
     pub fn root_name(&self) -> &AstNode<ast::Ident> {
@@ -620,13 +659,13 @@ impl Field {
 }
 
 #[derive(Clone, Debug)]
-pub struct AnonymousFn {
+pub struct AnonymousFnValue {
     fn_id: FnId,
 }
 
-impl AnonymousFn {
-    pub fn new(fn_id: FnId) -> AnonymousFn {
-        AnonymousFn { fn_id: fn_id }
+impl AnonymousFnValue {
+    pub fn new(fn_id: FnId) -> Self {
+        AnonymousFnValue { fn_id: fn_id }
     }
 
     pub fn fn_id(&self) -> FnId {

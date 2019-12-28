@@ -19,6 +19,7 @@ use super::type_checker::TypingContext;
 use super::metadata::Metadata;
 use super::type_cons::TypeCons;
 use super::abstract_type::AbstractType;
+use super::analysis_context::{GlobalData, AnalysisContext, AnalysisUniverse};
 
 pub const UNIT_TYPE: &'static str = "Unit";
 pub const INT_TYPE: &'static str = "int";
@@ -95,75 +96,19 @@ impl Program {
 
 #[derive(Clone, Debug)]
 pub struct Universe {
-    type_cons_map: HashMap<TypeId, TypeCons>,
-    fn_map: HashMap<FnId, Function>,
-    builtin_fn_set: HashSet<FnId>,
-    module_map: HashMap<ModuleId, Module>,
-    module_name: HashMap<Ident, ModuleId>,
-    id_counter: Cell<u64>,
-    std_scope: ScopedData,
-    unit: TypeId,
-    int: TypeId,
-    float: TypeId,
-    string: TypeId,
-    boolean: TypeId,
+    pub(super) type_map: HashMap<TypeId, TypeCons>,
+    pub(super) fn_map: HashMap<FnId, Function>,
+    pub(super) builtin_fn_set: HashSet<FnId>,
+    pub(super) module_map: HashMap<ModuleId, Module>,
+    pub(super) module_name_map: HashMap<Ident, ModuleId>,
+    pub(super) unit: TypeId,
+    pub(super) int: TypeId,
+    pub(super) float: TypeId,
+    pub(super) string: TypeId,
+    pub(super) boolean: TypeId,
 }
 
 impl Universe {
-    pub fn std() -> Universe {
-        let unit =
-            (TypeId(0), internal_module_path!(UNIT_TYPE), TypeCons::Unit);
-        let int = (TypeId(1), internal_module_path!(INT_TYPE), TypeCons::Int);
-        let float = (
-            TypeId(2),
-            internal_module_path!(FLOAT_TYPE),
-            TypeCons::Float,
-        );
-        let string = (
-            TypeId(3),
-            internal_module_path!(STRING_TYPE),
-            TypeCons::String,
-        );
-        let boolean =
-            (TypeId(4), internal_module_path!(BOOL_TYPE), TypeCons::Bool);
-
-        let type_map = vec![
-            unit.clone(),
-            int.clone(),
-            float.clone(),
-            string.clone(),
-            boolean.clone(),
-        ];
-
-        Universe {
-            type_cons_map: type_map
-                .clone()
-                .into_iter()
-                .map(|(id, _, tc)| (id, tc))
-                .collect(),
-            fn_map: HashMap::new(),
-            builtin_fn_set: HashSet::new(),
-            module_map: HashMap::new(),
-            module_name: HashMap::new(),
-            id_counter: Cell::new(5),
-            std_scope: ScopedData::new(
-                type_map
-                    .clone()
-                    .into_iter()
-                    .map(|(id, path, _)| (path, id))
-                    .collect(),
-            ),
-            unit: unit.0,
-            int: int.0,
-            float: float.0,
-            string: string.0,
-            boolean: boolean.0,
-        }
-    }
-
-    pub fn std_scope(&self) -> ScopedData {
-        self.std_scope.clone()
-    }
 
     pub fn unit(&self) -> TypeId {
         self.unit
@@ -185,124 +130,16 @@ impl Universe {
         self.boolean
     }
 
-    pub fn map_module(
-        &mut self,
-        mod_id: ModuleId,
-        name: Ident,
-        module: Module,
-    ) {
-        if self.module_name.insert(name, mod_id).is_some() {
-            unimplemented!("Overriding module with the same name.");
-        }
-
-        self.module_map.insert(mod_id, module);
-    }
-
     pub fn get_module(&self, id: ModuleId) -> &Module {
         self.module_map.get(&id).unwrap()
     }
 
-    pub(crate) fn get_module_mut(&mut self, id: ModuleId) -> &mut Module {
-        self.module_map.get_mut(&id).unwrap()
-    }
-
     pub fn module_id(&self, name: &Ident) -> Option<ModuleId> {
-        self.module_name.get(name).map(|id| id.clone())
-    }
-
-    /// Only used when function analysis returns a recoverable error.
-    /// Unmap to not have a partial function.
-    pub fn unmap_fn(&mut self, fn_id: FnId) {
-        self.fn_map.remove(&fn_id);
-    }
-
-    pub fn insert_fn(
-        &mut self,
-        fn_id: FnId,
-        name: Ident,
-        type_id: TypeId,
-        analysis_context: AnalysisContext,
-        cfg: CFG,
-        span: Span,
-    ) {
-        let function = SMPLFunction {
-            name: name,
-            fn_type: type_id,
-            cfg: Rc::new(RefCell::new(cfg)),
-            analysis_context: analysis_context,
-            span: span,
-        };
-
-        if self
-            .fn_map
-            .insert(fn_id, Function::SMPL(function))
-            .is_some()
-        {
-            panic!(
-                "Attempting to override Function with FnId {} in the Universe",
-                fn_id.0
-            );
-        }
-    }
-
-    pub fn insert_builtin_fn(
-        &mut self,
-        fn_id: FnId,
-        name: Ident,
-        fn_type: TypeId,
-    ) {
-        let builtin = BuiltinFunction {
-            name: name,
-            fn_type: fn_type,
-        };
-
-        self.builtin_fn_set.insert(fn_id);
-
-        if self
-            .fn_map
-            .insert(fn_id, Function::Builtin(builtin))
-            .is_some()
-        {
-            panic!(
-                "Attempting to override builtin function with FnId {} in the Universe",
-                fn_id.0
-            );
-        }
-    }
-
-    pub fn reserve_anonymous_fn(
-        &mut self,
-        fn_id: FnId,
-        ast_fn: AstNode<AstAnonymousFn>,
-    ) {
-        let anon_fn = AnonymousFunction::Reserved(ast_fn);
-
-        if self
-            .fn_map
-            .insert(fn_id, Function::Anonymous(anon_fn))
-            .is_some()
-        {
-            panic!(
-                "Attempting to override function with FnId {} in the Universe",
-                fn_id.0
-            );
-        }
-    }
-
-    pub fn manual_insert_type_cons(&mut self, type_id: TypeId, cons: TypeCons) {
-        if self.type_cons_map.insert(type_id, cons).is_some() {
-            panic!("Duplicate type constructor for type id");
-        }
-    }
-
-    pub fn insert_type_cons(&mut self, cons: TypeCons) -> TypeId {
-        let type_id = self.new_type_id();
-        self.manual_insert_type_cons(type_id, cons);
-        type_id
+        self.module_name_map.get(name).map(|id| id.clone())
     }
 
     pub fn get_type_cons(&self, id: TypeId) -> &TypeCons {
-        self.type_cons_map
+        self.type_map
             .get(&id)
             .expect("Expected TypeID to always resolve to a TypeCons")
     }
@@ -311,60 +148,12 @@ impl Universe {
         self.fn_map.get(&id).unwrap()
     }
 
-    pub fn get_fn_mut(&mut self, id: FnId) -> &mut Function {
-        self.fn_map.get_mut(&id).unwrap()
-    }
-
     pub fn is_builtin_fn(&self, id: FnId) -> bool {
         self.builtin_fn_set.contains(&id)
     }
 
-    fn inc_counter(&self) -> u64 {
-        let curr = self.id_counter.get();
-        let next = curr + 1;
-        self.id_counter.set(next);
-
-        curr
-    }
-
-    pub fn new_type_id(&self) -> TypeId {
-        TypeId(self.inc_counter())
-    }
-
-    pub fn new_type_param_id(&self) -> TypeParamId {
-        TypeParamId(self.inc_counter())
-    }
-
-    pub fn new_type_var_id(&self) -> TypeVarId {
-        TypeVarId(self.inc_counter())
-    }
-
-    pub fn new_field_id(&self) -> FieldId {
-        FieldId(self.inc_counter())
-    }
-
-    pub fn new_var_id(&self) -> VarId {
-        VarId(self.inc_counter())
-    }
-
-    pub fn new_fn_id(&self) -> FnId {
-        FnId(self.inc_counter())
-    }
-
-    pub fn new_tmp_id(&self) -> TmpId {
-        TmpId(self.inc_counter())
-    }
-
-    pub fn new_loop_id(&self) -> LoopId {
-        LoopId(self.inc_counter())
-    }
-
-    pub fn new_branching_id(&self) -> BranchingId {
-        BranchingId(self.inc_counter())
-    }
-
     pub fn static_types(&self) -> Vec<(TypeId, TypeCons)> {
-        self.type_cons_map
+        self.type_map
             .iter()
             .map(|(id, cons)| (id.clone(), cons.clone()))
             .collect()
@@ -375,7 +164,7 @@ impl Universe {
     }
 
     pub fn all_modules(&self) -> impl Iterator<Item = (&Ident, ModuleId)> {
-        self.module_name
+        self.module_name_map
             .iter()
             .map(|(name, id)| (name, id.clone()))
     }
@@ -429,55 +218,18 @@ pub enum BindingInfo {
 }
 
 #[derive(Clone, Debug)]
-pub struct AnalysisContext {
-    fn_scope: ScopedData,
-    typing_context: TypingContext,
-    existential_type_vars: Vec<TypeVarId>,
-}
-
-impl AnalysisContext {
-    pub fn new(
-        fn_scope: ScopedData,
-        typing_context: TypingContext,
-        existential_type_vars: Vec<TypeVarId>,
-    ) -> AnalysisContext {
-        AnalysisContext {
-            fn_scope: fn_scope,
-            typing_context: typing_context,
-            existential_type_vars: existential_type_vars,
-        }
-    }
-
-    pub fn fn_scope(&self) -> &ScopedData {
-        &self.fn_scope
-    }
-
-    pub fn typing_context(&self) -> &TypingContext {
-        &self.typing_context
-    }
-
-    pub fn set_typing_context(&mut self, tc: TypingContext) {
-        self.typing_context = tc;
-    }
-
-    pub fn existential_type_vars(&self) -> &[TypeVarId] {
-        &self.existential_type_vars
-    }
-}
-
-#[derive(Clone, Debug)]
 pub enum Function {
     Builtin(BuiltinFunction),
     SMPL(SMPLFunction),
-    Anonymous(AnonymousFunction),
+    Anonymous(AnonymousFn),
 }
 
 impl Function {
     pub fn fn_type(&self) -> Option<TypeId> {
         match self {
-            Function::Builtin(ref bf) => Some(bf.fn_type()),
-            Function::SMPL(ref sf) => Some(sf.fn_type()),
-            Function::Anonymous(ref af) => af.fn_type(),
+            Function::Builtin(ref bf) => Some(bf.type_id()),
+            Function::SMPL(ref sf) => Some(sf.type_id()),
+            Function::Anonymous(ref af) => af.type_id(),
         }
     }
 
@@ -491,53 +243,55 @@ impl Function {
 }
 
 #[derive(Clone, Debug)]
-pub enum AnonymousFunction {
-    Reserved(AstNode<AstAnonymousFn>),
-    Resolved {
-        fn_type: AstNode<TypeId>,
-        cfg: Rc<RefCell<CFG>>,
-        analysis_context: AnalysisContext,
-    },
+pub struct AnonymousFn {
+    pub span: Span,
+    pub type_id: TypeId,
+    pub cfg: CFG,
+    pub analysis_context: AnalysisContext,
 }
 
-impl AnonymousFunction {
-    pub fn name(&self) -> Option<&Ident> {
-        None
+impl AnonymousFn {
+    pub fn type_id(&self) -> Option<TypeId> {
+        // TODO: Remove option constraint
+        Some(self.type_id)
     }
 
-    pub fn fn_type(&self) -> Option<TypeId> {
-        match self {
-            AnonymousFunction::Reserved(_) => None,
-            AnonymousFunction::Resolved { fn_type, .. } => {
-                Some(fn_type.data().clone())
-            }
-        }
+    pub fn name(&self) -> Option<&Ident> {
+        None
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct BuiltinFunction {
-    name: Ident,
-    fn_type: TypeId,
+    pub(super) fn_id: FnId,
+    pub(super) name: Ident,
+    pub(super) type_id: TypeId,
 }
 
 impl BuiltinFunction {
+
+    pub fn fn_id(&self) -> FnId {
+        self.fn_id
+    }
+
     pub fn name(&self) -> &Ident {
         &self.name
     }
 
-    pub fn fn_type(&self) -> TypeId {
-        self.fn_type
+    pub fn type_id(&self) -> TypeId {
+        self.type_id
     }
 }
 
+
 #[derive(Clone, Debug)]
 pub struct SMPLFunction {
-    name: Ident,
-    fn_type: TypeId,
-    cfg: Rc<RefCell<CFG>>,
-    analysis_context: AnalysisContext,
-    span: Span,
+    pub(super) fn_id: FnId,
+    pub(super) name: Ident,
+    pub(super) type_id: TypeId,
+    pub(super) cfg: CFG,
+    pub(super) analysis_context: AnalysisContext,
+    pub(super) span: Span,
 }
 
 impl SMPLFunction {
@@ -545,12 +299,12 @@ impl SMPLFunction {
         &self.name
     }
 
-    pub fn fn_type(&self) -> TypeId {
-        self.fn_type
+    pub fn type_id(&self) -> TypeId {
+        self.type_id
     }
 
-    pub fn cfg(&self) -> Rc<RefCell<CFG>> {
-        self.cfg.clone()
+    pub fn cfg(&self) -> &CFG {
+        &self.cfg
     }
 
     pub fn span(&self) -> Span {
@@ -585,7 +339,7 @@ impl From<FnId> for BindingId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TypeId(u64);
+pub struct TypeId(pub(super) u64);
 
 impl ::std::fmt::Display for TypeId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -600,7 +354,7 @@ impl TypeId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TypeParamId(u64);
+pub struct TypeParamId(pub(super) u64);
 
 impl ::std::fmt::Display for TypeParamId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -615,7 +369,7 @@ impl TypeParamId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TypeVarId(u64);
+pub struct TypeVarId(pub(super) u64);
 
 impl ::std::fmt::Display for TypeVarId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -630,7 +384,7 @@ impl TypeVarId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct FieldId(u64);
+pub struct FieldId(pub(super) u64);
 
 impl ::std::fmt::Display for FieldId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -671,7 +425,7 @@ impl From<TmpId> for DataId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct VarId(u64);
+pub struct VarId(pub(super) u64);
 
 impl ::std::fmt::Display for VarId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -686,7 +440,7 @@ impl VarId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct FnId(u64);
+pub struct FnId(pub(super) u64);
 
 impl ::std::fmt::Display for FnId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -701,7 +455,7 @@ impl FnId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TmpId(u64);
+pub struct TmpId(pub(super) u64);
 
 impl ::std::fmt::Display for TmpId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -716,7 +470,7 @@ impl TmpId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct LoopId(u64);
+pub struct LoopId(pub(super) u64);
 
 impl ::std::fmt::Display for LoopId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -725,7 +479,7 @@ impl ::std::fmt::Display for LoopId {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct BranchingId(u64);
+pub struct BranchingId(pub(super)u64);
 
 impl ::std::fmt::Display for BranchingId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {

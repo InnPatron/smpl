@@ -7,29 +7,38 @@ use crate::span::Span;
 use crate::ast::{
     ArrayInit as AstArrayInit, AstNode, Expr as AstExpr, TypedPath,
 };
+use super::analysis_context::{LocalData, GlobalData, ReservedAnonymousFn};
+use super::anon_storage::AnonStorage;
 
-pub fn flatten(universe: &mut Universe, e: AstExpr) -> Expr {
+pub fn flatten(global_data: &mut GlobalData, local_data: &mut LocalData, e: AstExpr)
+    -> (AnonStorage<ReservedAnonymousFn>, Expr) {
+
     let mut expr = Expr::new();
 
-    let (_, span) = flatten_expr(universe, &mut expr, e);
+    let mut buff = AnonStorage::new();
+    let (_, span) = flatten_expr(global_data, local_data, &mut buff, &mut expr, e);
     expr.set_span(span);
 
-    expr
+    (buff, expr)
 }
 
-pub fn flatten_expr(
-    universe: &mut Universe,
+fn flatten_expr(
+    global_data: &mut GlobalData,
+    local_data: &mut LocalData,
+    anonymous_fns: &mut AnonStorage<ReservedAnonymousFn>,
     scope: &mut Expr,
     e: AstExpr,
 ) -> (TmpId, Span) {
     match e {
         AstExpr::Bin(bin) => {
             let (bin, span) = bin.to_data();
-            let (lhs, _) = flatten_expr(universe, scope, *bin.lhs);
-            let (rhs, _) = flatten_expr(universe, scope, *bin.rhs);
+            let (lhs, _) =
+                flatten_expr(global_data, local_data, anonymous_fns, scope, *bin.lhs);
+            let (rhs, _) =
+                flatten_expr(global_data, local_data, anonymous_fns, scope, *bin.rhs);
             (
                 scope.map_tmp(
-                    universe,
+                    local_data.new_tmp_id(),
                     Value::BinExpr(
                         bin.op,
                         Typed::untyped(lhs),
@@ -43,10 +52,11 @@ pub fn flatten_expr(
 
         AstExpr::Uni(uni) => {
             let (uni, span) = uni.to_data();
-            let expr = flatten_expr(universe, scope, *uni.expr).0;
+            let expr =
+                flatten_expr(global_data, local_data, anonymous_fns, scope, *uni.expr).0;
             (
                 scope.map_tmp(
-                    universe,
+                    local_data.new_tmp_id(),
                     Value::UniExpr(uni.op, Typed::untyped(expr)),
                     span.clone(),
                 ),
@@ -56,7 +66,7 @@ pub fn flatten_expr(
 
         AstExpr::Literal(literal) => {
             let (literal, span) = literal.to_data();
-            (scope.map_tmp(universe, Value::Literal(literal), span.clone()), span)
+            (scope.map_tmp(local_data.new_tmp_id(), Value::Literal(literal), span.clone()), span)
         }
 
         AstExpr::StructInit(init) => {
@@ -67,13 +77,13 @@ pub fn flatten_expr(
                 .into_iter()
                 .map(|(name, expr)| {
                     let expr =
-                        Typed::untyped(flatten_expr(universe, scope, *expr).0);
+                        Typed::untyped(flatten_expr(global_data, local_data, anonymous_fns, scope, *expr).0);
                     (name.data().clone(), expr)
                 })
                 .collect::<Vec<_>>();
             (
                 scope.map_tmp(
-                    universe,
+                    local_data.new_tmp_id(),
                     Value::StructInit(StructInit::new(struct_name, field_init)),
                     span.clone(),
                 ),
@@ -87,13 +97,13 @@ pub fn flatten_expr(
                 .field_init
                 .into_iter()
                 .map(|(name, expr)| {
-                    let expr = flatten_expr(universe, scope, *expr).0;
+                    let expr = flatten_expr(global_data, local_data, anonymous_fns, scope, *expr).0;
                     (name.data().clone(), expr)
                 })
                 .collect::<Vec<_>>();
             (
                 scope.map_tmp(
-                    universe,
+                    local_data.new_tmp_id(),
                     Value::AnonStructInit(AnonStructInit::new(field_init)),
                     span.clone(),
                 ),
@@ -105,7 +115,7 @@ pub fn flatten_expr(
             let span = ident.span();
             (
                 scope.map_tmp(
-                    universe,
+                    local_data.new_tmp_id(),
                     Value::Binding(TypedBinding::new(ident)),
                     span.clone(),
                 ),
@@ -115,9 +125,12 @@ pub fn flatten_expr(
 
         AstExpr::FieldAccess(path) => {
             let (path, span) = path.to_data();
-            let field_access = FieldAccess::new(universe, path);
+            let (mut anon, field_access) = FieldAccess::new(global_data, local_data, path);
+            anonymous_fns.append(&mut anon);
             (
-                scope.map_tmp(universe, Value::FieldAccess(field_access), span.clone()),
+                scope.map_tmp(local_data.new_tmp_id(),
+                    Value::FieldAccess(field_access),
+                    span.clone()),
                 span,
             )
         }
@@ -126,16 +139,16 @@ pub fn flatten_expr(
             let (fn_call, span) = fn_call.to_data();
             let path = fn_call.path;
             let (fn_val, _fn_val_span) =
-                flatten_expr(universe, scope, AstExpr::Path(path));
+                flatten_expr(global_data, local_data, anonymous_fns, scope, AstExpr::Path(path));
             let args = fn_call.args.map(|vec| {
                 vec.into_iter()
-                    .map(|e| Typed::untyped(flatten_expr(universe, scope, e).0))
+                    .map(|e| Typed::untyped(flatten_expr(global_data, local_data, anonymous_fns, scope, e).0))
                     .collect::<Vec<_>>()
             });
 
             let fn_call = FnCall::new(fn_val, args);
 
-            (scope.map_tmp(universe, Value::FnCall(fn_call), span.clone()), span)
+            (scope.map_tmp(local_data.new_tmp_id(), Value::FnCall(fn_call), span.clone()), span)
         }
 
         AstExpr::ArrayInit(init) => {
@@ -146,7 +159,7 @@ pub fn flatten_expr(
                         .into_iter()
                         .map(|element| {
                             Typed::untyped(
-                                flatten_expr(universe, scope, element).0,
+                                flatten_expr(global_data, local_data, anonymous_fns, scope, element).0,
                             )
                         })
                         .collect();
@@ -154,17 +167,17 @@ pub fn flatten_expr(
                     let init = ArrayInit::List(list);
 
                     (
-                        scope.map_tmp(universe, Value::ArrayInit(init), span.clone()),
+                        scope.map_tmp(local_data.new_tmp_id(), Value::ArrayInit(init), span.clone()),
                         span,
                     )
                 }
                 AstArrayInit::Value(expr, size) => {
                     let value =
-                        Typed::untyped(flatten_expr(universe, scope, *expr).0);
+                        Typed::untyped(flatten_expr(global_data, local_data, anonymous_fns, scope, *expr).0);
                     let init = ArrayInit::Value(value, size);
 
                     (
-                        scope.map_tmp(universe, Value::ArrayInit(init), span.clone()),
+                        scope.map_tmp(local_data.new_tmp_id(), Value::ArrayInit(init), span.clone()),
                         span,
                     )
                 }
@@ -177,9 +190,9 @@ pub fn flatten_expr(
             let indexing_expr = indexing.indexer;
 
             let array =
-                Typed::untyped(flatten_expr(universe, scope, *array_expr).0);
+                Typed::untyped(flatten_expr(global_data, local_data, anonymous_fns, scope, *array_expr).0);
             let indexer =
-                Typed::untyped(flatten_expr(universe, scope, *indexing_expr).0);
+                Typed::untyped(flatten_expr(global_data, local_data, anonymous_fns, scope, *indexing_expr).0);
 
             let indexing = Indexing {
                 array: array,
@@ -187,7 +200,7 @@ pub fn flatten_expr(
             };
 
             (
-                scope.map_tmp(universe, Value::Indexing(indexing), span.clone()),
+                scope.map_tmp(local_data.new_tmp_id(), Value::Indexing(indexing), span.clone()),
                 span,
             )
         }
@@ -209,17 +222,21 @@ pub fn flatten_expr(
                 }
             };
 
-            (scope.map_tmp(universe, tmp, span.clone()), span)
+            (scope.map_tmp(local_data.new_tmp_id(), tmp, span.clone()), span)
         }
 
         AstExpr::AnonymousFn(a_fn) => {
             let span = a_fn.span();
-            let fn_id = universe.new_fn_id();
-            universe.reserve_anonymous_fn(fn_id, a_fn);
+            let fn_id = global_data.new_fn_id();
+            let a_fn = ReservedAnonymousFn {
+                fn_id,
+                ast: a_fn
+            };
+            anonymous_fns.insert(fn_id, a_fn);
             (
                 scope.map_tmp(
-                    universe,
-                    Value::AnonymousFn(AnonymousFn::new(fn_id)),
+                    local_data.new_tmp_id(),
+                    Value::AnonymousFn(AnonymousFnValue::new(fn_id)),
                     span.clone(),
                 ),
                 span,
@@ -232,7 +249,8 @@ pub fn flatten_expr(
             let (base, span) = chain.base.to_data();
             let base_expr = AstExpr::FnCall(AstNode::new(base, span));
 
-            let (base_result, span) = flatten_expr(universe, scope, base_expr);
+            let (base_result, span) =
+                flatten_expr(global_data, local_data, anonymous_fns, scope, base_expr);
 
             let mut previous_result = base_result;
             let mut span = span;
@@ -243,11 +261,11 @@ pub fn flatten_expr(
                     AstExpr::FnCall(AstNode::new(call, next_span));
 
                 let (fn_call_result, next_span) =
-                    flatten_expr(universe, scope, fn_call_expr);
+                    flatten_expr(global_data, local_data, anonymous_fns, scope, fn_call_expr);
 
                 let fn_call = scope.get_tmp_mut(fn_call_result);
 
-                let fn_call = irmatch!(fn_call.value_mut().data_mut(); 
+                let fn_call = irmatch!(fn_call.value_mut().data_mut();
                                        Value::FnCall(ref mut call) => call);
 
                 // Use the result of the function call as the first argument
@@ -279,18 +297,23 @@ mod tests {
     use crate::parser::expr_parser::*;
     use crate::parser::*;
     use crate::module::ModuleSource;
+    use super::super::analysis_context::{GlobalData, LocalData, AnalysisUniverse};
 
     #[test]
     fn expr_exec_order_ck() {
+
+        let mut global_data = GlobalData::new();
+        let mut local_data = LocalData::new();
+
         let input = "5 + 2 / 3";
         let source = ModuleSource::Anonymous(None);
 
         let mut input = buffer_input(&source, input);
         let expr = piped_expr(&mut input, &[]).unwrap().to_data().0;
 
-        let mut universe = Universe::std();
+        let mut universe = AnalysisUniverse::std(&mut global_data);
 
-        let expr = flatten(&mut universe, expr);
+        let (_, expr) = flatten(&mut global_data, &mut local_data, expr);
 
         let mut order = expr.execution_order();
 

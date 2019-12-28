@@ -2,14 +2,14 @@ use crate::span::Span;
 
 use super::error::*;
 use super::resolve_scope::ScopedData;
-use super::semantic_data::Universe;
+use super::analysis_context::AnalysisUniverse;
 use super::type_checker::TypingContext;
 use super::abstract_type::*;
 
 /// Used for invariance (i.e. types must match EXACTLY)
 /// Will NOT perform any inferences
 pub fn equal_types_static(
-    universe: &Universe,
+    universe: &AnalysisUniverse,
     scoped_data: &ScopedData,
     typing_context: &TypingContext,
     synthesis: &AbstractType,

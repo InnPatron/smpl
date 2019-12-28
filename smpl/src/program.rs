@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use crate::analysis::error::AnalysisError;
 use crate::analysis::{
-    check_program, AnonymousFunction, FnId, Function,
+    check_program, AnonymousFn, FnId, Function,
     Program as AnalyzedProgram, TypingContext, CFG,
     ModuleId, Module as AnalyzedModule,
 };
@@ -19,10 +19,10 @@ pub struct Program {
 
 impl Program {
 
-    /// 
+    ///
     /// Create a new `Program` from an iterator of unparsed SMPL modules.
     ///
-    pub fn from_unparsed<'a, I>(modules: I) -> Result<Program, Error> 
+    pub fn from_unparsed<'a, I>(modules: I) -> Result<Program, Error>
     where I: Iterator<Item=UnparsedModule<'a>> {
         use crate::parser::parse_module;
 
@@ -35,7 +35,7 @@ impl Program {
             .map_err(|e| e.into())
     }
 
-    /// 
+    ///
     /// Create a new `Program` from an iterator of pre-parsed SMPL modules.
     ///
     pub fn from_parsed<I>(
@@ -81,7 +81,7 @@ impl Program {
     }
 }
 
-/// 
+///
 /// Represents a fully analyzed SMPL module that can be compiled.
 ///
 pub struct CompilableModule<'a> {
@@ -113,7 +113,7 @@ impl<'a> CompilableModule<'a> {
             })
     }
 
-    pub fn compilable_fns(&self) -> 
+    pub fn compilable_fns(&self) ->
         impl Iterator<Item = CompilableFn> {
 
         self.module
@@ -136,24 +136,22 @@ impl<'a> CompilableModule<'a> {
             Function::SMPL(f) => {
                 let c_fn = CompilableFn {
                     fn_id: f_id.clone(),
-                    cfg: f.cfg(),
+                    // TODO: Temporary measure
+                    //  Change this to something else?
+                    cfg: Rc::new(RefCell::new(f.cfg().clone())),
                     typing_context: f.analysis_context().typing_context(),
                 };
                 c_fn
             },
 
-            Function::Anonymous(AnonymousFunction::Reserved(_)) => {
-                panic!("All anonymous functions should be resolved after analysis");
-            }
-
-            Function::Anonymous(AnonymousFunction::Resolved {
+            Function::Anonymous( AnonymousFn {
                 ref cfg,
                 ref analysis_context,
                 ..
             }) => {
                 let c_fn = CompilableFn {
                     fn_id: f_id.clone(),
-                    cfg: cfg.clone(),
+                    cfg: Rc::new(RefCell::new(cfg.clone())),
                     typing_context: analysis_context.typing_context()
                 };
 
@@ -165,7 +163,7 @@ impl<'a> CompilableModule<'a> {
     }
 }
 
-/// 
+///
 /// Represents a fully analyzed SMPL function that can be compiled.
 ///
 /// Does **NOT** include builtin functions.

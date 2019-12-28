@@ -17,6 +17,8 @@ mod type_cons_gen;
 mod type_equality;
 mod type_resolver;
 mod unique_linear_cfg_traversal;
+mod analysis_context;
+mod anon_storage;
 
 pub mod error;
 pub mod metadata;
@@ -31,6 +33,6 @@ pub(crate) use self::control_flow::CFG;
 pub(crate) use self::linear_cfg_traversal::{Passenger, Traverser};
 pub(crate) use self::semantic_ck::check_program;
 pub(crate) use self::semantic_data::*;
-pub(crate) use self::semantic_data::{Function, Module, Program};
+pub(crate) use self::semantic_data::{Function, AnonymousFn, Module, Program};
 pub(crate) use self::type_checker::TypingContext;
 pub(crate) use self::typed_ast::*;

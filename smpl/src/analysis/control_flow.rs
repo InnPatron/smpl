@@ -9,14 +9,22 @@ use crate::span::Span;
 use super::error::{AnalysisError, ControlFlowError};
 use super::expr_flow;
 
-use super::semantic_data::{AnalysisContext, LoopId, Universe};
+use super::semantic_data::LoopId;
 use super::type_cons::TypeCons;
 use super::abstract_type::AbstractType;
 
 use super::type_checker::TypingContext;
 use super::typed_ast;
+use super::analysis_context::{
+    AnalysisUniverse,
+    AnalysisContext,
+    GlobalData,
+    LocalData,
+    ReservedAnonymousFn
+};
 
 use super::control_data::*;
+use super::anon_storage::AnonStorage;
 
 type InternalLoopData = Option<(graph::NodeIndex, graph::NodeIndex, LoopId)>;
 
@@ -320,11 +328,13 @@ impl CFG {
     /// Only performs continue/break statement checking (necessary for CFG generation).
     ///
     pub fn generate(
-        universe: &mut Universe,
+        universe: &AnalysisUniverse,
+        global_data: &mut GlobalData,
+        local_data: &mut LocalData,
         body: ast::AstNode<ast::Block>,
         fn_type: &TypeCons,
         _analysis_context: &AnalysisContext,
-    ) -> Result<Self, AnalysisError> {
+    ) -> Result<(AnonStorage<ReservedAnonymousFn>, Self), AnalysisError> {
         let mut cfg = {
             let mut graph = graph::Graph::new();
             let start = graph.add_node(Node::Start);
@@ -341,8 +351,13 @@ impl CFG {
 
         let (body, _) = body.to_data();
         let instructions = body.0;
+        // TODO: Return anonymous functions
+        let mut anonymous_fns = AnonStorage::new();
         let function_body = cfg.generate_scoped_block(
             universe,
+            global_data,
+            local_data,
+            &mut anonymous_fns,
             instructions.into_iter(),
             None,
         )?;
@@ -386,7 +401,7 @@ impl CFG {
         append_node!(cfg, head, previous, Node::ExitScope);
         append_node_index!(cfg, head, previous, cfg.end);
 
-        Ok(cfg)
+        Ok((anonymous_fns, cfg))
     }
 
     ///
@@ -398,7 +413,10 @@ impl CFG {
     ///
     fn generate_scoped_block<'a, 'b, T>(
         &'a mut self,
-        universe: &'b mut Universe,
+        universe: &'b AnalysisUniverse,
+        global_data: &'b mut GlobalData,
+        local_data: &'b mut LocalData,
+        anonymous_fns: &mut AnonStorage<ReservedAnonymousFn>,
         mut instructions: T,
         loop_data: InternalLoopData,
     ) -> Result<BranchData, ControlFlowError>
@@ -417,7 +435,9 @@ impl CFG {
                 // Added to current basic block
                 Stmt::Expr(expr) => {
                     let (ast_expr, span) = expr.to_data();
-                    let expr = expr_flow::flatten(universe, ast_expr);
+                    let (mut anon, expr) =
+                        expr_flow::flatten(global_data, local_data, ast_expr);
+                    anonymous_fns.append(&mut anon);
                     current_block.append(BlockNode::Expr(ExprData {
                         expr: expr,
                         span: span,
@@ -429,9 +449,12 @@ impl CFG {
                     match expr_stmt {
                         // Append assignment node to current basic block
                         ExprStmt::Assignment(assignment) => {
-                            let assignment = typed_ast::Assignment::new(
-                                universe, assignment,
+                            let (mut anon_fn, assignment) = typed_ast::Assignment::new(
+                                global_data,
+                                local_data,
+                                assignment,
                             );
+                            anonymous_fns.append(&mut anon_fn);
                             current_block.append(BlockNode::Assignment(
                                 AssignmentData {
                                     assignment: assignment,
@@ -442,11 +465,13 @@ impl CFG {
 
                         // Append local variable declaration node to current basic block
                         ExprStmt::LocalVarDecl(decl) => {
-                            let decl = typed_ast::LocalVarDecl::new(
-                                universe,
+                            let (mut anon_fn, decl) = typed_ast::LocalVarDecl::new(
+                                global_data,
+                                local_data,
                                 decl,
                                 expr_stmt_span.clone(),
                             );
+                            anonymous_fns.append(&mut anon_fn);
                             current_block.append(BlockNode::LocalVarDecl(
                                 LocalVarDeclData {
                                     decl: decl,
@@ -467,7 +492,12 @@ impl CFG {
                                 current_block = BasicBlock::new();
                             }
                             let expr = expr
-                                .map(|expr| expr_flow::flatten(universe, expr));
+                                .map(|expr| {
+                                    let (mut anon_fn, expr) =
+                                        expr_flow::flatten(global_data, local_data, expr);
+                                    anonymous_fns.append(&mut anon_fn);
+                                    expr
+                                });
                             append_node!(
                                 self,
                                 head,
@@ -556,13 +586,15 @@ impl CFG {
 
                             let (block, _) = while_data.block.to_data();
 
-                            let loop_id = universe.new_loop_id();
+                            let loop_id = local_data.new_loop_id();
 
                             let expr_data = {
                                 let (conditional, con_span) =
                                     while_data.conditional.to_data();
-                                let expr =
-                                    expr_flow::flatten(universe, conditional);
+                                let (mut anon_fn, expr) =
+                                    expr_flow::flatten(global_data, local_data, conditional);
+                                anonymous_fns.append(&mut anon_fn);
+
                                 ExprData {
                                     expr: expr,
                                     span: con_span,
@@ -592,6 +624,9 @@ impl CFG {
                             let instructions = block.0;
                             let loop_body = self.generate_scoped_block(
                                 universe,
+                                global_data,
+                                local_data,
+                                anonymous_fns,
                                 instructions.into_iter(),
                                 Some((loop_head, loop_foot, loop_id)),
                             )?;
@@ -664,7 +699,10 @@ impl CFG {
                             //   BranchSplit or BranchMerge (keep ScopeEnter, ScopeExit)
                             fn generate_branch(
                                 cfg: &mut CFG,
-                                universe: &mut Universe,
+                                universe: &AnalysisUniverse,
+                                global_data: &mut GlobalData,
+                                local_data: &mut LocalData,
+                                anonymous_fns: &mut AnonStorage<ReservedAnonymousFn>,
                                 body: AstNode<Block>,
                                 condition: Option<AstNode<Expr>>,
                                 loop_data: InternalLoopData,
@@ -675,6 +713,9 @@ impl CFG {
                                 // Generate the branch subgraph
                                 let branch_graph = cfg.generate_scoped_block(
                                     universe,
+                                    global_data,
+                                    local_data,
+                                    anonymous_fns,
                                     instructions.into_iter(),
                                     loop_data,
                                 )?;
@@ -730,14 +771,16 @@ impl CFG {
                                 match condition {
                                     Some(ast_condition) => {
                                         let branch_id =
-                                            universe.new_branching_id();
+                                            local_data.new_branching_id();
 
                                         let (conditional, con_span) =
                                             ast_condition.to_data();
-                                        let expr = expr_flow::flatten(
-                                            universe,
+                                        let (mut anon, expr) = expr_flow::flatten(
+                                            global_data,
+                                            local_data,
                                             conditional,
                                         );
+                                        anonymous_fns.append(&mut anon);
                                         let expr_data = ExprData {
                                             expr: expr,
                                             span: con_span,
@@ -801,6 +844,9 @@ impl CFG {
                             let first_branch = generate_branch(
                                 self,
                                 universe,
+                                global_data,
+                                local_data,
+                                anonymous_fns,
                                 first_branch.block,
                                 Some(first_branch.conditional),
                                 loop_data,
@@ -826,6 +872,9 @@ impl CFG {
                                 let branch = generate_branch(
                                     self,
                                     universe,
+                                    global_data,
+                                    local_data,
+                                    anonymous_fns,
                                     branch.block,
                                     Some(branch.conditional),
                                     loop_data,
@@ -874,7 +923,14 @@ impl CFG {
                                 Some(block) => {
                                     // Found an "else" branch
                                     let else_branch = generate_branch(
-                                        self, universe, block, None, loop_data,
+                                        self,
+                                        universe,
+                                        global_data,
+                                        local_data,
+                                        anonymous_fns,
+                                        block,
+                                        None,
+                                        loop_data,
                                     )?;
                                     let else_head = else_branch.head
                                         .expect("generate_branch() head should always be Some");
@@ -938,7 +994,8 @@ mod tests {
     use petgraph::dot::{Config, Dot};
     use petgraph::Direction;
 
-    use super::super::semantic_data::{TypeId, Universe};
+    use super::super::semantic_data::TypeId;
+    use super::super::analysis_context::AnalysisUniverse;
     use super::super::type_cons::*;
 
     macro_rules! edges {
@@ -977,21 +1034,33 @@ mod tests {
 let a: int = 2;
 let b: int = 3;
 }";
+
+        let mut global_data = GlobalData::new();
+        let mut local_data = LocalData::new();
+
         let source = ModuleSource::Anonymous(None);
         let mut input = buffer_input(&source, input);
-        let mut universe = Universe::std();
+        let mut universe = AnalysisUniverse::std(&mut global_data);
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
-        let analysis_context = 
-            generate_fn_analysis_data(&universe, 
-                &universe.std_scope(), 
+        let analysis_context =
+            generate_fn_analysis_data(
+                &universe,
+                &mut global_data,
+                &mut local_data,
+                &universe.std_scope(),
                 &TypingContext::empty(),
                 &fn_type,
                 &fn_def
                 ).unwrap();
-        let cfg = CFG::generate(&mut universe, 
-                fn_def.body.clone(), &fn_type, &analysis_context)
-            .unwrap();
+        let (_, cfg) = CFG::generate(
+            &universe,
+            &mut global_data,
+            &mut local_data,
+            fn_def.body.clone(),
+            &fn_type,
+            &analysis_context)
+        .unwrap();
 
         println!("{:?}", Dot::with_config(&cfg.graph, &[Config::EdgeNoLabel]));
 
@@ -1048,21 +1117,32 @@ if (test) {
     let c: int = 4;
 }
 }";
+
+        let mut global_data = GlobalData::new();
+        let mut local_data = LocalData::new();
         let source = ModuleSource::Anonymous(None);
         let mut input = buffer_input(&source, input);
 
-        let mut universe = Universe::std();
+        let mut universe = AnalysisUniverse::std(&mut global_data);
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
         let fn_def = testfn_decl(&mut input).unwrap();
-        let analysis_context = 
-            generate_fn_analysis_data(&universe, 
-                &universe.std_scope(), 
+        let analysis_context =
+            generate_fn_analysis_data(
+                &universe,
+                &mut global_data,
+                &mut local_data,
+                &universe.std_scope(),
                 &TypingContext::empty(),
                 &fn_type,
                 &fn_def
                 ).unwrap();
-        let cfg = CFG::generate(
-                &mut universe, fn_def.body.clone(), &fn_type, &analysis_context,
+        let (_, cfg) = CFG::generate(
+                &universe,
+                &mut global_data,
+                &mut local_data,
+                fn_def.body.clone(),
+                &fn_type,
+                &analysis_context,
             )
             .unwrap();
 
@@ -1206,21 +1286,31 @@ if (test) {
 
     }
 }";
+        let mut global_data = GlobalData::new();
+        let mut local_data = LocalData::new();
+
         let source = ModuleSource::Anonymous(None);
         let mut input = buffer_input(&source, input);
-        let mut universe = Universe::std();
+        let mut universe = AnalysisUniverse::std(&mut global_data);
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
-        
+
         let fn_def = testfn_decl(&mut input).unwrap();
-        let analysis_context = 
-            generate_fn_analysis_data(&universe, 
-                &universe.std_scope(), 
+        let analysis_context =
+            generate_fn_analysis_data(&universe,
+                &mut global_data,
+                &mut local_data,
+                &universe.std_scope(),
                 &TypingContext::empty(),
                 &fn_type,
                 &fn_def
                 ).unwrap();
-        let cfg = CFG::generate(
-                &mut universe, fn_def.body.clone(), &fn_type, &analysis_context,
+        let (_, cfg) = CFG::generate(
+                &universe,
+                &mut global_data,
+                &mut local_data,
+                fn_def.body.clone(),
+                &fn_type,
+                &analysis_context,
             )
             .unwrap();
 
@@ -1321,7 +1411,7 @@ if (test) {
 
             // condition b FALSE branch (branch_split_c)
             let branch_split_c = branch_split_c.expect("Missing false edge connecting to branch split C");
-            
+
             let branch_split_c_edges = edges!(cfg, branch_split_c);
             let mut truth_target = None;
             let mut false_target = None;
@@ -1420,25 +1510,36 @@ if (test) {
     fn while_loop_generation() {
         let input = "fn test(arg: int) {
     while (true) {
-        
+
     }
 }";
+        let mut global_data = GlobalData::new();
+        let mut local_data = LocalData::new();
+
         let source = ModuleSource::Anonymous(None);
         let mut input = buffer_input(&source, input);
-        let mut universe = Universe::std();
+        let mut universe = AnalysisUniverse::std(&mut global_data);
         let fn_type = fn_type_cons(vec![expected_app(universe.int())], expected_app(universe.unit()));
-        
+
         let fn_def = testfn_decl(&mut input).unwrap();
-        let analysis_context = 
-            generate_fn_analysis_data(&universe, 
-                &universe.std_scope(), 
+        let analysis_context =
+            generate_fn_analysis_data(
+                &universe,
+                &mut global_data,
+                &mut local_data,
+                &universe.std_scope(),
                 &TypingContext::empty(),
                 &fn_type,
                 &fn_def
                 ).unwrap();
 
-        let cfg = CFG::generate(
-                &mut universe, fn_def.body.clone(), &fn_type, &analysis_context
+        let (_, cfg) = CFG::generate(
+                &universe,
+                &mut global_data,
+                &mut local_data,
+                fn_def.body.clone(),
+                &fn_type,
+                &analysis_context
             )
             .unwrap();
 
@@ -1472,7 +1573,7 @@ if (test) {
 
         let head_neighbors = neighbors!(cfg, loop_head);
         assert_eq!(head_neighbors.clone().count(), 2);
-        
+
         let head_edges = edges!(cfg, loop_head);
         assert_eq!(head_edges.clone().count(), 2);
 
