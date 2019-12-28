@@ -244,8 +244,11 @@ fn analyze_fns(
 
     let mut finished: HashMap<FnId, UniverseFn> = HashMap::new();
 
-    let reserved_anon_fns = analyzable_raw_program.anon_fns;
-    let mut unresolved_anon_fns = AnonStorage::new();
+    let mut reserved_anon_fns: AnonStorage<ReservedAnonymousFn> =
+        analyzable_raw_program.anon_fns;
+    let mut unresolved_anon_fns: AnonStorage<(AnalysisContext, TypeCons, ModuleId)> =
+        AnonStorage::new();
+
     for (mod_id, raw_mod) in analyzable_raw_program.module_map.into_iter() {
         for (_, reserved_fn) in raw_mod.reserved_fns.into_iter() {
             let fn_id = reserved_fn.0;
@@ -278,10 +281,36 @@ fn analyze_fns(
         }
     }
 
+    resolve_anonymous_fns(
+        universe,
+        metadata,
+        global_data,
+        &mut finished,
+        analyzable_raw_program.local_data_map,
+        analyzable_raw_program.anon_fn_parents,
+        unresolved_anon_fns,
+        reserved_anon_fns)?;
+
+    Ok((finished, analyzable_raw_program.type_map))
+}
+
+fn resolve_anonymous_fns(
+    universe: &mut AnalysisUniverse,
+    metadata: &mut Metadata,
+    global_data: &mut GlobalData,
+    finished: &mut HashMap<FnId, UniverseFn>,
+    mut local_data_map: HashMap<FnId, LocalData>,
+    mut anon_fn_parents: AnonStorage<FnId>,
+    mut unresolved_anon_fns: AnonStorage<(AnalysisContext, TypeCons, ModuleId)>,
+    mut reserved_anon_fns: AnonStorage<ReservedAnonymousFn>,
+    ) -> Result<(), AnalysisError> {
+
+    // TODO: Module ownership
+    // TODO: Return parent map?
+
     // Analyze all currently unresolved anonymous functions.
     //   Any nested anonymous functions are analyzed on the next iteration
     //   and so on until there are no more unresolved anonymous functions
-    let mut reserved_anon_fns = reserved_anon_fns;
     loop {
 
         if unresolved_anon_fns.len() == 0 {
@@ -289,6 +318,7 @@ fn analyze_fns(
         }
 
         let mut anon_fns_to_resolve = unresolved_anon_fns.data();
+
         unresolved_anon_fns = AnonStorage::new();
 
         for (to_resolve_fn_id, (analysis_context, type_cons, mod_id)) in anon_fns_to_resolve {
@@ -306,12 +336,10 @@ fn analyze_fns(
                 .clone();
 
             let type_id = global_data.new_type_id();
-            let parent_fn_id = analyzable_raw_program
-                .anon_fn_parents
+            let parent_fn_id = anon_fn_parents
                 .get(to_resolve_fn_id)
                 .clone();
-            let local_data = analyzable_raw_program
-                .local_data_map
+            let local_data = local_data_map
                 .get_mut(&parent_fn_id)
                 .expect("Missing local data for function");
 
@@ -326,7 +354,7 @@ fn analyze_fns(
 
             // Reserve nested unresolved anonymous functions
             for (nested_anon_fn_id, _) in nested_unresolved_anon_fns.ref_data() {
-                analyzable_raw_program.anon_fn_parents
+                anon_fn_parents
                     .insert(nested_anon_fn_id.clone(), parent_fn_id);
             }
             reserved_anon_fns.append(&mut nested_unresolved_anon_fns);
@@ -364,7 +392,7 @@ fn analyze_fns(
         }
     }
 
-    Ok((finished, analyzable_raw_program.type_map))
+    Ok(())
 }
 
 ///
