@@ -78,6 +78,36 @@ struct ReservedStruct(TypeId, AstNode<Struct>);
 struct ReservedFn(FnId, AstNode<AstFunction>, TypeId,);
 struct ReservedBuiltinFn(FnId, AstNode<AstBuiltinFunction>, TypeId);
 
+///
+/// Perform static analysis on a collection of SMPL modules.
+///
+/// 1. Convert the parsed modules into raw module data
+/// 2. Generate module-level scopes for each module.
+///    Abstractly map top-level type and function declarations into scope.
+/// 3. Generate module dependencies and bring external module symbols
+///    into scope.
+/// 4. Generate type constructors from type declarations.
+///    Insert type constructors into the universe.
+/// 5. Based off of the module-level scope and universe, process top-level function
+///    declarations by:
+///      1. Creating and inserting their type constructors into the universe.
+///      2. Converting the function body into a CFG with pseudo-ANF expressions.
+///         This conversion captures the AST of nested anonymous functions.
+/// 6. Perform program-wide static analysis:
+///      1. Perform scope resolution, type checking, and branch tracing on
+///         all top-level functions.
+///      2. Capture a snapshot of the scope and typing context whenever an anonymous
+///         function is created.
+///      3. Mark these anonymous functions as reserved in the universe.
+///      4. Initialize a worklist with these reserved anonymous functions.
+///      5. Until the worklist is empty:
+///         1. Perform scope resolution, type checking, and branch tracing on
+///            the next anonymous function to resolve.
+///         2. Capture a snapshot of the scope and typing context whenever an anonymous
+///            function is created.
+///         3. Mark nested anonymous functions as reserved in the universe.
+///         4. Add these nested anonymous functions to the worklist.
+///
 pub fn check_modules(
     modules: Vec<ParsedModule>,
 ) -> Result<Program, AnalysisError> {
@@ -87,15 +117,21 @@ pub fn check_modules(
     let mut features = PresentFeatures::new();
     let mut metadata = Metadata::new();
 
+    // Gather raw mod data
     let unscoped_raw_program = raw_mod_data(&mut global_data, modules)?;
 
+    // Abstractly map top-level functions and type names
     let internally_scoped_raw_program =
         scope_raw_data_internal(&universe, unscoped_raw_program);
 
+    // Calculate dependencies and bring other modules into scope
     let dependent_raw_program = map_usings(internally_scoped_raw_program)?;
 
+    // Read raw type declarations and insert their type constructors into the universe
     let typable_raw_program =
         map_types(&mut universe, &mut metadata, &mut global_data, dependent_raw_program)?;
+
+    // Convert top-level functions into an analyzable form
     let analyzable_raw_program =
         generate_analyzable_fns(&mut universe,
             &mut metadata,
@@ -103,6 +139,7 @@ pub fn check_modules(
             &mut global_data,
             typable_raw_program)?;
 
+    // Perform program-wide static analysis
     let universe = analyze_program(
         universe,
         &mut metadata,
@@ -334,7 +371,9 @@ fn resolve_anonymous_fns(
 
     // Analyze all currently unresolved anonymous functions.
     //   Any nested anonymous functions are analyzed on the next iteration
-    //   and so on until there are no more unresolved anonymous functions
+    //   and so on until there are no more unresolved anonymous functions.
+    // Guarenteed to terminate because parsed anonymous functions cannot be
+    //   infinitely nested.
     loop {
 
         if unresolved_anon_fns.len() == 0 {
