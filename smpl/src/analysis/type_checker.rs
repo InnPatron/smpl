@@ -1072,7 +1072,7 @@ impl<'a> TypeChecker<'a> {
 
         let fn_type_cons = self.universe
             .get_fn_type_cons(fn_id)
-            .expect("Expect anonymous functions to already be resolved")
+            .expect("Missing function type constructor")
             .clone();
 
         let type_args = type_inst
