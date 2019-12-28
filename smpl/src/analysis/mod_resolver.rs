@@ -246,6 +246,14 @@ fn analyze_fns(
 
     let mut reserved_anon_fns: AnonStorage<ReservedAnonymousFn> =
         analyzable_raw_program.anon_fns;
+
+    // Insert reserved anonymous functions into the Universe
+    // Required to generate type constructors during type checking for parent functions
+    for (fn_id, reserved_anon_fn) in reserved_anon_fns.data() {
+        universe.insert_anon_fn(fn_id, AnalyzableAnonymousFn::Reserved(reserved_anon_fn));
+    }
+    reserved_anon_fns = AnonStorage::new();
+
     let mut unresolved_anon_fns: AnonStorage<(AnalysisContext, TypeCons, ModuleId)> =
         AnonStorage::new();
 
@@ -271,7 +279,6 @@ fn analyze_fns(
                     metadata,
                     global_data,
                     local_data,
-                    &reserved_anon_fns,
                     mod_id.clone(),
                 )?;
 
@@ -313,6 +320,13 @@ fn resolve_anonymous_fns(
     //   and so on until there are no more unresolved anonymous functions
     loop {
 
+        // Insert reserved anonymous functions into the Universe
+        // Required to generate type constructors during type checking for parent functions
+        for (fn_id, reserved_anon_fn) in reserved_anon_fns.data() {
+            universe.insert_anon_fn(fn_id, AnalyzableAnonymousFn::Reserved(reserved_anon_fn));
+        }
+        reserved_anon_fns = AnonStorage::new();
+
         if unresolved_anon_fns.len() == 0 {
             break;
         }
@@ -323,17 +337,13 @@ fn resolve_anonymous_fns(
 
         for (to_resolve_fn_id, (analysis_context, type_cons, mod_id)) in anon_fns_to_resolve {
 
-            let span = reserved_anon_fns
-                .get(to_resolve_fn_id)
-                .ast
+            let reserved_anon_fn = universe.get_reserved_anon_fn(to_resolve_fn_id);
+
+            let span = reserved_anon_fn
                 .span();
 
-            let anon_fn_decl = reserved_anon_fns
-                .get(to_resolve_fn_id)
-                .ast
-                .data()
-                .body
-                .clone();
+            let anon_fn_decl = reserved_anon_fn
+                .ast();
 
             let type_id = global_data.new_type_id();
             let parent_fn_id = anon_fn_parents
@@ -347,7 +357,7 @@ fn resolve_anonymous_fns(
                 universe,
                 global_data,
                 local_data,
-                anon_fn_decl,
+                anon_fn_decl.data().body.clone(),
                 &type_cons,
                 &analysis_context,
             )?;
@@ -379,11 +389,11 @@ fn resolve_anonymous_fns(
                     metadata,
                     global_data,
                     local_data,
-                    &reserved_anon_fns,
                     mod_id.clone(),
                 )?;
 
-
+            // TODO: Need to change the 'reserved' anonymous function
+            //   'resolved' within AnalysisUniverse?
             finished
                 .insert(to_resolve_fn_id, to_analyze);
 
