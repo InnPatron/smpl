@@ -14,15 +14,11 @@ use super::metadata::*;
 use super::resolve_scope::ScopedData;
 use super::semantic_data::Module;
 use super::semantic_data::*;
-use super::semantic_data::{ AnonymousFn as ResolvedAnonymousFn, BuiltinFunction};
+use super::semantic_data::{ AnonymousFn as ResolvedAnonymousFn, BuiltinFunction, Function};
 use super::type_checker::TypingContext;
 use super::type_cons::TypeCons;
 use super::type_cons_gen;
 use super::analysis_context::*;
-use super::analysis_context::{
-    UniverseFn as Function,
-    AnalyzableAnonymousFn as AnonymousFn,
-};
 use super::anon_storage::AnonStorage;
 
 use crate::feature::*;
@@ -54,16 +50,10 @@ struct AnalyzableRawProgram {
     scope_map: HashMap<ModuleId, ScopedData>,
     dependency_map: HashMap<ModuleId, HashSet<ModuleId>>,
     type_map: HashMap<TypeId, TypeCons>,
-    fn_map: HashMap<FnId, Function>,
+    fn_map: HashMap<FnId, UniverseFn>,
     anon_fns: AnonStorage<ReservedAnonymousFn>,
     anon_fn_parents: AnonStorage<FnId>,
     local_data_map: HashMap<FnId, LocalData>,
-}
-
-struct AnalyzedProgram {
-    module_map: HashMap<ModuleId, Module>,
-    fn_map: HashMap<FnId, Function>,
-    type_map: HashMap<TypeId, TypeCons>,
 }
 
 struct RawProgram {
@@ -128,7 +118,7 @@ fn analyze_program(
     metadata: &mut Metadata,
     global_data: &mut GlobalData,
     analyzable_raw_program: AnalyzableRawProgram,
-    ) -> Result<AnalyzedProgram, AnalysisError> {
+    ) -> Result<Universe, AnalysisError> {
 
         let module_map =
             module_ownership(&analyzable_raw_program);
@@ -140,12 +130,63 @@ fn analyze_program(
                 global_data,
                 analyzable_raw_program)?;
 
-        Ok(AnalyzedProgram {
+        let fn_map = fn_map
+            .into_iter()
+            .map(|(fn_id, func)| {
+                let func = match func {
+                    UniverseFn::Anonymous(AnalyzableAnonymousFn::Reserved(..)) => {
+                        panic!("Expected all anonymous functions to be resolved after analysis");
+                    }
+
+                    UniverseFn::Anonymous(AnalyzableAnonymousFn::Resolved(resolved)) => {
+                        Function::Anonymous(resolved)
+                    }
+
+                    UniverseFn::SMPL(s) => Function::SMPL(s),
+
+                    UniverseFn::Builtin(b) => Function::Builtin(b),
+                };
+
+                (fn_id, func)
+            })
+        .collect::<HashMap<FnId, Function>>();
+
+        let builtin_fn_set = fn_map
+            .iter()
+            .filter_map(|(fn_id, func)| {
+                match func {
+                    Function::Builtin(..)   => Some(fn_id.clone()),
+                    _                       => None,
+                }
+            })
+        .collect::<HashSet<FnId>>();
+
+        let module_name_map = module_map
+            .iter()
+            .map(|(mod_id, module)| {
+                (module.name.clone(), mod_id.clone())
+            })
+        .collect::<HashMap<Ident, ModuleId>>();
+
+        let int = universe.int();
+        let float = universe.float();
+        let string = universe.string();
+        let boolean = universe.boolean();
+        let unit = universe.unit();
+
+        Ok(Universe {
             module_map,
             fn_map,
             type_map,
+            builtin_fn_set,
+            module_name_map,
+            int,
+            float,
+            string,
+            boolean,
+            unit,
         })
-    }
+}
 
 fn module_ownership(
     raw_program: &AnalyzableRawProgram,
@@ -199,9 +240,9 @@ fn analyze_fns(
     metadata: &mut Metadata,
     global_data: &mut GlobalData,
     mut analyzable_raw_program: AnalyzableRawProgram,
-    ) -> Result<(HashMap<FnId, Function>, HashMap<TypeId, TypeCons>), AnalysisError> {
+    ) -> Result<(HashMap<FnId, UniverseFn>, HashMap<TypeId, TypeCons>), AnalysisError> {
 
-    let mut finished: HashMap<FnId, Function> = HashMap::new();
+    let mut finished: HashMap<FnId, UniverseFn> = HashMap::new();
 
     let reserved_anon_fns = analyzable_raw_program.anon_fns;
     let mut unresolved_anon_fns = AnonStorage::new();
@@ -294,7 +335,7 @@ fn analyze_fns(
             universe
                 .manual_insert_type_cons(type_id, type_cons);
 
-            let mut to_analyze = Function::Anonymous(
+            let mut to_analyze = UniverseFn::Anonymous(
                 AnalyzableAnonymousFn::Resolved(
                     ResolvedAnonymousFn {
                         span,
@@ -393,7 +434,7 @@ fn generate_analyzable_fns(
                 .insert_fn_type_cons(fn_id, fn_type_id, fn_type_cons);
 
             // TODO: Only insert into fn_map, not universe
-            assert!(fn_map.insert(fn_id.clone(), Function::SMPL(SMPLFunction {
+            assert!(fn_map.insert(fn_id.clone(), UniverseFn::SMPL(SMPLFunction {
                 fn_id: fn_id.clone(),
                 name: fn_name.clone(),
                 type_id: fn_type_id.clone(),
@@ -435,7 +476,7 @@ fn generate_analyzable_fns(
             features.add_feature(BUILTIN_FN);
 
             // TODO: Only insert into fn_map, not universe
-            assert!(fn_map.insert(fn_id.clone(), Function::Builtin(BuiltinFunction {
+            assert!(fn_map.insert(fn_id.clone(), UniverseFn::Builtin(BuiltinFunction {
                 fn_id: fn_id.clone(),
                 name: fn_name.clone(),
                 type_id: fn_type_id.clone(),
