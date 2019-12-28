@@ -123,12 +123,22 @@ fn analyze_program(
         let module_map =
             module_ownership(&analyzable_raw_program);
 
-        let (fn_map, type_map) =
+        let (fn_map, type_map, anon_ownership) =
             analyze_fns(
                 &mut universe,
                 metadata,
                 &mut global_data,
                 analyzable_raw_program)?;
+
+        let module_map = {
+            let mut module_map = module_map;
+            for (fn_id, mod_id) in anon_ownership.into_iter() {
+                let module = module_map.get_mut(&mod_id).unwrap();
+                module.owned_fns.insert(fn_id);
+            }
+
+            module_map
+        };
 
         let fn_map = fn_map
             .into_iter()
@@ -240,7 +250,7 @@ fn analyze_fns(
     metadata: &mut Metadata,
     global_data: &mut GlobalData,
     mut analyzable_raw_program: AnalyzableRawProgram,
-    ) -> Result<(HashMap<FnId, UniverseFn>, HashMap<TypeId, TypeCons>), AnalysisError> {
+    ) -> Result<(HashMap<FnId, UniverseFn>, HashMap<TypeId, TypeCons>, Vec<(FnId, ModuleId)>), AnalysisError> {
 
     let mut finished: HashMap<FnId, UniverseFn> = HashMap::new();
 
@@ -288,7 +298,7 @@ fn analyze_fns(
         }
     }
 
-    resolve_anonymous_fns(
+    let anon_ownership = resolve_anonymous_fns(
         universe,
         metadata,
         global_data,
@@ -298,7 +308,7 @@ fn analyze_fns(
         unresolved_anon_fns,
         reserved_anon_fns)?;
 
-    Ok((finished, analyzable_raw_program.type_map))
+    Ok((finished, analyzable_raw_program.type_map, anon_ownership))
 }
 
 fn resolve_anonymous_fns(
@@ -310,11 +320,11 @@ fn resolve_anonymous_fns(
     mut anon_fn_parents: AnonStorage<FnId>,
     mut unresolved_anon_fns: AnonStorage<(AnalysisContext, TypeCons, ModuleId)>,
     mut reserved_anon_fns: AnonStorage<ReservedAnonymousFn>,
-    ) -> Result<(), AnalysisError> {
+    ) -> Result<Vec<(FnId, ModuleId)>, AnalysisError> {
 
-    // TODO: Module ownership
     // TODO: Return parent map?
 
+    let mut anon_ownership: Vec<(FnId, ModuleId)> = Vec::new();
 
     // Insert reserved anonymous functions into the Universe
     // Required to generate type constructors during type checking for parent functions
@@ -336,6 +346,9 @@ fn resolve_anonymous_fns(
         unresolved_anon_fns = AnonStorage::new();
 
         for (to_resolve_fn_id, (analysis_context, type_cons, mod_id)) in anon_fns_to_resolve {
+
+            // Track which module owns the anonymous function
+            anon_ownership.push((to_resolve_fn_id, mod_id));
 
             let reserved_anon_fn = universe.get_reserved_anon_fn(to_resolve_fn_id);
 
@@ -407,7 +420,7 @@ fn resolve_anonymous_fns(
         }
     }
 
-    Ok(())
+    Ok(anon_ownership)
 }
 
 ///
