@@ -50,7 +50,7 @@ struct AnalyzableRawProgram {
     scope_map: HashMap<ModuleId, ScopedData>,
     dependency_map: HashMap<ModuleId, HashSet<ModuleId>>,
     type_map: HashMap<TypeId, TypeCons>,
-    fn_map: HashMap<FnId, UniverseFn>,
+    fn_map: HashMap<FnId, AnalyzableFn>,
     anon_fns: AnonStorage<ReservedAnonymousFn>,
     anon_fn_parents: AnonStorage<FnId>,
     local_data_map: HashMap<FnId, LocalData>,
@@ -181,17 +181,17 @@ fn analyze_program(
             .into_iter()
             .map(|(fn_id, func)| {
                 let func = match func {
-                    UniverseFn::Anonymous(AnalyzableAnonymousFn::Reserved(..)) => {
+                    AnalyzableFn::Anonymous(AnalyzableAnonymousFn::Reserved(..)) => {
                         panic!("Expected all anonymous functions to be resolved after analysis");
                     }
 
-                    UniverseFn::Anonymous(AnalyzableAnonymousFn::Resolved(resolved)) => {
+                    AnalyzableFn::Anonymous(AnalyzableAnonymousFn::Resolved(resolved)) => {
                         Function::Anonymous(resolved)
                     }
 
-                    UniverseFn::SMPL(s) => Function::SMPL(s),
+                    AnalyzableFn::SMPL(s) => Function::SMPL(s),
 
-                    UniverseFn::Builtin(b) => Function::Builtin(b),
+                    AnalyzableFn::Builtin(b) => Function::Builtin(b),
                 };
 
                 (fn_id, func)
@@ -287,9 +287,9 @@ fn analyze_fns(
     metadata: &mut Metadata,
     global_data: &mut GlobalData,
     mut analyzable_raw_program: AnalyzableRawProgram,
-    ) -> Result<(HashMap<FnId, UniverseFn>, HashMap<TypeId, TypeCons>, Vec<(FnId, ModuleId)>), AnalysisError> {
+    ) -> Result<(HashMap<FnId, AnalyzableFn>, HashMap<TypeId, TypeCons>, Vec<(FnId, ModuleId)>), AnalysisError> {
 
-    let mut finished: HashMap<FnId, UniverseFn> = HashMap::new();
+    let mut finished: HashMap<FnId, AnalyzableFn> = HashMap::new();
 
     let mut reserved_anon_fns: AnonStorage<ReservedAnonymousFn> =
         analyzable_raw_program.anon_fns;
@@ -352,7 +352,7 @@ fn resolve_anonymous_fns(
     universe: &mut AnalysisUniverse,
     metadata: &mut Metadata,
     global_data: &mut GlobalData,
-    finished: &mut HashMap<FnId, UniverseFn>,
+    finished: &mut HashMap<FnId, AnalyzableFn>,
     mut local_data_map: HashMap<FnId, LocalData>,
     mut anon_fn_parents: AnonStorage<FnId>,
     mut unresolved_anon_fns: AnonStorage<(AnalysisContext, TypeCons, ModuleId)>,
@@ -430,7 +430,7 @@ fn resolve_anonymous_fns(
             universe
                 .manual_insert_type_cons(type_id, type_cons);
 
-            let mut to_analyze = UniverseFn::Anonymous(
+            let mut to_analyze = AnalyzableFn::Anonymous(
                 AnalyzableAnonymousFn::Resolved(
                     ResolvedAnonymousFn {
                         span,
@@ -534,7 +534,7 @@ fn generate_analyzable_fns(
                 .insert_fn_type_cons(fn_id, fn_type_id, fn_type_cons);
 
             // TODO: Only insert into fn_map, not universe
-            assert!(fn_map.insert(fn_id.clone(), UniverseFn::SMPL(SMPLFunction {
+            assert!(fn_map.insert(fn_id.clone(), AnalyzableFn::SMPL(SMPLFunction {
                 fn_id: fn_id.clone(),
                 name: fn_name.clone(),
                 type_id: fn_type_id.clone(),
@@ -576,7 +576,7 @@ fn generate_analyzable_fns(
             features.add_feature(BUILTIN_FN);
 
             // TODO: Only insert into fn_map, not universe
-            assert!(fn_map.insert(fn_id.clone(), UniverseFn::Builtin(BuiltinFunction {
+            assert!(fn_map.insert(fn_id.clone(), AnalyzableFn::Builtin(BuiltinFunction {
                 fn_id: fn_id.clone(),
                 name: fn_name.clone(),
                 type_id: type_id.clone(),

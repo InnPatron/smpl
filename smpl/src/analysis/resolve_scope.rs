@@ -12,23 +12,23 @@ use super::semantic_data::{
     FnId, ModulePath, TypeId, TypeVarId, VarId, AnonymousFn as ResolvedAnonymousFn,
 };
 use super::analysis_context::{
-    UniverseFn, AnalyzableAnonymousFn as AnonymousFn,
+    AnalyzableFn, AnalyzableAnonymousFn as AnonymousFn,
 };
 use super::typed_ast::*;
 use super::anon_storage::AnonStorage;
 
-pub fn resolve(to_resolve: &mut UniverseFn)
+pub fn resolve(to_resolve: &mut AnalyzableFn)
     -> Result<AnonStorage<ScopedData>, AnalysisError> {
 
     let mut scope_resolver = ScopeResolver::new(to_resolve);
 
     let result: Result<(), _> = match to_resolve {
-        UniverseFn::SMPL(ref mut smpl_fn) => {
+        AnalyzableFn::SMPL(ref mut smpl_fn) => {
             let cfg = &mut smpl_fn.cfg;
             traverse(cfg, &mut scope_resolver)
         }
 
-        UniverseFn::Anonymous(ref mut anon_fn) => match anon_fn {
+        AnalyzableFn::Anonymous(ref mut anon_fn) => match anon_fn {
             AnonymousFn::Reserved(..) => {
                 panic!("Anonymous function should be resolved")
             }
@@ -37,7 +37,7 @@ pub fn resolve(to_resolve: &mut UniverseFn)
             }
         },
 
-        UniverseFn::Builtin(..) => {
+        AnalyzableFn::Builtin(..) => {
             panic!("Unable to resolve scope of builtin functions")
         }
     };
@@ -54,11 +54,11 @@ impl ScopeResolver {
 
     // Formal parameters should already be in the function scope
     //  (in generate_fn_type())
-    pub fn new(to_resolve: &UniverseFn) -> ScopeResolver {
+    pub fn new(to_resolve: &AnalyzableFn) -> ScopeResolver {
 
         match to_resolve {
-            UniverseFn::Builtin(_) => unimplemented!(),
-            UniverseFn::Anonymous(ref anonymous_fn) => {
+            AnalyzableFn::Builtin(_) => unimplemented!(),
+            AnalyzableFn::Anonymous(ref anonymous_fn) => {
                 let fn_scope = match anonymous_fn {
                     AnonymousFn::Reserved(..) => {
                         panic!("Expected anonymous functions to already be resolved");
@@ -76,7 +76,7 @@ impl ScopeResolver {
                 }
             }
 
-            UniverseFn::SMPL(ref smpl_function) => ScopeResolver {
+            AnalyzableFn::SMPL(ref smpl_function) => ScopeResolver {
                 anon_scope_storage: AnonStorage::new(),
                 scopes: vec![smpl_function
                     .analysis_context()

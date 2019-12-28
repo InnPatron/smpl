@@ -22,12 +22,12 @@ use super::type_resolver;
 use super::typed_ast::*;
 use super::analysis_context::{
     AnalysisUniverse, GlobalData, AnalyzableAnonymousFn as SemanticAnonymousFn,
-    UniverseFn,
+    AnalyzableFn,
 };
 use super::anon_storage::AnonStorage;
 
 pub fn type_check(
-    to_check: &mut UniverseFn,
+    to_check: &mut AnalyzableFn,
     universe: &AnalysisUniverse,
     metadata: &mut Metadata,
     global_data: &mut GlobalData,
@@ -36,8 +36,8 @@ pub fn type_check(
 
     let cfg = {
         match to_check {
-            UniverseFn::SMPL(ref smpl_fn) => smpl_fn.cfg(),
-            UniverseFn::Anonymous(ref afn) => match afn {
+            AnalyzableFn::SMPL(ref smpl_fn) => smpl_fn.cfg(),
+            AnalyzableFn::Anonymous(ref afn) => match afn {
                 SemanticAnonymousFn::Reserved(..) => {
                     panic!("Anonymous function should be resolved")
                 }
@@ -58,12 +58,12 @@ pub fn type_check(
     let typing_context = type_checker.typing_context;
     {
         match to_check {
-            UniverseFn::SMPL(ref mut smpl_fn) => {
+            AnalyzableFn::SMPL(ref mut smpl_fn) => {
                 smpl_fn
                     .analysis_context_mut()
                     .set_typing_context(typing_context);
             }
-            UniverseFn::Anonymous(ref mut afn) => match afn {
+            AnalyzableFn::Anonymous(ref mut afn) => match afn {
                 SemanticAnonymousFn::Reserved(..) => unreachable!(),
 
                 SemanticAnonymousFn::Resolved(ResolvedAnonymousFn {
@@ -98,7 +98,7 @@ impl<'a> TypeChecker<'a> {
     // TODO: Add function parameters somewhere
     // TODO: Put formal parameters into function scope within AnalysisUniverse
     pub fn new<'b>(
-        to_check: &UniverseFn,
+        to_check: &AnalyzableFn,
         universe: &'b AnalysisUniverse,
         metadata: &'b mut Metadata,
         global_data: &'b mut GlobalData,
@@ -106,9 +106,9 @@ impl<'a> TypeChecker<'a> {
     ) -> Result<TypeChecker<'b>, AnalysisError> {
 
         match to_check {
-            UniverseFn::Builtin(..) => unimplemented!(),
+            AnalyzableFn::Builtin(..) => unimplemented!(),
 
-            UniverseFn::Anonymous(ref anonymous_fn) => {
+            AnalyzableFn::Anonymous(ref anonymous_fn) => {
                 match anonymous_fn {
                     SemanticAnonymousFn::Reserved(..) => {
                         panic!("Expected anonymous functions to already be resolved");
@@ -165,7 +165,7 @@ impl<'a> TypeChecker<'a> {
                 }
             }
 
-            UniverseFn::SMPL(ref smpl_function) => {
+            AnalyzableFn::SMPL(ref smpl_function) => {
                 let typing_context =
                     smpl_function.analysis_context().typing_context().clone();
                 let fn_scope =
@@ -755,7 +755,7 @@ impl<'a> TypeChecker<'a> {
                     .metadata_mut()
                     .is_builtin_params_unchecked(fn_id)
                 {
-                    return Err(AnalysisError::UncheckedUniverseFnBinding(var.ident().clone()));
+                    return Err(AnalysisError::UncheckedAnalyzableFnBinding(var.ident().clone()));
                 }
                 */
 
@@ -911,7 +911,7 @@ impl<'a> TypeChecker<'a> {
                 Ok(*(return_type.clone()))
             }
 
-            t @ _ => panic!("UniverseFn call on a non-function type: {:?}", t),
+            t @ _ => panic!("AnalyzableFn call on a non-function type: {:?}", t),
         }
     }
 

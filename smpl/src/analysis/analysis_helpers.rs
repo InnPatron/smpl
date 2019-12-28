@@ -15,12 +15,12 @@ use super::type_cons::{TypeCons, TypeParams};
 use super::abstract_type::AbstractType;
 use super::analysis_context::{
     GlobalData, LocalData, AnalysisContext, AnalysisUniverse,
-    ReservedAnonymousFn, UniverseFn
+    ReservedAnonymousFn, AnalyzableFn
 };
 use super::anon_storage::AnonStorage;
 
 pub fn analyze_fn(
-    to_analyze: &mut UniverseFn,
+    to_analyze: &mut AnalyzableFn,
     universe: &AnalysisUniverse,
     metadata: &mut Metadata,
     global_data: &mut GlobalData,

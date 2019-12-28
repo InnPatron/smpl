@@ -16,7 +16,7 @@ use super::semantic_data::{
     AnonymousFn as ResolvedAnonymousFn, SMPLFunction, BuiltinFunction
 };
 
-pub enum UniverseFn {
+pub enum AnalyzableFn {
     SMPL(SMPLFunction),
     Anonymous(AnalyzableAnonymousFn),
     Builtin(BuiltinFunction),
