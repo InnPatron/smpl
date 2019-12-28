@@ -301,6 +301,20 @@ impl AbstractTypeX<Span> {
                 )
             }
 
+            AbstractType::App2 {
+                type_cons: _,
+                args: _,
+                ..
+            } => {
+                let no_sub_map = HashMap::new();
+                self.substitute_internal(
+                    universe,
+                    scoped_data,
+                    typing_context,
+                    &no_sub_map,
+                )
+            }
+
             t => Ok(t.clone()),
         }
     }
