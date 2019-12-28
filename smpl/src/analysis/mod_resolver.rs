@@ -103,20 +103,20 @@ pub fn check_modules(
             &mut global_data,
             typable_raw_program)?;
 
-    let analyzed = analyze_program(
-        &mut universe,
+    let universe = analyze_program(
+        universe,
         &mut metadata,
-        &mut global_data,
+        global_data,
         analyzable_raw_program
     )?;
 
-    Ok(unimplemented!())
+    Ok(Program::new(universe, metadata, features))
 }
 
 fn analyze_program(
-    universe: &mut AnalysisUniverse,
+    mut universe: AnalysisUniverse,
     metadata: &mut Metadata,
-    global_data: &mut GlobalData,
+    mut global_data: GlobalData,
     analyzable_raw_program: AnalyzableRawProgram,
     ) -> Result<Universe, AnalysisError> {
 
@@ -125,9 +125,9 @@ fn analyze_program(
 
         let (fn_map, type_map) =
             analyze_fns(
-                universe,
+                &mut universe,
                 metadata,
-                global_data,
+                &mut global_data,
                 analyzable_raw_program)?;
 
         let fn_map = fn_map
