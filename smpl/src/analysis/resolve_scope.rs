@@ -17,10 +17,10 @@ use super::analysis_context::{
 use super::typed_ast::*;
 use super::anon_storage::AnonStorage;
 
-pub fn resolve_prime(to_resolve: &mut UniverseFn)
+pub fn resolve(to_resolve: &mut UniverseFn)
     -> Result<AnonStorage<ScopedData>, AnalysisError> {
 
-    let mut scope_resolver = ScopeResolver::new_prime(to_resolve);
+    let mut scope_resolver = ScopeResolver::new(to_resolve);
 
     let result: Result<(), _> = match to_resolve {
         UniverseFn::SMPL(ref mut smpl_fn) => {
@@ -54,7 +54,7 @@ impl ScopeResolver {
 
     // Formal parameters should already be in the function scope
     //  (in generate_fn_type())
-    pub fn new_prime(to_resolve: &UniverseFn) -> ScopeResolver {
+    pub fn new(to_resolve: &UniverseFn) -> ScopeResolver {
 
         match to_resolve {
             UniverseFn::Builtin(_) => unimplemented!(),

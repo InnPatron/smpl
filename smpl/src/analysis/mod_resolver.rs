@@ -283,7 +283,7 @@ fn analyze_fns(
 
 
             let mut this_anon_fns =
-                analysis_helpers::analyze_fn_prime(
+                analysis_helpers::analyze_fn(
                     &mut fn_to_analyze,
                     universe,
                     metadata,
@@ -401,7 +401,7 @@ fn resolve_anonymous_fns(
                     }));
 
             let mut this_unresolved_anon_fns =
-                analysis_helpers::analyze_fn_prime(
+                analysis_helpers::analyze_fn(
                     &mut to_analyze,
                     universe,
                     metadata,

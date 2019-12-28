@@ -26,7 +26,7 @@ use super::analysis_context::{
 };
 use super::anon_storage::AnonStorage;
 
-pub fn type_check_prime(
+pub fn type_check(
     to_check: &mut UniverseFn,
     universe: &AnalysisUniverse,
     metadata: &mut Metadata,
@@ -50,7 +50,7 @@ pub fn type_check_prime(
     };
 
     let mut type_checker =
-        TypeChecker::new_prime(to_check, universe, metadata, global_data, module_id)?;
+        TypeChecker::new(to_check, universe, metadata, global_data, module_id)?;
     let traverser = Traverser::new(cfg, &mut type_checker);
     traverser.traverse()?;
 
@@ -97,7 +97,7 @@ impl<'a> TypeChecker<'a> {
     // TODO: Store function (return) type somwhere
     // TODO: Add function parameters somewhere
     // TODO: Put formal parameters into function scope within AnalysisUniverse
-    pub fn new_prime<'b>(
+    pub fn new<'b>(
         to_check: &UniverseFn,
         universe: &'b AnalysisUniverse,
         metadata: &'b mut Metadata,

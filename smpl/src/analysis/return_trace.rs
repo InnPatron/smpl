@@ -14,7 +14,7 @@ use super::analysis_context::{
     AnalyzableAnonymousFn as AnonymousFn,
 };
 
-pub fn return_trace_prime(
+pub fn return_trace(
     to_trace: &UniverseFn,
 ) -> Result<(), AnalysisError> {
 

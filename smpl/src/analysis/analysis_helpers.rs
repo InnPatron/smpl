@@ -19,7 +19,7 @@ use super::analysis_context::{
 };
 use super::anon_storage::AnonStorage;
 
-pub fn analyze_fn_prime(
+pub fn analyze_fn(
     to_analyze: &mut UniverseFn,
     universe: &AnalysisUniverse,
     metadata: &mut Metadata,
@@ -33,11 +33,11 @@ pub fn analyze_fn_prime(
     use super::analysis_context::AnalyzableAnonymousFn;
 
     let anon_scopes: AnonStorage<ScopedData> =
-        resolve_scope::resolve_prime(to_analyze)?;
+        resolve_scope::resolve(to_analyze)?;
 
     let (mut anon_typing_contexts, mut anon_type_cons):
         (AnonStorage<TypingContext>, AnonStorage<TypeCons>) =
-        type_checker::type_check_prime(
+        type_checker::type_check(
             to_analyze,
             universe,
             metadata,
@@ -45,7 +45,7 @@ pub fn analyze_fn_prime(
             module_id,
         )?;
 
-    let _ = return_trace::return_trace_prime(to_analyze)?;
+    let _ = return_trace::return_trace(to_analyze)?;
 
     let analyzable_anons: AnonStorage<(AnalysisContext, TypeCons, ModuleId)> = {
 
