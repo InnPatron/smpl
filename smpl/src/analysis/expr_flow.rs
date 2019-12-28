@@ -297,7 +297,7 @@ mod tests {
     use crate::parser::expr_parser::*;
     use crate::parser::*;
     use crate::module::ModuleSource;
-    use super::super::analysis_context::{GlobalData, LocalData};
+    use super::super::analysis_context::{GlobalData, LocalData, AnalysisUniverse};
 
     #[test]
     fn expr_exec_order_ck() {
@@ -311,7 +311,7 @@ mod tests {
         let mut input = buffer_input(&source, input);
         let expr = piped_expr(&mut input, &[]).unwrap().to_data().0;
 
-        let mut universe = Universe::std(&mut global_data);
+        let mut universe = AnalysisUniverse::std(&mut global_data);
 
         let (_, expr) = flatten(&mut global_data, &mut local_data, expr);
 
