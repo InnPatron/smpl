@@ -25,12 +25,12 @@ pub fn analyze_fn_prime(
     metadata: &mut Metadata,
     global_data: &mut GlobalData,
     local_data: &mut LocalData,
-    reserved_anon_fns: &AnonStorage<ReservedAnonymousFn>,
     module_id: ModuleId,
 ) -> Result<AnonStorage<(AnalysisContext, TypeCons, ModuleId)>, AnalysisError> {
     use super::resolve_scope;
     use super::return_trace;
     use super::type_checker;
+    use super::analysis_context::AnalyzableAnonymousFn;
 
     let anon_scopes: AnonStorage<ScopedData> =
         resolve_scope::resolve_prime(to_analyze)?;
@@ -54,7 +54,7 @@ pub fn analyze_fn_prime(
             .map(|(fn_id, outer_scope)| {
                 let outer_typing_context: TypingContext = anon_typing_contexts.remove(fn_id);
                 let type_cons: TypeCons = anon_type_cons.remove(fn_id);
-                let reserved = reserved_anon_fns.get(fn_id);
+                let reserved_ast = universe.get_reserved_anon_fn(fn_id);
 
                 generate_fn_analysis_data(
                     universe,
@@ -63,7 +63,7 @@ pub fn analyze_fn_prime(
                     &outer_scope,
                     &outer_typing_context,
                     &type_cons,
-                    reserved.ast.data(),
+                    reserved_ast.ast().data(),
                 ).map(|ac| (fn_id, (ac, type_cons, module_id)))
             })
         .collect::<Result<HashMap<_, _>, _>>()?;
