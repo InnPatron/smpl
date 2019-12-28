@@ -48,6 +48,16 @@ pub struct ReservedAnonymousFn {
     pub(super) ast: AstNode<AstAnonymousFn>,
 }
 
+impl ReservedAnonymousFn {
+    pub fn span(&self) -> Span {
+        self.ast.span()
+    }
+
+    pub fn ast(&self) -> &AstNode<AstAnonymousFn> {
+        &self.ast
+    }
+}
+
 pub struct GlobalData {
     id_counter: Cell<u64>,
     int_type_id: TypeId,
@@ -351,6 +361,16 @@ impl AnalysisUniverse {
 
     pub fn get_anon_fn(&self, id: FnId) -> &AnalyzableAnonymousFn {
         self.anon_fn_map.get(&id).unwrap()
+    }
+
+    pub fn get_reserved_anon_fn(&self, id: FnId) -> &ReservedAnonymousFn {
+        match self.get_anon_fn(id) {
+            AnalyzableAnonymousFn::Reserved(ref r) => r,
+
+            AnalyzableAnonymousFn::Resolved(..) => {
+                panic!("Should not be seeing resolved reserved anonymous functions");
+            }
+        }
     }
 
     pub fn get_anon_fn_mut(&mut self, id: FnId) -> &mut AnalyzableAnonymousFn {
