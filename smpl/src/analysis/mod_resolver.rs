@@ -315,17 +315,17 @@ fn resolve_anonymous_fns(
     // TODO: Module ownership
     // TODO: Return parent map?
 
+
+    // Insert reserved anonymous functions into the Universe
+    // Required to generate type constructors during type checking for parent functions
+    for (fn_id, reserved_anon_fn) in reserved_anon_fns.data() {
+        universe.insert_anon_fn(fn_id, AnalyzableAnonymousFn::Reserved(reserved_anon_fn));
+    }
+
     // Analyze all currently unresolved anonymous functions.
     //   Any nested anonymous functions are analyzed on the next iteration
     //   and so on until there are no more unresolved anonymous functions
     loop {
-
-        // Insert reserved anonymous functions into the Universe
-        // Required to generate type constructors during type checking for parent functions
-        for (fn_id, reserved_anon_fn) in reserved_anon_fns.data() {
-            universe.insert_anon_fn(fn_id, AnalyzableAnonymousFn::Reserved(reserved_anon_fn));
-        }
-        reserved_anon_fns = AnonStorage::new();
 
         if unresolved_anon_fns.len() == 0 {
             break;
@@ -363,11 +363,16 @@ fn resolve_anonymous_fns(
             )?;
 
             // Reserve nested unresolved anonymous functions
-            for (nested_anon_fn_id, _) in nested_unresolved_anon_fns.ref_data() {
+            // Insert reserved anonymous functions into the Universe
+            //   Required to generate type constructors during type checking for parent functions
+            for (nested_anon_fn_id, reserved_anon_fn) in nested_unresolved_anon_fns.data() {
                 anon_fn_parents
                     .insert(nested_anon_fn_id.clone(), parent_fn_id);
+
+                universe
+                    .insert_anon_fn(nested_anon_fn_id,
+                        AnalyzableAnonymousFn::Reserved(reserved_anon_fn));
             }
-            reserved_anon_fns.append(&mut nested_unresolved_anon_fns);
 
             // Insert anonymous function type constructors into the universe
             universe
