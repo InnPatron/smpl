@@ -19,7 +19,7 @@ use super::type_checker::TypingContext;
 use super::metadata::Metadata;
 use super::type_cons::TypeCons;
 use super::abstract_type::AbstractType;
-use super::analysis_context::{GlobalData, AnalysisContext};
+use super::analysis_context::{GlobalData, AnalysisContext, AnalysisUniverse};
 
 pub const UNIT_TYPE: &'static str = "Unit";
 pub const INT_TYPE: &'static str = "int";
@@ -96,74 +96,19 @@ impl Program {
 
 #[derive(Clone, Debug)]
 pub struct Universe {
-    type_cons_map: HashMap<TypeId, TypeCons>,
-    fn_map: HashMap<FnId, Function>,
-    builtin_fn_set: HashSet<FnId>,
-    module_map: HashMap<ModuleId, Module>,
-    module_name: HashMap<Ident, ModuleId>,
-    std_scope: ScopedData,
-    unit: TypeId,
-    int: TypeId,
-    float: TypeId,
-    string: TypeId,
-    boolean: TypeId,
+    pub(super) type_map: HashMap<TypeId, TypeCons>,
+    pub(super) fn_map: HashMap<FnId, Function>,
+    pub(super) builtin_fn_set: HashSet<FnId>,
+    pub(super) module_map: HashMap<ModuleId, Module>,
+    pub(super) module_name_map: HashMap<Ident, ModuleId>,
+    pub(super) unit: TypeId,
+    pub(super) int: TypeId,
+    pub(super) float: TypeId,
+    pub(super) string: TypeId,
+    pub(super) boolean: TypeId,
 }
 
 impl Universe {
-    pub fn std(global_data: &GlobalData) -> Universe {
-        let unit =
-            (global_data.unit_type_id(), internal_module_path!(UNIT_TYPE), TypeCons::Unit);
-        let int =
-            (global_data.int_type_id(), internal_module_path!(INT_TYPE), TypeCons::Int);
-        let float = (
-            global_data.float_type_id(),
-            internal_module_path!(FLOAT_TYPE),
-            TypeCons::Float,
-        );
-        let string = (
-            global_data.string_type_id(),
-            internal_module_path!(STRING_TYPE),
-            TypeCons::String,
-        );
-        let boolean =
-            (global_data.bool_type_id(), internal_module_path!(BOOL_TYPE), TypeCons::Bool);
-
-        let type_map = vec![
-            unit.clone(),
-            int.clone(),
-            float.clone(),
-            string.clone(),
-            boolean.clone(),
-        ];
-
-        Universe {
-            type_cons_map: type_map
-                .clone()
-                .into_iter()
-                .map(|(id, _, tc)| (id, tc))
-                .collect(),
-            fn_map: HashMap::new(),
-            builtin_fn_set: HashSet::new(),
-            module_map: HashMap::new(),
-            module_name: HashMap::new(),
-            std_scope: ScopedData::new(
-                type_map
-                    .clone()
-                    .into_iter()
-                    .map(|(id, path, _)| (path, id))
-                    .collect(),
-            ),
-            unit: unit.0,
-            int: int.0,
-            float: float.0,
-            string: string.0,
-            boolean: boolean.0,
-        }
-    }
-
-    pub fn std_scope(&self) -> ScopedData {
-        self.std_scope.clone()
-    }
 
     pub fn unit(&self) -> TypeId {
         self.unit
@@ -185,55 +130,22 @@ impl Universe {
         self.boolean
     }
 
-    pub fn map_module(
-        &mut self,
-        mod_id: ModuleId,
-        name: Ident,
-        module: Module,
-    ) {
-        if self.module_name.insert(name, mod_id).is_some() {
-            unimplemented!("Overriding module with the same name.");
-        }
-
-        self.module_map.insert(mod_id, module);
-    }
-
     pub fn get_module(&self, id: ModuleId) -> &Module {
         self.module_map.get(&id).unwrap()
     }
 
-    pub(crate) fn get_module_mut(&mut self, id: ModuleId) -> &mut Module {
-        self.module_map.get_mut(&id).unwrap()
-    }
-
     pub fn module_id(&self, name: &Ident) -> Option<ModuleId> {
-        self.module_name.get(name).map(|id| id.clone())
-    }
-
-    pub fn manual_insert_type_cons(&mut self, type_id: TypeId, cons: TypeCons) {
-        if self.type_cons_map.insert(type_id, cons).is_some() {
-            panic!("Duplicate type constructor for type id");
-        }
+        self.module_name_map.get(name).map(|id| id.clone())
     }
 
     pub fn get_type_cons(&self, id: TypeId) -> &TypeCons {
-        self.type_cons_map
+        self.type_map
             .get(&id)
             .expect("Expected TypeID to always resolve to a TypeCons")
     }
 
-    pub fn insert_fn(&mut self, id: FnId, func: Function) {
-        if self.fn_map.insert(id, func).is_some() {
-            panic!("Overwriting function");
-        }
-    }
-
     pub fn get_fn(&self, id: FnId) -> &Function {
         self.fn_map.get(&id).unwrap()
-    }
-
-    pub fn get_fn_mut(&mut self, id: FnId) -> &mut Function {
-        self.fn_map.get_mut(&id).unwrap()
     }
 
     pub fn is_builtin_fn(&self, id: FnId) -> bool {
@@ -241,7 +153,7 @@ impl Universe {
     }
 
     pub fn static_types(&self) -> Vec<(TypeId, TypeCons)> {
-        self.type_cons_map
+        self.type_map
             .iter()
             .map(|(id, cons)| (id.clone(), cons.clone()))
             .collect()
@@ -252,7 +164,7 @@ impl Universe {
     }
 
     pub fn all_modules(&self) -> impl Iterator<Item = (&Ident, ModuleId)> {
-        self.module_name
+        self.module_name_map
             .iter()
             .map(|(name, id)| (name, id.clone()))
     }
