@@ -103,14 +103,6 @@ pub fn check_modules(
             &mut global_data,
             typable_raw_program)?;
 
-    let _ = generate_builtin_type_cons(
-        &mut universe,
-        &mut metadata,
-        &mut features,
-        &mut global_data,
-        &analyzable_raw_program
-    )?;
-
     let universe = analyze_program(
         universe,
         &mut metadata,
@@ -375,45 +367,10 @@ fn analyze_fns(
     Ok((finished, analyzable_raw_program.type_map))
 }
 
-/// Insert builtin function type constructors into the AnalysisUniverse
-fn generate_builtin_type_cons(
-    universe: &mut AnalysisUniverse,
-    metadata: &mut Metadata,
-    features: &mut PresentFeatures,
-    global_data: &mut GlobalData,
-    raw_program: &AnalyzableRawProgram,
-    ) -> Result<(), AnalysisError> {
-
-    for (mod_id, module_data) in raw_program.module_map.iter() {
-        for (_, reserved_builtin_fn) in module_data.reserved_builtins.iter() {
-
-            let type_id = global_data.new_type_id();
-            let fn_id = reserved_builtin_fn.0.clone();
-            let type_cons = type_cons_gen::generate_builtin_fn_type(
-                universe,
-                metadata,
-                features,
-                global_data,
-                raw_program.scope_map.get(mod_id).unwrap(),
-                &TypingContext::empty(),
-                fn_id,
-                reserved_builtin_fn.1.data(),
-            )?;
-
-            // Insert into the AnalysisUniverse
-            universe
-                .insert_fn_type_cons(fn_id, type_id, type_cons);
-
-        }
-    }
-
-    Ok(())
-}
-
 ///
 /// Creates an AnalyzableRawProgram
 ///
-/// Also inserts type constructors for SMPL functions (NOT builtins)
+/// Also inserts type constructors for SMPL functions (including builtins)
 ///
 fn generate_analyzable_fns(
     universe: &mut AnalysisUniverse,
@@ -506,7 +463,7 @@ fn generate_analyzable_fns(
             let fn_decl = reserved_builtin.1.data();
             let fn_name = fn_decl.name.data();
 
-            let fn_type = type_cons_gen::generate_builtin_fn_type(
+            let type_cons = type_cons_gen::generate_builtin_fn_type(
                 universe,
                 metadata,
                 features,
@@ -517,9 +474,9 @@ fn generate_analyzable_fns(
                 reserved_builtin.1.data(),
             )?;
 
-            let fn_type_id = reserved_builtin.2;
+            let type_id = reserved_builtin.2;
             universe
-                .manual_insert_type_cons(fn_type_id, fn_type);
+                .insert_fn_type_cons(fn_id, type_id, type_cons);
 
             features.add_feature(BUILTIN_FN);
 
@@ -527,7 +484,7 @@ fn generate_analyzable_fns(
             assert!(fn_map.insert(fn_id.clone(), UniverseFn::Builtin(BuiltinFunction {
                 fn_id: fn_id.clone(),
                 name: fn_name.clone(),
-                type_id: fn_type_id.clone(),
+                type_id: type_id.clone(),
             })).is_none());
 
             metadata.insert_builtin(fn_id);
