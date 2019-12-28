@@ -102,6 +102,7 @@ mod tests {
     test_pass_analysis!(mutually_recursive_check);
 
     test_pass_analysis!(anonymous_fn_call);
+    test_pass_analysis!(anonymous_fn_nested);
     test_pass_analysis!(anonymous_fn_arg);
     test_pass_analysis!(fn_piping);
 
