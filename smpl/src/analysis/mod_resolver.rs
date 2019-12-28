@@ -367,6 +367,11 @@ fn analyze_fns(
     Ok((finished, analyzable_raw_program.type_map))
 }
 
+///
+/// Creates an AnalyzableRawProgram
+///
+/// Also inserts type constructors for SMPL functions (NOT builtins)
+///
 fn generate_analyzable_fns(
     universe: &mut AnalysisUniverse,
     metadata: &mut Metadata,
