@@ -16,12 +16,14 @@ use super::semantic_data::{
     AnonymousFn as ResolvedAnonymousFn, SMPLFunction, BuiltinFunction
 };
 
+#[derive(Debug)]
 pub enum AnalyzableFn {
     SMPL(SMPLFunction),
     Anonymous(AnalyzableAnonymousFn),
     Builtin(BuiltinFunction),
 }
 
+#[derive(Debug)]
 pub enum AnalyzableAnonymousFn {
     Reserved(ReservedAnonymousFn),
     Resolved(ResolvedAnonymousFn),
