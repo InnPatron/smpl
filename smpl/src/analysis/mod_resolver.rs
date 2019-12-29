@@ -161,7 +161,8 @@ fn analyze_program(
             module_ownership(&analyzable_raw_program);
 
         let _ =
-            module_metadata(metadata, &analyzable_raw_program);
+            super::metadata_collectors::collect_metadata(metadata, &analyzable_raw_program)
+            .expect("Unhandled metadata errors");
 
         let (fn_map, type_map, anon_ownership) =
             analyze_fns(
@@ -236,20 +237,6 @@ fn analyze_program(
             boolean,
             unit,
         })
-}
-
-///
-/// Map module name to ModuleId.
-/// Required by SMPL consumers for better name diagnostics.
-fn module_metadata(metadata: &mut Metadata, raw_program: &AnalyzableRawProgram) {
-
-    for (mod_id, module_data) in raw_program.module_map.iter() {
-        let name = module_data.name.data().clone();
-        metadata
-            .mod_metadata_mut()
-            .map_module(name, mod_id.clone());
-    }
-
 }
 
 fn module_ownership(
