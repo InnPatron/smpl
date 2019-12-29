@@ -60,9 +60,9 @@ fn run() {
         } elif input == "?" {
           println();
           println("Controls:");
-          println("e||r||t"); 
+          println("e||r||t");
           println("=======");
-          println("d||f||g");  
+          println("d||f||g");
           println("=======");
           println("c||v||b");
           println();
@@ -188,7 +188,7 @@ fn check_win(state: State) -> int {
 
 fn change_state(state: State, row: int, column: int) -> State {
     let curRow = state.array[row];
-    
+
     if curRow[column] != 0 {
         println("Cell (", row, ",", column, ") is already occupied");
         return state;

@@ -56,7 +56,7 @@ pub fn vm_module() -> VmModule {
 
 pub fn make_some(value: Value) -> Value {
     let mut some_struct = Struct::new();
-    
+
     let tag = some_tag();
 
     some_struct.set_field(OPTION_DATA_KEY.to_string(), value);
@@ -67,7 +67,7 @@ pub fn make_some(value: Value) -> Value {
 
 pub fn make_none() -> Value {
     let mut none_struct = Struct::new();
-    
+
     let tag = none_tag();
     none_struct.set_field(OPTION_TAG_KEY.to_string(), tag);
 
@@ -206,14 +206,14 @@ mod tests {
     macro_rules! option_test {
         ($mod: expr, $mod_name: expr, $fn_name: expr, $args: expr) => {{
 
-            let mut modules = vec![vm_module(), 
+            let mut modules = vec![vm_module(),
                 VmModule::new(parse_module(UnparsedModule::anonymous($mod)).unwrap())];
 
             let mut vm = AVM::new(Std::no_std(), modules).unwrap();
 
             let fn_handle = vm.query_module($mod_name, $fn_name).unwrap().unwrap();
             let result = vm.spawn_executor(fn_handle, $args, SpawnOptions {
-                type_check: false    
+                type_check: false
             })
                 .unwrap()
                 .execute_sync()
@@ -312,12 +312,12 @@ use option;
 
 fn unwrap() -> String {
     let o1 = option::some(type String)(\"Hello world\");
-    return option::unwrap(type String)(o1); 
+    return option::unwrap(type String)(o1);
 }
 
 fn expect() -> String {
     let o1 = option::some(type String)(\"Hello world\");
-    return option::expect(type String)(o1, \"ERROR\"); 
+    return option::expect(type String)(o1, \"ERROR\");
 }";
 
         let unwrap = option_test!(mod1, "mod1", "unwrap", vec![]);

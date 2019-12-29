@@ -5,5 +5,5 @@ struct B {
 }
 
 fn test() {
-    
+
 }

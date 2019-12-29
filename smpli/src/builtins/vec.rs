@@ -271,7 +271,7 @@ use smpl::prelude::*;
 use super::*;
 
 macro_rules! wrap_input {
-    ($input: expr) => {{ 
+    ($input: expr) => {{
         UnparsedModule::anonymous($input)
     }}
 }
@@ -286,7 +286,7 @@ macro_rules! vec_test {
 
         let fn_handle = vm.query_module($mod_name, $fn_name).unwrap().unwrap();
         let result = vm.spawn_executor(fn_handle, $args, SpawnOptions {
-            type_check: false    
+            type_check: false
         })
             .unwrap()
             .execute_sync()
@@ -375,7 +375,7 @@ v = vec::remove(type int)(v, 1);
 return vec::get_value(type int)(v, 1);
 }
 ";
-    
+
     let result = vec_test!(mod1, "mod1", "test", vec![]);
 
     assert_eq!(Value::Int(789), result);
@@ -400,7 +400,7 @@ let a = vec::get_value(type int)(v, 0);
 return a;
 }
 ";
-    
+
     let result = vec_test!(mod1, "mod1", "test", vec![]);
 
     assert_eq!(Value::Int(1337), result);
@@ -439,7 +439,7 @@ v = vec::push(type int)(v, 7);
 return vec::contains(type int)(v, 20);
 }
 ";
-    
+
     let result = vec_test!(mod1, "mod1", "test", vec![]);
 
     assert_eq!(Value::Bool(true), result);

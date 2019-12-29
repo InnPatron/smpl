@@ -1,6 +1,6 @@
 mod mod1;
 
-fn foo(type T)(t: T) -> int 
+fn foo(type T)(t: T) -> int
     where T: {a: int, b: int, c: { d: bool }} {
 
     let qux: T = t;

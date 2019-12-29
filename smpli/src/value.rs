@@ -237,7 +237,7 @@ impl Array {
 
     pub fn is_empty(&self) -> bool {
         self.vec.is_empty()
-    } 
+    }
 }
 
 impl std::ops::Deref for Array {
@@ -270,8 +270,8 @@ impl std::iter::FromIterator<Value> for Array {
             vec.push(ReferableValue::new(v));
         }
 
-        Array { 
-            vec: vec 
+        Array {
+            vec: vec
         }
     }
 }

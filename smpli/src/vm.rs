@@ -14,9 +14,9 @@ use crate::vm_i::*;
 
 use smpl::byte_gen;
 
-pub type CompiledProgram = 
+pub type CompiledProgram =
     Arc<HashMap<FnId, Arc<byte_gen::ByteCodeFunction>>>;
-pub type MappedBuiltins = 
+pub type MappedBuiltins =
     Arc<HashMap<FnId, Arc<BuiltinFn>>>;
 
 #[derive(Debug, Clone)]
@@ -57,7 +57,7 @@ impl AVM {
             }
 
         }
-        
+
         let mut vm = AVM {
             metadata: Arc::new(program.metadata().clone()),
             compiled: Arc::new(compiled_fns),
@@ -135,9 +135,9 @@ impl AVM {
         if spawn_options.type_check {
             unimplemented!();
         } else {
-            Executor::new(self.metadata.clone(), 
-                          fn_handle, 
-                          self.compiled.clone(), 
+            Executor::new(self.metadata.clone(),
+                          fn_handle,
+                          self.compiled.clone(),
                           self.builtins.clone(),
                           args)
         }

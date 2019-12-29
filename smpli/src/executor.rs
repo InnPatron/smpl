@@ -34,7 +34,7 @@ pub struct Executor {
 
 impl Executor {
     pub(super) fn new(metadata: Arc<Metadata>,
-                      fn_handle: FnHandle, 
+                      fn_handle: FnHandle,
                       compiled: CompiledProgram,
                       builtins: MappedBuiltins,
                       args: Vec<Value>) -> Result<Executor, InternalError> {
@@ -56,11 +56,11 @@ impl Executor {
             module_env.map_value(byte_gen::to_fn_id(*fn_id), scoped_handle);
         }
 
-        let current = 
-            Executor::create_stack_info(&*metadata, 
-                                        fn_handle, 
-                                        compiled.clone(), 
-                                        builtins.clone(), 
+        let current =
+            Executor::create_stack_info(&*metadata,
+                                        fn_handle,
+                                        compiled.clone(),
+                                        builtins.clone(),
                                         &module_env,
                                         args)?;
 
@@ -74,7 +74,7 @@ impl Executor {
             module_env: module_env,
             finished: false,
         };
-        
+
         Ok(executor)
     }
 
@@ -91,7 +91,7 @@ impl Executor {
     }
 
     fn create_stack_info(metadata: &Metadata,
-                      fn_handle: FnHandle, 
+                      fn_handle: FnHandle,
                       compiled: CompiledProgram,
                       builtins: MappedBuiltins,
                       module_env: &Env,
@@ -99,9 +99,9 @@ impl Executor {
 
         let fn_id = fn_handle.fn_id();
         if metadata.is_builtin(fn_id) {
-            Ok(StackInfo::BuiltinStack(BuiltinStack::new(fn_handle, 
-                                                      compiled.clone(), 
-                                                      builtins.clone(), 
+            Ok(StackInfo::BuiltinStack(BuiltinStack::new(fn_handle,
+                                                      compiled.clone(),
+                                                      builtins.clone(),
                                                       args)))
 
         } else {
@@ -111,18 +111,18 @@ impl Executor {
             let args_len = args.len();
 
             if param_info.len() != args_len {
-                return Err(InternalError::InvalidArgCount(args_len, 
+                return Err(InternalError::InvalidArgCount(args_len,
                     ExpectedArgCount::Exact(param_info.len())));
             }
 
             let mut stack_info = ByteCodeStack::new(
                 fn_handle, compiled.clone(), builtins.clone(), module_env);
-            
+
             for (arg, param_info) in args
                     .into_iter()
                     .zip(param_info) {
 
-               stack_info.env 
+               stack_info.env
                     .map_value(param_info.name().to_string(), arg);
             }
 
@@ -192,7 +192,7 @@ impl Executor {
                     ExecuteAction::AddIP(to_add) => {
                         // Overflow/underflow catching
                         if to_add >= 0 {
-                            let (result, overflow) = 
+                            let (result, overflow) =
                                 instruction_pointer.overflowing_add(to_add as u64);
 
                             if overflow {
@@ -202,7 +202,7 @@ impl Executor {
                                         addition: to_add,
                                     }))?;
                             } else {
-                                *instruction_pointer = result; 
+                                *instruction_pointer = result;
                             }
                         } else {
                             let (result, underflow) =
@@ -215,7 +215,7 @@ impl Executor {
                                         addition: to_add,
                                     }))?;
                             } else {
-                                *instruction_pointer = result; 
+                                *instruction_pointer = result;
                             }
 
                         }
@@ -241,7 +241,7 @@ impl Executor {
                     &self.module_env,
                     args
                 )?;
-                
+
                 // Push the new stack frame by swapping it with self.top
                 //  The old top is pushed onto the stack
                 mem::swap(&mut stack_frame, &mut self.top);
@@ -255,7 +255,7 @@ impl Executor {
             ExecuteAction::PopStack(value) => {
                 match self.stack.pop() {
 
-                    Some(mut stack_top) => { 
+                    Some(mut stack_top) => {
                         // Swap the Executor's top StackInfo and swap it with the top of the
                         //   internal stack
                         // Drop the old top
@@ -266,11 +266,11 @@ impl Executor {
 
                         Ok(())
                     }
- 
+
                     // No more stack frames to pop
                     // Finished execution of the orignal function
                     None => {
-                        
+
                         self.finished = true;
                         self.return_register = Some(value);
                         Ok(())
@@ -287,7 +287,7 @@ impl Executor {
     fn fetch(env: &Env, location: &Location) -> ReferableValue {
 
         match location {
-            Location::Compound { 
+            Location::Compound {
                 ref root,
                 ref root_index,
                 ref path,
@@ -312,7 +312,7 @@ impl Executor {
                                 v
                                     .get(index)
                                     // TODO: Array bounds error here
-                                    .expect(&format!("Invalid index: {}", index))   
+                                    .expect(&format!("Invalid index: {}", index))
                                     .ref_clone()
                             }
 
@@ -347,7 +347,7 @@ impl Executor {
                         }
 
                         FieldAccess::FieldIndex {
-                            ref field, 
+                            ref field,
                             ref index_tmp,
                         } => {
 
@@ -440,7 +440,7 @@ impl Executor {
     }
 
     fn execute_instruction(instruction: &Instruction, ip: InstructionPointerType,
-                           env: &mut Env, return_register: &mut Option<Value>) 
+                           env: &mut Env, return_register: &mut Option<Value>)
         -> Result<ExecuteAction, InternalError> {
 
         macro_rules! integer_from_arg {
@@ -499,7 +499,7 @@ impl Executor {
                 }
             }}
         }
-        
+
         macro_rules! int_op {
             ($env: expr, $instruction: expr, $store_loc: expr, $arg1: expr, $arg2: expr, $op: tt) => {{
 
@@ -563,7 +563,7 @@ impl Executor {
             },
 
             Instruction::StoreStructure(ref store_loc, ref string_value_map) => {
-                let mut internal_struct = Struct::new(); 
+                let mut internal_struct = Struct::new();
 
                 string_value_map
                     .iter()
@@ -606,34 +606,34 @@ impl Executor {
                 Ok(ExecuteAction::IncrementIP)
             }
 
-            Instruction::AddI(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::AddI(ref store_loc, ref arg1, ref arg2) =>
                 int_op!(env, instruction, store_loc, arg1, arg2, +),
 
-            Instruction::SubI(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::SubI(ref store_loc, ref arg1, ref arg2) =>
                 int_op!(env, instruction, store_loc, arg1, arg2, -),
 
-            Instruction::MulI(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::MulI(ref store_loc, ref arg1, ref arg2) =>
                 int_op!(env, instruction, store_loc, arg1, arg2, *),
 
-            Instruction::DivI(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::DivI(ref store_loc, ref arg1, ref arg2) =>
                 int_op!(env, instruction, store_loc, arg1, arg2, /),
 
-            Instruction::ModI(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::ModI(ref store_loc, ref arg1, ref arg2) =>
                 int_op!(env, instruction, store_loc, arg1, arg2, %),
 
-            Instruction::AddF(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::AddF(ref store_loc, ref arg1, ref arg2) =>
                 float_op!(env, instruction, store_loc, arg1, arg2, +),
 
-            Instruction::SubF(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::SubF(ref store_loc, ref arg1, ref arg2) =>
                 float_op!(env, instruction, store_loc, arg1, arg2, -),
 
-            Instruction::MulF(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::MulF(ref store_loc, ref arg1, ref arg2) =>
                 float_op!(env, instruction, store_loc, arg1, arg2, *),
 
-            Instruction::DivF(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::DivF(ref store_loc, ref arg1, ref arg2) =>
                 float_op!(env, instruction, store_loc, arg1, arg2, /),
 
-            Instruction::ModF(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::ModF(ref store_loc, ref arg1, ref arg2) =>
                 float_op!(env, instruction, store_loc, arg1, arg2, %),
 
             Instruction::And(ref store_loc, ref arg1, ref arg2) => {
@@ -656,28 +656,28 @@ impl Executor {
                 Ok(ExecuteAction::IncrementIP)
             }
 
-            Instruction::GEqI(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::GEqI(ref store_loc, ref arg1, ref arg2) =>
                 comp_int_op!(env, instruction, store_loc, arg1, arg2, >=),
 
-            Instruction::LEqI(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::LEqI(ref store_loc, ref arg1, ref arg2) =>
                 comp_int_op!(env, instruction, store_loc, arg1, arg2, <=),
 
-            Instruction::GEI(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::GEI(ref store_loc, ref arg1, ref arg2) =>
                 comp_int_op!(env, instruction, store_loc, arg1, arg2, >),
 
-            Instruction::LEI(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::LEI(ref store_loc, ref arg1, ref arg2) =>
                 comp_int_op!(env, instruction, store_loc, arg1, arg2, <),
 
-            Instruction::GEqF(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::GEqF(ref store_loc, ref arg1, ref arg2) =>
                 comp_float_op!(env, instruction, store_loc, arg1, arg2, >=),
 
-            Instruction::LEqF(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::LEqF(ref store_loc, ref arg1, ref arg2) =>
                 comp_float_op!(env, instruction, store_loc, arg1, arg2, <=),
 
-            Instruction::GEF(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::GEF(ref store_loc, ref arg1, ref arg2) =>
                 comp_float_op!(env, instruction, store_loc, arg1, arg2, >),
 
-            Instruction::LEF(ref store_loc, ref arg1, ref arg2) => 
+            Instruction::LEF(ref store_loc, ref arg1, ref arg2) =>
                 comp_float_op!(env, instruction, store_loc, arg1, arg2, <),
 
             Instruction::Eq(ref store_loc, ref arg1, ref arg2) => {
@@ -742,7 +742,7 @@ impl Executor {
 
                         Ok(ExecuteAction::PushStack(handle.clone(), args.unwrap_or(vec![])))
                     }
-                    
+
                     _ => Err(InternalError::RuntimeInstructionError(
                             RuntimeInstructionError::ExpectedFunction(instruction.clone()))),
                 }
@@ -774,7 +774,7 @@ impl Executor {
             Instruction::JumpCondition(ref jump_target, ref arg1) => {
                 let condition = bool_from_arg!(arg1, instruction);
                 let action = if condition {
-                    ExecuteAction::SetIP(jump_target.absolute_target()) 
+                    ExecuteAction::SetIP(jump_target.absolute_target())
                 } else {
                     ExecuteAction::IncrementIP
                 };
@@ -785,7 +785,7 @@ impl Executor {
             Instruction::JumpNegateCondition(ref jump_target, ref arg1) => {
                 let condition = bool_from_arg!(arg1, instruction);
                 let action = if !condition {
-                    ExecuteAction::SetIP(jump_target.absolute_target()) 
+                    ExecuteAction::SetIP(jump_target.absolute_target())
                 } else {
                     ExecuteAction::IncrementIP
                 };
@@ -800,7 +800,7 @@ impl Executor {
             Instruction::RelJumpCondition(ref rel_jump_target, ref arg1) => {
                 let condition = bool_from_arg!(arg1, instruction);
                 let action = if condition {
-                    ExecuteAction::AddIP(rel_jump_target.relative_target()) 
+                    ExecuteAction::AddIP(rel_jump_target.relative_target())
                 } else {
                     ExecuteAction::IncrementIP
                 };
@@ -811,7 +811,7 @@ impl Executor {
             Instruction::RelJumpNegateCondition(ref rel_jump_target, ref arg1) => {
                 let condition = bool_from_arg!(arg1, instruction);
                 let action = if !condition {
-                    ExecuteAction::AddIP(rel_jump_target.relative_target()) 
+                    ExecuteAction::AddIP(rel_jump_target.relative_target())
                 } else {
                     ExecuteAction::IncrementIP
                 };
@@ -825,7 +825,7 @@ impl Executor {
 
 enum FetchResult {
     Value(Value),
-    ValueRef(ReferableValue) 
+    ValueRef(ReferableValue)
 }
 
 enum ExecuteAction {
@@ -853,7 +853,7 @@ struct BuiltinStack {
 }
 
 impl BuiltinStack {
-    fn new(handle: FnHandle, compiled: CompiledProgram, 
+    fn new(handle: FnHandle, compiled: CompiledProgram,
            builtins: MappedBuiltins, args: Vec<Value>) -> BuiltinStack {
 
         let current_fn = builtins.get(&handle.fn_id()).unwrap().clone();
@@ -879,7 +879,7 @@ struct ByteCodeStack {
 }
 
 impl ByteCodeStack {
-    fn new(handle: FnHandle, compiled: CompiledProgram, 
+    fn new(handle: FnHandle, compiled: CompiledProgram,
            builtins: MappedBuiltins, module_env: &Env) -> ByteCodeStack {
 
         let current_fn: Arc<byte_gen::ByteCodeFunction> = compiled.get(&handle.fn_id()).unwrap().clone();

@@ -3,7 +3,7 @@ mod mod1;
 opaque Foo(type P);
 
 struct Bar {
-   x: int 
+   x: int
 }
 
 struct Container(type T) {
