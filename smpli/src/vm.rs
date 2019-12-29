@@ -83,7 +83,8 @@ impl AVM {
     ) -> Result<(), VmError> {
         let module_name = self.metadata
             .mod_metadata()
-            .get_module_by_id(mod_id).unwrap();
+            .get_module_by_id(mod_id)
+            .expect(&format!("Could not find metadata for module: {}", mod_id));
 
         let module_fn_pair = ModuleFnPair {
             module: module_name,
