@@ -4,7 +4,7 @@ struct Bar {
     y: bool,
 }
 
-struct Foo(type T) 
+struct Foo(type T)
     where T: { y: bool } {
     x: T
 }

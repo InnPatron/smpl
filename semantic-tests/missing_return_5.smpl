@@ -1,5 +1,5 @@
 mod missing_return_5;
-        
+
 fn test() -> int {
     if true {
         if true {

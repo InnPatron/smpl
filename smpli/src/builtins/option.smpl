@@ -11,8 +11,8 @@ builtin fn expect(type T)(value: Option(type T), msg: String) -> T;
 builtin fn none(type T)() -> Option(type T);
 builtin fn is_none(type T)(value: Option(type T)) -> bool;
 
-fn map(type T, U)(opt: Option(type T), 
-                  mapper: fn(T) -> U) 
+fn map(type T, U)(opt: Option(type T),
+                  mapper: fn(T) -> U)
     -> Option(type U) {
 
     let inner = unwrap(type T)(opt);

@@ -1,7 +1,7 @@
 use failure::Error;
 
 use smpl::*;
-use smpl::parse_module;
+use smpl::prelude::parse_module;
 
 use crate::*;
 
@@ -13,10 +13,10 @@ macro_rules! include_test {
 
 macro_rules! expect_value {
     ($name: ident, module :: $mod_name: expr, eval :: $fn_name: expr, args :: $args: expr, finalizer :: $finalizer: expr) => {
-        expect_value!($name, 
-            module :: $mod_name, 
-            eval :: $fn_name, 
-            args :: $args, 
+        expect_value!($name,
+            module :: $mod_name,
+            eval :: $fn_name,
+            args :: $args,
             finalizer :: $finalizer,
             builtins :: |vm| { vm }
         );
@@ -33,24 +33,24 @@ macro_rules! expect_value {
     };
 
     ($name: ident, module :: $mod_name: expr, eval :: $fn_name: expr, args :: $args: expr, expect :: $expect: expr, builtins :: $builtins: expr) => {
-        expect_value!($name, 
-            module :: $mod_name, 
-            eval :: $fn_name, 
-            args :: $args, 
+        expect_value!($name,
+            module :: $mod_name,
+            eval :: $fn_name,
+            args :: $args,
             finalizer :: |result| {
-                assert_eq!($expect, result);   
+                assert_eq!($expect, result);
             },
             builtins :: $builtins
         );
     };
 
     ($name: ident, module :: $mod_name: expr, eval :: $fn_name: expr, args :: $args: expr, expect :: $expect: expr) => {
-        expect_value!($name, 
-            module :: $mod_name, 
-            eval :: $fn_name, 
-            args :: $args, 
+        expect_value!($name,
+            module :: $mod_name,
+            eval :: $fn_name,
+            args :: $args,
             finalizer :: |result| {
-                assert_eq!($expect, result);   
+                assert_eq!($expect, result);
             },
             builtins :: |vm| { vm }
         );
@@ -76,7 +76,7 @@ macro_rules! setup_and_run {
 
         let modules = vec![module];
         let avm = AVM::new(Std::std(), modules).unwrap();
-        
+
         let a_fn_handle = avm.query_module($mod_name, $fn_name)
             .expect("Query error")
             .expect("Unknown query");
@@ -93,7 +93,7 @@ macro_rules! setup_and_run {
 }
 
 macro_rules! wrap_input {
-    ($input: expr) => {{ 
+    ($input: expr) => {{
         UnparsedModule::anonymous($input)
     }}
 }
@@ -118,7 +118,7 @@ async fn var_arg_sum(args: Vec<Value>) -> Result<Value, Error> {
     }
 
     return Ok(Value::Int(sum));
-} 
+}
 
 expect_value!(interpreter_basic,
     module :: "mod1",
@@ -134,7 +134,7 @@ expect_value!(interpreter_struct,
     finalizer :: |result|  {
         let result = irmatch!(result; Value::Struct(s) => s.get_field("f").unwrap());
         let result = irmatch!(result; Value::Int(i) => i);
-            
+
         assert_eq!(12, result);
     }
 );
@@ -142,7 +142,7 @@ expect_value!(interpreter_struct,
 expect_value!(interpreter_builtin,
     module :: "mod1",
     eval :: "test",
-    args :: vec![Value::Int(5), Value::Int(7)], 
+    args :: vec![Value::Int(5), Value::Int(7)],
     expect :: Value::Int(12),
     builtins :: |vm: VmModule| {
         vm.add_builtin("add", erase(add))
@@ -190,16 +190,16 @@ return mod1::add(1, 2);
     let modules = vec![m1, m2];
 
     let mut avm = AVM::new(Std::no_std(), modules).unwrap();
-    
+
     let a_fn_handle = avm.query_module("mod2", "test2").unwrap().unwrap();
 
     let a_result = avm.spawn_executor(a_fn_handle, vec![], SpawnOptions {
-        type_check: false,    
+        type_check: false,
     })
         .unwrap()
         .execute_sync()
         .unwrap();
-        
+
 
     assert_eq!(Value::Int(3), a_result);
 }
@@ -265,6 +265,13 @@ expect_value!(interpreter_anonymous_fn_arg,
     eval :: "test",
     args :: vec![],
     expect :: Value::Int(15)
+);
+
+expect_value!(interpreter_anonymous_fn_nested,
+    module :: "mod1",
+    eval :: "test",
+    args :: vec![Value::Int(21)],
+    expect :: Value::Int(43)
 );
 
 expect_value!(interpreter_fn_piping,
@@ -351,11 +358,11 @@ fn test() -> int {
 
     let modules = vec![mod1, mod2];
     let avm = AVM::new(Std::std(), modules).unwrap();
-    
+
     let fn_handle = avm.query_module("mod2", "test").unwrap().unwrap();
 
     let result = avm.spawn_executor(fn_handle, vec![], SpawnOptions {
-        type_check: false   
+        type_check: false
     })
         .expect("Executor spawn error error")
         .execute_sync()

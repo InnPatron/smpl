@@ -1,5 +1,5 @@
 use failure::Error;
-use smpl::{UnparsedModule, parse_module};
+use smpl::prelude::{UnparsedModule, parse_module};
 
 use crate::*;
 
@@ -83,7 +83,7 @@ async fn to_upper(args: Vec<Value>) -> Result<Value, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use smpl::*;
+    use smpl::prelude::*;
 
     macro_rules! wrap_input {
         ($input: expr) => {{
@@ -108,7 +108,7 @@ mod tests {
 
         let result = vm
             .spawn_executor(fn_handle, vec![Value::String("1".to_string())], SpawnOptions {
-                type_check: false    
+                type_check: false
             })
             .unwrap()
             .execute_sync()
@@ -245,7 +245,7 @@ return str::to_string(\"Cannot\", \" touch\", \" this!?\");
     let fn_handle = vm.query_module("mod1", "test").unwrap().unwrap();
 
     let result = vm.spawn_executor(fn_handle, vec![], SpawnOptions {
-        type_check: false    
+        type_check: false
     })
         .unwrap()
         .execute_sync()

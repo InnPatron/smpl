@@ -45,15 +45,15 @@ struct TypableRawProgram {
     type_map: HashMap<TypeId, TypeCons>,
 }
 
-struct AnalyzableRawProgram {
-    module_map: HashMap<ModuleId, RawModData>,
-    scope_map: HashMap<ModuleId, ScopedData>,
-    dependency_map: HashMap<ModuleId, HashSet<ModuleId>>,
-    type_map: HashMap<TypeId, TypeCons>,
-    fn_map: HashMap<FnId, AnalyzableFn>,
-    anon_fns: AnonStorage<ReservedAnonymousFn>,
-    anon_fn_parents: AnonStorage<FnId>,
-    local_data_map: HashMap<FnId, LocalData>,
+pub(super) struct AnalyzableRawProgram {
+    pub(super) module_map: HashMap<ModuleId, RawModData>,
+    pub(super) scope_map: HashMap<ModuleId, ScopedData>,
+    pub(super) dependency_map: HashMap<ModuleId, HashSet<ModuleId>>,
+    pub(super) type_map: HashMap<TypeId, TypeCons>,
+    pub(super) fn_map: HashMap<FnId, AnalyzableFn>,
+    pub(super) anon_fns: AnonStorage<ReservedAnonymousFn>,
+    pub(super) anon_fn_parents: AnonStorage<FnId>,
+    pub(super) local_data_map: HashMap<FnId, LocalData>,
 }
 
 struct RawProgram {
@@ -62,21 +62,21 @@ struct RawProgram {
     raw_map: HashMap<Ident, ModuleId>,
 }
 
-struct RawModData {
-    source: ModuleSource,
-    name: AstNode<Ident>,
-    id: ModuleId,
-    reserved_opaque: HashMap<Ident, ReservedOpaque>,
-    reserved_structs: HashMap<Ident, ReservedStruct>,
-    reserved_fns: HashMap<Ident, ReservedFn>,
-    reserved_builtins: HashMap<Ident, ReservedBuiltinFn>,
-    uses: Vec<AstNode<UseDecl>>,
+pub(super) struct RawModData {
+    pub(super) source: ModuleSource,
+    pub(super) name: AstNode<Ident>,
+    pub(super) id: ModuleId,
+    pub(super) reserved_opaque: HashMap<Ident, ReservedOpaque>,
+    pub(super) reserved_structs: HashMap<Ident, ReservedStruct>,
+    pub(super) reserved_fns: HashMap<Ident, ReservedFn>,
+    pub(super) reserved_builtins: HashMap<Ident, ReservedBuiltinFn>,
+    pub(super) uses: Vec<AstNode<UseDecl>>,
 }
 
-struct ReservedOpaque(TypeId, AstNode<Opaque>);
-struct ReservedStruct(TypeId, AstNode<Struct>);
-struct ReservedFn(FnId, AstNode<AstFunction>, TypeId,);
-struct ReservedBuiltinFn(FnId, AstNode<AstBuiltinFunction>, TypeId);
+pub(super) struct ReservedOpaque(pub(super) TypeId, pub(super) AstNode<Opaque>);
+pub(super) struct ReservedStruct(pub(super) TypeId, pub(super) AstNode<Struct>);
+pub(super) struct ReservedFn(pub(super) FnId, pub(super) AstNode<AstFunction>, pub(super) TypeId,);
+pub(super) struct ReservedBuiltinFn(pub(super) FnId, pub(super) AstNode<AstBuiltinFunction>, pub(super)TypeId);
 
 ///
 /// Perform static analysis on a collection of SMPL modules.
@@ -147,6 +147,10 @@ pub fn check_modules(
         analyzable_raw_program
     )?;
 
+    let _ =
+        super::metadata_collectors::collect_metadata_post(&mut metadata, &universe)
+        .expect("Unhandled metadata errors");
+
     Ok(Program::new(universe, metadata, features))
 }
 
@@ -159,6 +163,10 @@ fn analyze_program(
 
         let module_map =
             module_ownership(&analyzable_raw_program);
+
+        let _ =
+            super::metadata_collectors::collect_metadata(metadata, &analyzable_raw_program)
+            .expect("Unhandled metadata errors");
 
         let (fn_map, type_map, anon_ownership) =
             analyze_fns(
@@ -332,6 +340,27 @@ fn analyze_fns(
             unresolved_anon_fns.append(&mut this_anon_fns);
 
             finished.insert(fn_id, fn_to_analyze);
+        }
+
+        // Add builtin functions to function map
+        for (_, reserved_builtin_fn) in raw_mod.reserved_builtins.into_iter() {
+            let fn_id = reserved_builtin_fn.0;
+            let type_id = reserved_builtin_fn.2;
+
+            let name: Ident = reserved_builtin_fn.1
+                .data()
+                .name
+                .data()
+                .clone();
+
+
+            let func = AnalyzableFn::Builtin(BuiltinFunction {
+                fn_id,
+                type_id,
+                name
+            });
+
+            finished.insert(fn_id, func);
         }
     }
 

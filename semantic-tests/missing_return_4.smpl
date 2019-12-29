@@ -4,6 +4,6 @@ fn test() -> int {
     if true {
         return 0;
     } else {
-    
+
     }
 }

@@ -1,7 +1,7 @@
 use failure::Fail;
 
 use smpl::ModuleId;
-use smpl::Error as StaticError;
+use smpl::error::Error as StaticError;
 use smpl::byte_gen::{ Instruction, InstructionPointerType };
 
 #[derive(Debug, Clone)]
@@ -63,13 +63,13 @@ pub enum InternalError {
 pub enum RuntimeInstructionError {
     // TODO: canonical string representation of instructions
     #[fail(display = "Expected int in: {:?}", _0)]
-    ExpectedInt(Instruction), 
+    ExpectedInt(Instruction),
 
     #[fail(display = "Expected float in: {:?}", _0)]
-    ExpectedFloat(Instruction), 
+    ExpectedFloat(Instruction),
 
     #[fail(display = "Expected bool in: {:?}", _0)]
-    ExpectedBool(Instruction), 
+    ExpectedBool(Instruction),
 
     #[fail(display = "Expected function in: {:?}", _0)]
     ExpectedFunction(Instruction),
@@ -94,10 +94,10 @@ pub enum RuntimeInstructionError {
 pub enum IIReason {
     // TODO: canonical string representation of instructions
     #[fail(display = "Expected int in: {:?}", _0)]
-    ExpectedInt(Instruction), 
+    ExpectedInt(Instruction),
 
     #[fail(display = "Expected float in: {:?}", _0)]
-    ExpectedFloat(Instruction), 
+    ExpectedFloat(Instruction),
 
     #[fail(display = "Expected bool in: {:?}", _0)]
     ExpectedBool(Instruction),

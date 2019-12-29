@@ -1,5 +1,5 @@
 use smpl::ModuleId;
-use smpl::ParsedModule;
+use smpl::prelude::ParsedModule;
 
 use crate::vm_i::BuiltinFn;
 
