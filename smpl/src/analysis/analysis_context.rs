@@ -182,6 +182,7 @@ pub struct AnalysisContext {
     parent_scope: ScopedData,
     typing_context: TypingContext,
     existential_type_vars: Vec<TypeVarId>,
+    param_order: Vec<(Ident, VarId)>,
 }
 
 impl AnalysisContext {
@@ -189,12 +190,18 @@ impl AnalysisContext {
         parent_scope: ScopedData,
         typing_context: TypingContext,
         existential_type_vars: Vec<TypeVarId>,
+        param_order: Vec<(Ident, VarId)>,
     ) -> AnalysisContext {
         AnalysisContext {
             parent_scope,
             typing_context,
             existential_type_vars,
+            param_order,
         }
+    }
+
+    pub fn param_order(&self) -> &[(Ident, VarId)] {
+        &self.param_order
     }
 
     pub fn parent_scope(&self) -> &ScopedData {

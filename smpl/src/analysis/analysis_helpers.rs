@@ -122,6 +122,8 @@ where
         fn_scope.clear_scoped_vars();
     }
 
+    let mut param_order = Vec::new();
+
     match fn_type_cons {
         TypeCons::Function {
             ref type_params,
@@ -172,10 +174,13 @@ where
                         &existential_map,
                     )?;
 
+                    let formal_param_name = formal_param.data().name.data().clone();
                     fn_scope.insert_var(
-                        formal_param.data().name.data().clone(),
+                        formal_param_name.clone(),
                         formal_param_var_id,
                     );
+
+                    param_order.push((formal_param_name, formal_param_var_id));
 
                     fn_context
                         .var_type_map
@@ -191,5 +196,6 @@ where
         fn_scope,
         fn_context,
         existential_type_vars,
+        param_order,
     ))
 }
