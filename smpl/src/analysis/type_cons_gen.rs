@@ -116,7 +116,6 @@ pub fn generate_fn_type_cons(
         None => AbstractType::Unit(fn_def.name.span()),
     };
 
-    let mut param_metadata = Vec::new();
     let typed_formal_params = match fn_def.params {
         Some(ref params) => {
             let mut typed_formal_params = Vec::new();
@@ -143,8 +142,6 @@ pub fn generate_fn_type_cons(
 
         None => Vec::new(),
     };
-
-    metadata.insert_function_param_ids(fn_id, param_metadata);
 
     Ok(TypeCons::Function {
         type_params: type_params,
@@ -200,7 +197,6 @@ pub fn generate_builtin_fn_type(
         BuiltinFnParams::Checked(ref params) => match *params {
             Some(ref params) => {
                 let mut typed_params = Vec::new();
-                let mut param_metadata = Vec::new();
                 for param in params.iter() {
                     let param = param.data();
                     let param_anno = &param.param_type;
@@ -219,13 +215,9 @@ pub fn generate_builtin_fn_type(
                     // TODO: Function signature scanner?
                 }
 
-                metadata.insert_function_param_ids(fn_id, param_metadata);
-
                 typed_params
             }
             None => {
-                metadata
-                    .insert_function_param_ids(fn_id, Vec::with_capacity(0));
                 Vec::with_capacity(0)
             }
         },
@@ -277,7 +269,6 @@ pub fn generate_anonymous_fn_type(
         None => AbstractType::Unit(fn_def.body.span()),
     };
 
-    let mut param_metadata = Vec::new();
     let typed_formal_params = match fn_def.params {
         Some(ref params) => {
             let mut typed_formal_params = Vec::new();
@@ -302,8 +293,6 @@ pub fn generate_anonymous_fn_type(
 
         None => Vec::new(),
     };
-
-    metadata.insert_function_param_ids(fn_id, param_metadata);
 
     Ok(TypeCons::Function {
         type_params: type_params,
