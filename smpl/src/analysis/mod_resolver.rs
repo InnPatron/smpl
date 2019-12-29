@@ -333,6 +333,27 @@ fn analyze_fns(
 
             finished.insert(fn_id, fn_to_analyze);
         }
+
+        // Add builtin functions to function map
+        for (_, reserved_builtin_fn) in raw_mod.reserved_builtins.into_iter() {
+            let fn_id = reserved_builtin_fn.0;
+            let type_id = reserved_builtin_fn.2;
+
+            let name: Ident = reserved_builtin_fn.1
+                .data()
+                .name
+                .data()
+                .clone();
+
+
+            let func = AnalyzableFn::Builtin(BuiltinFunction {
+                fn_id,
+                type_id,
+                name
+            });
+
+            finished.insert(fn_id, func);
+        }
     }
 
     let anon_ownership = resolve_anonymous_fns(
