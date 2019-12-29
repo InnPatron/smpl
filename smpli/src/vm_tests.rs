@@ -1,7 +1,7 @@
 use failure::Error;
 
 use smpl::*;
-use smpl::parse_module;
+use smpl::prelude::parse_module;
 
 use crate::*;
 
