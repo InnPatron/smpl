@@ -22,7 +22,7 @@ SMPL was built to replace [Popstcl](https://github.com/InnPatron/Popstcl) as the
 * Generics (with width-based structural constraints)
 
 ## The Bad
-* Does match Rust 1:1
+* Does not match Rust 1:1
   * No move semantics
   * No concept of lifetime
 * Bare-bones standard library
