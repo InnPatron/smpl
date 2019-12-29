@@ -1,0 +1,24 @@
+mod mod1;
+
+fn test(i: int) -> int {
+    let function = test2();
+
+    return function(i);
+}
+
+fn test2() -> fn(int) -> int {
+    let a1 = fn (foo: int) -> int {
+
+        let bar = fn (bar: int) -> int {
+            let baz = fn(baz: int) -> int {
+                return baz * 2;
+            };
+
+            return baz(bar) + 1;
+        };
+
+        return bar(foo);
+    };
+
+    return a1;
+}

@@ -267,6 +267,13 @@ expect_value!(interpreter_anonymous_fn_arg,
     expect :: Value::Int(15)
 );
 
+expect_value!(interpreter_anonymous_fn_nested,
+    module :: "mod1",
+    eval :: "test",
+    args :: vec![Value::Int(21)],
+    expect :: Value::Int(43)
+);
+
 expect_value!(interpreter_fn_piping,
     module :: "mod1",
     eval :: "test",
