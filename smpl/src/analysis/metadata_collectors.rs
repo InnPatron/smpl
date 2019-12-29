@@ -1,3 +1,4 @@
+use super::semantic_data::Universe;
 use super::metadata::Metadata;
 use super::mod_resolver::AnalyzableRawProgram;
 
@@ -8,6 +9,13 @@ pub(super) fn collect_metadata(metadata: &mut Metadata, raw_program: &Analyzable
     -> Result<(), MetadataError> {
 
     module_metadata(metadata, raw_program);
+
+
+    Ok(())
+}
+
+pub(super) fn collect_metadata_post(metadata: &mut Metadata, universe: &Universe)
+    -> Result<(), MetadataError> {
 
 
     Ok(())

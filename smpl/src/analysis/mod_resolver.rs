@@ -147,6 +147,10 @@ pub fn check_modules(
         analyzable_raw_program
     )?;
 
+    let _ =
+        super::metadata_collectors::collect_metadata_post(&mut metadata, &universe)
+        .expect("Unhandled metadata errors");
+
     Ok(Program::new(universe, metadata, features))
 }
 
