@@ -31,7 +31,9 @@ mod feature;
 #[macro_use]
 mod ast_macros;
 mod ast;
+mod ast_node;
 mod new_ast;
+mod expr_ast;
 #[macro_use]
 mod analysis;
 mod code_gen;

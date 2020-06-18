@@ -1,6 +1,6 @@
 pub type Span = LocationSpan;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct LocationSpan {
     source: String,
     start: Location,
