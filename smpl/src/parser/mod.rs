@@ -7,6 +7,7 @@ mod tokens;
 #[cfg(not(test))]
 #[macro_use]
 mod parser;
+mod new_parser;
 #[cfg(test)]
 #[macro_use]
 pub mod parser;
@@ -35,7 +36,7 @@ pub fn parse_module(input: UnparsedModule) -> Result<ParsedModule, ParserError> 
 }
 
 #[cfg(test)]
-pub fn buffer_input<'a, 'b>(source: &'a crate::module::ModuleSource, input: &'b str) 
+pub fn buffer_input<'a, 'b>(source: &'a crate::module::ModuleSource, input: &'b str)
     -> tokens::BufferedTokenizer<'a, 'b> {
 
     let tokenizer = tokens::Tokenizer::new(source, input);

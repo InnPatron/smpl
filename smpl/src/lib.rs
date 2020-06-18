@@ -2,7 +2,7 @@
 
   Core library to parse, analyze, and compile the SMPL language.
 
-  * This crate does **NOT** come with the means to execute SMPL code. 
+  * This crate does **NOT** come with the means to execute SMPL code.
     * Use a crate like [smpli](https://crates.io/crates/smpli) for a runtime/std instead
 
   # Using the Crate
@@ -31,6 +31,7 @@ mod feature;
 #[macro_use]
 mod ast_macros;
 mod ast;
+mod new_ast;
 #[macro_use]
 mod analysis;
 mod code_gen;
