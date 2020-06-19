@@ -2,6 +2,7 @@ use crate::span::Span;
 use crate::ast_node::{EmptyAstNode, AstNode};
 
 use crate::new_ast::{Ident, TypedPath, TypeAnnotation, FnParameter};
+use crate::typable_ast::{Typed, Typable};
 
 use crate::analysis::{FieldId, VarId, FnId};
 
@@ -17,28 +18,28 @@ pub enum ExprStmt {
     While(AstNode<While>),
     LocalVarDecl(AstNode<LocalVarDecl>),
     Assignment(AstNode<Assignment>),
-    Return(AstNode<Option<Expr>>),
-    Break(AstNode<Option<Expr>>),
+    Return(AstNode<Option<Typable<Expr>>>),
+    Break(AstNode<Option<Typable<Expr>>>),
     Continue(EmptyAstNode),
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct If {
     pub branches: Vec<Branch>,
-    pub default_branch: Option<AstNode<Block>>,
+    pub default_branch: Option<Typable<AstNode<Block>>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Branch {
-    pub conditional: AstNode<Expr>,
-    pub block: AstNode<Block>,
+    pub conditional: Typable<AstNode<Expr>>,
+    pub block: Typable<AstNode<Block>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct While {
-    pub conditional: AstNode<Expr>,
-    pub body: AstNode<Block>,
-    pub default_branch: Option<AstNode<Block>>,
+    pub conditional: Typable<AstNode<Expr>>,
+    pub body: Typable<AstNode<Block>>,
+    pub default_branch: Option<Typable<AstNode<Block>>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -48,44 +49,44 @@ pub struct Block(pub Vec<Stmt>);
 pub struct LocalVarDecl {
     pub var_type: Option<AstNode<TypeAnnotation>>,
     pub var_name: AstNode<Ident>,
-    pub var_init: Expr,
+    pub var_init: Typable<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Assignment {
-    pub name: Box<AstNode<Access>>,
-    pub value: Expr,
+    pub name: Typable<Box<AstNode<Access>>>,
+    pub value: Typable<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    If(Box<AstNode<If>>),
-    While(Box<AstNode<While>>),
-    Bin(AstNode<BinExpr>),
-    Uni(AstNode<UniExpr>),
-    Literal(AstNode<Literal>),
-    Binding(AstNode<Ident>),
-    Access(Box<AstNode<Access>>),
-    FnCall(AstNode<FnCall>),
-    StructInit(AstNode<StructInit>),
-    ArrayInit(AstNode<ArrayInit>),
-    AnonymousFn(AstNode<AnonymousFn>),
-    Path(AstNode<TypedPath>),
+    If(Box<Typable<AstNode<If>>>),
+    While(Box<Typable<AstNode<While>>>),
+    Bin(Typable<AstNode<BinExpr>>),
+    Uni(Typable<AstNode<UniExpr>>),
+    Literal(Typable<AstNode<Literal>>),
+    Binding(Typable<AstNode<Ident>>),
+    Access(Box<Typable<AstNode<Access>>>),
+    FnCall(Typable<AstNode<FnCall>>),
+    StructInit(Typable<AstNode<StructInit>>),
+    ArrayInit(Typable<AstNode<ArrayInit>>),
+    AnonymousFn(Typable<AstNode<AnonymousFn>>),
+    Path(Typable<AstNode<TypedPath>>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct AnonymousFn {
     pub params: Option<Vec<AstNode<FnParameter>>>,
     pub return_type: Option<AstNode<TypeAnnotation>>,
-    pub body: AstNode<Block>,
+    pub body: Typable<AstNode<Block>>,
     pub fn_id: Option<FnId>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Access {
     root_name: AstNode<Ident>,
-    root_indexing: Option<Expr>,
-    root_var: Option<VarId>,
+    root_indexing: Option<Typable<Expr>>,
+    root_var: Option<Typable<VarId>>,
     path: Vec<self::FASegment>,
 }
 
@@ -93,13 +94,13 @@ pub struct Access {
 #[derive(Debug, Clone, PartialEq)]
 pub enum FASegment {
     Ident(Field),
-    Indexing(Field, Expr),
+    Indexing(Field, Typable<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field {
     name: AstNode<Ident>,
-    field_id: Option<FieldId>,
+    field_id: Option<Typable<FieldId>>,
 }
 
 impl Field {
@@ -108,9 +109,12 @@ impl Field {
         self.name.node()
     }
 
-    pub fn field_id(&self) -> FieldId {
+    pub fn field_id(&self) -> &Typable<FieldId> {
+        self.field_id.as_ref().expect("No field id")
+    }
 
-        self.field_id.as_ref().cloned().expect("No field id")
+    pub fn field_id_mut(&mut self) -> &mut Typable<FieldId> {
+        self.field_id.as_mut().expect("No field id")
     }
 
     pub fn set_field_id(&mut self, id: FieldId) {
@@ -118,45 +122,46 @@ impl Field {
             panic!("Attempting to override field id.");
         }
 
-        self.field_id = Some(id);
+        self.field_id = Some(Typable::untyped(id));
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct UniExpr {
     pub op: UniOp,
-    pub expr: Box<Expr>,
+    pub expr: Box<Typable<Expr>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BinExpr {
     pub op: BinOp,
-    pub lhs: Box<Expr>,
-    pub rhs: Box<Expr>,
+    pub lhs: Box<Typable<Expr>>,
+    pub rhs: Box<Typable<Expr>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
     pub path: AstNode<TypedPath>,
-    pub args: Option<Vec<Expr>>,
+    pub fn_id: Option<Typable<FnId>>,
+    pub args: Option<Vec<Typable<Expr>>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructInit {
-    pub struct_name: Option<TypedPath>,
-    pub field_init: Vec<(AstNode<Ident>, Box<Expr>)>,
+    pub struct_name: Typable<Option<TypedPath>>,
+    pub field_init: Vec<(AstNode<Ident>, Box<Typable<Expr>>)>,
 }
 
 impl StructInit {
     pub fn is_anonymous(&self) -> bool {
-        self.struct_name.is_none()
+        self.struct_name.data().is_none()
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArrayInit {
-    InitList(Vec<Expr>),
-    Value(Box<Expr>, u64),
+    InitList(Vec<Typable<Expr>>),
+    Value(Box<Typable<Expr>>, u64),
 }
 
 #[derive(Clone, Debug, PartialEq)]
