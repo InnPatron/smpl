@@ -34,6 +34,7 @@ mod ast;
 mod ast_node;
 mod new_ast;
 mod expr_ast;
+mod typable_ast;
 #[macro_use]
 mod analysis;
 mod code_gen;
