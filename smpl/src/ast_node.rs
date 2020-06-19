@@ -43,7 +43,7 @@ where
     }
 }
 
-impl<T> Eq for AstNode<T> where T: ::std::fmt::Debug + Eq {}
+impl<T> Eq for AstNode<T> where T: Eq {}
 
 impl<T> ::std::hash::Hash for AstNode<T>
 where
