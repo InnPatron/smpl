@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::analysis::abstract_type::AbstractType;
 
 pub struct Typable<T> {
@@ -38,6 +40,47 @@ impl<T> Typable<T> {
         }
 
         self.typ = Some(t);
+    }
+}
+
+impl<T> PartialEq for Typable<T>
+where
+    T: PartialEq,
+{
+    fn eq(&self, other: &Typable<T>) -> bool {
+        self.data == other.data
+    }
+}
+
+impl<T> Eq for Typable<T> where T: Eq {}
+
+impl<T> ::std::hash::Hash for Typable<T>
+where
+    T: ::std::hash::Hash,
+{
+    fn hash<H: ::std::hash::Hasher>(&self, state: &mut H) {
+        self.data.hash(state);
+    }
+}
+
+impl<T> Clone for Typable<T>
+where
+    T: Clone,
+{
+    fn clone(&self) -> Typable<T> {
+        Typable {
+            data: self.data.clone(),
+            typ: self.typ.clone(),
+        }
+    }
+}
+
+impl<T> ::std::fmt::Debug for Typable<T>
+where
+    T: ::std::fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        ::std::fmt::Debug::fmt(&self.data, f)
     }
 }
 
