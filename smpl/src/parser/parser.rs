@@ -9,47 +9,6 @@ use crate::span::*;
 
 pub type ParseErr<T> = Result<T, ParserError>;
 
-macro_rules! consume_token  {
-
-    ($input: expr, $state: expr) => {{
-        let next = $input.next()
-            .ok_or(parser_error!(ParserErrorKind::UnexpectedEOI, $state))?
-            .map_err(|e| parser_error!(ParserErrorKind::TokenizerError(e), $state))?;
-        next.to_data()
-    }};
-
-    ($input: expr, $token: pat, $state: expr) => {{
-        let next = $input.next()
-            .ok_or(parser_error!(ParserErrorKind::UnexpectedEOI, $state))?
-            .map_err(|e| parser_error!(ParserErrorKind::TokenizerError(e), $state))?;
-        let data = next.to_data();
-        match data.1 {
-            $token => data,
-            _ => Err(parser_error!(ParserErrorKind::UnexpectedToken(data.1), $state, Some(data.0)))?,
-        }
-    }};
-
-    ($input: expr, $token: pat => $e: expr, $state: expr) => {{
-        let next = $input.next()
-            .ok_or(parser_error!(ParserErrorKind::UnexpectedEOI, $state))?
-            .map_err(|e| parser_error!(ParserErrorKind::TokenizerError(e), $state))?;
-        let data = next.to_data();
-        match data.1 {
-            $token => (data.0, $e),
-            _ => Err(parser_error!(ParserErrorKind::UnexpectedToken(data.1), $state, Some(data.0)))?,
-        }
-    }};
-}
-
-macro_rules! peek_token {
-    ($tokenizer: expr, $lam: expr, $state: expr) => {
-        ($tokenizer)
-            .peek($lam)
-            .ok_or(parser_error!(ParserErrorKind::UnexpectedEOI, $state))?
-            .map_err(|e| parser_error!(e.into(), $state))?
-    };
-}
-
 pub fn module(tokens: &mut BufferedTokenizer) -> ParseErr<Module> {
     enum ModDec {
         Struct,
@@ -224,8 +183,8 @@ fn kv_list(
 fn kv_pair(
     tokens: &mut BufferedTokenizer,
 ) -> ParseErr<(Ident, Option<String>)> {
-    let (_, ident) = consume_token!(tokens, 
-                                    Token::Identifier(i) => i, 
+    let (_, ident) = consume_token!(tokens,
+                                    Token::Identifier(i) => i,
                                     parser_state!("kvpair", "key"));
 
     if peek_token!(
@@ -241,7 +200,7 @@ fn kv_pair(
             Token::Assign,
             parser_state!("kvpair", "assign")
         );
-        let (_, v) = consume_token!(tokens, 
+        let (_, v) = consume_token!(tokens,
                                     Token::StringLiteral(s) => s,
                                     parser_state!("kvpair", "value"));
         Ok((Ident(ident), Some(v)))
@@ -253,7 +212,7 @@ fn kv_pair(
 fn use_decl(tokens: &mut BufferedTokenizer) -> ParseErr<DeclStmt> {
     let (uspan, _) =
         consume_token!(tokens, Token::Use, parser_state!("use-decl", "use"));
-    let (mspan, module) = consume_token!(tokens, 
+    let (mspan, module) = consume_token!(tokens,
                                          Token::Identifier(i) => Ident(i),
                                          parser_state!("use-decl", "name"));
     let _semi = consume_token!(
@@ -354,7 +313,7 @@ fn fn_decl(
         span = fnloc;
     }
 
-    let (idloc, ident) = consume_token!(tokens, 
+    let (idloc, ident) = consume_token!(tokens,
                                         Token::Identifier(i) => Ident(i),
                                         parser_state!("fn-decl", "name"));
     let _lparen = consume_token!(
@@ -567,7 +526,7 @@ pub fn fn_param_list(
 }
 
 fn fn_param(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<FnParameter>> {
-    let (idloc, ident) = consume_token!(tokens, 
+    let (idloc, ident) = consume_token!(tokens,
                                         Token::Identifier(i) => Ident(i),
                                         parser_state!("fn-param", "parameter name"));
     let _colon = consume_token!(
@@ -604,7 +563,7 @@ fn opaque_decl(
         Token::Opaque,
         parser_state!("opaque-decl", "opaque")
     );
-    let (name_loc, struct_name) = consume_token!(tokens, 
+    let (name_loc, struct_name) = consume_token!(tokens,
                                                Token::Identifier(i) => Ident(i),
                                                parser_state!("opaque-decl", "name"));
 
@@ -666,7 +625,7 @@ fn struct_decl(
         Token::Struct,
         parser_state!("struct-decl", "struct")
     );
-    let (name_loc, struct_name) = consume_token!(tokens, 
+    let (name_loc, struct_name) = consume_token!(tokens,
                                                Token::Identifier(i) => Ident(i),
                                                parser_state!("struct-decl", "name"));
 
@@ -791,7 +750,7 @@ fn struct_field_list(
 }
 
 fn struct_field(tokens: &mut BufferedTokenizer) -> ParseErr<StructField> {
-    let (idloc, ident) = consume_token!(tokens, 
+    let (idloc, ident) = consume_token!(tokens,
                                         Token::Identifier(i) => Ident(i),
                                         parser_state!("struct-field", "name"));
     let _colon = consume_token!(
@@ -814,7 +773,7 @@ fn module_decl(tokens: &mut BufferedTokenizer) -> ParseErr<AstNode<Ident>> {
     // Consume MOD
     let (modloc, _) =
         consume_token!(tokens, Token::Mod, parser_state!("mod-decl", "mod"));
-    let (_idloc, ident) = consume_token!(tokens, 
+    let (_idloc, ident) = consume_token!(tokens,
                                          Token::Identifier(i) => Ident(i),
                                          parser_state!("mod-decl", "name"));
     let (semiloc, _) = consume_token!(
@@ -1026,7 +985,7 @@ pub fn module_binding(
     tokens: &mut BufferedTokenizer,
 ) -> ParseErr<AstNode<ModulePath>> {
     let mut path = Vec::new();
-    let (floc, first) = consume_token!(tokens, 
+    let (floc, first) = consume_token!(tokens,
                                         Token::Identifier(i) => Ident(i),
                                         parser_state!("module-binding", "root"));
 
@@ -1046,7 +1005,7 @@ pub fn module_binding(
             Token::ColonColon,
             parser_state!("module-binding", "segment coloncolon")
         );
-        let (nloc, next) = consume_token!(tokens, 
+        let (nloc, next) = consume_token!(tokens,
                                           Token::Identifier(i) => Ident(i),
                                           parser_state!("module-binding", "segment name"));
         path.push(AstNode::new(next, nloc.clone()));
@@ -1073,7 +1032,7 @@ fn array_type(
         Token::Semi,
         parser_state!("array-type", "semicolon")
     );
-    let (_, number) = consume_token!(tokens, 
+    let (_, number) = consume_token!(tokens,
                                      Token::IntLiteral(i) => i,
                                      parser_state!("array-type", "array size"));
     let (rloc, _) = consume_token!(
@@ -1729,7 +1688,7 @@ fn local_var_decl(
         parser_state!("local-var-decl", "let")
     );
 
-    let (iloc, ident) = consume_token!(tokens, 
+    let (iloc, ident) = consume_token!(tokens,
                                        Token::Identifier(i) => Ident(i),
                                        parser_state!("local-var-decl", "name"));
     let ident = AstNode::new(ident, iloc);
@@ -2005,7 +1964,7 @@ fn type_param_list_post_lparen(
         parser_state!("type-param-list", "type")
     );
 
-    let mut type_params = vec![consume_token!(tokens, 
+    let mut type_params = vec![consume_token!(tokens,
                                               Token::Identifier(ident) => Ident(ident),
                                               parser_state!("type-param-list", "type-param"))];
 

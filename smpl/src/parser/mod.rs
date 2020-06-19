@@ -1,13 +1,15 @@
 use crate::module::*;
 
 #[macro_use]
+mod macros;
+
+#[macro_use]
 pub mod error;
 mod tokens;
 
 #[cfg(not(test))]
 #[macro_use]
 mod parser;
-mod new_parser;
 #[cfg(test)]
 #[macro_use]
 pub mod parser;
@@ -16,6 +18,9 @@ pub mod parser;
 mod expr_parser;
 #[cfg(test)]
 pub mod expr_parser;
+
+mod new_parser;
+
 
 #[cfg(test)]
 mod parser_tests;
