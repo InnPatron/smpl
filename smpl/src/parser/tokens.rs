@@ -232,7 +232,7 @@ struct CharInput<'src_str, 'input> {
 }
 
 impl<'src_str, 'input> CharInput<'src_str, 'input> {
-    fn new(source: &'src_str ModuleSource, input: &'input str) 
+    fn new(source: &'src_str ModuleSource, input: &'input str)
         -> CharInput<'src_str, 'input> {
 
         let last = if input.len() == 0 {
@@ -244,9 +244,9 @@ impl<'src_str, 'input> CharInput<'src_str, 'input> {
         let lookahead = chars.peek().map(|(char_index, (byte_index, c))| {
             (
                 Location::new(
-                    byte_index.clone(), 
-                    char_index.clone(), 
-                    1, 
+                    byte_index.clone(),
+                    char_index.clone(),
+                    1,
                     2),
                 c.clone(),
             )
@@ -326,7 +326,7 @@ pub struct Tokenizer<'src_str, 'input> {
 }
 
 impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
-    pub fn new(source: &'src_str ModuleSource, input: &'input str) 
+    pub fn new(source: &'src_str ModuleSource, input: &'input str)
         -> Tokenizer<'src_str, 'input> {
 
         Tokenizer {
@@ -889,15 +889,15 @@ mod hello;";
 
     #[test]
     fn tokenize_literals() {
-        let input = "true 
-false 
-1337 
--1337 
-1 
--1 
-1.0 
-1. 
--1. 
+        let input = "true
+false
+1337
+-1337
+1
+-1
+1.0
+1.
+-1.
 -1.0
 ";
         let source = ModuleSource::Anonymous(None);
