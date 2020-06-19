@@ -4,6 +4,7 @@ use std::fmt;
 use crate::span::Span;
 use crate::ast_node::AstNode;
 use crate::expr_ast::{ Expr, Block };
+use crate::typable_ast::{Typed, Typable};
 
 pub struct Module {
     pub ident: AstNode<Ident>,
@@ -26,7 +27,7 @@ pub struct UseDecl(pub AstNode<Ident>);
 pub struct BuiltinFunction {
     pub name: AstNode<Ident>,
     pub params: BuiltinFnParams,
-    pub return_type: Option<AstNode<TypeAnnotation>>,
+    pub return_type: Option<Typable<AstNode<TypeAnnotation>>>,
     pub annotations: Vec<Annotation>,
     pub type_params: Option<TypeParams>,
     pub where_clause: Option<WhereClause>,
@@ -35,15 +36,15 @@ pub struct BuiltinFunction {
 #[derive(Debug, Clone, PartialEq)]
 pub enum BuiltinFnParams {
     Unchecked,
-    Checked(Option<Vec<AstNode<FnParameter>>>),
+    Checked(Vec<Typable<AstNode<FnParameter>>>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: AstNode<Ident>,
-    pub params: Option<Vec<AstNode<FnParameter>>>,
-    pub return_type: Option<AstNode<TypeAnnotation>>,
-    pub body: AstNode<Block>,
+    pub params: Option<Vec<Typable<AstNode<FnParameter>>>>,
+    pub return_type: Option<Typable<AstNode<TypeAnnotation>>>,
+    pub body: Typable<AstNode<Block>>,
     pub annotations: Vec<Annotation>,
     pub type_params: Option<TypeParams>,
     pub where_clause: Option<WhereClause>,
@@ -81,7 +82,7 @@ pub struct StructBody(pub Option<Vec<StructField>>);
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructField {
     pub name: AstNode<Ident>,
-    pub field_type: AstNode<TypeAnnotation>,
+    pub field_type: Typable<AstNode<TypeAnnotation>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -111,19 +112,19 @@ pub enum WidthConstraint {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypedPath {
-    pub base: ModulePath,
-    pub params: Vec<AstNode<TypeAnnotation>>,
+    pub base: Typable<ModulePath>,
+    pub params: Vec<Typable<AstNode<TypeAnnotation>>>,
 }
 
 impl TypedPath {
-    pub fn nil_arity(base: ModulePath) -> Self {
+    pub fn nil_arity(base: Typable<ModulePath>) -> Self {
         TypedPath {
             base,
             params: Vec::with_capacity(0),
         }
     }
 
-    pub fn n_arity(base: ModulePath, params: Vec<AstNode<TypeAnnotation>>) -> Self {
+    pub fn n_arity(base: Typable<ModulePath>, params: Vec<Typable<AstNode<TypeAnnotation>>>) -> Self {
         TypedPath {
             base,
             params,
