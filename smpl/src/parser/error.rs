@@ -33,6 +33,8 @@ macro_rules! parser_state {
     };
 }
 
+pub type ParserResult<T> = Result<T, ParserError>;
+
 #[derive(Debug, Clone)]
 pub struct ParserError {
     kind: ParserErrorKind,

@@ -20,7 +20,7 @@ mod expr_parser;
 pub mod expr_parser;
 
 mod new_parser;
-
+mod type_parser;
 
 #[cfg(test)]
 mod parser_tests;

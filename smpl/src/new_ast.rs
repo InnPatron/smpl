@@ -7,7 +7,7 @@ use crate::expr_ast::{ Expr, Block };
 use crate::typable_ast::{Typed, Typable};
 
 pub struct Module {
-    pub ident: AstNode<Ident>,
+    pub ident: Option<AstNode<Ident>>,
     pub top_levels: Vec<DeclStmt>,
 }
 
@@ -42,7 +42,7 @@ pub enum BuiltinFnParams {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: AstNode<Ident>,
-    pub params: Option<Vec<Typable<AstNode<FnParameter>>>>,
+    pub params: Vec<Typable<AstNode<FnParameter>>>,
     pub return_type: Option<Typable<AstNode<TypeAnnotation>>>,
     pub body: Typable<AstNode<Block>>,
     pub annotations: Vec<Annotation>,
