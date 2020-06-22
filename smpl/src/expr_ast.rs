@@ -28,13 +28,13 @@ pub enum ExprStmt {
 #[derive(Clone, Debug, PartialEq)]
 pub struct If {
     pub branches: Vec<Branch>,
-    pub default_branch: Option<Typable<AstNode<Block>>>,
+    pub default_branch: Option<TypedNode<Block>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Branch {
-    pub conditional: Typable<AstNode<Expr>>,
-    pub block: Typable<AstNode<Block>>,
+    pub conditional: TypedNode<Expr>,
+    pub block: TypedNode<Block>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -62,18 +62,18 @@ pub struct Assignment {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    If(Box<Typable<AstNode<If>>>),
-    While(Box<Typable<AstNode<While>>>),
-    Bin(Typable<AstNode<BinExpr>>),
-    Uni(Typable<AstNode<UniExpr>>),
-    Literal(Typable<AstNode<Literal>>),
-    Binding(Typable<AstNode<Ident>>),
-    Access(Box<Typable<AstNode<Access>>>),
-    FnCall(Typable<AstNode<FnCall>>),
-    StructInit(Typable<AstNode<StructInit>>),
-    ArrayInit(Typable<AstNode<ArrayInit>>),
-    AnonymousFn(Typable<AstNode<AnonymousFn>>),
-    Path(Typable<AstNode<TypedPath>>),
+    If(Box<TypedNode<If>>),
+    While(Box<TypedNode<While>>),
+    Bin(TypedNode<BinExpr>),
+    Uni(TypedNode<UniExpr>),
+    Literal(TypedNode<Literal>),
+    Binding(TypedNode<Ident>),
+    Access(Box<TypedNode<Access>>),
+    FnCall(TypedNode<FnCall>),
+    StructInit(TypedNode<StructInit>),
+    ArrayInit(TypedNode<ArrayInit>),
+    AnonymousFn(TypedNode<AnonymousFn>),
+    Path(TypedNode<TypedPath>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
