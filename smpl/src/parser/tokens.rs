@@ -83,6 +83,8 @@ pub enum Token {
     Lte,
     Lt,
 
+    Bang,
+    // TODO: Remove 'Invert'
     Invert,
 
     Plus,
@@ -163,6 +165,7 @@ impl std::fmt::Display for Token {
             Lte => write!(f, "<="),
             Lt => write!(f, "<"),
 
+            Bang => write!(f, "!"),
             Invert => write!(f, "!"),
 
             Plus => write!(f, "+"),
@@ -510,7 +513,7 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
                     ))
                 } else {
                     Ok(SpannedToken::new(
-                        Token::Invert,
+                        Token::Bang,
                         LocationSpan::span_1(self.source.to_string(), start, 1),
                     ))
                 }
