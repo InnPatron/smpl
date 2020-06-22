@@ -1,5 +1,5 @@
 use crate::span::Span;
-use crate::ast_node::{EmptyAstNode, AstNode};
+use crate::ast_node::{EmptyAstNode, AstNode, Spanned};
 
 use crate::new_ast::{Ident, TypedPath, TypeAnnotation, FnParameter};
 use crate::typable_ast::{Typed, Typable};
@@ -39,7 +39,7 @@ pub struct Branch {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct While {
-    pub conditional: AstNode<Expr>,
+    pub conditional: Expr,
     pub body: TypedNode<Block>,
     pub default_branch: Option<TypedNode<Block>>,
 }
@@ -77,10 +77,6 @@ pub enum Expr {
     Path(TypedNode<TypedPath>),
 }
 
-impl Expr {
-
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct AnonymousFn {
     pub params: Option<Vec<AstNode<FnParameter>>>,
@@ -92,7 +88,7 @@ pub struct AnonymousFn {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Access {
     root_name: AstNode<Ident>,
-    root_indexing: Option<Typable<Expr>>,
+    root_indexing: Option<Expr>,
     root_var: Option<Typable<VarId>>,
     path: Vec<self::FASegment>,
 }
@@ -101,7 +97,7 @@ pub struct Access {
 #[derive(Debug, Clone, PartialEq)]
 pub enum FASegment {
     Ident(Field),
-    Indexing(Field, Typable<Expr>),
+    Indexing(Field, Expr),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -136,27 +132,27 @@ impl Field {
 #[derive(Clone, Debug, PartialEq)]
 pub struct UniExpr {
     pub op: UniOp,
-    pub expr: Box<Typable<Expr>>,
+    pub expr: Box<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BinExpr {
     pub op: BinOp,
-    pub lhs: Box<Typable<Expr>>,
-    pub rhs: Box<Typable<Expr>>,
+    pub lhs: Box<Expr>,
+    pub rhs: Box<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
     pub path: AstNode<TypedPath>,
     pub fn_id: Option<Typable<FnId>>,
-    pub args: Option<Vec<Typable<Expr>>>,
+    pub args: Option<Vec<Expr>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructInit {
     pub struct_name: Typable<Option<TypedPath>>,
-    pub field_init: Vec<(AstNode<Ident>, Box<Typable<Expr>>)>,
+    pub field_init: Vec<(AstNode<Ident>, Box<Expr>)>,
 }
 
 impl StructInit {
@@ -167,8 +163,8 @@ impl StructInit {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArrayInit {
-    InitList(Vec<Typable<Expr>>),
-    Value(Box<Typable<Expr>>, u64),
+    InitList(Vec<Expr>),
+    Value(Box<Expr>, u64),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -238,6 +234,26 @@ impl Typed for Expr {
             Expr::ArrayInit(ref mut typed) => typed.set_type(t),
             Expr::AnonymousFn(ref mut typed) => typed.set_type(t),
             Expr::Path(ref mut typed) => typed.set_type(t),
+        }
+    }
+}
+
+impl Spanned for Expr {
+    fn span(&self) -> Span {
+        match *self {
+            Expr::Assignment(ref spanned) => spanned.data().span(),
+            Expr::If(ref spanned) => spanned.data().span(),
+            Expr::While(ref spanned) => spanned.data().span(),
+            Expr::Bin(ref spanned) => spanned.data().span(),
+            Expr::Uni(ref spanned) => spanned.data().span(),
+            Expr::Literal(ref spanned) => spanned.data().span(),
+            Expr::Binding(ref spanned) => spanned.data().span(),
+            Expr::Access(ref spanned) => spanned.data().span(),
+            Expr::FnCall(ref spanned) => spanned.data().span(),
+            Expr::StructInit(ref spanned) => spanned.data().span(),
+            Expr::ArrayInit(ref spanned) => spanned.data().span(),
+            Expr::AnonymousFn(ref spanned) => spanned.data().span(),
+            Expr::Path(ref spanned) => spanned.data().span(),
         }
     }
 }
