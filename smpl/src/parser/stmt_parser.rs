@@ -356,12 +356,25 @@ fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
                 | Token::Bang => Box::new(uni_expr) as ExprAction,
 
             Token::LParen => Box::new(paren_expr) as ExprAction,
+
+            Token::Identifier(..) => Box::new(ident_expr) as ExprAction,
             _ => todo!()
         },
         parser_state!("expr", "nud")
     );
 
     Ok(action)
+}
+
+fn ident_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
+    let (ident_span, ident) = consume_token!(tokens,
+        Token::Identifier(ident) => Ident(ident),
+        parser_state!("identifier-leaf", "root")
+    );
+
+    let ident_node = Typable::untyped(AstNode::new(ident, ident_span));
+
+    Ok(Expr::Binding(ident_node))
 }
 
 fn paren_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
