@@ -355,12 +355,34 @@ fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
                 | Token::Minus
                 | Token::Bang => Box::new(uni_expr) as ExprAction,
 
+            Token::LParen => Box::new(paren_expr) as ExprAction,
             _ => todo!()
         },
         parser_state!("expr", "nud")
     );
 
     Ok(action)
+}
+
+fn paren_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
+    let _ = consume_token!(
+        tokens,
+        Token::LParen,
+        parser_state!("paren-expr", "lparen")
+    );
+
+    let inner = production!(
+        parse_expr(tokens, &[ExprDelim::Semi], 0),
+        parser_state!("paren-expr", "inner-expr")
+    );
+
+    let _ = consume_token!(
+        tokens,
+        Token::RParen,
+        parser_state!("paren-expr", "rparen")
+    );
+
+    Ok(inner)
 }
 
 fn uni_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
