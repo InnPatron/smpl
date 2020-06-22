@@ -1,6 +1,7 @@
 use std::fmt;
 
 use crate::analysis::abstract_type::AbstractType;
+use crate::expr_ast::Expr;
 
 pub struct Typable<T> {
     data: T,
@@ -28,18 +29,6 @@ impl<T> Typable<T> {
 
     pub fn data_mut(&mut self) -> &mut T {
         &mut self.data
-    }
-
-    pub fn typ(&self) -> &AbstractType {
-        self.typ.as_ref().expect("Missing type")
-    }
-
-    pub fn set_type(&mut self, t: AbstractType) {
-        if self.typ.is_some() {
-            panic!("Attempting to overrwite a type");
-        }
-
-        self.typ = Some(t);
     }
 
     pub fn into_data(self) -> T {
@@ -90,10 +79,58 @@ where
 
 pub trait Typed {
     fn typ(&self) -> &AbstractType;
+
+    fn set_type(&mut self, t: AbstractType);
 }
 
 impl<T> Typed for Typable<T> {
     fn typ(&self) -> &AbstractType {
-        self.typ()
+        self.typ.as_ref().expect("Missing type")
+    }
+
+    fn set_type(&mut self, t: AbstractType) {
+        if self.typ.is_some() {
+            panic!("Attempting to overrwite a type");
+        }
+
+        self.typ = Some(t);
+    }
+}
+
+impl Typed for Expr {
+    fn typ(&self) -> &AbstractType {
+        match *self {
+            Expr::Assignment(ref typed) => typed.typ(),
+            Expr::If(ref typed) => typed.typ(),
+            Expr::While(ref typed) => typed.typ(),
+            Expr::Bin(ref typed) => typed.typ(),
+            Expr::Uni(ref typed) => typed.typ(),
+            Expr::Literal(ref typed) => typed.typ(),
+            Expr::Binding(ref typed) => typed.typ(),
+            Expr::Access(ref typed) => typed.typ(),
+            Expr::FnCall(ref typed) => typed.typ(),
+            Expr::StructInit(ref typed) => typed.typ(),
+            Expr::ArrayInit(ref typed) => typed.typ(),
+            Expr::AnonymousFn(ref typed) => typed.typ(),
+            Expr::Path(ref typed) => typed.typ(),
+        }
+    }
+
+    fn set_type(&mut self, t: AbstractType) {
+        match *self {
+            Expr::Assignment(ref mut typed) => typed.set_type(t),
+            Expr::If(ref mut typed) => typed.set_type(t),
+            Expr::While(ref mut typed) => typed.set_type(t),
+            Expr::Bin(ref mut typed) => typed.set_type(t),
+            Expr::Uni(ref mut typed) => typed.set_type(t),
+            Expr::Literal(ref mut typed) => typed.set_type(t),
+            Expr::Binding(ref mut typed) => typed.set_type(t),
+            Expr::Access(ref mut typed) => typed.set_type(t),
+            Expr::FnCall(ref mut typed) => typed.set_type(t),
+            Expr::StructInit(ref mut typed) => typed.set_type(t),
+            Expr::ArrayInit(ref mut typed) => typed.set_type(t),
+            Expr::AnonymousFn(ref mut typed) => typed.set_type(t),
+            Expr::Path(ref mut typed) => typed.set_type(t),
+        }
     }
 }

@@ -1,6 +1,8 @@
 use std::fmt;
 
 use crate::span::Span;
+use crate::analysis::abstract_type::AbstractType;
+use crate::typable_ast::Typed;
 
 pub type EmptyAstNode = AstNode<()>;
 
@@ -69,5 +71,15 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         ::std::fmt::Debug::fmt(&self.node, f)
+    }
+}
+
+impl<T> Typed for AstNode<T> where T: Typed {
+    fn typ(&self) -> &AbstractType {
+        self.node.typ()
+    }
+
+    fn set_type(&mut self, t: AbstractType) {
+        self.node.set_type(t);
     }
 }
