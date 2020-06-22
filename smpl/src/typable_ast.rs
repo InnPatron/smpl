@@ -41,6 +41,10 @@ impl<T> Typable<T> {
 
         self.typ = Some(t);
     }
+
+    pub fn into_data(self) -> T {
+        self.data
+    }
 }
 
 impl<T> PartialEq for Typable<T>
