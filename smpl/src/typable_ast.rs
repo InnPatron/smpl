@@ -1,6 +1,8 @@
 use std::fmt;
 
+use crate::span::Span;
 use crate::analysis::abstract_type::AbstractType;
+use crate::ast_node::Spanned;
 
 pub struct Typable<T> {
     data: T,
@@ -93,5 +95,12 @@ impl<T> Typed for Typable<T> {
         }
 
         self.typ = Some(t);
+    }
+}
+
+
+impl<T> Spanned for Typable<T> where T: Spanned {
+    fn span(&self) -> Span {
+        self.data.span()
     }
 }
