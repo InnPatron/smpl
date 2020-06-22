@@ -309,16 +309,37 @@ fn expr(
     delimiters: &[ExprDelim],
     min_bp: BindingPower,
     ) -> ParserResult<Expr> {
-    todo!();
+
+    if tokens.eof() {
+        todo!("Unexpected EOF 1");
+    }
+
+    // TODO: eat whitespace
+    let expr_action = nud_action(tokens)?;
+    let left: Expr = expr_action(tokens)?;
+    expr_with_left(tokens, left, delimiters, min_bp)
 }
 
 fn expr_with_left(
     tokens: &mut BufferedTokenizer,
-    left: Expr,
+    mut left: Expr,
     delimiters: &[ExprDelim],
     min_bp: BindingPower,
     ) -> ParserResult<Expr> {
-    todo!();
+
+    while !tokens.eof() {
+        // TODO: Delimiter check
+
+        // TODO: postfix
+
+        // TODO: eate whitespace
+
+        // TODO: lbp
+        // let (lbp, rbp, led_action)
+        // left = led_action(tokens, left)?;
+    }
+
+    Ok(left)
 }
 
 fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
