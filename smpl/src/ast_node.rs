@@ -6,6 +6,10 @@ use crate::typable_ast::Typed;
 
 pub type EmptyAstNode = AstNode<()>;
 
+pub trait Spanned {
+    fn span(&self) -> Span;
+}
+
 pub struct AstNode<T> {
     node: T,
     span: Span,
@@ -30,8 +34,10 @@ impl<T> AstNode<T> {
     pub fn node_mut(&mut self) -> &mut T {
         &mut self.node
     }
+}
 
-    pub fn span(&self) -> Span {
+impl<T> Spanned for AstNode<T> {
+    fn span(&self) -> Span {
         self.span.clone()
     }
 }
