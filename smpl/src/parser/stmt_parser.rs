@@ -3,14 +3,14 @@ use std::ops::FnOnce;
 use super::error::*;
 use super::tokens::*;
 use super::type_parser::*;
-use crate::ast_node::AstNode;
+use crate::ast_node::{Spanned, AstNode};
 use crate::new_ast::*;
 use crate::span::*;
 use crate::typable_ast::Typable;
 use crate::expr_ast::*;
 
 type BindingPower = u64;
-type ExprAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<TypedNode<Expr>>>;
+type ExprAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<Expr>>;
 type StmtAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<Stmt>>;
 type LbpData = (BindingPower, BindingPower, ExprAction);
 
@@ -261,7 +261,7 @@ fn parse_if(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
         default_branch,
     }, if_span);
 
-    if nud(tokens).is_ok() {
+    if nud_action(tokens).is_ok() {
         // if-expr is in a statement position
         // Example:
         //      if foo { bar; } x = 1;
@@ -281,8 +281,6 @@ fn parse_if(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
                 0),
             parser_state!("expr", "right"));
 
-        let (expr, _) = expr.into_data().split();
-
         Ok(Stmt::Expr(expr))
     }
 }
@@ -301,16 +299,50 @@ fn if_branch(tokens: &mut BufferedTokenizer) -> ParserResult<Branch> {
 }
 
 fn top_level_expr(tokens: &mut BufferedTokenizer, delimiters: &[ExprDelim])
-    -> ParserResult<TypedNode<Expr>> {
+    -> ParserResult<Expr> {
 
-    let nud_action = nud(tokens)?;
-    let left = nud_action(tokens)?;
+    let nud = nud_action(tokens)?;
+    let left = nud(tokens)?;
 
     todo!();
 }
 
-fn nud(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
-    todo!();
+fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
+
+    let action = peek_token!(tokens,
+        |tok| match tok {
+            Token::IntLiteral(..)
+                | Token::FloatLiteral(..)
+                | Token::BoolLiteral(..)
+                | Token::StringLiteral(..) => Box::new(parse_literal),
+
+            _ => todo!()
+        },
+        parser_state!("expr", "nud")
+    );
+
+    Ok(action)
+}
+
+fn parse_literal(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
+    let (next_span, next) = tokens
+        .next()
+        .unwrap()
+        .map_err(|e| parser_error!(e.into(), parser_state!("literal")))?
+        .to_data();
+
+    let literal = match next {
+        Token::IntLiteral(i) => Literal::Int(i),
+        Token::FloatLiteral(f) => Literal::Float(f),
+        Token::BoolLiteral(b) => Literal::Bool(b),
+        Token::StringLiteral(s) => Literal::String(s),
+
+        _ => unreachable!(),
+    };
+
+    let literal_node = Expr::Literal(Typable::untyped(AstNode::new(literal, next_span)));
+
+    Ok(literal_node)
 }
 
 fn expr_with_left(
@@ -318,6 +350,6 @@ fn expr_with_left(
     left: Expr,
     delimiters: &[ExprDelim],
     min_bp: BindingPower,
-    ) -> ParserResult<TypedNode<Expr>> {
+    ) -> ParserResult<Expr> {
     todo!();
 }
