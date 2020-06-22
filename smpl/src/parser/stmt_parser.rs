@@ -301,10 +301,10 @@ fn if_branch(tokens: &mut BufferedTokenizer) -> ParserResult<Branch> {
 fn top_level_expr(tokens: &mut BufferedTokenizer, delimiters: &[ExprDelim])
     -> ParserResult<Expr> {
 
-    expr(tokens, delimiters, 0)
+    parse_expr(tokens, delimiters, 0)
 }
 
-fn expr(
+fn parse_expr(
     tokens: &mut BufferedTokenizer,
     delimiters: &[ExprDelim],
     min_bp: BindingPower,
@@ -381,7 +381,7 @@ fn uni_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
     };
 
     let base = production!(
-        expr(tokens, &[ExprDelim::Semi], 0),
+        parse_expr(tokens, &[ExprDelim::Semi], 0),
         parser_state!("uni-expr", "base")
     );
 
