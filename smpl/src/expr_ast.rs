@@ -4,6 +4,7 @@ use crate::ast_node::{EmptyAstNode, AstNode};
 use crate::new_ast::{Ident, TypedPath, TypeAnnotation, FnParameter};
 use crate::typable_ast::{Typed, Typable};
 
+use crate::analysis::abstract_type::AbstractType;
 use crate::analysis::{FieldId, VarId, FnId};
 
 pub type TypedNode<T> = Typable<AstNode<T>>;
@@ -19,8 +20,8 @@ pub enum ExprStmt {
     If(AstNode<If>),
     While(AstNode<While>),
     LocalVarDecl(AstNode<LocalVarDecl>),
-    Return(AstNode<Option<TypedNode<Expr>>>),
-    Break(AstNode<Option<TypedNode<Expr>>>),
+    Return(AstNode<Option<Expr>>),
+    Break(AstNode<Option<Expr>>),
     Continue(EmptyAstNode),
 }
 
@@ -32,14 +33,14 @@ pub struct If {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Branch {
-    pub conditional: TypedNode<Expr>,
+    pub conditional: Expr,
     pub block: TypedNode<Block>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct While {
-    pub conditional: Typable<AstNode<Expr>>,
-    pub body: Typable<AstNode<Block>>,
+    pub conditional: AstNode<Expr>,
+    pub body: TypedNode<Block>,
     pub default_branch: Option<TypedNode<Block>>,
 }
 
@@ -50,13 +51,13 @@ pub struct Block(pub Vec<Stmt>);
 pub struct LocalVarDecl {
     pub var_type: Option<AstNode<TypeAnnotation>>,
     pub var_name: AstNode<Ident>,
-    pub var_init: TypedNode<Expr>,
+    pub var_init: Expr,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Assignment {
     pub name: Typable<Box<AstNode<Access>>>,
-    pub value: TypedNode<Expr>,
+    pub value: Expr,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -74,6 +75,10 @@ pub enum Expr {
     ArrayInit(TypedNode<ArrayInit>),
     AnonymousFn(TypedNode<AnonymousFn>),
     Path(TypedNode<TypedPath>),
+}
+
+impl Expr {
+
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -197,4 +202,42 @@ pub enum BinOp {
 pub enum UniOp {
     Negate,
     LogicalInvert,
+}
+
+impl Typed for Expr {
+    fn typ(&self) -> &AbstractType {
+        match *self {
+            Expr::Assignment(ref typed) => typed.typ(),
+            Expr::If(ref typed) => typed.typ(),
+            Expr::While(ref typed) => typed.typ(),
+            Expr::Bin(ref typed) => typed.typ(),
+            Expr::Uni(ref typed) => typed.typ(),
+            Expr::Literal(ref typed) => typed.typ(),
+            Expr::Binding(ref typed) => typed.typ(),
+            Expr::Access(ref typed) => typed.typ(),
+            Expr::FnCall(ref typed) => typed.typ(),
+            Expr::StructInit(ref typed) => typed.typ(),
+            Expr::ArrayInit(ref typed) => typed.typ(),
+            Expr::AnonymousFn(ref typed) => typed.typ(),
+            Expr::Path(ref typed) => typed.typ(),
+        }
+    }
+
+    fn set_type(&mut self, t: AbstractType) {
+        match *self {
+            Expr::Assignment(ref mut typed) => typed.set_type(t),
+            Expr::If(ref mut typed) => typed.set_type(t),
+            Expr::While(ref mut typed) => typed.set_type(t),
+            Expr::Bin(ref mut typed) => typed.set_type(t),
+            Expr::Uni(ref mut typed) => typed.set_type(t),
+            Expr::Literal(ref mut typed) => typed.set_type(t),
+            Expr::Binding(ref mut typed) => typed.set_type(t),
+            Expr::Access(ref mut typed) => typed.set_type(t),
+            Expr::FnCall(ref mut typed) => typed.set_type(t),
+            Expr::StructInit(ref mut typed) => typed.set_type(t),
+            Expr::ArrayInit(ref mut typed) => typed.set_type(t),
+            Expr::AnonymousFn(ref mut typed) => typed.set_type(t),
+            Expr::Path(ref mut typed) => typed.set_type(t),
+        }
+    }
 }
