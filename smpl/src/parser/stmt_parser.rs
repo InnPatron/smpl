@@ -301,20 +301,38 @@ fn if_branch(tokens: &mut BufferedTokenizer) -> ParserResult<Branch> {
 fn top_level_expr(tokens: &mut BufferedTokenizer, delimiters: &[ExprDelim])
     -> ParserResult<Expr> {
 
-    let nud = nud_action(tokens)?;
-    let left = nud(tokens)?;
+    expr(tokens, delimiters, 0)
+}
 
+fn expr(
+    tokens: &mut BufferedTokenizer,
+    delimiters: &[ExprDelim],
+    min_bp: BindingPower,
+    ) -> ParserResult<Expr> {
+    todo!();
+}
+
+fn expr_with_left(
+    tokens: &mut BufferedTokenizer,
+    left: Expr,
+    delimiters: &[ExprDelim],
+    min_bp: BindingPower,
+    ) -> ParserResult<Expr> {
     todo!();
 }
 
 fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
 
-    let action = peek_token!(tokens,
+    let action: ExprAction = peek_token!(tokens,
         |tok| match tok {
             Token::IntLiteral(..)
                 | Token::FloatLiteral(..)
                 | Token::BoolLiteral(..)
-                | Token::StringLiteral(..) => Box::new(parse_literal),
+                | Token::StringLiteral(..) => Box::new(parse_literal) as ExprAction,
+
+            Token::Plus
+                | Token::Minus
+                | Token::Bang => Box::new(uni_expr) as ExprAction,
 
             _ => todo!()
         },
@@ -322,6 +340,49 @@ fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
     );
 
     Ok(action)
+}
+
+fn uni_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
+    let (op_span, uniop) = tokens
+        .next()
+        .unwrap()
+        .map_err(|e| parser_error!(e.into(), parser_state!("uni-expr", "uni-op")))?
+        .to_data();
+
+    let uniop = match uniop {
+        Token::Plus => None,
+
+        Token::Minus => Some(UniOp::Negate),
+
+        Token::Bang => Some(UniOp::LogicalInvert),
+
+        _ => unreachable!(),
+    };
+
+    let base = production!(
+        expr(tokens, &[ExprDelim::Semi], 0),
+        parser_state!("uni-expr", "base")
+    );
+
+    let base_span = base.span();
+
+    let uni_expr_span = Span::combine(op_span, base_span);
+
+    match uniop {
+        Some(op) => {
+            let uni_expr = UniExpr {
+                op,
+                expr: Box::new(base),
+            };
+
+            let uni_node = Typable::untyped(AstNode::new(uni_expr, uni_expr_span));
+
+            Ok(Expr::Uni(uni_node))
+        }
+
+
+        None => Ok(base),
+    }
 }
 
 fn parse_literal(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
@@ -343,13 +404,4 @@ fn parse_literal(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
     let literal_node = Expr::Literal(Typable::untyped(AstNode::new(literal, next_span)));
 
     Ok(literal_node)
-}
-
-fn expr_with_left(
-    tokens: &mut BufferedTokenizer,
-    left: Expr,
-    delimiters: &[ExprDelim],
-    min_bp: BindingPower,
-    ) -> ParserResult<Expr> {
-    todo!();
 }
