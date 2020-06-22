@@ -1,9 +1,9 @@
 use std::collections::HashMap;
-use std::iter::Iterator;
 
 use super::error::*;
 use super::tokens::*;
 use super::type_parser::*;
+use super::stmt_parser;
 use crate::new_ast::*;
 use crate::ast_node::AstNode;
 use crate::typable_ast::{Typable, Typed};
@@ -379,7 +379,7 @@ fn fn_decl(
 
     let mut body: Option<Typable<AstNode<Block>>> = None;
     if !is_builtin {
-        body = Some(block(tokens)?);
+        body = Some(stmt_parser::block(tokens)?);
     }
 
     if is_builtin {

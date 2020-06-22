@@ -6,6 +6,8 @@ use crate::typable_ast::{Typed, Typable};
 
 use crate::analysis::{FieldId, VarId, FnId};
 
+pub type TypedNode<T> = Typable<AstNode<T>>;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
     ExprStmt(ExprStmt),
@@ -18,8 +20,8 @@ pub enum ExprStmt {
     While(AstNode<While>),
     LocalVarDecl(AstNode<LocalVarDecl>),
     Assignment(AstNode<Assignment>),
-    Return(AstNode<Option<Typable<Expr>>>),
-    Break(AstNode<Option<Typable<Expr>>>),
+    Return(AstNode<Option<TypedNode<Expr>>>),
+    Break(AstNode<Option<TypedNode<Expr>>>),
     Continue(EmptyAstNode),
 }
 
@@ -39,7 +41,7 @@ pub struct Branch {
 pub struct While {
     pub conditional: Typable<AstNode<Expr>>,
     pub body: Typable<AstNode<Block>>,
-    pub default_branch: Option<Typable<AstNode<Block>>>,
+    pub default_branch: Option<TypedNode<Block>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -49,13 +51,13 @@ pub struct Block(pub Vec<Stmt>);
 pub struct LocalVarDecl {
     pub var_type: Option<AstNode<TypeAnnotation>>,
     pub var_name: AstNode<Ident>,
-    pub var_init: Typable<Expr>,
+    pub var_init: TypedNode<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Assignment {
     pub name: Typable<Box<AstNode<Access>>>,
-    pub value: Typable<Expr>,
+    pub value: TypedNode<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

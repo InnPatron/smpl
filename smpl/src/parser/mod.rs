@@ -21,6 +21,7 @@ pub mod expr_parser;
 
 mod new_parser;
 mod type_parser;
+mod stmt_parser;
 
 #[cfg(test)]
 mod parser_tests;
