@@ -787,6 +787,10 @@ impl<'a, 'b> BufferedTokenizer<'a, 'b> {
         self.next.is_none()
     }
 
+    pub fn eof(&self) -> bool {
+        self.peek_is_none()
+    }
+
     pub fn peek<F, R>(&self, closure: F) -> Option<Result<R, SpannedError>>
     where
         F: Fn(&Token) -> R,
