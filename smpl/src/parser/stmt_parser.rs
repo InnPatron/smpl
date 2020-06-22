@@ -14,6 +14,12 @@ type ExprAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<TypedNode<E
 type StmtAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<Stmt>>;
 type LbpData = (BindingPower, BindingPower, ExprAction);
 
+enum ExprDelim {
+    Semi,
+    Comma,
+    NewBlock,
+}
+
 pub fn block(tokens: &mut BufferedTokenizer) -> ParserResult<TypedNode<Block>> {
     let (lspan, _) = consume_token!(
         tokens,
@@ -59,7 +65,7 @@ fn stmt(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
             Token::Break
                 | Token::Return
                 | Token::Continue => keyword_expr(tok.clone()),
-            Token::If => todo!(),
+            Token::If => Box::new(parse_if),
             Token::While => todo!(),
 
             _ => todo!(),
@@ -90,7 +96,7 @@ fn keyword_expr(kind: Token) -> StmtAction {
                     // No semicolon found
                     // Parse for expression
                     let expr = production!(
-                        top_level_expr(tokens, &[Token::Semi]),
+                        top_level_expr(tokens, &[ExprDelim::Semi]),
                         parser_state!("break-stmt", "expr")
                     );
 
@@ -130,7 +136,7 @@ fn keyword_expr(kind: Token) -> StmtAction {
                     // No semicolon found
                     // Parse for expression
                     let expr = production!(
-                        top_level_expr(tokens, &[Token::Semi]),
+                        top_level_expr(tokens, &[ExprDelim::Semi]),
                         parser_state!("return-stmt", "expr")
                     );
 
@@ -176,20 +182,141 @@ fn keyword_expr(kind: Token) -> StmtAction {
     })
 }
 
-fn top_level_expr(tokens: &mut BufferedTokenizer, delimiters: &[Token])
+fn parse_if(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
+
+    enum IfDec {
+        Elif,
+        Else,
+        End,
+    }
+
+    let (ifloc, _) =
+        consume_token!(tokens, Token::If, parser_state!("if-expr", "if"));
+
+    let mut end = ifloc.clone();
+
+    // Parse the first
+    let first_branch = production!(
+        if_branch(tokens),
+        parser_state!("if-expr", "first branch")
+    );
+    end = first_branch.block.data().span();
+
+    let mut branches = vec![first_branch];
+    let mut default_branch = None;
+
+    //
+    loop {
+        match peek_token!(
+            tokens,
+            |tok| match tok {
+                Token::Elif => IfDec::Elif,
+                Token::Else => IfDec::Else,
+
+                _ => IfDec::End,
+            },
+            parser_state!("if-stmt", "branches")
+        ) {
+            IfDec::Elif => {
+                let _elif = consume_token!(
+                    tokens,
+                    Token::Elif,
+                    parser_state!("if-stmt", "elif")
+                );
+
+                let branch = production!(
+                    if_branch(tokens),
+                    parser_state!("if-stmt", "elif branch")
+                );
+                end = branch.block.data().span();
+
+                branches.push(branch);
+            }
+
+            IfDec::Else => {
+                let _else = consume_token!(
+                    tokens,
+                    Token::Else,
+                    parser_state!("if-stmt", "else")
+                );
+                let block = production!(
+                    block(tokens),
+                    parser_state!("if-stmt", "else-block")
+                );
+
+                end = block.data().span();
+                default_branch = Some(block);
+
+                break;
+            }
+
+            IfDec::End => break,
+        }
+    }
+
+    let if_span = LocationSpan::combine(ifloc, end);
+
+    let if_node = AstNode::new(If {
+        branches,
+        default_branch,
+    }, if_span);
+
+    if nud(tokens).is_ok() {
+        // if-expr is in a statement position
+        // Example:
+        //      if foo { bar; } x = 1;
+        Ok(Stmt::ExprStmt(ExprStmt::If(if_node)))
+    } else {
+        // if-expr is in an expression position
+        // Example:
+        //      if foo { bar; } + 4;
+        //
+        // NOTE: Well-formedness of if expressions handled by a separate pass
+
+        let expr = production!(
+            expr_with_left(
+                tokens,
+                Expr::If(Box::new(Typable::untyped(if_node))),
+                &[ExprDelim::Semi],
+                0),
+            parser_state!("expr", "right"));
+
+        let (expr, _) = expr.into_data().split();
+
+        Ok(Stmt::Expr(expr))
+    }
+}
+
+fn if_branch(tokens: &mut BufferedTokenizer) -> ParserResult<Branch> {
+    let conditional = top_level_expr(tokens, &[])?;
+
+    let block = production!(block(tokens), parser_state!("if-branch", "block"));
+
+    let branch = Branch {
+        conditional: conditional,
+        block: block,
+    };
+
+    Ok(branch)
+}
+
+fn top_level_expr(tokens: &mut BufferedTokenizer, delimiters: &[ExprDelim])
     -> ParserResult<TypedNode<Expr>> {
+
+    let nud_action = nud(tokens)?;
+    let left = nud_action(tokens)?;
 
     todo!();
 }
 
-fn nud(tokens: &BufferedTokenizer) -> ParserResult<TypedNode<Expr>> {
+fn nud(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
     todo!();
 }
 
 fn expr_with_left(
     tokens: &mut BufferedTokenizer,
-    left: TypedNode<Expr>,
-    delimiters: &[Token],
+    left: Expr,
+    delimiters: &[ExprDelim],
     min_bp: BindingPower,
     ) -> ParserResult<TypedNode<Expr>> {
     todo!();
