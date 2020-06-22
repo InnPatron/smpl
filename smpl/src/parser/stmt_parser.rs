@@ -357,6 +357,8 @@ fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
 
             Token::LParen => Box::new(paren_expr) as ExprAction,
 
+            Token::LBrace => Box::new(block_expr) as ExprAction,
+
             Token::Identifier(..) => Box::new(ident_expr) as ExprAction,
             _ => todo!()
         },
@@ -364,6 +366,12 @@ fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
     );
 
     Ok(action)
+}
+
+fn block_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
+    let block = block(tokens)?;
+
+    Ok(Expr::Block(block))
 }
 
 fn ident_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {

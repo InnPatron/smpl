@@ -75,6 +75,7 @@ pub enum Expr {
     ArrayInit(TypedNode<ArrayInit>),
     AnonymousFn(TypedNode<AnonymousFn>),
     Path(TypedNode<TypedPath>),
+    Block(TypedNode<Block>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -216,6 +217,7 @@ impl Typed for Expr {
             Expr::ArrayInit(ref typed) => typed.typ(),
             Expr::AnonymousFn(ref typed) => typed.typ(),
             Expr::Path(ref typed) => typed.typ(),
+            Expr::Block(ref typed) => typed.typ(),
         }
     }
 
@@ -234,6 +236,7 @@ impl Typed for Expr {
             Expr::ArrayInit(ref mut typed) => typed.set_type(t),
             Expr::AnonymousFn(ref mut typed) => typed.set_type(t),
             Expr::Path(ref mut typed) => typed.set_type(t),
+            Expr::Block(ref mut typed) => typed.set_type(t),
         }
     }
 }
@@ -254,6 +257,7 @@ impl Spanned for Expr {
             Expr::ArrayInit(ref spanned) => spanned.data().span(),
             Expr::AnonymousFn(ref spanned) => spanned.data().span(),
             Expr::Path(ref spanned) => spanned.data().span(),
+            Expr::Block(ref spanned) => spanned.data().span(),
         }
     }
 }
