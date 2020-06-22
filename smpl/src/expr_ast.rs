@@ -19,7 +19,6 @@ pub enum ExprStmt {
     If(AstNode<If>),
     While(AstNode<While>),
     LocalVarDecl(AstNode<LocalVarDecl>),
-    Assignment(AstNode<Assignment>),
     Return(AstNode<Option<TypedNode<Expr>>>),
     Break(AstNode<Option<TypedNode<Expr>>>),
     Continue(EmptyAstNode),
@@ -62,6 +61,7 @@ pub struct Assignment {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
+    Assignment(Box<TypedNode<Assignment>>),
     If(Box<TypedNode<If>>),
     While(Box<TypedNode<While>>),
     Bin(TypedNode<BinExpr>),
