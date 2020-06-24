@@ -375,12 +375,23 @@ fn led_action(tokens: &BufferedTokenizer) -> ParserResult<LbpData> {
 
                 Token::Pipe         => (10, 10, binexpr(tok)),
 
+                // TODO: Check precedence
+                Token::Eq           => (15, 15, binexpr(tok)),
+                Token::NEq          => (17, 17, binexpr(tok)),
+                Token::Gt           => (17, 17, binexpr(tok)),
+                Token::Gte          => (17, 17, binexpr(tok)),
+                Token::Lt           => (17, 17, binexpr(tok)),
+                Token::Lte          => (17, 17, binexpr(tok)),
+
+                Token::LAnd         => (18, 18, binexpr(tok)),
+                Token::LOr          => (18, 18, binexpr(tok)),
+
                 Token::Plus         => (20, 20, binexpr(tok)),
                 Token::Minus        => (20, 20, binexpr(tok)),
                 Token::Star         => (30, 30, binexpr(tok)),
                 Token::Slash        => (30, 30, binexpr(tok)),
 
-                Token::Dot          => (100, 99, binexpr(tok)),
+                Token::Dot          => (100, 100, binexpr(tok)),
 
                 Token::ColonColon   => (120, 120, binexpr(tok)),
                 Token::Assign       => (140, 140, binexpr(tok)),
@@ -422,6 +433,18 @@ fn parse_binexpr(tokens: &mut BufferedTokenizer, left: Expr,
         Token::Star     => Ok(basic_binop!(left, BinOp::Mul, rbp, delims)),
         Token::Slash    => Ok(basic_binop!(left, BinOp::Div, rbp, delims)),
         Token::Pipe     => Ok(basic_binop!(left, BinOp::Pipe, rbp, delims)),
+
+        Token::Eq       => Ok(basic_binop!(left, BinOp::Eq, rbp, delims)),
+        Token::NEq      => Ok(basic_binop!(left, BinOp::Neq, rbp, delims)),
+        Token::Gte      => Ok(basic_binop!(left, BinOp::Gte, rbp, delims)),
+        Token::Gt       => Ok(basic_binop!(left, BinOp::Gt, rbp, delims)),
+        Token::Lte      => Ok(basic_binop!(left, BinOp::Lte, rbp, delims)),
+        Token::Lt       => Ok(basic_binop!(left, BinOp::Lt, rbp, delims)),
+
+        Token::LAnd     => Ok(basic_binop!(left, BinOp::LAnd, rbp, delims)),
+        Token::LOr      => Ok(basic_binop!(left, BinOp::LOr, rbp, delims)),
+
+        Token::Assign   => Ok(basic_binop!(left, BinOp::Assign, rbp, delims)),
 
         _ => todo!(),
     }

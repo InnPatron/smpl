@@ -185,14 +185,15 @@ pub enum BinOp {
     Div,
     Mod,
 
-    LogicalAnd,
-    LogicalOr,
-    GreaterEq,
-    LesserEq,
-    Greater,
-    Lesser,
+    LAnd,
+    LOr,
+    Gte,
+    Lte,
+    Gt,
+    Lt,
     Eq,
-    InEq,
+    Neq,
+    Assign,
 }
 
 #[derive(Clone, Debug, PartialEq)]
