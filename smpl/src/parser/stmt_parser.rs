@@ -333,11 +333,20 @@ fn expr_with_left(
 
         // TODO: postfix
 
-        // TODO: eate whitespace
+        // TODO: eat whitespace
 
-        // TODO: lbp
-        // let (lbp, rbp, expr_action)
-        // left = led_action(tokens, left)?;
+        // TODO: Delimiter check
+        if tokens.eof() {
+            break;
+        }
+
+        let (lbp, rbp, expr_action) = led_action(tokens)?;
+
+        if lbp < min_bp {
+            break;
+        }
+
+        left = expr_action(tokens, left, rbp, delimiters)?;
     }
 
     Ok(left)
