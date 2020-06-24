@@ -446,6 +446,29 @@ fn parse_binexpr(tokens: &mut BufferedTokenizer, left: Expr,
 
         Token::Assign   => Ok(basic_binop!(left, BinOp::Assign, rbp, delims)),
 
+        Token::ColonColon => {
+            let right = parse_expr(tokens, delims, rbp)?;
+            match (left, right) {
+                (Expr::Binding(left), Expr::Binding(right)) => {
+                    let left = left.into_data();
+                    let right = right.into_data();
+                    let path_span = Span::combine(left.span(), right.span());
+                    let module_path_node = AstNode::new(ModulePath(vec![left, right]), path_span);
+
+                    Ok(Expr::ModulePath(Typable::untyped(module_path_node)))
+                }
+
+                (Expr::ModulePath(mut path), Expr::Binding(right)) => {
+                    let right = right.into_data();
+                    path.data_mut().node_mut().0.push(right);
+
+                    Ok(Expr::ModulePath(path))
+                }
+
+                (left, right) => todo!("Unexpected left for operator \"::\""),
+            }
+        }
+
         _ => todo!(),
     }
 }
