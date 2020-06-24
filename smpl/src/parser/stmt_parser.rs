@@ -342,7 +342,7 @@ fn expr_with_left(
 
         let (lbp, rbp, expr_action) = led_action(tokens)?;
 
-        if lbp < min_bp {
+        if lbp <= min_bp {
             break;
         }
 
