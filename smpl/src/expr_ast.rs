@@ -1,7 +1,7 @@
 use crate::span::Span;
 use crate::ast_node::{EmptyAstNode, AstNode, Spanned};
 
-use crate::new_ast::{Ident, TypedPath, TypeAnnotation, FnParameter};
+use crate::new_ast::{Ident, TypedPath, ModulePath, TypeAnnotation, FnParameter};
 use crate::typable_ast::{Typed, Typable};
 
 use crate::analysis::abstract_type::AbstractType;
@@ -74,6 +74,7 @@ pub enum Expr {
     StructInit(TypedNode<StructInit>),
     ArrayInit(TypedNode<ArrayInit>),
     AnonymousFn(TypedNode<AnonymousFn>),
+    ModulePath(TypedNode<ModulePath>),
     Path(TypedNode<TypedPath>),
     Block(TypedNode<Block>),
 }
@@ -219,6 +220,7 @@ impl Typed for Expr {
             Expr::AnonymousFn(ref typed) => typed.typ(),
             Expr::Path(ref typed) => typed.typ(),
             Expr::Block(ref typed) => typed.typ(),
+            Expr::ModulePath(ref typed) => typed.typ(),
         }
     }
 
@@ -238,6 +240,7 @@ impl Typed for Expr {
             Expr::AnonymousFn(ref mut typed) => typed.set_type(t),
             Expr::Path(ref mut typed) => typed.set_type(t),
             Expr::Block(ref mut typed) => typed.set_type(t),
+            Expr::ModulePath(ref mut typed) => typed.set_type(t),
         }
     }
 }
@@ -259,6 +262,7 @@ impl Spanned for Expr {
             Expr::AnonymousFn(ref spanned) => spanned.data().span(),
             Expr::Path(ref spanned) => spanned.data().span(),
             Expr::Block(ref spanned) => spanned.data().span(),
+            Expr::ModulePath(ref spanned) => spanned.data().span(),
         }
     }
 }
