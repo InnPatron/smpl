@@ -10,9 +10,10 @@ use crate::typable_ast::Typable;
 use crate::expr_ast::*;
 
 type BindingPower = u64;
+type LedAction = Box<FnOnce(&mut BufferedTokenizer, Expr, BindingPower, &[ExprDelim]) -> ParserResult<Expr>>;
 type ExprAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<Expr>>;
 type StmtAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<Stmt>>;
-type LbpData = (BindingPower, BindingPower, ExprAction);
+type LbpData = (BindingPower, BindingPower, LedAction);
 
 enum ExprDelim {
     Semi,
@@ -335,11 +336,86 @@ fn expr_with_left(
         // TODO: eate whitespace
 
         // TODO: lbp
-        // let (lbp, rbp, led_action)
+        // let (lbp, rbp, expr_action)
         // left = led_action(tokens, left)?;
     }
 
     Ok(left)
+}
+
+
+fn led_action(tokens: &BufferedTokenizer) -> ParserResult<LbpData> {
+
+    fn binexpr(op: &Token) -> LedAction {
+        let op = op.clone();
+        Box::new(|tokens, left, rbp, delim| parse_binexpr(tokens, left, op, rbp, delim))
+    }
+
+    macro_rules! unreachable_led {
+        ($msg: expr) => {{
+            Box::new(|_: &mut BufferedTokenizer, _: Expr, _: BindingPower, _: &[ExprDelim]| -> ParserResult<Expr> {
+                unreachable!($msg)
+            }) as LedAction
+        }}
+    }
+
+    let (lbp, rbp, action) = peek_token!(tokens,
+        |tok| match tok {
+
+                Token::RParen => (0, 0, unreachable_led!("led rparen")),
+
+                Token::Pipe         => (10, 10, binexpr(tok)),
+
+                Token::Plus         => (20, 20, binexpr(tok)),
+                Token::Minus        => (20, 20, binexpr(tok)),
+                Token::Star         => (30, 30, binexpr(tok)),
+                Token::Slash        => (30, 30, binexpr(tok)),
+
+                Token::Dot          => (100, 99, binexpr(tok)),
+
+                Token::ColonColon   => (120, 120, binexpr(tok)),
+                Token::Assign       => (140, 140, binexpr(tok)),
+
+                _ => todo!(),
+
+         },
+        parser_state!("expr", "led")
+    );
+
+    Ok((lbp, rbp, action))
+}
+
+
+
+fn parse_binexpr(tokens: &mut BufferedTokenizer, left: Expr,
+    op: Token, rbp: BindingPower, delims: &[ExprDelim])
+    -> ParserResult<Expr> {
+
+    macro_rules! basic_binop {
+        ($left: expr, $op: expr, $rbp: expr, $delims: expr) => {{
+
+            let lhs = Box::new($left);
+            let rhs = Box::new(parse_expr(tokens, $delims, $rbp)?);
+
+            let binexpr_span = Span::combine(lhs.span(), rhs.span());
+
+            Expr::Bin(Typable::untyped(AstNode::new(BinExpr {
+                op: $op,
+                lhs,
+                rhs,
+            }, binexpr_span)))
+        }}
+    }
+
+    match op {
+        Token::Plus     => Ok(basic_binop!(left, BinOp::Add, rbp, delims)),
+        Token::Minus    => Ok(basic_binop!(left, BinOp::Sub, rbp, delims)),
+        Token::Star     => Ok(basic_binop!(left, BinOp::Mul, rbp, delims)),
+        Token::Slash    => Ok(basic_binop!(left, BinOp::Div, rbp, delims)),
+        Token::Pipe     => Ok(basic_binop!(left, BinOp::Pipe, rbp, delims)),
+
+        _ => todo!(),
+    }
 }
 
 fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
