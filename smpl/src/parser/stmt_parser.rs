@@ -345,11 +345,6 @@ fn expr_with_left(
 
         // TODO: eat whitespace
 
-        // TODO: Delimiter check
-        if tokens.eof() {
-            break;
-        }
-
         // Infix operator
         let (lbp, rbp, expr_action) = led_action(tokens)?;
 
