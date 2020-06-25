@@ -17,6 +17,7 @@ type StmtAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<Stmt>>;
 type LbpData = (BindingPower, BindingPower, LedAction);
 type PostData = (BindingPower, PostAction);
 
+#[derive(PartialEq, Eq)]
 enum ExprDelim {
     Semi,
     Comma,
@@ -331,7 +332,9 @@ fn expr_with_left(
     ) -> ParserResult<Expr> {
 
     while !tokens.eof() {
-        // TODO: Delimiter check
+        if delim_break(tokens, delimiters)? {
+            break;
+        }
 
         // Postfix operator?
         if let Some((lbp, expr_action)) = postfix_action(tokens)? {
@@ -356,6 +359,20 @@ fn expr_with_left(
     }
 
     Ok(left)
+}
+
+fn delim_break(tokens: &BufferedTokenizer, delims: &[ExprDelim]) -> ParserResult<bool> {
+    Ok(peek_token!(tokens,
+        |tok| match tok {
+
+            Token::Semi => delims.contains(&ExprDelim::Semi),
+            Token::Comma => delims.contains(&ExprDelim::Comma),
+            Token::LBrace => delims.contains(&ExprDelim::NewBlock),
+
+            _ => false,
+        },
+        parser_state!("expr", "delim-check")
+    ))
 }
 
 fn postfix_action(tokens: &BufferedTokenizer) -> ParserResult<Option<PostData>> {
