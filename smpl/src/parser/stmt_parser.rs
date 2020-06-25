@@ -415,7 +415,9 @@ fn led_action(tokens: &BufferedTokenizer) -> ParserResult<LbpData> {
     let (lbp, rbp, action) = peek_token!(tokens,
         |tok| match tok {
 
-                Token::RParen => (0, 0, unreachable_led!("led rparen")),
+                Token::RParen       => (0, 0, unreachable_led!("led rparen")),
+                Token::RBrace       => (0, 0, unreachable_led!("led rbrace")),
+                Token::RBracket     => (0, 0, unreachable_led!("led rbracket")),
 
                 Token::Pipe         => (10, 10, binexpr(tok)),
 
