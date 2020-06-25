@@ -603,6 +603,24 @@ fn struct_init(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
 
         let field = AstNode::new(field, field_span);
         field_init.push((field, Box::new(init_value)));
+
+        if peek_token!(tokens,
+            |tok| match tok {
+                Token::Comma => true,
+                _ => false,
+            },
+            parser_state!("stuct-init", "comma?")
+        ) {
+            // Found comma
+            let _comma = consume_token!(tokens,
+                Token::Comma,
+                parser_state!("struct-init", "comma")
+            );
+            continue;
+        } else {
+            // No comma
+            break;
+        }
     }
 
 
