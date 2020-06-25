@@ -390,7 +390,60 @@ fn postfix_action(tokens: &BufferedTokenizer) -> ParserResult<Option<PostData>> 
 }
 
 fn parse_fn_call(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[ExprDelim]) -> ParserResult<Expr> {
-    todo!();
+
+    let _lparen = consume_token!(
+        tokens,
+        Token::LParen,
+        parser_state!("fn-call", "lparen")
+    );
+
+    let mut args: Vec<Expr> = Vec::new();
+
+    while peek_token!(tokens,
+        |tok| match tok {
+            Token::RParen => false,
+
+            _ => true,
+        },
+        parser_state!("fn-call", "arg?")
+    ) {
+        let arg = top_level_expr(tokens, &[ExprDelim::Comma])?;
+
+        args.push(arg);
+
+        if peek_token!(tokens,
+            |tok| match tok {
+                Token::Comma => true,
+                _ => false,
+            },
+            parser_state!("fn-call", "comma?")
+        ) {
+            // Found comma
+            let _comma = consume_token!(tokens,
+                Token::Comma,
+                parser_state!("fn-call", "comma")
+            );
+            continue;
+        } else {
+            // No comma
+            break;
+        }
+    }
+
+    let (rspan, _) = consume_token!(
+        tokens,
+        Token::RParen,
+        parser_state!("fn-call", "rparen")
+    );
+
+    let fn_call_span = Span::combine(left.span(), rspan);
+
+    let fn_call_node = AstNode::new(FnCall {
+        fn_value: Box::new(left),
+        args,
+    }, fn_call_span);
+
+    Ok(Expr::FnCall(Typable::untyped(fn_call_node)))
 }
 
 fn parse_index_access(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[ExprDelim]) -> ParserResult<Expr> {

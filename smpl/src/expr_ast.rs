@@ -111,7 +111,7 @@ pub struct BinExpr {
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
     pub fn_value: Box<Expr>,
-    pub args: Option<Vec<Expr>>,
+    pub args: Vec<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
