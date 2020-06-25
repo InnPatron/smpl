@@ -56,23 +56,24 @@ pub struct LocalVarDecl {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Assignment {
-    pub name: Typable<Box<AstNode<Access>>>,
-    pub value: Expr,
+    pub name: Box<Expr>,
+    pub value: Box<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    Assignment(Box<TypedNode<Assignment>>),
+    Assignment(TypedNode<Assignment>),
     If(Box<TypedNode<If>>),
     While(Box<TypedNode<While>>),
     Bin(TypedNode<BinExpr>),
     Uni(TypedNode<UniExpr>),
     Literal(TypedNode<Literal>),
     Binding(TypedNode<Ident>),
-    Access(Box<TypedNode<Access>>),
+    DotAccess(TypedNode<DotAccess>),
     FnCall(TypedNode<FnCall>),
     StructInit(TypedNode<StructInit>),
     ArrayInit(TypedNode<ArrayInit>),
+    IndexAccess(TypedNode<IndexAccess>),
     AnonymousFn(TypedNode<AnonymousFn>),
     ModulePath(TypedNode<ModulePath>),
     Path(TypedNode<TypedPath>),
@@ -80,55 +81,25 @@ pub enum Expr {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct IndexAccess {
+    pub base: Box<Expr>,
+    pub indexer: Box<Expr>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct DotAccess {
+    pub base: Box<Expr>,
+    pub field: TypedNode<Ident>,
+    pub field_id: Option<FieldId>,
+}
+
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct AnonymousFn {
     pub params: Option<Vec<AstNode<FnParameter>>>,
     pub return_type: Option<AstNode<TypeAnnotation>>,
     pub body: Typable<AstNode<Block>>,
     pub fn_id: Option<FnId>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Access {
-    root_name: AstNode<Ident>,
-    root_indexing: Option<Expr>,
-    root_var: Option<Typable<VarId>>,
-    path: Vec<self::FASegment>,
-}
-
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum FASegment {
-    Ident(Field),
-    Indexing(Field, Expr),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Field {
-    name: AstNode<Ident>,
-    field_id: Option<Typable<FieldId>>,
-}
-
-impl Field {
-
-    pub fn name(&self) -> &Ident {
-        self.name.node()
-    }
-
-    pub fn field_id(&self) -> &Typable<FieldId> {
-        self.field_id.as_ref().expect("No field id")
-    }
-
-    pub fn field_id_mut(&mut self) -> &mut Typable<FieldId> {
-        self.field_id.as_mut().expect("No field id")
-    }
-
-    pub fn set_field_id(&mut self, id: FieldId) {
-        if self.field_id.is_some() {
-            panic!("Attempting to override field id.");
-        }
-
-        self.field_id = Some(Typable::untyped(id));
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -146,8 +117,7 @@ pub struct BinExpr {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnCall {
-    pub path: AstNode<TypedPath>,
-    pub fn_id: Option<Typable<FnId>>,
+    pub fn_value: Box<Expr>,
     pub args: Option<Vec<Expr>>,
 }
 
@@ -213,7 +183,8 @@ impl Typed for Expr {
             Expr::Uni(ref typed) => typed.typ(),
             Expr::Literal(ref typed) => typed.typ(),
             Expr::Binding(ref typed) => typed.typ(),
-            Expr::Access(ref typed) => typed.typ(),
+            Expr::DotAccess(ref typed) => typed.typ(),
+            Expr::IndexAccess(ref typed) => typed.typ(),
             Expr::FnCall(ref typed) => typed.typ(),
             Expr::StructInit(ref typed) => typed.typ(),
             Expr::ArrayInit(ref typed) => typed.typ(),
@@ -233,7 +204,8 @@ impl Typed for Expr {
             Expr::Uni(ref mut typed) => typed.set_type(t),
             Expr::Literal(ref mut typed) => typed.set_type(t),
             Expr::Binding(ref mut typed) => typed.set_type(t),
-            Expr::Access(ref mut typed) => typed.set_type(t),
+            Expr::DotAccess(ref mut typed) => typed.set_type(t),
+            Expr::IndexAccess(ref mut typed) => typed.set_type(t),
             Expr::FnCall(ref mut typed) => typed.set_type(t),
             Expr::StructInit(ref mut typed) => typed.set_type(t),
             Expr::ArrayInit(ref mut typed) => typed.set_type(t),
@@ -255,7 +227,8 @@ impl Spanned for Expr {
             Expr::Uni(ref spanned) => spanned.data().span(),
             Expr::Literal(ref spanned) => spanned.data().span(),
             Expr::Binding(ref spanned) => spanned.data().span(),
-            Expr::Access(ref spanned) => spanned.data().span(),
+            Expr::DotAccess(ref spanned) => spanned.data().span(),
+            Expr::IndexAccess(ref spanned) => spanned.data().span(),
             Expr::FnCall(ref spanned) => spanned.data().span(),
             Expr::StructInit(ref spanned) => spanned.data().span(),
             Expr::ArrayInit(ref spanned) => spanned.data().span(),
