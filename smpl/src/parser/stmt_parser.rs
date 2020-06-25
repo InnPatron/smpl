@@ -10,10 +10,12 @@ use crate::typable_ast::Typable;
 use crate::expr_ast::*;
 
 type BindingPower = u64;
+type PostAction = Box<FnOnce(&mut BufferedTokenizer, Expr, &[ExprDelim]) -> ParserResult<Expr>>;
 type LedAction = Box<FnOnce(&mut BufferedTokenizer, Expr, BindingPower, &[ExprDelim]) -> ParserResult<Expr>>;
 type ExprAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<Expr>>;
 type StmtAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<Stmt>>;
 type LbpData = (BindingPower, BindingPower, LedAction);
+type PostData = (BindingPower, PostAction);
 
 enum ExprDelim {
     Semi,
@@ -331,7 +333,15 @@ fn expr_with_left(
     while !tokens.eof() {
         // TODO: Delimiter check
 
-        // TODO: postfix
+        // Postfix operator?
+        if let Some((lbp, expr_action)) = postfix_action(tokens)? {
+            if lbp <= min_bp {
+                break;
+            }
+
+            left = expr_action(tokens, left, delimiters)?;
+            continue;
+        }
 
         // TODO: eat whitespace
 
@@ -340,6 +350,7 @@ fn expr_with_left(
             break;
         }
 
+        // Infix operator
         let (lbp, rbp, expr_action) = led_action(tokens)?;
 
         if lbp <= min_bp {
@@ -352,6 +363,27 @@ fn expr_with_left(
     Ok(left)
 }
 
+fn postfix_action(tokens: &BufferedTokenizer) -> ParserResult<Option<PostData>> {
+
+    Ok(peek_token!(tokens,
+        |tok| match tok {
+            // TODO: Review LBP of postfix operators
+            Token::LParen => Some((50, Box::new(parse_fn_call) as PostAction)),
+            Token::LBracket => Some((50, Box::new(parse_index_access) as PostAction)),
+
+            _ => None,
+        },
+        parser_state!("expr", "postfix_action?")
+    ))
+}
+
+fn parse_fn_call(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[ExprDelim]) -> ParserResult<Expr> {
+    todo!();
+}
+
+fn parse_index_access(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[ExprDelim]) -> ParserResult<Expr> {
+    todo!();
+}
 
 fn led_action(tokens: &BufferedTokenizer) -> ParserResult<LbpData> {
 
