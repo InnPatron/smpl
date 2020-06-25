@@ -55,14 +55,7 @@ pub struct LocalVarDecl {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Assignment {
-    pub name: Box<Expr>,
-    pub value: Box<Expr>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    Assignment(TypedNode<Assignment>),
     If(Box<TypedNode<If>>),
     While(Box<TypedNode<While>>),
     Bin(TypedNode<BinExpr>),
@@ -164,7 +157,9 @@ pub enum BinOp {
     Lt,
     Eq,
     Neq,
+
     Assign,
+    Dot,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -176,7 +171,6 @@ pub enum UniOp {
 impl Typed for Expr {
     fn typ(&self) -> &AbstractType {
         match *self {
-            Expr::Assignment(ref typed) => typed.typ(),
             Expr::If(ref typed) => typed.typ(),
             Expr::While(ref typed) => typed.typ(),
             Expr::Bin(ref typed) => typed.typ(),
@@ -197,7 +191,6 @@ impl Typed for Expr {
 
     fn set_type(&mut self, t: AbstractType) {
         match *self {
-            Expr::Assignment(ref mut typed) => typed.set_type(t),
             Expr::If(ref mut typed) => typed.set_type(t),
             Expr::While(ref mut typed) => typed.set_type(t),
             Expr::Bin(ref mut typed) => typed.set_type(t),
@@ -220,7 +213,6 @@ impl Typed for Expr {
 impl Spanned for Expr {
     fn span(&self) -> Span {
         match *self {
-            Expr::Assignment(ref spanned) => spanned.data().span(),
             Expr::If(ref spanned) => spanned.data().span(),
             Expr::While(ref spanned) => spanned.data().span(),
             Expr::Bin(ref spanned) => spanned.data().span(),
