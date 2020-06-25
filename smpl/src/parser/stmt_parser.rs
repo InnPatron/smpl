@@ -538,13 +538,113 @@ fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
 
             Token::LBrace => Box::new(block_expr) as ExprAction,
 
+            Token::Init => Box::new(struct_init) as ExprAction,
+
             Token::Identifier(..) => Box::new(ident_expr) as ExprAction,
+
             _ => todo!()
         },
         parser_state!("expr", "nud")
     );
 
     Ok(action)
+}
+
+fn struct_init(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
+    let (init_span, _) = consume_token!(tokens,
+        Token::Init,
+        parser_state!("struct-init", "init")
+    );
+
+    let typed_path: Option<AstNode<TypedPath>> = if peek_token!(tokens,
+        |tok| match tok {
+            Token::LBrace => false,
+            _ => true,
+
+        },
+        parser_state!("struct-init", "anonymous?")) {
+
+        // Expecting a (potentially typed) module path
+        let module_path_expr = top_level_expr(tokens, &[ExprDelim::NewBlock])?;
+
+        Some(try_expr_to_path(module_path_expr)?)
+
+    } else {
+        None
+    };
+
+    let _lbrace = consume_token!(tokens,
+        Token::LBrace,
+        parser_state!("struct-init", "lbrace")
+    );
+
+    let mut field_init: Vec<(AstNode<Ident>, Box<Expr>)> = Vec::new();
+    while peek_token!(tokens,
+        |tok| match tok {
+            Token::RBrace => false,
+
+            _ => true,
+        },
+        parser_state!("struct-init", "field-init?")
+    ) {
+
+        // TODO: Pattern parsing here
+        let (field_span, field) = consume_token!(tokens,
+            Token::Identifier(ident) => Ident(ident),
+            parser_state!("struct-init", "field-ident")
+        );
+
+        let _colon = consume_token!(tokens,
+            Token::Colon,
+            parser_state!("struct-init", "init-colon")
+        );
+
+        let init_value = top_level_expr(tokens, &[ExprDelim::Comma])?;
+
+        let field = AstNode::new(field, field_span);
+        field_init.push((field, Box::new(init_value)));
+    }
+
+
+    let (rbrace_span, _) = consume_token!(tokens,
+        Token::RBrace,
+        parser_state!("struct-init", "rbrace")
+    );
+
+    let init_span = Span::combine(init_span, rbrace_span);
+    let init_node = AstNode::new(StructInit {
+        struct_name: Typable::untyped(typed_path),
+        field_init,
+    }, init_span);
+
+    Ok(Expr::StructInit(Typable::untyped(init_node)))
+}
+
+fn try_expr_to_path(expr: Expr) -> ParserResult<AstNode<TypedPath>> {
+    match expr {
+        Expr::ModulePath(path) => {
+            let path: AstNode<ModulePath> = path.into_data();
+            let (path, path_span) = path.split();
+            Ok(AstNode::new(TypedPath {
+                base: Typable::untyped(path),
+                params: vec![],
+            }, path_span))
+        },
+
+        Expr::Binding(binding) => {
+            let binding: AstNode<Ident> = binding.into_data();
+            let binding_span = binding.span().clone();
+
+            Ok(AstNode::new(TypedPath {
+                base: Typable::untyped(ModulePath(vec![binding])),
+                params: vec![],
+            }, binding_span))
+        },
+
+        Expr::Path(p) => Ok(p.into_data()),
+
+        expr => todo!("Unexpected expression for type name: {:?}", expr),
+    }
 }
 
 fn block_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {

@@ -116,7 +116,7 @@ pub struct FnCall {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructInit {
-    pub struct_name: Typable<Option<TypedPath>>,
+    pub struct_name: Typable<Option<AstNode<TypedPath>>>,
     pub field_init: Vec<(AstNode<Ident>, Box<Expr>)>,
 }
 
