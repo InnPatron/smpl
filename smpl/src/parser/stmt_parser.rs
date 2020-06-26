@@ -612,7 +612,7 @@ fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
 
             Token::LBrace => Box::new(block_expr) as ExprAction,
 
-            Token::Init => Box::new(struct_init) as ExprAction,
+            Token::Init => Box::new(init_expr) as ExprAction,
 
             Token::Identifier(..) => Box::new(ident_expr) as ExprAction,
 
@@ -624,11 +624,30 @@ fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
     Ok(action)
 }
 
-fn struct_init(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
+fn init_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
     let (init_span, _) = consume_token!(tokens,
         Token::Init,
-        parser_state!("struct-init", "init")
+        parser_state!("init-expr", "init")
     );
+
+    if peek_token!(tokens,
+        |tok| match tok {
+            Token::LBracket => true,
+            _ => false,
+        },
+        parser_state!("init-expr", "init-kind?")
+    ) {
+        struct_init(tokens, init_span)
+    } else {
+        array_init(tokens, init_span)
+    }
+}
+
+fn array_init(tokens: &mut BufferedTokenizer, init_span: Span) -> ParserResult<Expr> {
+    todo!();
+}
+
+fn struct_init(tokens: &mut BufferedTokenizer, init_span: Span) -> ParserResult<Expr> {
 
     let typed_path: Option<AstNode<TypedPath>> = if peek_token!(tokens,
         |tok| match tok {
