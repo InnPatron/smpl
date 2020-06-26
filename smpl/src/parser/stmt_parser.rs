@@ -643,8 +643,72 @@ fn init_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
     }
 }
 
-fn array_init(tokens: &mut BufferedTokenizer, init_span: Span) -> ParserResult<Expr> {
-    todo!();
+// 'init [v1, v2, ... vn; X]'
+// 'init [v1, v2, ... vn]'
+fn array_init(tokens: &mut BufferedTokenizer, mut init_span: Span) -> ParserResult<Expr> {
+
+    enum InitListDecision {
+        Value,
+        RepetitionCount,
+        Break,
+        Err,
+    }
+
+    let _lbracket = consume_token!(tokens,
+        Token::LBracket,
+        parser_state!("array-init", "lbracket")
+    );
+
+    let mut pattern = Vec::new();
+    let mut repetition_count = None;
+    let mut parse_repetition_count = false;
+    while peek_token!(tokens,
+        |tok| match tok {
+            Token::RBracket => false,
+            _ => true,
+        },
+        parser_state!("array-init", "rbracket?")
+    ) {
+        let expr = top_level_expr(tokens, &[])?;
+
+        if parse_repetition_count {
+            repetition_count = Some(Box::new(expr));
+            break;
+        } else {
+            pattern.push(expr);
+        }
+
+        match peek_token!(tokens,
+            |tok| match tok {
+                Token::Semi => InitListDecision::RepetitionCount,
+                Token::Comma => InitListDecision::Value,
+                Token::RBracket => InitListDecision::Break,
+                _ => InitListDecision::Err,
+            },
+            parser_state!("array-init", "comma-semi?")
+        ) {
+            InitListDecision::RepetitionCount => parse_repetition_count = true,
+
+            InitListDecision::Break => break,
+
+            InitListDecision::Err => todo!(),
+
+            _ => continue,
+        }
+    }
+
+    let (rbracket_span, _) = consume_token!(tokens,
+        Token::RBracket,
+        parser_state!("array-init", "rbracket")
+    );
+
+    init_span = Span::combine(init_span, rbracket_span);
+    let array_init_node = AstNode::new(ArrayInit {
+        pattern,
+        repetition_count
+    }, init_span);
+
+    Ok(Expr::ArrayInit(Typable::untyped(array_init_node)))
 }
 
 fn struct_init(tokens: &mut BufferedTokenizer, init_span: Span) -> ParserResult<Expr> {

@@ -127,9 +127,9 @@ impl StructInit {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum ArrayInit {
-    InitList(Vec<Expr>),
-    Value(Box<Expr>, u64),
+pub struct ArrayInit {
+    pub pattern: Vec<Expr>,
+    pub repetition_count: Option<Box<Expr>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
