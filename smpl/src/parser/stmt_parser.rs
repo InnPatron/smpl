@@ -447,7 +447,28 @@ fn parse_fn_call(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[Exp
 }
 
 fn parse_index_access(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[ExprDelim]) -> ParserResult<Expr> {
-    todo!();
+    let _lbracket = consume_token!(
+        tokens,
+        Token::LBracket,
+        parser_state!("index-access", "lbracket")
+    );
+
+    let indexing_expr = top_level_expr(tokens, &[])?;
+
+    let (rbracket_span, _) = consume_token!(
+        tokens,
+        Token::RBracket,
+        parser_state!("index-access", "lbracket")
+    );
+
+    let indexing_span = Span::combine(left.span(), rbracket_span);
+
+    let indexing_node = AstNode::new(IndexAccess {
+        base: Box::new(left),
+        indexer: Box::new(indexing_expr),
+    }, indexing_span);
+
+    Ok(Expr::IndexAccess(Typable::untyped(indexing_node)))
 }
 
 fn led_action(tokens: &BufferedTokenizer) -> ParserResult<LbpData> {
