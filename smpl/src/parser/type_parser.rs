@@ -69,7 +69,7 @@ fn type_ann(
         left = expr_action(tokens, left, rbp, ann_delims)?;
     }
 
-    todo!();
+    Ok(left)
 }
 
 fn led_action(tokens: &BufferedTokenizer) -> ParserResult<LbpData> {
