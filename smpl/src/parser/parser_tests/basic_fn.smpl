@@ -1,0 +1,9 @@
+mod mod1;
+
+fn foo() -> Type {
+
+}
+
+fn bar(x: int, y: int) -> Type {
+
+}

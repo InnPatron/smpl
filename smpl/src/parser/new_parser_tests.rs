@@ -32,3 +32,5 @@ fn parse_module(input: &str) -> ParserResult<Module> {
 }
 
 test_parse_module!(empty_module_declared);
+
+test_parse_module!(basic_fn);
