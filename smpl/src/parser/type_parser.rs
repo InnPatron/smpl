@@ -18,6 +18,13 @@ type LedAction = Box<FnOnce(&mut BufferedTokenizer, AstNode<TypeAnn>, BindingPow
 
 pub use self::top_level_type_ann as type_annotation;
 
+const all_delims: &'static [AnnDelim] = &[
+    AnnDelim::NewBlock,
+    AnnDelim::Assign,
+    AnnDelim::Comma,
+    AnnDelim::Semi,
+];
+
 #[derive(PartialEq, Eq)]
 pub enum AnnDelim {
     NewBlock,
@@ -254,7 +261,7 @@ fn width_constraint(
             );
 
             let (name, name_loc) = production!(
-                type_annotation(tokens, &[]),
+                type_annotation(tokens, all_delims),
                 parser_state!("width-constraint", "constraint-base")
             )
             .split();
