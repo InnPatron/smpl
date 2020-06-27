@@ -10,4 +10,5 @@ struct Foo {
     g: base BAR + { x: int, y: int },
     h: { x: int, y: int } + base BAR,
     i: { x: int, y: int } + base BAR + base BAZ,
+    j: base BAR(type foo) + { x: int, y: int },
 }
