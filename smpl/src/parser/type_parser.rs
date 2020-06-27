@@ -125,7 +125,7 @@ fn chain_constraints(tokens: &mut BufferedTokenizer, left: AstNode<TypeAnn>, rbp
             TypeAnn::WidthConstraints(left)
         }
 
-        _ => todo!()
+        (left, right) => todo!("Found {:?} \n\n {:?}", left, right),
     };
 
     let span = Span::combine(left_span, right_span);
