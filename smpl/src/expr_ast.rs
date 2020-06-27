@@ -1,7 +1,7 @@
 use crate::span::Span;
 use crate::ast_node::{EmptyAstNode, AstNode, Spanned};
 
-use crate::new_ast::{Ident, TypedPath, ModulePath, TypeAnnotation, FnParameter};
+use crate::new_ast::{Ident, TypedPath, ModulePath, TypeAnn, FnParameter};
 use crate::typable_ast::{Typed, Typable};
 
 use crate::analysis::abstract_type::AbstractType;
@@ -50,7 +50,7 @@ pub struct Block(pub Vec<Stmt>);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct LocalVarDecl {
-    pub var_type: Option<AstNode<TypeAnnotation>>,
+    pub var_type: Option<AstNode<TypeAnn>>,
     pub var_name: AstNode<Ident>,
     pub var_init: Expr,
 }
@@ -91,7 +91,7 @@ pub struct DotAccess {
 #[derive(Clone, Debug, PartialEq)]
 pub struct AnonymousFn {
     pub params: Option<Vec<AstNode<FnParameter>>>,
-    pub return_type: Option<AstNode<TypeAnnotation>>,
+    pub return_type: Option<AstNode<TypeAnn>>,
     pub body: Typable<AstNode<Block>>,
     pub fn_id: Option<FnId>,
 }

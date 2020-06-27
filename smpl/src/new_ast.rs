@@ -27,7 +27,7 @@ pub struct UseDecl(pub AstNode<Ident>);
 pub struct BuiltinFunction {
     pub name: AstNode<Ident>,
     pub params: BuiltinFnParams,
-    pub return_type: Option<Typable<AstNode<TypeAnnotation>>>,
+    pub return_type: Option<Typable<AstNode<TypeAnn>>>,
     pub annotations: Vec<Annotation>,
     pub type_params: Option<TypeParams>,
     pub where_clause: Option<WhereClause>,
@@ -43,7 +43,7 @@ pub enum BuiltinFnParams {
 pub struct Function {
     pub name: AstNode<Ident>,
     pub params: Vec<Typable<AstNode<FnParameter>>>,
-    pub return_type: Option<Typable<AstNode<TypeAnnotation>>>,
+    pub return_type: Option<Typable<AstNode<TypeAnn>>>,
     pub body: Typable<AstNode<Block>>,
     pub annotations: Vec<Annotation>,
     pub type_params: Option<TypeParams>,
@@ -53,7 +53,7 @@ pub struct Function {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnParameter {
     pub name: AstNode<Ident>,
-    pub param_type: AstNode<TypeAnnotation>,
+    pub param_type: AstNode<TypeAnn>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -74,7 +74,7 @@ pub struct Struct {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct WhereClause(pub HashMap<AstNode<Ident>, Vec<AstNode<TypeAnnotation>>>);
+pub struct WhereClause(pub HashMap<AstNode<Ident>, Vec<AstNode<TypeAnn>>>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructBody(pub Option<Vec<StructField>>);
@@ -82,17 +82,17 @@ pub struct StructBody(pub Option<Vec<StructField>>);
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructField {
     pub name: AstNode<Ident>,
-    pub field_type: Typable<AstNode<TypeAnnotation>>,
+    pub field_type: Typable<AstNode<TypeAnn>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum TypeAnnotation {
+pub enum TypeAnn {
     Path(TypedPath),
-    Array(Box<AstNode<TypeAnnotation>>, u64),
+    Array(Box<AstNode<TypeAnn>>, u64),
     FnType(
         Option<TypeParams>,
-        Option<Vec<AstNode<TypeAnnotation>>>,
-        Option<Box<AstNode<TypeAnnotation>>>,
+        Option<Vec<AstNode<TypeAnn>>>,
+        Option<Box<AstNode<TypeAnn>>>,
     ),
     WidthConstraint(Vec<AstNode<WidthConstraint>>),
 }
@@ -106,14 +106,14 @@ pub struct TypeParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum WidthConstraint {
-    BaseStruct(AstNode<TypeAnnotation>),
-    Anonymous(Vec<(AstNode<Ident>, AstNode<TypeAnnotation>)>),
+    BaseStruct(AstNode<TypeAnn>),
+    Anonymous(Vec<(AstNode<Ident>, AstNode<TypeAnn>)>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypedPath {
     pub base: Typable<ModulePath>,
-    pub params: Vec<Typable<AstNode<TypeAnnotation>>>,
+    pub params: Vec<Typable<AstNode<TypeAnn>>>,
 }
 
 impl TypedPath {
@@ -124,7 +124,7 @@ impl TypedPath {
         }
     }
 
-    pub fn n_arity(base: Typable<ModulePath>, params: Vec<Typable<AstNode<TypeAnnotation>>>) -> Self {
+    pub fn n_arity(base: Typable<ModulePath>, params: Vec<Typable<AstNode<TypeAnn>>>) -> Self {
         TypedPath {
             base,
             params,
