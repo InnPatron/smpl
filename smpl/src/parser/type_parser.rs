@@ -146,7 +146,7 @@ fn typed_path(tokens: &mut BufferedTokenizer, left: AstNode<TypeAnn>) -> ParserR
     let new_ann: TypeAnn = match left {
         TypeAnn::ModulePath(path) => {
 
-            let path_span = Span::combine(path.span(), end_span);
+            let path_span = Span::combine(path.span(), end_span.clone());
 
             let node = AstNode::new(TypedPath {
                 base: path,
@@ -159,7 +159,11 @@ fn typed_path(tokens: &mut BufferedTokenizer, left: AstNode<TypeAnn>) -> ParserR
         _ => todo!(),
     };
 
-    todo!();
+    let path_ann = Span::combine(left_span, end_span);
+
+    let node = AstNode::new(new_ann, path_ann);
+
+    Ok(node)
 }
 
 fn delim_break(tokens: &BufferedTokenizer, ann_delims: &[AnnDelim]) -> ParserResult<bool> {
