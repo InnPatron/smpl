@@ -16,6 +16,8 @@ type PostData = (BindingPower, PostAction);
 type LbpData = (BindingPower, BindingPower, LedAction);
 type LedAction = Box<FnOnce(&mut BufferedTokenizer, AstNode<TypeAnn>, BindingPower, &[AnnDelim]) -> ParserResult<AstNode<TypeAnn>>>;
 
+const type_args_only_bp: BindingPower = 40;
+
 pub use self::top_level_type_ann as type_annotation;
 
 const all_delims: &'static [AnnDelim] = &[
@@ -260,8 +262,10 @@ fn width_constraint(
                 parser_state!("width-constraint", "base")
             );
 
+            // TODO: Temporary patch for binding power
+            // Make sure that (type arg BP) > arg BP > PLUS BP
             let (name, name_loc) = production!(
-                type_annotation(tokens, all_delims),
+                type_ann(tokens, type_args_only_bp, all_delims),
                 parser_state!("width-constraint", "constraint-base")
             )
             .split();
