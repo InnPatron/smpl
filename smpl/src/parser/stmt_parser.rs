@@ -382,7 +382,7 @@ fn parse_if(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
 }
 
 fn if_branch(tokens: &mut BufferedTokenizer) -> ParserResult<Branch> {
-    let conditional = top_level_expr(tokens, &[])?;
+    let conditional = top_level_expr(tokens, &[ExprDelim::NewBlock])?;
 
     let block = production!(block(tokens), parser_state!("if-branch", "block"));
 
