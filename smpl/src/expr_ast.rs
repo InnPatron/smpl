@@ -1,13 +1,11 @@
 use crate::span::Span;
 use crate::ast_node::{EmptyAstNode, AstNode, Spanned};
 
-use crate::new_ast::{Ident, TypedPath, ModulePath, TypeAnn, FnParameter};
+use crate::new_ast::{Ident, TypedPath, ModulePath, TypeAnn, FnParameter, TypedNode};
 use crate::typable_ast::{Typed, Typable};
 
 use crate::analysis::abstract_type::AbstractType;
 use crate::analysis::{FieldId, VarId, FnId};
-
-pub type TypedNode<T> = Typable<AstNode<T>>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {

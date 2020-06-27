@@ -356,7 +356,7 @@ fn fn_decl(
             parser_state!("fn-decl", "return type arrow")
         );
         return_type = Some(Typable::untyped(production!(
-            type_annotation(tokens),
+            type_annotation(tokens, &[AnnDelim::NewBlock]),
             parser_state!("fn-decl", "return type")
         )));
     }
@@ -488,7 +488,7 @@ fn fn_param(tokens: &mut BufferedTokenizer) -> ParserResult<Typable<AstNode<FnPa
         parser_state!("fn-param", "param type colon")
     );
     let ann = production!(
-        type_annotation(tokens),
+        type_annotation(tokens, &[AnnDelim::Comma]),
         parser_state!("fn-param", "param-type")
     );
 
@@ -652,7 +652,7 @@ fn struct_decl(
     ))
 }
 
-fn struct_field_list(
+pub fn struct_field_list(
     tokens: &mut BufferedTokenizer,
 ) -> ParserResult<Vec<StructField>> {
     let mut list = vec![production!(
@@ -706,7 +706,7 @@ fn struct_field(tokens: &mut BufferedTokenizer) -> ParserResult<StructField> {
         parser_state!("struct-field", "field type colon")
     );
     let ann = production!(
-        type_annotation(tokens),
+        type_annotation(tokens, &[AnnDelim::Comma]),
         parser_state!("struct-field", "type annotation")
     );
 

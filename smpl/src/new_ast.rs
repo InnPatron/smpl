@@ -6,6 +6,8 @@ use crate::ast_node::AstNode;
 use crate::expr_ast::{ Expr, Block };
 use crate::typable_ast::{Typed, Typable};
 
+pub type TypedNode<T> = Typable<AstNode<T>>;
+
 pub struct Module {
     pub ident: Option<AstNode<Ident>>,
     pub top_levels: Vec<DeclStmt>,
@@ -87,14 +89,15 @@ pub struct StructField {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeAnn {
-    Path(TypedPath),
-    Array(Box<AstNode<TypeAnn>>, u64),
+    ModulePath(TypedNode<ModulePath>),
+    Path(TypedNode<TypedPath>),
+    Array(Box<TypedNode<TypeAnn>>, u64),
     FnType(
         Option<TypeParams>,
-        Option<Vec<AstNode<TypeAnn>>>,
-        Option<Box<AstNode<TypeAnn>>>,
+        Vec<TypedNode<TypeAnn>>,
+        Option<Box<TypedNode<TypeAnn>>>,
     ),
-    WidthConstraint(Vec<AstNode<WidthConstraint>>),
+    WidthConstraints(Vec<WidthConstraint>),
 }
 
 // TODO: May need to manually implement PartialEq
@@ -106,8 +109,8 @@ pub struct TypeParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum WidthConstraint {
-    BaseStruct(AstNode<TypeAnn>),
-    Anonymous(Vec<(AstNode<Ident>, AstNode<TypeAnn>)>),
+    BaseStruct(TypedNode<TypeAnn>),
+    Anonymous(Vec<(AstNode<Ident>, TypedNode<TypeAnn>)>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
