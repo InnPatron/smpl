@@ -26,6 +26,10 @@ mod stmt_parser;
 #[cfg(test)]
 mod parser_tests;
 
+#[cfg(test)]
+mod new_parser_tests;
+
+
 use self::error::ParserError;
 
 ///
