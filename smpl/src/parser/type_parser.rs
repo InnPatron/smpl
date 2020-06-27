@@ -11,6 +11,8 @@ use crate::span::*;
 
 type BindingPower = u64;
 type TypeAnnAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<AstNode<TypeAnn>>>;
+type PostAction = Box<FnOnce(&mut BufferedTokenizer, AstNode<TypeAnn>) -> ParserResult<AstNode<TypeAnn>>>;
+type PostData = (BindingPower, PostAction);
 
 pub use self::top_level_type_ann as type_annotation;
 
@@ -36,7 +38,7 @@ fn type_ann(
 ) -> ParserResult<AstNode<TypeAnn>> {
 
     let ann_action = nud_action(tokens)?;
-    let left: AstNode<TypeAnn> = ann_action(tokens)?;
+    let mut left: AstNode<TypeAnn> = ann_action(tokens)?;
 
     while !tokens.eof() {
         if delim_break(tokens, ann_delims)? {
@@ -44,14 +46,14 @@ fn type_ann(
         }
 
         // Postfix operator?
-        //if let Some((lbp, expr_action)) = postfix_action(tokens)? {
-        //    if lbp <= min_bp {
-        //        break;
-        //    }
+        if let Some((lbp, post_action)) = postfix_action(tokens)? {
+            if lbp <= min_bp {
+                break;
+            }
 
-        //    left = expr_action(tokens, left, delimiters)?;
-        //    continue;
-        //}
+            left = post_action(tokens, left)?;
+            continue;
+        }
 
         //// TODO: eat whitespace
 
@@ -64,6 +66,42 @@ fn type_ann(
 
         //left = expr_action(tokens, left, rbp, delimiters)?;
     }
+
+    todo!();
+}
+
+fn postfix_action(tokens: &BufferedTokenizer) -> ParserResult<Option<PostData>> {
+    Ok(peek_token!(tokens,
+        |tok| match tok {
+            // TODO: Review LBP of postfix operators
+            Token::LParen => Some((50, Box::new(typed_path) as PostAction)),
+
+            _ => None,
+        },
+        parser_state!("expr", "postfix_action?")
+    ))
+}
+
+fn typed_path(tokens: &mut BufferedTokenizer, left: AstNode<TypeAnn>) -> ParserResult<AstNode<TypeAnn>> {
+    let (arg_list, end_span) = type_arg_list(tokens)?;
+
+    let (left, left_span) = left.split();
+
+    let new_ann: TypeAnn = match left {
+        TypeAnn::ModulePath(path) => {
+
+            let path_span = Span::combine(path.span(), end_span);
+
+            let node = AstNode::new(TypedPath {
+                base: path,
+                params: arg_list,
+            }, path_span);
+
+            TypeAnn::Path(Typable::untyped(node))
+        }
+
+        _ => todo!(),
+    };
 
     todo!();
 }
@@ -411,7 +449,7 @@ pub fn type_param_list_post_lparen(
 
 pub fn type_arg_list(
     tokens: &mut BufferedTokenizer,
-) -> ParserResult<Vec<AstNode<TypeAnn>>> {
+) -> ParserResult<(Vec<TypedNode<TypeAnn>>, Span)> {
     let _lparen = consume_token!(
         tokens,
         Token::LParen,
@@ -423,17 +461,17 @@ pub fn type_arg_list(
 
 pub fn type_arg_list_post_lparen(
     tokens: &mut BufferedTokenizer,
-) -> ParserResult<Vec<AstNode<TypeAnn>>> {
+) -> ParserResult<(Vec<TypedNode<TypeAnn>>, Span)> {
     let _type = consume_token!(
         tokens,
         Token::Type,
         parser_state!("type-arg-list", "type")
     );
 
-    let mut type_args = vec![production!(
+    let mut type_args = vec![Typable::untyped(production!(
         type_annotation(tokens, &[AnnDelim::Comma]),
         parser_state!("type-arg-list", "type-arg")
-    )];
+    ))];
 
     loop {
         if peek_token!(
@@ -457,10 +495,10 @@ pub fn type_arg_list_post_lparen(
                 },
                 parser_state!("type-arg-list", "rparen?")
             ) {
-                type_args.push(production!(
+                type_args.push(Typable::untyped(production!(
                     type_annotation(tokens, &[AnnDelim::Comma]),
                     parser_state!("type-arg-list", "type-arg")
-                ));
+                )));
                 continue;
             }
         }
@@ -468,13 +506,13 @@ pub fn type_arg_list_post_lparen(
         break;
     }
 
-    let _rparen = consume_token!(
+    let (rparen_span, _) = consume_token!(
         tokens,
         Token::RParen,
         parser_state!("type-arg-list", "rparen")
     );
 
-    Ok(type_args)
+    Ok((type_args, rparen_span))
 }
 
 pub fn where_clause(tokens: &mut BufferedTokenizer) -> ParserResult<WhereClause> {
