@@ -13,6 +13,8 @@ type BindingPower = u64;
 type TypeAnnAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<AstNode<TypeAnn>>>;
 type PostAction = Box<FnOnce(&mut BufferedTokenizer, AstNode<TypeAnn>) -> ParserResult<AstNode<TypeAnn>>>;
 type PostData = (BindingPower, PostAction);
+type LbpData = (BindingPower, BindingPower, LedAction);
+type LedAction = Box<FnOnce(&mut BufferedTokenizer, AstNode<TypeAnn>, BindingPower, &[AnnDelim]) -> ParserResult<AstNode<TypeAnn>>>;
 
 pub use self::top_level_type_ann as type_annotation;
 
@@ -55,19 +57,73 @@ fn type_ann(
             continue;
         }
 
-        //// TODO: eat whitespace
+        // TODO: eat whitespace
 
-        //// Infix operator
-        //let (lbp, rbp, expr_action) = led_action(tokens)?;
+        // Infix operator
+        let (lbp, rbp, expr_action) = led_action(tokens)?;
 
-        //if lbp <= min_bp {
-        //    break;
-        //}
+        if lbp <= min_bp {
+            break;
+        }
 
-        //left = expr_action(tokens, left, rbp, delimiters)?;
+        left = expr_action(tokens, left, rbp, ann_delims)?;
     }
 
     todo!();
+}
+
+fn led_action(tokens: &BufferedTokenizer) -> ParserResult<LbpData> {
+
+    macro_rules! unreachable_led {
+        ($msg: expr) => {{
+            Box::new(|_: &mut BufferedTokenizer, _: AstNode<TypeAnn>, _: BindingPower, _: &[AnnDelim]| -> ParserResult<AstNode<TypeAnn>> {
+                unreachable!($msg)
+            }) as LedAction
+        }}
+    }
+
+    let (lbp, rbp, action) = peek_token!(tokens,
+        |tok| match tok {
+
+                Token::RParen       => (0, 0, unreachable_led!("led rparen")),
+                Token::RBrace       => (0, 0, unreachable_led!("led rbrace")),
+
+                Token::Plus         => (20, 20, Box::new(chain_constraints) as LedAction),
+
+                _ => todo!(),
+
+         },
+        parser_state!("expr", "led")
+    );
+
+    Ok((lbp, rbp, action))
+}
+
+fn chain_constraints(tokens: &mut BufferedTokenizer, left: AstNode<TypeAnn>, rbp: BindingPower, upper_delims: &[AnnDelim]) -> ParserResult<AstNode<TypeAnn>> {
+
+    let _plus = consume_token!(tokens,
+        Token::Plus,
+        parser_state!("chain-constraint", "plus")
+    );
+
+    let right = top_level_type_ann(tokens, upper_delims)?;
+
+    let (left, left_span) = left.split();
+    let (right, right_span) = right.split();
+
+    let ann = match (left, right) {
+        (TypeAnn::WidthConstraints(mut left), TypeAnn::WidthConstraints(mut right)) => {
+            left.append(&mut right);
+
+            TypeAnn::WidthConstraints(left)
+        }
+
+        _ => todo!()
+    };
+
+    let span = Span::combine(left_span, right_span);
+
+    Ok(AstNode::new(ann, span))
 }
 
 fn postfix_action(tokens: &BufferedTokenizer) -> ParserResult<Option<PostData>> {
