@@ -82,19 +82,19 @@ fn led_action(tokens: &BufferedTokenizer) -> ParserResult<LbpData> {
         }}
     }
 
-    let (lbp, rbp, action) = peek_token!(tokens,
-        |tok| match tok {
+    let (lbp, rbp, action) = peek_token!(tokens, SPAN
+        |tok, span| match tok {
 
-                Token::RParen       => (0, 0, unreachable_led!("led rparen")),
-                Token::RBrace       => (0, 0, unreachable_led!("led rbrace")),
+                Token::RParen       => Ok((0, 0, unreachable_led!("led rparen"))),
+                Token::RBrace       => Ok((0, 0, unreachable_led!("led rbrace"))),
 
-                Token::Plus         => (20, 20, Box::new(chain_constraints) as LedAction),
+                Token::Plus         => Ok((20, 20, Box::new(chain_constraints) as LedAction)),
 
-                _ => todo!(),
+                _                   => Err(parser_error!(ParserErrorKind::UnexpectedToken(tok.clone()), parser_state!("type-led"), span)),
 
          },
         parser_state!("expr", "led")
-    );
+    )?;
 
     Ok((lbp, rbp, action))
 }
