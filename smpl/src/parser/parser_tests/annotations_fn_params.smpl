@@ -1,0 +1,14 @@
+fn Foo (
+    a: int,
+    b: mod2::foo,
+    c: [mod3::foo; 5],
+    d: mod4::bar(type mod5::foo, mod6::baz(type int, boolean)),
+    e: base BAR,
+    f: { x: int, y: int },
+    g: base BAR + { x: int, y: int },
+    h: { x: int, y: int } + base BAR,
+    i: { x: int, y: int } + base BAR + base BAZ,
+    j: base BAR(type foo) + { x: int, y: int },
+) -> base BAR(type foo) {
+
+}
