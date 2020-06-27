@@ -41,6 +41,7 @@ pub struct Branch {
 pub struct While {
     pub conditional: Expr,
     pub body: TypedNode<Block>,
+    pub branches: Vec<Branch>,
     pub default_branch: Option<TypedNode<Block>>,
 }
 

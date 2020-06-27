@@ -186,6 +186,98 @@ fn keyword_expr(kind: Token) -> StmtAction {
     })
 }
 
+fn parse_while(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
+
+    enum WhileDec {
+        Elif,
+        Else,
+        End,
+    }
+
+    let (while_span, _) =
+        consume_token!(tokens, Token::While, parser_state!("while-expr", "while"));
+
+    let conditional = top_level_expr(tokens, &[ExprDelim::NewBlock])?;
+
+    let while_body = production!(block(tokens), parser_state!("while-branch", "block"));
+
+    let mut branches = Vec::new();
+    let mut default_branch = None;
+    let mut end = while_body.span();
+
+    loop {
+        match peek_token!(
+            tokens,
+            |tok| match tok {
+                Token::Elif => WhileDec::Elif,
+                Token::Else => WhileDec::Else,
+
+                _ => WhileDec::End,
+            },
+            parser_state!("while-expr", "branches")
+        ) {
+            WhileDec::Elif => {
+                let _elif = consume_token!(
+                    tokens,
+                    Token::Elif,
+                    parser_state!("while-expr", "elif")
+                );
+
+                let branch = production!(
+                    if_branch(tokens),
+                    parser_state!("while-expr", "elif branch")
+                );
+                end = branch.block.data().span();
+
+                branches.push(branch);
+            }
+
+            WhileDec::Else => {
+                let _else = consume_token!(
+                    tokens,
+                    Token::Else,
+                    parser_state!("while-expr", "else")
+                );
+                let block = production!(
+                    block(tokens),
+                    parser_state!("while-expr", "else-block")
+                );
+
+                end = block.data().span();
+                default_branch = Some(block);
+
+                break;
+            }
+
+            WhileDec::End => break,
+        }
+    }
+
+    let while_span = LocationSpan::combine(while_span, end);
+
+    let while_node = AstNode::new(While {
+        conditional,
+        body: while_body,
+        branches,
+        default_branch,
+    }, while_span);
+
+    if nud_action(tokens).is_ok() {
+        Ok(Stmt::ExprStmt(ExprStmt::While(while_node)))
+    } else {
+
+        let expr = production!(
+            expr_with_left(
+                tokens,
+                Expr::While(Box::new(Typable::untyped(while_node))),
+                &[ExprDelim::Semi],
+                0),
+            parser_state!("expr", "right"));
+
+        Ok(Stmt::Expr(expr))
+    }
+}
+
 fn parse_if(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
 
     enum IfDec {
