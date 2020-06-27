@@ -37,4 +37,38 @@ macro_rules! peek_token {
             .ok_or(parser_error!(ParserErrorKind::UnexpectedEOI, $state))?
             .map_err(|e| parser_error!(e.into(), $state))?
     };
+
+    ($tokenizer: expr, SPAN $lam: expr, $state: expr) => {
+        ($tokenizer)
+            .peek_span($lam)
+            .ok_or(parser_error!(ParserErrorKind::UnexpectedEOI, $state))?
+            .map_err(|e| parser_error!(e.into(), $state))?
+    };
+}
+
+macro_rules! parser_error {
+    ($kind: expr, $state: expr) => {{
+        parser_error!($kind, $state, None)
+    }};
+
+    ($kind: expr, $state: expr, $location: expr) => {{
+        use crate::parser::error::*;
+        ParserError::new($kind, $location.into()).push_state($state)
+    }};
+}
+
+macro_rules! production {
+    ($production: expr, $state: expr) => {{
+        use crate::parser::error::*;
+        ($production).map_err(|e| e.push_state($state))?
+    }};
+}
+
+macro_rules! parser_state {
+    ($state: expr) => {{
+        ParserState::new_state($state)
+    }};
+    ($state: expr, $substate: expr) => {
+        ParserState::new_state($state).substate($substate)
+    };
 }

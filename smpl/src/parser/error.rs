@@ -6,33 +6,6 @@ use super::tokens::{SpannedError, Token};
 use crate::ast::Expr;
 use crate::span::LocationSpan;
 
-macro_rules! parser_error {
-    ($kind: expr, $state: expr) => {{
-        parser_error!($kind, $state, None)
-    }};
-
-    ($kind: expr, $state: expr, $location: expr) => {{
-        use crate::parser::error::*;
-        ParserError::new($kind, $location).push_state($state)
-    }};
-}
-
-macro_rules! production {
-    ($production: expr, $state: expr) => {{
-        use crate::parser::error::*;
-        ($production).map_err(|e| e.push_state($state))?
-    }};
-}
-
-macro_rules! parser_state {
-    ($state: expr) => {{
-        ParserState::new_state($state)
-    }};
-    ($state: expr, $substate: expr) => {
-        ParserState::new_state($state).substate($substate)
-    };
-}
-
 pub type ParserResult<T> = Result<T, ParserError>;
 
 #[derive(Debug, Clone)]

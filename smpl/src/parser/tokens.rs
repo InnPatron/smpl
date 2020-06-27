@@ -791,6 +791,16 @@ impl<'a, 'b> BufferedTokenizer<'a, 'b> {
         self.peek_is_none()
     }
 
+    pub fn peek_span<F, R>(&self, closure: F) -> Option<Result<R, SpannedError>>
+    where
+        F: Fn(&Token, Span) -> R,
+    {
+        self.next.as_ref().map(|ref r| match r {
+            Ok(ref t) => Ok(closure(t.token(), t.location())),
+            Err(ref e) => Err((*e).clone()),
+        })
+    }
+
     pub fn peek<F, R>(&self, closure: F) -> Option<Result<R, SpannedError>>
     where
         F: Fn(&Token) -> R,
