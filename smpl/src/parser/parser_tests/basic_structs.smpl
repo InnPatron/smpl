@@ -1,0 +1,13 @@
+mod mod1;
+
+struct Foo {
+
+}
+
+struct Bar {
+
+}
+
+fn foo() {
+
+}
