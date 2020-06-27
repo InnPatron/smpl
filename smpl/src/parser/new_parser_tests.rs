@@ -36,3 +36,5 @@ test_parse_module!(empty_module_declared);
 test_parse_module!(basic_fn);
 
 test_parse_module!(basic_structs);
+
+test_parse_module!(annotations_struct_fields);
