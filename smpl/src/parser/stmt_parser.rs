@@ -891,7 +891,7 @@ fn try_expr_to_path(expr: Expr) -> ParserResult<AstNode<TypedPath>> {
     match expr {
         Expr::ModulePath(path) => {
             let path: AstNode<ModulePath> = path.into_data();
-            let (path, path_span) = path.split();
+            let path_span = path.span();
             Ok(AstNode::new(TypedPath {
                 base: Typable::untyped(path),
                 params: vec![],
@@ -902,8 +902,10 @@ fn try_expr_to_path(expr: Expr) -> ParserResult<AstNode<TypedPath>> {
             let binding: AstNode<Ident> = binding.into_data();
             let binding_span = binding.span().clone();
 
+            let module_path = AstNode::new(ModulePath(vec![binding]), binding_span.clone());
+
             Ok(AstNode::new(TypedPath {
-                base: Typable::untyped(ModulePath(vec![binding])),
+                base: Typable::untyped(module_path),
                 params: vec![],
             }, binding_span))
         },
