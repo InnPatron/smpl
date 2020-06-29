@@ -8,12 +8,13 @@ use crate::typable_ast::{Typed, Typable};
 
 pub type TypedNode<T> = Typable<AstNode<T>>;
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Module {
     pub ident: Option<AstNode<Ident>>,
     pub top_levels: Vec<DeclStmt>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum DeclStmt {
     Use(AstNode<UseDecl>),
     Opaque(AstNode<Opaque>),
@@ -44,9 +45,9 @@ pub enum BuiltinFnParams {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: AstNode<Ident>,
-    pub params: Vec<Typable<AstNode<FnParameter>>>,
-    pub return_type: Option<Typable<AstNode<TypeAnn>>>,
-    pub body: Typable<AstNode<Block>>,
+    pub params: Vec<TypedNode<FnParameter>>,
+    pub return_type: Option<TypedNode<TypeAnn>>,
+    pub body: TypedNode<Block>,
     pub annotations: Vec<Annotation>,
     pub type_params: Option<TypeParams>,
     pub where_clause: Option<WhereClause>,
