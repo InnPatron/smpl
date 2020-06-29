@@ -5,3 +5,29 @@ fn f1() {
 
     } + 1;
 }
+
+fn f2() {
+    let foo = if true {
+
+    } + 1;
+}
+
+fn f3() {
+    let foo = if true {
+
+    } elif false {
+
+    } else {
+
+    } + 1;
+}
+
+fn f4() {
+    let foo = if 1 + 2 {
+
+    } elif 3 == 4 {
+
+    } else {
+
+    } + 1;
+}
