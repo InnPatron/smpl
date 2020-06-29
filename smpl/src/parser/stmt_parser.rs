@@ -700,9 +700,10 @@ fn parse_binexpr(tokens: &mut BufferedTokenizer, left: Expr,
     -> ParserResult<Expr> {
 
     macro_rules! basic_binop {
-        ($left: expr, $op: expr, $rbp: expr, $delims: expr) => {{
+        ($left: expr, $tok: pat => $op: expr, $rbp: expr, $delims: expr) => {{
 
             let lhs = Box::new($left);
+            let _op = consume_token!(tokens, $tok, parser_state!("binexpr", "op"));
             let rhs = Box::new(parse_expr(tokens, $delims, $rbp)?);
 
             let binexpr_span = Span::combine(lhs.span(), rhs.span());
@@ -716,25 +717,25 @@ fn parse_binexpr(tokens: &mut BufferedTokenizer, left: Expr,
     }
 
     match op {
-        Token::Plus     => Ok(basic_binop!(left, BinOp::Add, rbp, delims)),
-        Token::Minus    => Ok(basic_binop!(left, BinOp::Sub, rbp, delims)),
-        Token::Star     => Ok(basic_binop!(left, BinOp::Mul, rbp, delims)),
-        Token::Slash    => Ok(basic_binop!(left, BinOp::Div, rbp, delims)),
-        Token::Pipe     => Ok(basic_binop!(left, BinOp::Pipe, rbp, delims)),
+        Token::Plus     => Ok(basic_binop!(left, Token::Plus  => BinOp::Add, rbp, delims)),
+        Token::Minus    => Ok(basic_binop!(left, Token::Minus => BinOp::Sub, rbp, delims)),
+        Token::Star     => Ok(basic_binop!(left, Token::Star  => BinOp::Mul, rbp, delims)),
+        Token::Slash    => Ok(basic_binop!(left, Token::Slash => BinOp::Div, rbp, delims)),
+        Token::Pipe     => Ok(basic_binop!(left, Token::Pipe  => BinOp::Pipe, rbp, delims)),
 
-        Token::Eq       => Ok(basic_binop!(left, BinOp::Eq, rbp, delims)),
-        Token::NEq      => Ok(basic_binop!(left, BinOp::Neq, rbp, delims)),
-        Token::Gte      => Ok(basic_binop!(left, BinOp::Gte, rbp, delims)),
-        Token::Gt       => Ok(basic_binop!(left, BinOp::Gt, rbp, delims)),
-        Token::Lte      => Ok(basic_binop!(left, BinOp::Lte, rbp, delims)),
-        Token::Lt       => Ok(basic_binop!(left, BinOp::Lt, rbp, delims)),
+        Token::Eq       => Ok(basic_binop!(left, Token::Eq  => BinOp::Eq, rbp, delims)),
+        Token::NEq      => Ok(basic_binop!(left, Token::NEq => BinOp::Neq, rbp, delims)),
+        Token::Gte      => Ok(basic_binop!(left, Token::Gte => BinOp::Gte, rbp, delims)),
+        Token::Gt       => Ok(basic_binop!(left, Token::Gt  => BinOp::Gt, rbp, delims)),
+        Token::Lte      => Ok(basic_binop!(left, Token::Lte => BinOp::Lte, rbp, delims)),
+        Token::Lt       => Ok(basic_binop!(left, Token::Lt  => BinOp::Lt, rbp, delims)),
 
-        Token::LAnd     => Ok(basic_binop!(left, BinOp::LAnd, rbp, delims)),
-        Token::LOr      => Ok(basic_binop!(left, BinOp::LOr, rbp, delims)),
+        Token::LAnd     => Ok(basic_binop!(left, Token::LAnd => BinOp::LAnd, rbp, delims)),
+        Token::LOr      => Ok(basic_binop!(left, Token::LOr  => BinOp::LOr, rbp, delims)),
 
-        Token::Assign   => Ok(basic_binop!(left, BinOp::Assign, rbp, delims)),
+        Token::Assign   => Ok(basic_binop!(left, Token::Assign => BinOp::Assign, rbp, delims)),
 
-        Token::Dot      => Ok(basic_binop!(left, BinOp::Dot, rbp, delims)),
+        Token::Dot      => Ok(basic_binop!(left, Token::Dot => BinOp::Dot, rbp, delims)),
 
         Token::ColonColon => {
             let right = parse_expr(tokens, delims, rbp)?;
