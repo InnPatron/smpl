@@ -43,10 +43,10 @@ macro_rules! fn_param {
 
 macro_rules! struct_field {
     ($name: ident => $type: expr) => {{
-        dummy_node!(UNTYPED => FnParameter {
+        StructField {
             name: dummy_node!(ident!(stringify!($name))),
-            param_type: dummy_node!($type)
-        })
+            field_type: dummy_node!(UNTYPED => $type)
+        }
     }}
 }
 
@@ -116,7 +116,7 @@ macro_rules! module_path {
     ($root: ident  $(:: $segment: ident)*) => {{
         let mut v = vec![dummy_node!(ident!(stringify!($root)))];
 
-        $(v.push(dummy_node!(dummy_node!(ident!(stringify!($segment)))));)*
+        $(v.push(dummy_node!(ident!(stringify!($segment))));)*
 
         ModulePath(v)
     }}
@@ -127,5 +127,59 @@ macro_rules! type_ann {
         let path = module_path!($root $(:: $segment)*);
 
         TypeAnn::ModulePath(dummy_node!(UNTYPED => path))
+    }};
+
+    (PATH => $root: ident $(:: $segment: ident)* (TYPE $($type_arg: expr),* ) ) => {{
+        let path = module_path!($root $(:: $segment)*);
+
+        let mut type_args = Vec::new();
+
+        $(type_args.push(dummy_node!(UNTYPED => $type_arg));)*
+
+        let path = TypedPath {
+            base: dummy_node!(UNTYPED => path),
+            params: type_args,
+        };
+
+        TypeAnn::Path(dummy_node!(UNTYPED => path))
+    }};
+
+    (WIDTH => $constraints: expr) => {{
+        TypeAnn::WidthConstraints($constraints)
+    }};
+
+    (ARRAY => [$base: expr, $size: expr]) => {{
+        TypeAnn::Array(Box::new(dummy_node!(UNTYPED => $base)), $size)
+    }};
+}
+
+macro_rules! width_constraint {
+    (BASE => $root: ident $(:: $segment: ident)*) => {{
+        let path = module_path!($root $(:: $segment)*);
+
+        WidthConstraint::BaseStruct(
+            dummy_node!(UNTYPED => TypeAnn::ModulePath(dummy_node!(UNTYPED => path)))
+        )
+    }};
+
+    (BASE => $root: ident $(:: $segment: ident)* (TYPE $($type_arg: expr),* ) ) => {{
+        let path = module_path!($root $(:: $segment)*);
+
+        let mut type_args = Vec::new();
+
+        $(type_args.push(dummy_node!(UNTYPED => $type_arg));)*
+
+        let path = TypedPath {
+            base: dummy_node!(UNTYPED => path),
+            params: type_args,
+        };
+
+        WidthConstraint::BaseStruct(
+            dummy_node!(UNTYPED => TypeAnn::Path(dummy_node!(UNTYPED => path)))
+        )
+    }};
+
+    (ANON => $body: expr) => {{
+        WidthConstraint::Anonymous($body)
     }}
 }
