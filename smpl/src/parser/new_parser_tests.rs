@@ -34,7 +34,11 @@ macro_rules! test_parse_module {
             let mod1 = parse_module(mod1)
                 .expect("Module did not parse correctly");
 
-            assert_eq!(mod1, $expected);
+            let expected = $expected;
+
+            dbg!(&mod1);
+            dbg!(&expected);
+            assert_eq!(mod1, expected);
         }
     }
 }
@@ -108,6 +112,65 @@ test_parse_module!(basic_structs,
     ])
 );
 
-test_parse_module!(type_annotations_struct_fields);
+test_parse_module!(type_annotations_struct_fields,
+    module!("mod1" => vec![
+        decl!(STRUCT => Struct {
+            name: dummy_node!(ident!("Foo")),
+            body: vec![
+                struct_field!(a => type_ann!(PATH => int)),
+                struct_field!(b => type_ann!(PATH => mod2::foo)),
+                struct_field!(c => type_ann!(ARRAY => [type_ann!(PATH => mod3::foo), 5])),
+                struct_field!(d => type_ann!(PATH => mod4::bar (TYPE
+                    type_ann!(PATH => mod5::foo),
+                    type_ann!(PATH => mod6::baz (TYPE
+                        type_ann!(PATH => int),
+                        type_ann!(PATH => boolean)
+                    ))
+                ))),
+                struct_field!(e => type_ann!(WIDTH => vec![
+                    width_constraint!(BASE => BAR)
+                ])),
+                struct_field!(f => type_ann!(WIDTH => vec![
+                    width_constraint!(ANON => vec![
+                        struct_field!(x => type_ann!(PATH => int)),
+                        struct_field!(y => type_ann!(PATH => int)),
+                    ])
+                ])),
+                struct_field!(g => type_ann!(WIDTH => vec![
+                    width_constraint!(BASE => BAR),
+                    width_constraint!(ANON => vec![
+                        struct_field!(x => type_ann!(PATH => int)),
+                        struct_field!(y => type_ann!(PATH => int)),
+                    ])
+                ])),
+                struct_field!(h => type_ann!(WIDTH => vec![
+                    width_constraint!(ANON => vec![
+                        struct_field!(x => type_ann!(PATH => int)),
+                        struct_field!(y => type_ann!(PATH => int)),
+                    ]),
+                    width_constraint!(BASE => BAR)
+                ])),
+                struct_field!(i => type_ann!(WIDTH => vec![
+                    width_constraint!(ANON => vec![
+                        struct_field!(x => type_ann!(PATH => int)),
+                        struct_field!(y => type_ann!(PATH => int)),
+                    ]),
+                    width_constraint!(BASE => BAR),
+                    width_constraint!(BASE => BAZ)
+                ])),
+                struct_field!(j => type_ann!(WIDTH => vec![
+                    width_constraint!(BASE => BAR (TYPE type_ann!(PATH => foo))),
+                    width_constraint!(ANON => vec![
+                        struct_field!(x => type_ann!(PATH => int)),
+                        struct_field!(y => type_ann!(PATH => int)),
+                    ])
+                ]))
+            ],
+            annotations: Vec::new(),
+            type_params: None,
+            where_clause: None,
+        })
+    ])
+);
 
 test_parse_module!(type_annotations_fn_params);
