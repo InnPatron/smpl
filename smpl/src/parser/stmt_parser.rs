@@ -73,12 +73,24 @@ fn stmt(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
             Token::Let => Box::new(parse_let),
             Token::While => todo!(),
 
-            _ => todo!(),
+            _ => Box::new(semi_expr),
         },
         parser_state!("stmt", "stmt-kind")
     );
 
     action(tokens)
+}
+
+fn semi_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
+    let expr = top_level_expr(tokens, &[ExprDelim::Semi])?;
+
+    let _semi = consume_token!(tokens,
+        Token::Semi,
+        parser_state!("semi-expr", ";")
+    );
+
+
+    Ok(Stmt::Expr(expr))
 }
 
 fn parse_let(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
