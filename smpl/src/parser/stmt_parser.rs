@@ -437,7 +437,12 @@ fn parse_if(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
                 Expr::If(Box::new(Typable::untyped(if_node))),
                 &[ExprDelim::Semi],
                 0),
-            parser_state!("expr", "right"));
+            parser_state!("if-semi-expr", "right"));
+
+        let _semi = consume_token!(tokens,
+            Token::Semi,
+            parser_state!("if-semi-expr", ";")
+        );
 
         Ok(Stmt::Expr(expr))
     }
