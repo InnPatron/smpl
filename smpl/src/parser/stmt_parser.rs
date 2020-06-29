@@ -689,29 +689,29 @@ fn parse_binexpr(tokens: &mut BufferedTokenizer, left: Expr,
 
 fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
 
-    let action: ExprAction = peek_token!(tokens,
-        |tok| match tok {
+    let action: ExprAction = peek_token!(tokens, SPAN
+        |tok, span| match tok {
             Token::IntLiteral(..)
                 | Token::FloatLiteral(..)
                 | Token::BoolLiteral(..)
-                | Token::StringLiteral(..) => Box::new(parse_literal) as ExprAction,
+                | Token::StringLiteral(..) => Ok(Box::new(parse_literal) as ExprAction),
 
             Token::Plus
                 | Token::Minus
-                | Token::Bang => Box::new(uni_expr) as ExprAction,
+                | Token::Bang => Ok(Box::new(uni_expr) as ExprAction),
 
-            Token::LParen => Box::new(paren_expr) as ExprAction,
+            Token::LParen => Ok(Box::new(paren_expr) as ExprAction),
 
-            Token::LBrace => Box::new(block_expr) as ExprAction,
+            Token::LBrace => Ok(Box::new(block_expr) as ExprAction),
 
-            Token::Init => Box::new(init_expr) as ExprAction,
+            Token::Init => Ok(Box::new(init_expr) as ExprAction),
 
-            Token::Identifier(..) => Box::new(ident_expr) as ExprAction,
+            Token::Identifier(..) => Ok(Box::new(ident_expr) as ExprAction),
 
-            _ => todo!()
+            _ => Err(parser_error!(ParserErrorKind::UnexpectedToken(tok.clone()), parser_state!("expr", "nud"), span)),
         },
         parser_state!("expr", "nud")
-    );
+    )?;
 
     Ok(action)
 }
