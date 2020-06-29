@@ -78,7 +78,35 @@ test_parse_module!(basic_fn,
     ])
 );
 
-test_parse_module!(basic_structs);
+test_parse_module!(basic_structs,
+    module!("mod1" => vec![
+        decl!(STRUCT => Struct {
+            name: dummy_node!(ident!("Foo")),
+            body: vec![],
+            annotations: Vec::new(),
+            type_params: None,
+            where_clause: None,
+        }),
+
+        decl!(STRUCT => Struct {
+            name: dummy_node!(ident!("Bar")),
+            body: vec![],
+            annotations: Vec::new(),
+            type_params: None,
+            where_clause: None,
+        }),
+
+        decl!(FN => Function {
+            name: dummy_node!(ident!("foo")),
+            params: vec![],
+            return_type: None,
+            body: dummy_node!(UNTYPED => block!(EMPTY)),
+            annotations: vec![],
+            type_params: None,
+            where_clause: None,
+        })
+    ])
+);
 
 test_parse_module!(type_annotations_struct_fields);
 
