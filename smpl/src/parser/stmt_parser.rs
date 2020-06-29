@@ -651,41 +651,41 @@ fn led_action(tokens: &BufferedTokenizer) -> ParserResult<LbpData> {
         }}
     }
 
-    let (lbp, rbp, action) = peek_token!(tokens,
-        |tok| match tok {
+    let (lbp, rbp, action) = peek_token!(tokens, SPAN
+        |tok, span| match tok {
 
-                Token::RParen       => (0, 0, unreachable_led!("led rparen")),
-                Token::RBrace       => (0, 0, unreachable_led!("led rbrace")),
-                Token::RBracket     => (0, 0, unreachable_led!("led rbracket")),
+                Token::RParen       => Ok((0, 0, unreachable_led!("led rparen"))),
+                Token::RBrace       => Ok((0, 0, unreachable_led!("led rbrace"))),
+                Token::RBracket     => Ok((0, 0, unreachable_led!("led rbracket"))),
 
-                Token::Pipe         => (10, 10, binexpr(tok)),
+                Token::Pipe         => Ok((10, 10, binexpr(tok))),
 
                 // TODO: Check precedence
-                Token::Eq           => (15, 15, binexpr(tok)),
-                Token::NEq          => (17, 17, binexpr(tok)),
-                Token::Gt           => (17, 17, binexpr(tok)),
-                Token::Gte          => (17, 17, binexpr(tok)),
-                Token::Lt           => (17, 17, binexpr(tok)),
-                Token::Lte          => (17, 17, binexpr(tok)),
+                Token::Eq           => Ok((15, 15, binexpr(tok))),
+                Token::NEq          => Ok((17, 17, binexpr(tok))),
+                Token::Gt           => Ok((17, 17, binexpr(tok))),
+                Token::Gte          => Ok((17, 17, binexpr(tok))),
+                Token::Lt           => Ok((17, 17, binexpr(tok))),
+                Token::Lte          => Ok((17, 17, binexpr(tok))),
 
-                Token::LAnd         => (18, 18, binexpr(tok)),
-                Token::LOr          => (18, 18, binexpr(tok)),
+                Token::LAnd         => Ok((18, 18, binexpr(tok))),
+                Token::LOr          => Ok((18, 18, binexpr(tok))),
 
-                Token::Plus         => (20, 20, binexpr(tok)),
-                Token::Minus        => (20, 20, binexpr(tok)),
-                Token::Star         => (30, 30, binexpr(tok)),
-                Token::Slash        => (30, 30, binexpr(tok)),
+                Token::Plus         => Ok((20, 20, binexpr(tok))),
+                Token::Minus        => Ok((20, 20, binexpr(tok))),
+                Token::Star         => Ok((30, 30, binexpr(tok))),
+                Token::Slash        => Ok((30, 30, binexpr(tok))),
 
-                Token::Dot          => (100, 100, binexpr(tok)),
+                Token::Dot          => Ok((100, 100, binexpr(tok))),
 
-                Token::ColonColon   => (120, 120, binexpr(tok)),
-                Token::Assign       => (140, 140, binexpr(tok)),
+                Token::ColonColon   => Ok((120, 120, binexpr(tok))),
+                Token::Assign       => Ok((140, 140, binexpr(tok))),
 
-                _ => todo!(),
+                _ => Err(parser_error!(ParserErrorKind::UnexpectedToken(tok.clone()), parser_state!("expr", "led"), span)),
 
          },
         parser_state!("expr", "led")
-    );
+    )?;
 
     Ok((lbp, rbp, action))
 }
