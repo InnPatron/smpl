@@ -1,0 +1,41 @@
+mod mod1;
+
+fn f1() {
+    1 + 2;
+
+    foo(1);
+}
+
+fn f2() {
+    foo(1, 2, 3,);
+
+    bar(1, 2, 3);
+}
+
+fn f3() {
+    foo({
+        extract 1;
+    }, 2, {
+        extract 3;
+    },);
+
+    bar({
+        extract 1;
+    }, 2, {
+        extract 3;
+    },);
+}
+
+fn f4() {
+    mod2::inner1::foo({
+        extract 1;
+    }, 2, {
+        extract 3;
+    },);
+
+    mod3::bar({
+        extract 1;
+    }, 2, {
+        extract 3;
+    },);
+}

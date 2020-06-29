@@ -241,3 +241,5 @@ test_parse_module!(type_annotations_fn_params,
 test_parse_module!(if_stmts);
 
 test_parse_module!(if_exprs);
+
+test_parse_module!(exprs);
