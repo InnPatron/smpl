@@ -18,7 +18,7 @@ type LbpData = (BindingPower, BindingPower, LedAction);
 type PostData = (BindingPower, PostAction);
 
 #[derive(PartialEq, Eq)]
-enum ExprDelim {
+pub enum ExprDelim {
     Semi,
     Comma,
     NewBlock,
@@ -70,6 +70,7 @@ fn stmt(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
                 | Token::Return
                 | Token::Continue => keyword_expr(tok.clone()),
             Token::If => Box::new(parse_if),
+            Token::Let => Box::new(parse_let),
             Token::While => todo!(),
 
             _ => todo!(),
@@ -78,6 +79,55 @@ fn stmt(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
     );
 
     action(tokens)
+}
+
+fn parse_let(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
+    let (let_span, _) = consume_token!(tokens,
+        Token::Let,
+        parser_state!("let-stmt", "let")
+    );
+
+    let (name_span, name) = consume_token!(tokens,
+        Token::Identifier(id) => Ident(id),
+        parser_state!("let-stmt", "name")
+    );
+
+    let type_ann: Option<TypedNode<TypeAnn>> = if peek_token!(tokens,
+        |tok| match tok {
+            Token::Colon => true,
+            _ => false
+        },
+        parser_state!("let-stmt", "type-ann?")
+    ) {
+        Some(Typable::untyped(top_level_type_ann(tokens, &[AnnDelim::Assign])?))
+    } else {
+        None
+    };
+
+    let _assign = consume_token!(tokens,
+        Token::Assign,
+        parser_state!("let-stmt", "=")
+    );
+
+    let init = top_level_expr(tokens, &[ExprDelim::Semi])?;
+
+    let (semi_span, _) = consume_token!(tokens,
+        Token::Semi,
+        parser_state!("let-stmt", "semi")
+    );
+
+    let var_name = AstNode::new(name, name_span);
+
+    let node_span = Span::combine(let_span, semi_span);
+    let node = AstNode::new(LetStmt {
+        var_name,
+        type_ann,
+        init,
+    }, node_span);
+
+    Ok(Stmt::ExprStmt(ExprStmt::Let(
+        node
+    )))
 }
 
 fn keyword_expr(kind: Token) -> StmtAction {
@@ -394,7 +444,7 @@ fn if_branch(tokens: &mut BufferedTokenizer) -> ParserResult<Branch> {
     Ok(branch)
 }
 
-fn top_level_expr(tokens: &mut BufferedTokenizer, delimiters: &[ExprDelim])
+pub fn top_level_expr(tokens: &mut BufferedTokenizer, delimiters: &[ExprDelim])
     -> ParserResult<Expr> {
 
     parse_expr(tokens, delimiters, 0)

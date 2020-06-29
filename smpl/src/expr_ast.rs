@@ -17,7 +17,7 @@ pub enum Stmt {
 pub enum ExprStmt {
     If(AstNode<If>),
     While(AstNode<While>),
-    LocalVarDecl(AstNode<LocalVarDecl>),
+    Let(AstNode<LetStmt>),
     Return(AstNode<Option<Expr>>),
     Break(AstNode<Option<Expr>>),
     Continue(EmptyAstNode),
@@ -47,10 +47,10 @@ pub struct While {
 pub struct Block(pub Vec<Stmt>);
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct LocalVarDecl {
-    pub var_type: Option<AstNode<TypeAnn>>,
+pub struct LetStmt {
     pub var_name: AstNode<Ident>,
-    pub var_init: Expr,
+    pub type_ann: Option<TypedNode<TypeAnn>>,
+    pub init: Expr,
 }
 
 #[derive(Clone, Debug, PartialEq)]
