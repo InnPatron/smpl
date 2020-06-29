@@ -486,7 +486,10 @@ fn parse_expr(
     // TODO: eat whitespace
     let expr_action = nud_action(tokens)?;
     let left: Expr = expr_action(tokens)?;
-    expr_with_left(tokens, left, delimiters, min_bp)
+    Ok(production!(
+        expr_with_left(tokens, left, delimiters, min_bp),
+        parser_state!("expr", "expr-with-left")
+    ))
 }
 
 fn expr_with_left(
