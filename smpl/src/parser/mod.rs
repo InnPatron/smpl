@@ -24,6 +24,10 @@ mod type_parser;
 mod stmt_parser;
 
 #[cfg(test)]
+#[macro_use]
+mod test_macros;
+
+#[cfg(test)]
 mod parser_tests;
 
 #[cfg(test)]
