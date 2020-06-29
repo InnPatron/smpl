@@ -173,4 +173,69 @@ test_parse_module!(type_annotations_struct_fields,
     ])
 );
 
-test_parse_module!(type_annotations_fn_params);
+test_parse_module!(type_annotations_fn_params,
+    module!("mod1" => vec![
+        decl!(FN => Function {
+            name: dummy_node!(ident!("Foo")),
+            params: vec![
+                fn_param!(a => type_ann!(PATH => int)),
+                fn_param!(b => type_ann!(PATH => mod2::foo)),
+                fn_param!(c => type_ann!(ARRAY => [type_ann!(PATH => mod3::foo), 5])),
+                fn_param!(d => type_ann!(PATH => mod4::bar (TYPE
+                    type_ann!(PATH => mod5::foo),
+                    type_ann!(PATH => mod6::baz (TYPE
+                        type_ann!(PATH => int),
+                        type_ann!(PATH => boolean)
+                    ))
+                ))),
+                fn_param!(e => type_ann!(WIDTH => vec![
+                    width_constraint!(BASE => BAR)
+                ])),
+                fn_param!(f => type_ann!(WIDTH => vec![
+                    width_constraint!(ANON => vec![
+                        struct_field!(x => type_ann!(PATH => int)),
+                        struct_field!(y => type_ann!(PATH => int)),
+                    ])
+                ])),
+                fn_param!(g => type_ann!(WIDTH => vec![
+                    width_constraint!(BASE => BAR),
+                    width_constraint!(ANON => vec![
+                        struct_field!(x => type_ann!(PATH => int)),
+                        struct_field!(y => type_ann!(PATH => int)),
+                    ])
+                ])),
+                fn_param!(h => type_ann!(WIDTH => vec![
+                    width_constraint!(ANON => vec![
+                        struct_field!(x => type_ann!(PATH => int)),
+                        struct_field!(y => type_ann!(PATH => int)),
+                    ]),
+                    width_constraint!(BASE => BAR)
+                ])),
+                fn_param!(i => type_ann!(WIDTH => vec![
+                    width_constraint!(ANON => vec![
+                        struct_field!(x => type_ann!(PATH => int)),
+                        struct_field!(y => type_ann!(PATH => int)),
+                    ]),
+                    width_constraint!(BASE => BAR),
+                    width_constraint!(BASE => BAZ)
+                ])),
+                fn_param!(j => type_ann!(WIDTH => vec![
+                    width_constraint!(BASE => BAR (TYPE type_ann!(PATH => foo))),
+                    width_constraint!(ANON => vec![
+                        struct_field!(x => type_ann!(PATH => int)),
+                        struct_field!(y => type_ann!(PATH => int)),
+                    ])
+                ]))
+            ],
+            return_type: Some(dummy_node!(UNTYPED => type_ann!(WIDTH => vec![
+                width_constraint!(BASE => BAR (TYPE type_ann!(PATH => foo)))
+            ]))),
+            body: dummy_node!(UNTYPED => block!(EMPTY)),
+            annotations: Vec::new(),
+            type_params: None,
+            where_clause: None,
+        })
+    ])
+
+
+);

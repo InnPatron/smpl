@@ -1,3 +1,5 @@
+mod mod1;
+
 fn Foo (
     a: int,
     b: mod2::foo,
