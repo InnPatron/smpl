@@ -35,7 +35,9 @@ fn f4() {
 fn f5() {
     let foo = if 1 + 2 {
         break (5 + 3) * 2;
-    } elif 3 == { 4 + 10 - 3; } {
+    } elif 3 == {
+        extract 4 + 10 - 3;
+    } {
 
     } else {
 
