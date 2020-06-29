@@ -236,6 +236,4 @@ test_parse_module!(type_annotations_fn_params,
             where_clause: None,
         })
     ])
-
-
 );
