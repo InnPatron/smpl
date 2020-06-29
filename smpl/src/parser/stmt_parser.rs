@@ -419,7 +419,7 @@ fn parse_if(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
         default_branch,
     }, if_span);
 
-    if nud_action(tokens).is_ok() {
+    if nud_action(tokens).is_err() {
         // if-expr is in a statement position
         // Example:
         //      if foo { bar; } x = 1;
