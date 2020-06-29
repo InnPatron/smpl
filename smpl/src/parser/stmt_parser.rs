@@ -779,6 +779,11 @@ fn parse_binexpr(tokens: &mut BufferedTokenizer, left: Expr,
         Token::Dot      => Ok(basic_binop!(left, Token::Dot => BinOp::Dot, rbp, delims)),
 
         Token::ColonColon => {
+            let op = consume_token!(tokens,
+                Token::ColonColon,
+                parser_state!("expr", "module-path")
+            );
+
             let right = parse_expr(tokens, delims, rbp)?;
             match (left, right) {
                 (Expr::Binding(left), Expr::Binding(right)) => {
