@@ -291,7 +291,6 @@ fn width_constraint(
                 parser_state!("width-constraint", "anonymous-struct")
             )
                 .into_iter()
-                .map(|struct_field| (struct_field.name, struct_field.field_type))
                 .collect();
 
             let (r_loc, _) = consume_token!(
