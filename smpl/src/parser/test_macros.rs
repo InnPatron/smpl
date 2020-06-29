@@ -26,9 +26,22 @@ macro_rules! decl {
     (FN => $fn: expr) => {
         DeclStmt::Function(dummy_node!($fn))
     };
+
+    (STRUCT => $st: expr) => {
+        DeclStmt::Struct(dummy_node!($st))
+    }
 }
 
 macro_rules! fn_param {
+    ($name: ident => $type: expr) => {{
+        dummy_node!(UNTYPED => FnParameter {
+            name: dummy_node!(ident!(stringify!($name))),
+            param_type: dummy_node!($type)
+        })
+    }}
+}
+
+macro_rules! struct_field {
     ($name: ident => $type: expr) => {{
         dummy_node!(UNTYPED => FnParameter {
             name: dummy_node!(ident!(stringify!($name))),
