@@ -17,7 +17,7 @@ type StmtAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<Stmt>>;
 type LbpData = (BindingPower, BindingPower, LedAction);
 type PostData = (BindingPower, PostAction);
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum ExprDelim {
     Semi,
     Comma,

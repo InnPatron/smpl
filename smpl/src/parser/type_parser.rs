@@ -27,7 +27,7 @@ const all_delims: &'static [AnnDelim] = &[
     AnnDelim::Semi,
 ];
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum AnnDelim {
     NewBlock,
     Assign,
