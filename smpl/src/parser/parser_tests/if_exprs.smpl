@@ -3,5 +3,5 @@ mod mod1;
 fn f1() {
     if true {
 
-    } + 1
+    } + 1;
 }
