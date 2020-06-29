@@ -1,0 +1,45 @@
+mod mod1;
+
+fn if1() {
+    if true {
+
+    }
+}
+
+fn if2() {
+    if true {
+
+    } else {
+
+    }
+}
+
+fn if3() {
+    if true {
+
+    } elif false {
+
+    }
+}
+
+fn if4() {
+    if true {
+
+    } elif false {
+
+    } elif false {
+
+    }
+}
+
+fn if5() {
+    if true {
+
+    } elif false {
+
+    } elif false {
+
+    } else {
+
+    }
+}
