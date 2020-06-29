@@ -625,10 +625,9 @@ fn struct_decl(
             struct_field_list(tokens),
             parser_state!("struct-decl", "field-list")
         );
-        StructBody(Some(body))
+        body
     } else {
-        // Empty struct body
-        StructBody(None)
+        vec![]
     };
 
     // Get Keys

@@ -70,7 +70,7 @@ pub struct Opaque {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Struct {
     pub name: AstNode<Ident>,
-    pub body: StructBody,
+    pub body: Vec<StructField>,
     pub annotations: Vec<Annotation>,
     pub type_params: Option<TypeParams>,
     pub where_clause: Option<WhereClause>,
@@ -80,12 +80,9 @@ pub struct Struct {
 pub struct WhereClause(pub HashMap<AstNode<Ident>, Vec<AstNode<TypeAnn>>>);
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct StructBody(pub Option<Vec<StructField>>);
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct StructField {
     pub name: AstNode<Ident>,
-    pub field_type: Typable<AstNode<TypeAnn>>,
+    pub field_type: TypedNode<TypeAnn>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
