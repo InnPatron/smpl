@@ -61,6 +61,7 @@ pub enum Token {
 
     Init,
 
+    Extract,
     Continue,
     Break,
     Return,
@@ -143,6 +144,7 @@ impl std::fmt::Display for Token {
 
             Init => write!(f, "init"),
 
+            Extract => write!(f, "extract"),
             Continue => write!(f, "continue"),
             Break => write!(f, "break"),
             Return => write!(f, "return"),
@@ -578,6 +580,7 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
             "UNCHECKED" => Token::Unchecked,
             "type" => Token::Type,
             "where" => Token::Where,
+            "extract" => Token::Extract,
             "continue" => Token::Continue,
             "break" => Token::Break,
             "return" => Token::Return,

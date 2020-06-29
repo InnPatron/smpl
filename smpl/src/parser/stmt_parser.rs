@@ -68,7 +68,8 @@ fn stmt(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
         |tok| match tok {
             Token::Break
                 | Token::Return
-                | Token::Continue => keyword_expr(tok.clone()),
+                | Token::Continue
+                | Token::Extract => keyword_expr(tok.clone()),
             Token::If => Box::new(parse_if),
             Token::Let => Box::new(parse_let),
             Token::While => todo!(),
@@ -223,6 +224,46 @@ fn keyword_expr(kind: Token) -> StmtAction {
                 let node_return = AstNode::new(expr, return_span.clone());
 
                 Ok(Stmt::ExprStmt(ExprStmt::Return(node_return)))
+            }
+
+            Token::Extract => {
+                let (extract_span, _) = consume_token!(
+                    tokens,
+                    Token::Extract,
+                    parser_state!("extract-stmt", "extract")
+                );
+
+                let expr = if peek_token!(tokens,
+                    |tok| match tok {
+                        Token::Semi => false,
+                        _ => true,
+                    },
+                    parser_state!("extract-stmt", "expr?")
+                ) {
+                    // No semicolon found
+                    // Parse for expression
+                    let expr = production!(
+                        top_level_expr(tokens, &[ExprDelim::Semi]),
+                        parser_state!("extract-stmt", "expr")
+                    );
+
+                    Some(expr)
+                } else {
+                    None
+                };
+
+                // Semicolon found
+                let (semi_span, _) = consume_token!(
+                    tokens,
+                    Token::Semi,
+                    parser_state!("extract-stmt", "semi")
+                );
+
+                let extract_span = LocationSpan::combine(extract_span, semi_span);
+
+                let node_extract = AstNode::new(expr, extract_span);
+
+                Ok(Stmt::ExprStmt(ExprStmt::Return(node_extract)))
             }
 
             Token::Continue => {

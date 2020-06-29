@@ -20,6 +20,7 @@ pub enum ExprStmt {
     Let(AstNode<LetStmt>),
     Return(AstNode<Option<Expr>>),
     Break(AstNode<Option<Expr>>),
+    Extract(AstNode<Option<Expr>>),
     Continue(EmptyAstNode),
 }
 
