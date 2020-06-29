@@ -342,6 +342,38 @@ fn parse_while(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
 
 fn parse_if(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
 
+    let if_node = if_core(tokens)?;
+
+    if nud_action(tokens).is_err() {
+        // if-expr is in a statement position
+        // Example:
+        //      if foo { bar; } x = 1;
+        Ok(Stmt::ExprStmt(ExprStmt::If(if_node)))
+    } else {
+        // if-expr is in an expression position
+        // Example:
+        //      if foo { bar; } + 4;
+        //
+        // NOTE: Well-formedness of if expressions handled by a separate pass
+
+        let expr = production!(
+            expr_with_left(
+                tokens,
+                Expr::If(Box::new(Typable::untyped(if_node))),
+                &[ExprDelim::Semi],
+                0),
+            parser_state!("if-semi-expr", "right"));
+
+        let _semi = consume_token!(tokens,
+            Token::Semi,
+            parser_state!("if-semi-expr", ";")
+        );
+
+        Ok(Stmt::Expr(expr))
+    }
+}
+
+fn if_core(tokens: &mut BufferedTokenizer) -> ParserResult<AstNode<If>> {
     enum IfDec {
         Elif,
         Else,
@@ -419,33 +451,7 @@ fn parse_if(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
         default_branch,
     }, if_span);
 
-    if nud_action(tokens).is_err() {
-        // if-expr is in a statement position
-        // Example:
-        //      if foo { bar; } x = 1;
-        Ok(Stmt::ExprStmt(ExprStmt::If(if_node)))
-    } else {
-        // if-expr is in an expression position
-        // Example:
-        //      if foo { bar; } + 4;
-        //
-        // NOTE: Well-formedness of if expressions handled by a separate pass
-
-        let expr = production!(
-            expr_with_left(
-                tokens,
-                Expr::If(Box::new(Typable::untyped(if_node))),
-                &[ExprDelim::Semi],
-                0),
-            parser_state!("if-semi-expr", "right"));
-
-        let _semi = consume_token!(tokens,
-            Token::Semi,
-            parser_state!("if-semi-expr", ";")
-        );
-
-        Ok(Stmt::Expr(expr))
-    }
+    Ok(if_node)
 }
 
 fn if_branch(tokens: &mut BufferedTokenizer) -> ParserResult<Branch> {
@@ -773,6 +779,8 @@ fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
 
             Token::Init => Ok(Box::new(init_expr) as ExprAction),
 
+            Token::If => Ok(Box::new(if_expr) as ExprAction),
+
             Token::Identifier(..) => Ok(Box::new(ident_expr) as ExprAction),
 
             _ => Err(parser_error!(ParserErrorKind::UnexpectedToken(tok.clone()), parser_state!("expr", "nud"), span)),
@@ -781,6 +789,12 @@ fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
     )?;
 
     Ok(action)
+}
+
+fn if_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
+    let if_node = if_core(tokens)?;
+
+    Ok(Expr::If(Box::new(Typable::untyped(if_node))))
 }
 
 fn init_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
