@@ -936,9 +936,9 @@ fn init_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
         },
         parser_state!("init-expr", "init-kind?")
     ) {
-        struct_init(tokens, init_span)
-    } else {
         array_init(tokens, init_span)
+    } else {
+        struct_init(tokens, init_span)
     }
 }
 
