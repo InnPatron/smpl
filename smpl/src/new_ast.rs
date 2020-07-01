@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fmt;
+use std::fmt::{self, Debug};
 
 use crate::span::Span;
 use crate::ast_node::AstNode;
@@ -9,17 +9,17 @@ use crate::typable_ast::{Typed, Typable};
 pub type TypedNode<T> = Typable<AstNode<T>>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Module {
+pub struct Module<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> {
     pub ident: Option<AstNode<Ident>>,
-    pub top_levels: Vec<DeclStmt>,
+    pub top_levels: Vec<DeclStmt<S, E>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum DeclStmt {
+pub enum DeclStmt<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> {
     Use(AstNode<UseDecl>),
     Opaque(AstNode<Opaque>),
     Struct(AstNode<Struct>),
-    Function(AstNode<Function>),
+    Function(AstNode<Function<S, E>>),
     BuiltinFunction(AstNode<BuiltinFunction>),
 }
 
@@ -43,11 +43,11 @@ pub enum BuiltinFnParams {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Function {
+pub struct Function<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> {
     pub name: AstNode<Ident>,
     pub params: Vec<TypedNode<FnParameter>>,
     pub return_type: Option<TypedNode<TypeAnn>>,
-    pub body: TypedNode<Block>,
+    pub body: TypedNode<Block<S, E>>,
     pub annotations: Vec<Annotation>,
     pub type_params: Option<TypeParams>,
     pub where_clause: Option<WhereClause>,

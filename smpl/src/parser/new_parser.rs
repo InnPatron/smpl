@@ -10,8 +10,7 @@ use crate::typable_ast::{Typable, Typed};
 use crate::span::*;
 use crate::expr_ast::Block;
 
-
-pub fn module(tokens: &mut BufferedTokenizer) -> ParserResult<Module> {
+pub fn module(tokens: &mut BufferedTokenizer) -> ParserResult<Module<(), ()>> {
     enum ModDec {
         Struct,
         Opaque,
@@ -229,7 +228,7 @@ fn module_decl(tokens: &mut BufferedTokenizer) -> ParserResult<AstNode<Ident>> {
     Ok(AstNode::new(ident, span))
 }
 
-fn use_decl(tokens: &mut BufferedTokenizer) -> ParserResult<DeclStmt> {
+fn use_decl(tokens: &mut BufferedTokenizer) -> ParserResult<DeclStmt<(), ()>> {
     let (uspan, _) =
         consume_token!(tokens, Token::Use, parser_state!("use-decl", "use"));
     let (mspan, module) = consume_token!(tokens,
@@ -254,7 +253,7 @@ fn fn_decl(
     tokens: &mut BufferedTokenizer,
     annotations: Vec<Annotation>,
     is_builtin: bool,
-) -> ParserResult<DeclStmt> {
+) -> ParserResult<DeclStmt<(), ()>> {
     let mut span = Span::dummy();
     if is_builtin {
         let (bloc, _builtin) = consume_token!(
@@ -377,7 +376,7 @@ fn fn_decl(
         None
     };
 
-    let mut body: Option<Typable<AstNode<Block>>> = None;
+    let mut body: Option<Typable<AstNode<Block<(), ()>>>> = None;
     if !is_builtin {
         body = Some(stmt_parser::block(tokens)?);
     }

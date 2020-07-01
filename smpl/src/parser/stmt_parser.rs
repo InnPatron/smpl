@@ -10,10 +10,10 @@ use crate::typable_ast::Typable;
 use crate::expr_ast::*;
 
 type BindingPower = u64;
-type PostAction = Box<FnOnce(&mut BufferedTokenizer, Expr, &[ExprDelim]) -> ParserResult<Expr>>;
-type LedAction = Box<FnOnce(&mut BufferedTokenizer, Expr, BindingPower, &[ExprDelim]) -> ParserResult<Expr>>;
-type ExprAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<Expr>>;
-type StmtAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<Stmt>>;
+type PostAction = Box<FnOnce(&mut BufferedTokenizer, Expr<(), ()>, &[ExprDelim]) -> ParserResult<Expr<(), ()>>>;
+type LedAction = Box<FnOnce(&mut BufferedTokenizer, Expr<(), ()>, BindingPower, &[ExprDelim]) -> ParserResult<Expr<(), ()>>>;
+type ExprAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<Expr<(), ()>>>;
+type StmtAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<Stmt<(), ()>>>;
 type LbpData = (BindingPower, BindingPower, LedAction);
 type PostData = (BindingPower, PostAction);
 
@@ -24,7 +24,7 @@ pub enum ExprDelim {
     NewBlock,
 }
 
-pub fn block(tokens: &mut BufferedTokenizer) -> ParserResult<TypedNode<Block>> {
+pub fn block(tokens: &mut BufferedTokenizer) -> ParserResult<TypedNode<Block<(), ()>>> {
     let (lspan, _) = consume_token!(
         tokens,
         Token::LBrace,
@@ -62,7 +62,7 @@ pub fn block(tokens: &mut BufferedTokenizer) -> ParserResult<TypedNode<Block>> {
     Ok(Typable::untyped(block))
 }
 
-fn stmt(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
+fn stmt(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt<(), ()>> {
 
     let action: StmtAction = peek_token!(tokens,
         |tok| match tok {
@@ -82,7 +82,7 @@ fn stmt(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
     action(tokens)
 }
 
-fn semi_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
+fn semi_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt<(), ()>> {
     let expr = production!(
         top_level_expr(tokens, &[ExprDelim::Semi]),
         parser_state!("stmt", "semi-expr")
@@ -97,7 +97,7 @@ fn semi_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
     Ok(Stmt::Expr(expr))
 }
 
-fn parse_let(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
+fn parse_let(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt<(), ()>> {
     let (let_span, _) = consume_token!(tokens,
         Token::Let,
         parser_state!("let-stmt", "let")
@@ -149,7 +149,8 @@ fn parse_let(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
     }, node_span);
 
     Ok(Stmt::ExprStmt(ExprStmt::Let(
-        node
+        node,
+        ()
     )))
 }
 
@@ -193,7 +194,7 @@ fn keyword_expr(kind: Token) -> StmtAction {
 
                 let node_break = AstNode::new(expr, break_span.clone());
 
-                Ok(Stmt::ExprStmt(ExprStmt::Break(node_break)))
+                Ok(Stmt::ExprStmt(ExprStmt::Break(node_break, ())))
             }
 
             Token::Return => {
@@ -233,7 +234,7 @@ fn keyword_expr(kind: Token) -> StmtAction {
 
                 let node_return = AstNode::new(expr, return_span.clone());
 
-                Ok(Stmt::ExprStmt(ExprStmt::Return(node_return)))
+                Ok(Stmt::ExprStmt(ExprStmt::Return(node_return, ())))
             }
 
             Token::Extract => {
@@ -273,7 +274,7 @@ fn keyword_expr(kind: Token) -> StmtAction {
 
                 let node_extract = AstNode::new(expr, extract_span);
 
-                Ok(Stmt::ExprStmt(ExprStmt::Return(node_extract)))
+                Ok(Stmt::ExprStmt(ExprStmt::Return(node_extract, ())))
             }
 
             Token::Continue => {
@@ -291,7 +292,7 @@ fn keyword_expr(kind: Token) -> StmtAction {
                 );
 
                 let continue_span = LocationSpan::combine(continue_span, semi_span);
-                Ok(Stmt::ExprStmt(ExprStmt::Continue(AstNode::new((), continue_span))))
+                Ok(Stmt::ExprStmt(ExprStmt::Continue(AstNode::new((), continue_span), ())))
             }
 
             tok => panic!("keyword_expr cannot handle {:?}", tok),
@@ -299,7 +300,7 @@ fn keyword_expr(kind: Token) -> StmtAction {
     })
 }
 
-fn parse_while(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
+fn parse_while(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt<(), ()>> {
 
     enum WhileDec {
         Elif,
@@ -376,13 +377,13 @@ fn parse_while(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
     }, while_span);
 
     if nud_action(tokens).is_ok() {
-        Ok(Stmt::ExprStmt(ExprStmt::While(while_node)))
+        Ok(Stmt::ExprStmt(ExprStmt::While(while_node, ())))
     } else {
 
         let expr = production!(
             expr_with_left(
                 tokens,
-                Expr::While(Box::new(Typable::untyped(while_node))),
+                Expr::While(Box::new(Typable::untyped(while_node)), ()),
                 &[ExprDelim::Semi],
                 0),
             parser_state!("expr", "right"));
@@ -391,7 +392,7 @@ fn parse_while(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
     }
 }
 
-fn parse_if(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
+fn parse_if(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt<(), ()>> {
 
     let if_node = if_core(tokens)?;
 
@@ -399,7 +400,7 @@ fn parse_if(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
         // if-expr is in a statement position
         // Example:
         //      if foo { bar; } x = 1;
-        Ok(Stmt::ExprStmt(ExprStmt::If(if_node)))
+        Ok(Stmt::ExprStmt(ExprStmt::If(if_node, ())))
     } else {
         // if-expr is in an expression position
         // Example:
@@ -410,7 +411,7 @@ fn parse_if(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
         let expr = production!(
             expr_with_left(
                 tokens,
-                Expr::If(Box::new(Typable::untyped(if_node))),
+                Expr::If(Box::new(Typable::untyped(if_node)), ()),
                 &[ExprDelim::Semi],
                 0),
             parser_state!("if-semi-expr", "right"));
@@ -424,7 +425,7 @@ fn parse_if(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
     }
 }
 
-fn if_core(tokens: &mut BufferedTokenizer) -> ParserResult<AstNode<If>> {
+fn if_core(tokens: &mut BufferedTokenizer) -> ParserResult<AstNode<If<(), ()>>> {
     enum IfDec {
         Elif,
         Else,
@@ -505,7 +506,7 @@ fn if_core(tokens: &mut BufferedTokenizer) -> ParserResult<AstNode<If>> {
     Ok(if_node)
 }
 
-fn if_branch(tokens: &mut BufferedTokenizer) -> ParserResult<Branch> {
+fn if_branch(tokens: &mut BufferedTokenizer) -> ParserResult<Branch<(), ()>> {
     let conditional = top_level_expr(tokens, &[ExprDelim::NewBlock])?;
 
     let block = production!(block(tokens), parser_state!("if-branch", "block"));
@@ -519,7 +520,7 @@ fn if_branch(tokens: &mut BufferedTokenizer) -> ParserResult<Branch> {
 }
 
 pub fn top_level_expr(tokens: &mut BufferedTokenizer, delimiters: &[ExprDelim])
-    -> ParserResult<Expr> {
+    -> ParserResult<Expr<(), ()>> {
 
     parse_expr(tokens, delimiters, 0)
 }
@@ -528,7 +529,7 @@ fn parse_expr(
     tokens: &mut BufferedTokenizer,
     delimiters: &[ExprDelim],
     min_bp: BindingPower,
-    ) -> ParserResult<Expr> {
+    ) -> ParserResult<Expr<(), ()>> {
 
     if tokens.eof() {
         todo!("Unexpected EOF 1");
@@ -536,7 +537,7 @@ fn parse_expr(
 
     // TODO: eat whitespace
     let expr_action = nud_action(tokens)?;
-    let left: Expr = expr_action(tokens)?;
+    let left: Expr<(), ()> = expr_action(tokens)?;
     Ok(production!(
         expr_with_left(tokens, left, delimiters, min_bp),
         parser_state!("expr", "expr-with-left")
@@ -545,10 +546,10 @@ fn parse_expr(
 
 fn expr_with_left(
     tokens: &mut BufferedTokenizer,
-    mut left: Expr,
+    mut left: Expr<(), ()>,
     delimiters: &[ExprDelim],
     min_bp: BindingPower,
-    ) -> ParserResult<Expr> {
+    ) -> ParserResult<Expr<(), ()>> {
 
     while !tokens.eof() {
         if delim_break(tokens, delimiters)? {
@@ -608,7 +609,7 @@ fn postfix_action(tokens: &BufferedTokenizer) -> ParserResult<Option<PostData>> 
     ))
 }
 
-fn parse_some_app(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[ExprDelim]) -> ParserResult<Expr> {
+fn parse_some_app(tokens: &mut BufferedTokenizer, left: Expr<(), ()>, upper_delims: &[ExprDelim]) -> ParserResult<Expr<(), ()>> {
     let _lparen = consume_token!(
         tokens,
         Token::LParen,
@@ -631,7 +632,7 @@ fn parse_some_app(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[Ex
     ))
 }
 
-fn parse_type_args(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[ExprDelim]) -> ParserResult<Expr> {
+fn parse_type_args(tokens: &mut BufferedTokenizer, left: Expr<(), ()>, upper_delims: &[ExprDelim]) -> ParserResult<Expr<(), ()>> {
 
     let _type = consume_token!(tokens,
         Token::Type,
@@ -683,7 +684,7 @@ fn parse_type_args(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[E
     let type_app_span = Span::combine(left.span(), rspan);
 
     let base = match left {
-        Expr::ModulePath(base) => base,
+        Expr::ModulePath(base, ..) => base,
         _ => todo!("Unexpected left of type-app: {:?}", left),
     };
 
@@ -692,12 +693,12 @@ fn parse_type_args(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[E
         args,
     }, type_app_span);
 
-    Ok(Expr::Path(Typable::untyped(type_app_node)))
+    Ok(Expr::Path(Typable::untyped(type_app_node), ()))
 }
 
-fn parse_fn_call(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[ExprDelim]) -> ParserResult<Expr> {
+fn parse_fn_call(tokens: &mut BufferedTokenizer, left: Expr<(), ()>, upper_delims: &[ExprDelim]) -> ParserResult<Expr<(), ()>> {
 
-    let mut args: Vec<Expr> = Vec::new();
+    let mut args: Vec<Expr<(), ()>> = Vec::new();
 
     while peek_token!(tokens,
         |tok| match tok {
@@ -743,10 +744,10 @@ fn parse_fn_call(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[Exp
         args,
     }, fn_call_span);
 
-    Ok(Expr::FnCall(Typable::untyped(fn_call_node)))
+    Ok(Expr::FnCall(Typable::untyped(fn_call_node), ()))
 }
 
-fn parse_index_access(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[ExprDelim]) -> ParserResult<Expr> {
+fn parse_index_access(tokens: &mut BufferedTokenizer, left: Expr<(), ()>, upper_delims: &[ExprDelim]) -> ParserResult<Expr<(), ()>> {
     let _lbracket = consume_token!(
         tokens,
         Token::LBracket,
@@ -768,7 +769,7 @@ fn parse_index_access(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: 
         indexer: Box::new(indexing_expr),
     }, indexing_span);
 
-    Ok(Expr::IndexAccess(Typable::untyped(indexing_node)))
+    Ok(Expr::IndexAccess(Typable::untyped(indexing_node), ()))
 }
 
 fn led_action(tokens: &BufferedTokenizer) -> ParserResult<LbpData> {
@@ -780,7 +781,7 @@ fn led_action(tokens: &BufferedTokenizer) -> ParserResult<LbpData> {
 
     macro_rules! unreachable_led {
         ($msg: expr) => {{
-            Box::new(|_: &mut BufferedTokenizer, _: Expr, _: BindingPower, _: &[ExprDelim]| -> ParserResult<Expr> {
+            Box::new(|_: &mut BufferedTokenizer, _: Expr<(), ()>, _: BindingPower, _: &[ExprDelim]| -> ParserResult<Expr<(), ()>> {
                 unreachable!($msg)
             }) as LedAction
         }}
@@ -827,9 +828,9 @@ fn led_action(tokens: &BufferedTokenizer) -> ParserResult<LbpData> {
 
 
 
-fn parse_binexpr(tokens: &mut BufferedTokenizer, left: Expr,
+fn parse_binexpr(tokens: &mut BufferedTokenizer, left: Expr<(), ()>,
     op: Token, rbp: BindingPower, delims: &[ExprDelim])
-    -> ParserResult<Expr> {
+    -> ParserResult<Expr<(), ()>> {
 
     macro_rules! basic_binop {
         ($left: expr, $tok: pat => $op: expr, $rbp: expr, $delims: expr) => {{
@@ -844,7 +845,7 @@ fn parse_binexpr(tokens: &mut BufferedTokenizer, left: Expr,
                 op: $op,
                 lhs,
                 rhs,
-            }, binexpr_span)))
+            }, binexpr_span)), ())
         }}
     }
 
@@ -877,20 +878,20 @@ fn parse_binexpr(tokens: &mut BufferedTokenizer, left: Expr,
 
             let right = parse_expr(tokens, delims, rbp)?;
             match (left, right) {
-                (Expr::Binding(left), Expr::Binding(right)) => {
+                (Expr::Binding(left, ..), Expr::Binding(right, ..)) => {
                     let left = left.into_data();
                     let right = right.into_data();
                     let path_span = Span::combine(left.span(), right.span());
                     let module_path_node = AstNode::new(ModulePath(vec![left, right]), path_span);
 
-                    Ok(Expr::ModulePath(Typable::untyped(module_path_node)))
+                    Ok(Expr::ModulePath(Typable::untyped(module_path_node), ()))
                 }
 
-                (Expr::ModulePath(mut path), Expr::Binding(right)) => {
+                (Expr::ModulePath(mut path, ..), Expr::Binding(right, ..)) => {
                     let right = right.into_data();
                     path.data_mut().node_mut().0.push(right);
 
-                    Ok(Expr::ModulePath(path))
+                    Ok(Expr::ModulePath(path, ()))
                 }
 
                 (left, right) => todo!("Unexpected left for operator \"::\""),
@@ -932,13 +933,13 @@ fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
     Ok(action)
 }
 
-fn if_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
+fn if_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
     let if_node = if_core(tokens)?;
 
-    Ok(Expr::If(Box::new(Typable::untyped(if_node))))
+    Ok(Expr::If(Box::new(Typable::untyped(if_node)), ()))
 }
 
-fn init_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
+fn init_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
     let (init_span, _) = consume_token!(tokens,
         Token::Init,
         parser_state!("init-expr", "init")
@@ -959,7 +960,7 @@ fn init_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
 
 // 'init [v1, v2, ... vn; X]'
 // 'init [v1, v2, ... vn]'
-fn array_init(tokens: &mut BufferedTokenizer, mut init_span: Span) -> ParserResult<Expr> {
+fn array_init(tokens: &mut BufferedTokenizer, mut init_span: Span) -> ParserResult<Expr<(), ()>> {
 
     enum InitListDecision {
         Value,
@@ -1059,10 +1060,10 @@ fn array_init(tokens: &mut BufferedTokenizer, mut init_span: Span) -> ParserResu
         repetition_count
     }, init_span);
 
-    Ok(Expr::ArrayInit(Typable::untyped(array_init_node)))
+    Ok(Expr::ArrayInit(Typable::untyped(array_init_node), ()))
 }
 
-fn struct_init(tokens: &mut BufferedTokenizer, init_span: Span) -> ParserResult<Expr> {
+fn struct_init(tokens: &mut BufferedTokenizer, init_span: Span) -> ParserResult<Expr<(), ()>> {
 
     let typed_path: Option<AstNode<TypedPath>> = if peek_token!(tokens,
         |tok| match tok {
@@ -1086,7 +1087,7 @@ fn struct_init(tokens: &mut BufferedTokenizer, init_span: Span) -> ParserResult<
         parser_state!("struct-init", "lbrace")
     );
 
-    let mut field_init: Vec<(AstNode<Ident>, Box<Expr>)> = Vec::new();
+    let mut field_init: Vec<(AstNode<Ident>, Box<Expr<(), ()>>)> = Vec::new();
     while peek_token!(tokens,
         |tok| match tok {
             Token::RBrace => false,
@@ -1143,12 +1144,12 @@ fn struct_init(tokens: &mut BufferedTokenizer, init_span: Span) -> ParserResult<
         field_init,
     }, init_span);
 
-    Ok(Expr::StructInit(Typable::untyped(init_node)))
+    Ok(Expr::StructInit(Typable::untyped(init_node), ()))
 }
 
-fn try_expr_to_path(expr: Expr) -> ParserResult<AstNode<TypedPath>> {
+fn try_expr_to_path(expr: Expr<(), ()>) -> ParserResult<AstNode<TypedPath>> {
     match expr {
-        Expr::ModulePath(path) => {
+        Expr::ModulePath(path, ..) => {
             let path: AstNode<ModulePath> = path.into_data();
             let path_span = path.span();
             Ok(AstNode::new(TypedPath {
@@ -1157,7 +1158,7 @@ fn try_expr_to_path(expr: Expr) -> ParserResult<AstNode<TypedPath>> {
             }, path_span))
         },
 
-        Expr::Binding(binding) => {
+        Expr::Binding(binding, ..) => {
             let binding: AstNode<Ident> = binding.into_data();
             let binding_span = binding.span().clone();
 
@@ -1169,22 +1170,22 @@ fn try_expr_to_path(expr: Expr) -> ParserResult<AstNode<TypedPath>> {
             }, binding_span))
         },
 
-        Expr::Path(p) => Ok(p.into_data()),
+        Expr::Path(p, ..) => Ok(p.into_data()),
 
         expr => todo!("Unexpected expression for type name: {:?}", expr),
     }
 }
 
-fn block_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
+fn block_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
     let block = production!(
         block(tokens),
         parser_state!("expr", "block-expr")
     );
 
-    Ok(Expr::Block(block))
+    Ok(Expr::Block(block, ()))
 }
 
-fn ident_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
+fn ident_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
     let (ident_span, ident) = consume_token!(tokens,
         Token::Identifier(ident) => Ident(ident),
         parser_state!("identifier-leaf", "root")
@@ -1192,10 +1193,10 @@ fn ident_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
 
     let ident_node = Typable::untyped(AstNode::new(ident, ident_span));
 
-    Ok(Expr::Binding(ident_node))
+    Ok(Expr::Binding(ident_node, ()))
 }
 
-fn paren_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
+fn paren_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
     let _ = consume_token!(
         tokens,
         Token::LParen,
@@ -1216,7 +1217,7 @@ fn paren_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
     Ok(inner)
 }
 
-fn uni_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
+fn uni_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
     let (op_span, uniop) = tokens
         .next()
         .unwrap()
@@ -1251,7 +1252,7 @@ fn uni_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
 
             let uni_node = Typable::untyped(AstNode::new(uni_expr, uni_expr_span));
 
-            Ok(Expr::Uni(uni_node))
+            Ok(Expr::Uni(uni_node, ()))
         }
 
 
@@ -1259,7 +1260,7 @@ fn uni_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
     }
 }
 
-fn parse_literal(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
+fn parse_literal(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
     let (next_span, next) = tokens
         .next()
         .unwrap()
@@ -1275,7 +1276,7 @@ fn parse_literal(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
         _ => unreachable!(),
     };
 
-    let literal_node = Expr::Literal(Typable::untyped(AstNode::new(literal, next_span)));
+    let literal_node = Expr::Literal(Typable::untyped(AstNode::new(literal, next_span)), ());
 
     Ok(literal_node)
 }
