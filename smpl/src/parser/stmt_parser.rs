@@ -674,7 +674,7 @@ fn parse_type_args(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[E
 
     let type_app_node = AstNode::new(TypedPath {
         base,
-        params: args,
+        args,
     }, type_app_span);
 
     Ok(Expr::Path(Typable::untyped(type_app_node)))
@@ -1101,7 +1101,7 @@ fn try_expr_to_path(expr: Expr) -> ParserResult<AstNode<TypedPath>> {
             let path_span = path.span();
             Ok(AstNode::new(TypedPath {
                 base: Typable::untyped(path),
-                params: vec![],
+                args: vec![],
             }, path_span))
         },
 
@@ -1113,7 +1113,7 @@ fn try_expr_to_path(expr: Expr) -> ParserResult<AstNode<TypedPath>> {
 
             Ok(AstNode::new(TypedPath {
                 base: Typable::untyped(module_path),
-                params: vec![],
+                args: vec![],
             }, binding_span))
         },
 

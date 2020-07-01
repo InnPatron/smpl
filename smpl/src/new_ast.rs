@@ -114,21 +114,21 @@ pub enum WidthConstraint {
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypedPath {
     pub base: TypedNode<ModulePath>,
-    pub params: Vec<TypedNode<TypeAnn>>,
+    pub args: Vec<TypedNode<TypeAnn>>,
 }
 
 impl TypedPath {
     pub fn nil_arity(base: TypedNode<ModulePath>) -> Self {
         TypedPath {
             base,
-            params: Vec::with_capacity(0),
+            args: Vec::with_capacity(0),
         }
     }
 
-    pub fn n_arity(base: TypedNode<ModulePath>, params: Vec<TypedNode<TypeAnn>>) -> Self {
+    pub fn n_arity(base: TypedNode<ModulePath>, args: Vec<TypedNode<TypeAnn>>) -> Self {
         TypedPath {
             base,
-            params,
+            args,
         }
     }
 }

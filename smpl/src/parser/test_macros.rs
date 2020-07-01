@@ -138,7 +138,7 @@ macro_rules! type_ann {
 
         let path = TypedPath {
             base: dummy_node!(UNTYPED => path),
-            params: type_args,
+            args: type_args,
         };
 
         TypeAnn::Path(dummy_node!(UNTYPED => path))
@@ -171,7 +171,7 @@ macro_rules! width_constraint {
 
         let path = TypedPath {
             base: dummy_node!(UNTYPED => path),
-            params: type_args,
+            args: type_args,
         };
 
         WidthConstraint::BaseStruct(

@@ -159,7 +159,7 @@ fn typed_path(tokens: &mut BufferedTokenizer, left: AstNode<TypeAnn>) -> ParserR
 
             let node = AstNode::new(TypedPath {
                 base: path,
-                params: arg_list,
+                args: arg_list,
             }, path_span);
 
             TypeAnn::Path(Typable::untyped(node))
