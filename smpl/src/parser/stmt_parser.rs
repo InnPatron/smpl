@@ -959,7 +959,6 @@ fn array_init(tokens: &mut BufferedTokenizer, mut init_span: Span) -> ParserResu
     );
 
     let mut pattern = Vec::new();
-    let mut repetition_count = None;
     let mut parse_repetition_count = false;
     while peek_token!(tokens,
         |tok| match tok {
@@ -968,14 +967,26 @@ fn array_init(tokens: &mut BufferedTokenizer, mut init_span: Span) -> ParserResu
         },
         parser_state!("array-init", "rbracket?")
     ) {
-        let expr = top_level_expr(tokens, &[])?;
-
-        if parse_repetition_count {
-            repetition_count = Some(Box::new(expr));
+        if peek_token!(tokens,
+            |tok| match tok {
+                Token::Semi => true,
+                _ => false,
+            },
+            parser_state!("array-init", "trailing-comma-semi")
+        ) {
+            // Found [1, 2, ;5]
+            // NOTE: there may be NO pattern values
+            //      e.g. [;5]
+            // WF error
+            parse_repetition_count = true;
             break;
-        } else {
-            pattern.push(expr);
         }
+        let expr = production!(
+            top_level_expr(tokens, &[ExprDelim::Comma, ExprDelim::Semi]),
+            parser_state!("array-init", "pattern-val")
+        );
+
+        pattern.push(expr);
 
         match peek_token!(tokens,
             |tok| match tok {
@@ -986,15 +997,41 @@ fn array_init(tokens: &mut BufferedTokenizer, mut init_span: Span) -> ParserResu
             },
             parser_state!("array-init", "comma-semi?")
         ) {
-            InitListDecision::RepetitionCount => parse_repetition_count = true,
+            InitListDecision::RepetitionCount => {
+                parse_repetition_count = true;
+                break;
+            }
 
             InitListDecision::Break => break,
 
             InitListDecision::Err => todo!(),
 
-            _ => continue,
+            InitListDecision::Value => {
+                let _comma = consume_token!(tokens,
+                    Token::Comma,
+                    parser_state!("array-init", "comma")
+                );
+                continue;
+            }
         }
     }
+
+    let repetition_count = if parse_repetition_count {
+        let _semi = consume_token!(tokens,
+                    Token::Semi,
+                    parser_state!("array-init", "pattern-repeat-semi")
+                );
+
+        let expr = production!(
+            top_level_expr(tokens, &[]),
+            parser_state!("array-init", "pattern-repeat-expr")
+        );
+
+        Some(Box::new(expr))
+
+    } else {
+        None
+    };
 
     let (rbracket_span, _) = consume_token!(tokens,
         Token::RBracket,
