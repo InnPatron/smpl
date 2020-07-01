@@ -102,7 +102,7 @@ fn led_action(tokens: &BufferedTokenizer) -> ParserResult<LbpData> {
                 _                   => Err(parser_error!(ParserErrorKind::UnexpectedToken(tok.clone()), parser_state!("type-led"), span)),
 
          },
-        parser_state!("expr", "led")
+        parser_state!("type-ann", "led")
     )?;
 
     Ok((lbp, rbp, action))
@@ -143,7 +143,7 @@ fn postfix_action(tokens: &BufferedTokenizer) -> ParserResult<Option<PostData>> 
 
             _ => None,
         },
-        parser_state!("expr", "postfix_action?")
+        parser_state!("type-ann", "postfix_action?")
     ))
 }
 
@@ -186,28 +186,28 @@ fn delim_break(tokens: &BufferedTokenizer, ann_delims: &[AnnDelim]) -> ParserRes
 
             _ => false,
         },
-        parser_state!("expr", "delim-check")
+        parser_state!("type-ann", "delim-check")
     ))
 }
 
 fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<TypeAnnAction> {
-    let action: TypeAnnAction = peek_token!(tokens,
-        |tok| match tok {
+    let action: TypeAnnAction = peek_token!(tokens, SPAN
+        |tok, span| match tok {
 
-            Token::Fn => Box::new(fn_type) as TypeAnnAction,
+            Token::Fn => Ok(Box::new(fn_type) as TypeAnnAction),
 
-            Token::LBracket => Box::new(array_type) as TypeAnnAction,
+            Token::LBracket => Ok(Box::new(array_type) as TypeAnnAction),
 
-            Token::LBrace => Box::new(width_constraint_ann) as TypeAnnAction,
+            Token::LBrace => Ok(Box::new(width_constraint_ann) as TypeAnnAction),
 
-            Token::Base => Box::new(width_constraint_ann) as TypeAnnAction,
+            Token::Base => Ok(Box::new(width_constraint_ann) as TypeAnnAction),
 
-            Token::Identifier(..) => Box::new(module_binding_ann) as TypeAnnAction,
+            Token::Identifier(..) => Ok(Box::new(module_binding_ann) as TypeAnnAction),
 
-            _ => todo!()
+            _ => Err(parser_error!(ParserErrorKind::UnexpectedToken(tok.clone()), parser_state!("type-ann", "nud"), span)),
         },
-        parser_state!("expr", "nud")
-    );
+        parser_state!("type-ann", "nud")
+    )?;
 
     Ok(action)
 }

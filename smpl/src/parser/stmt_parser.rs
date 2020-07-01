@@ -83,7 +83,10 @@ fn stmt(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
 }
 
 fn semi_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
-    let expr = top_level_expr(tokens, &[ExprDelim::Semi])?;
+    let expr = production!(
+        top_level_expr(tokens, &[ExprDelim::Semi]),
+        parser_state!("stmt", "semi-expr")
+    );
 
     let _semi = consume_token!(tokens,
         Token::Semi,
@@ -112,7 +115,11 @@ fn parse_let(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
         },
         parser_state!("let-stmt", "type-ann?")
     ) {
-        Some(Typable::untyped(top_level_type_ann(tokens, &[AnnDelim::Assign])?))
+        let ann = production!(
+            top_level_type_ann(tokens, &[AnnDelim::Assign]),
+            parser_state!("let-stmt", "type-ann")
+        );
+        Some(Typable::untyped(ann))
     } else {
         None
     };
@@ -122,7 +129,10 @@ fn parse_let(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt> {
         parser_state!("let-stmt", "=")
     );
 
-    let init = top_level_expr(tokens, &[ExprDelim::Semi])?;
+    let init = production!(
+        top_level_expr(tokens, &[ExprDelim::Semi]),
+        parser_state!("let-stmt", "init-expr")
+    );
 
     let (semi_span, _) = consume_token!(tokens,
         Token::Semi,
@@ -1161,7 +1171,10 @@ fn try_expr_to_path(expr: Expr) -> ParserResult<AstNode<TypedPath>> {
 }
 
 fn block_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr> {
-    let block = block(tokens)?;
+    let block = production!(
+        block(tokens),
+        parser_state!("expr", "block-expr")
+    );
 
     Ok(Expr::Block(block))
 }
