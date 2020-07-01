@@ -62,3 +62,7 @@ fn f7() {
 fn f8() {
     init [12, 14, 16, 17];
 }
+
+fn f8() {
+    let zzz = mod8::function(type awesome, sause)(12 + 321).field1[5 + 6].field2;
+}
