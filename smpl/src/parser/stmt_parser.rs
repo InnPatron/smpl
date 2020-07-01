@@ -589,7 +589,7 @@ fn postfix_action(tokens: &BufferedTokenizer) -> ParserResult<Option<PostData>> 
     Ok(peek_token!(tokens,
         |tok| match tok {
             // TODO: Review LBP of postfix operators
-            Token::LParen => Some((50, Box::new(parse_fn_call) as PostAction)),
+            Token::LParen => Some((50, Box::new(parse_some_app) as PostAction)),
             Token::LBracket => Some((50, Box::new(parse_index_access) as PostAction)),
 
             _ => None,
@@ -598,13 +598,89 @@ fn postfix_action(tokens: &BufferedTokenizer) -> ParserResult<Option<PostData>> 
     ))
 }
 
-fn parse_fn_call(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[ExprDelim]) -> ParserResult<Expr> {
-
+fn parse_some_app(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[ExprDelim]) -> ParserResult<Expr> {
     let _lparen = consume_token!(
         tokens,
         Token::LParen,
         parser_state!("fn-call", "lparen")
     );
+
+    let action = peek_token!(tokens,
+        |tok| match tok {
+            Token::Type => Box::new(parse_type_args) as PostAction,
+
+            _ => Box::new(parse_fn_call) as PostAction,
+
+        },
+        parser_state!("expr", "application-type")
+    );
+
+    Ok(production!(
+        action(tokens, left, upper_delims),
+        parser_state!("block", "stmt")
+    ))
+}
+
+fn parse_type_args(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[ExprDelim]) -> ParserResult<Expr> {
+
+    let mut args: Vec<TypedNode<TypeAnn>> = Vec::new();
+
+    while peek_token!(tokens,
+        |tok| match tok {
+            Token::RParen => false,
+
+            _ => true,
+        },
+        parser_state!("type-app", "arg?")
+    ) {
+        let arg = production!(
+            top_level_type_ann(tokens, &[AnnDelim::Comma]),
+            parser_state!("type-app", "app")
+        );
+
+        args.push(Typable::untyped(arg));
+
+        if peek_token!(tokens,
+            |tok| match tok {
+                Token::Comma => true,
+                _ => false,
+            },
+            parser_state!("type-app", "comma?")
+        ) {
+            // Found comma
+            let _comma = consume_token!(tokens,
+                Token::Comma,
+                parser_state!("type-app", "comma")
+            );
+            continue;
+        } else {
+            // No comma
+            break;
+        }
+    }
+
+    let (rspan, _) = consume_token!(
+        tokens,
+        Token::RParen,
+        parser_state!("type-app", "rparen")
+    );
+
+    let type_app_span = Span::combine(left.span(), rspan);
+
+    let base = match left {
+        Expr::ModulePath(base) => base,
+        _ => todo!("Unexpected left of type-app: {:?}", left),
+    };
+
+    let type_app_node = AstNode::new(TypedPath {
+        base,
+        params: args,
+    }, type_app_span);
+
+    Ok(Expr::Path(Typable::untyped(type_app_node)))
+}
+
+fn parse_fn_call(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[ExprDelim]) -> ParserResult<Expr> {
 
     let mut args: Vec<Expr> = Vec::new();
 
