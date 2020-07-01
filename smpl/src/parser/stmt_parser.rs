@@ -633,6 +633,11 @@ fn parse_some_app(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[Ex
 
 fn parse_type_args(tokens: &mut BufferedTokenizer, left: Expr, upper_delims: &[ExprDelim]) -> ParserResult<Expr> {
 
+    let _type = consume_token!(tokens,
+        Token::Type,
+        parser_state!("type-app", "type")
+    );
+
     let mut args: Vec<TypedNode<TypeAnn>> = Vec::new();
 
     while peek_token!(tokens,
