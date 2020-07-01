@@ -39,3 +39,13 @@ fn f4() {
         extract 3;
     },);
 }
+
+fn f5() {
+    init mod3::Foo {
+        x: 50,
+        y: {
+            let x = 5;
+            extract x;
+        },
+    };
+}
