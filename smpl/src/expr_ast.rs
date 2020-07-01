@@ -233,3 +233,45 @@ impl<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> Spanned for Exp
         }
     }
 }
+
+impl<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> Expr<S, E> {
+    pub fn tag(&self) -> &E {
+        match *self {
+            Expr::If(_, ref tag) => tag,
+            Expr::While(_, ref tag) => tag,
+            Expr::Bin(_, ref tag) => tag,
+            Expr::Uni(_, ref tag) => tag,
+            Expr::Literal(_, ref tag) => tag,
+            Expr::Binding(_, ref tag) => tag,
+            Expr::DotAccess(_, ref tag) => tag,
+            Expr::IndexAccess(_, ref tag) => tag,
+            Expr::FnCall(_, ref tag) => tag,
+            Expr::StructInit(_, ref tag) => tag,
+            Expr::ArrayInit(_, ref tag) => tag,
+            Expr::AnonymousFn(_, ref tag) => tag,
+            Expr::Path(_, ref tag) => tag,
+            Expr::Block(_, ref tag) => tag,
+            Expr::ModulePath(_, ref tag) => tag,
+        }
+    }
+
+    pub fn tag_mut(&mut self) -> &mut E {
+        match *self {
+            Expr::If(_, ref mut tag) => tag,
+            Expr::While(_, ref mut tag) => tag,
+            Expr::Bin(_, ref mut tag) => tag,
+            Expr::Uni(_, ref mut tag) => tag,
+            Expr::Literal(_, ref mut tag) => tag,
+            Expr::Binding(_, ref mut tag) => tag,
+            Expr::DotAccess(_, ref mut tag) => tag,
+            Expr::IndexAccess(_, ref mut tag) => tag,
+            Expr::FnCall(_, ref mut tag) => tag,
+            Expr::StructInit(_, ref mut tag) => tag,
+            Expr::ArrayInit(_, ref mut tag) => tag,
+            Expr::AnonymousFn(_, ref mut tag) => tag,
+            Expr::Path(_, ref mut tag) => tag,
+            Expr::Block(_, ref mut tag) => tag,
+            Expr::ModulePath(_, ref mut tag) => tag,
+        }
+    }
+}
