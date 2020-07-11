@@ -43,7 +43,7 @@ macro_rules! test_parse_module {
     }
 }
 
-fn parse_module(input: &str) -> ParserResult<Module> {
+fn parse_module(input: &str) -> ParserResult<Module<(), ()>> {
     let source = ModuleSource::Anonymous(None);
     let mut tokens = buffer_input(&source, input);
 
