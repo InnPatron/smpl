@@ -6,21 +6,21 @@ use super::parser;
 use super::tokens::*;
 use crate::ast::*;
 use crate::ast_node::{Spanned, AstNode};
-use crate::typable_ast::{Typable, Typed};
+use crate::typable_ast::Typable;
 use crate::span::*;
 
 type BindingPower = u64;
-type TypeAnnAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<AstNode<TypeAnn>>>;
-type PostAction = Box<FnOnce(&mut BufferedTokenizer, AstNode<TypeAnn>) -> ParserResult<AstNode<TypeAnn>>>;
+type TypeAnnAction = Box<dyn FnOnce(&mut BufferedTokenizer) -> ParserResult<AstNode<TypeAnn>>>;
+type PostAction = Box<dyn FnOnce(&mut BufferedTokenizer, AstNode<TypeAnn>) -> ParserResult<AstNode<TypeAnn>>>;
 type PostData = (BindingPower, PostAction);
 type LbpData = (BindingPower, BindingPower, LedAction);
-type LedAction = Box<FnOnce(&mut BufferedTokenizer, AstNode<TypeAnn>, BindingPower, &[AnnDelim]) -> ParserResult<AstNode<TypeAnn>>>;
+type LedAction = Box<dyn FnOnce(&mut BufferedTokenizer, AstNode<TypeAnn>, BindingPower, &[AnnDelim]) -> ParserResult<AstNode<TypeAnn>>>;
 
-const type_args_only_bp: BindingPower = 40;
+const TYPE_ARGS_ONLY_BP: BindingPower = 40;
 
 pub use self::top_level_type_ann as type_annotation;
 
-const all_delims: &'static [AnnDelim] = &[
+const ALL_DELIMS: &'static [AnnDelim] = &[
     AnnDelim::NewBlock,
     AnnDelim::Assign,
     AnnDelim::Comma,
@@ -108,7 +108,7 @@ fn led_action(tokens: &BufferedTokenizer) -> ParserResult<LbpData> {
     Ok((lbp, rbp, action))
 }
 
-fn chain_constraints(tokens: &mut BufferedTokenizer, left: AstNode<TypeAnn>, rbp: BindingPower, upper_delims: &[AnnDelim]) -> ParserResult<AstNode<TypeAnn>> {
+fn chain_constraints(tokens: &mut BufferedTokenizer, left: AstNode<TypeAnn>, _rbp: BindingPower, upper_delims: &[AnnDelim]) -> ParserResult<AstNode<TypeAnn>> {
 
     let _plus = consume_token!(tokens,
         Token::Plus,
@@ -265,7 +265,7 @@ fn width_constraint(
             // TODO: Temporary patch for binding power
             // Make sure that (type arg BP) > arg BP > PLUS BP
             let (name, name_loc) = production!(
-                type_ann(tokens, type_args_only_bp, all_delims),
+                type_ann(tokens, TYPE_ARGS_ONLY_BP, ALL_DELIMS),
                 parser_state!("width-constraint", "constraint-base")
             )
             .split();
@@ -441,7 +441,7 @@ fn fn_type(
 }
 
 fn fn_type_params(
-    tokens: &mut BufferedTokenizer,
+    _tokens: &mut BufferedTokenizer,
 ) -> ParserResult<Vec<TypedNode<TypeAnn>>> {
     todo!();
 }

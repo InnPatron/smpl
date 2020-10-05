@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
 
-use crate::span::Span;
 use crate::ast_node::AstNode;
-use crate::expr_ast::{ Expr, Block };
-use crate::typable_ast::{Typed, Typable};
+use crate::expr_ast::Block;
+use crate::typable_ast::Typable;
 
 pub type TypedNode<T> = Typable<AstNode<T>>;
 

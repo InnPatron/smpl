@@ -10,10 +10,10 @@ use crate::typable_ast::Typable;
 use crate::expr_ast::*;
 
 type BindingPower = u64;
-type PostAction = Box<FnOnce(&mut BufferedTokenizer, Expr<(), ()>, &[ExprDelim]) -> ParserResult<Expr<(), ()>>>;
-type LedAction = Box<FnOnce(&mut BufferedTokenizer, Expr<(), ()>, BindingPower, &[ExprDelim]) -> ParserResult<Expr<(), ()>>>;
-type ExprAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<Expr<(), ()>>>;
-type StmtAction = Box<FnOnce(&mut BufferedTokenizer) -> ParserResult<Stmt<(), ()>>>;
+type PostAction = Box<dyn FnOnce(&mut BufferedTokenizer, Expr<(), ()>, &[ExprDelim]) -> ParserResult<Expr<(), ()>>>;
+type LedAction = Box<dyn FnOnce(&mut BufferedTokenizer, Expr<(), ()>, BindingPower, &[ExprDelim]) -> ParserResult<Expr<(), ()>>>;
+type ExprAction = Box<dyn FnOnce(&mut BufferedTokenizer) -> ParserResult<Expr<(), ()>>>;
+type StmtAction = Box<dyn FnOnce(&mut BufferedTokenizer) -> ParserResult<Stmt<(), ()>>>;
 type LbpData = (BindingPower, BindingPower, LedAction);
 type PostData = (BindingPower, PostAction);
 
@@ -435,14 +435,13 @@ fn if_core(tokens: &mut BufferedTokenizer) -> ParserResult<AstNode<If<(), ()>>> 
     let (ifloc, _) =
         consume_token!(tokens, Token::If, parser_state!("if-expr", "if"));
 
-    let mut end = ifloc.clone();
 
     // Parse the first
     let first_branch = production!(
         if_branch(tokens),
         parser_state!("if-expr", "first branch")
     );
-    end = first_branch.block.data().span();
+    let mut end = first_branch.block.data().span();
 
     let mut branches = vec![first_branch];
     let mut default_branch = None;
@@ -632,7 +631,7 @@ fn parse_some_app(tokens: &mut BufferedTokenizer, left: Expr<(), ()>, upper_deli
     ))
 }
 
-fn parse_type_args(tokens: &mut BufferedTokenizer, left: Expr<(), ()>, upper_delims: &[ExprDelim]) -> ParserResult<Expr<(), ()>> {
+fn parse_type_args(tokens: &mut BufferedTokenizer, left: Expr<(), ()>, _upper_delims: &[ExprDelim]) -> ParserResult<Expr<(), ()>> {
 
     let _type = consume_token!(tokens,
         Token::Type,
@@ -696,7 +695,7 @@ fn parse_type_args(tokens: &mut BufferedTokenizer, left: Expr<(), ()>, upper_del
     Ok(Expr::Path(Typable::untyped(type_app_node), ()))
 }
 
-fn parse_fn_call(tokens: &mut BufferedTokenizer, left: Expr<(), ()>, upper_delims: &[ExprDelim]) -> ParserResult<Expr<(), ()>> {
+fn parse_fn_call(tokens: &mut BufferedTokenizer, left: Expr<(), ()>, _upper_delims: &[ExprDelim]) -> ParserResult<Expr<(), ()>> {
 
     let mut args: Vec<Expr<(), ()>> = Vec::new();
 
@@ -747,7 +746,7 @@ fn parse_fn_call(tokens: &mut BufferedTokenizer, left: Expr<(), ()>, upper_delim
     Ok(Expr::FnCall(Typable::untyped(fn_call_node), ()))
 }
 
-fn parse_index_access(tokens: &mut BufferedTokenizer, left: Expr<(), ()>, upper_delims: &[ExprDelim]) -> ParserResult<Expr<(), ()>> {
+fn parse_index_access(tokens: &mut BufferedTokenizer, left: Expr<(), ()>, _upper_delims: &[ExprDelim]) -> ParserResult<Expr<(), ()>> {
     let _lbracket = consume_token!(
         tokens,
         Token::LBracket,
@@ -871,7 +870,7 @@ fn parse_binexpr(tokens: &mut BufferedTokenizer, left: Expr<(), ()>,
         Token::Dot      => Ok(basic_binop!(left, Token::Dot => BinOp::Dot, rbp, delims)),
 
         Token::ColonColon => {
-            let op = consume_token!(tokens,
+            let _op = consume_token!(tokens,
                 Token::ColonColon,
                 parser_state!("expr", "module-path")
             );
@@ -894,7 +893,7 @@ fn parse_binexpr(tokens: &mut BufferedTokenizer, left: Expr<(), ()>,
                     Ok(Expr::ModulePath(path, ()))
                 }
 
-                (left, right) => todo!("Unexpected left for operator \"::\""),
+                (_left, _right) => todo!("Unexpected left for operator \"::\""),
             }
         }
 

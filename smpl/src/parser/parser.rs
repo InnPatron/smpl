@@ -1,12 +1,10 @@
-use std::collections::HashMap;
-
 use super::error::*;
 use super::tokens::*;
 use super::type_parser::*;
 use super::stmt_parser;
 use crate::ast::*;
 use crate::ast_node::{Spanned, AstNode};
-use crate::typable_ast::{Typable, Typed};
+use crate::typable_ast::Typable;
 use crate::span::*;
 use crate::expr_ast::Block;
 

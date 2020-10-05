@@ -7,7 +7,7 @@ use crate::ast::{Ident, TypedPath, ModulePath, TypeAnn, FnParameter, TypedNode};
 use crate::typable_ast::{Typed, Typable};
 
 use crate::analysis::type_structs::Type;
-use crate::analysis::{VarId, FnId};
+use crate::analysis::FnId;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> {

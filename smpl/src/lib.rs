@@ -15,14 +15,12 @@
      * Code generators will have full access to type information, control flow, metadata, etc.
 */
 
-#[macro_use]
 extern crate irmatch;
 extern crate failure;
 extern crate itertools;
 extern crate petgraph;
 #[macro_use]
 extern crate failure_derive;
-#[macro_use]
 extern crate display_derive;
 
 pub mod module;
