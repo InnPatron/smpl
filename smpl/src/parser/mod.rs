@@ -7,28 +7,13 @@ mod macros;
 pub mod error;
 mod tokens;
 
-#[cfg(not(test))]
-#[macro_use]
 mod parser;
-#[cfg(test)]
-#[macro_use]
-pub mod parser;
-
-#[cfg(not(test))]
-mod expr_parser;
-#[cfg(test)]
-pub mod expr_parser;
-
-mod new_parser;
 mod type_parser;
 mod stmt_parser;
 
 #[cfg(test)]
 #[macro_use]
 mod test_macros;
-
-#[cfg(test)]
-mod parser_tests;
 
 #[cfg(test)]
 mod new_parser_tests;

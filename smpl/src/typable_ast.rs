@@ -1,12 +1,12 @@
 use std::fmt;
 
 use crate::span::Span;
-use crate::analysis::abstract_type::AbstractType;
+use crate::analysis::type_structs::Type;
 use crate::ast_node::Spanned;
 
 pub struct Typable<T> {
     data: T,
-    typ: Option<AbstractType>,
+    typ: Option<Type>,
 }
 
 impl<T> Typable<T> {
@@ -17,7 +17,7 @@ impl<T> Typable<T> {
         }
     }
 
-    pub fn typed(data: T, typ: AbstractType) -> Self {
+    pub fn typed(data: T, typ: Type) -> Self {
         Typable {
             data,
             typ: Some(typ),
@@ -79,17 +79,17 @@ where
 }
 
 pub trait Typed {
-    fn typ(&self) -> &AbstractType;
+    fn typ(&self) -> &Type;
 
-    fn set_type(&mut self, t: AbstractType);
+    fn set_type(&mut self, t: Type);
 }
 
 impl<T> Typed for Typable<T> {
-    fn typ(&self) -> &AbstractType {
+    fn typ(&self) -> &Type {
         self.typ.as_ref().expect("Missing type")
     }
 
-    fn set_type(&mut self, t: AbstractType) {
+    fn set_type(&mut self, t: Type) {
         if self.typ.is_some() {
             panic!("Attempting to overrwite a type");
         }

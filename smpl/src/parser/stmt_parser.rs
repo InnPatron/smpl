@@ -4,7 +4,7 @@ use super::error::*;
 use super::tokens::*;
 use super::type_parser::*;
 use crate::ast_node::{Spanned, AstNode};
-use crate::new_ast::*;
+use crate::ast::*;
 use crate::span::*;
 use crate::typable_ast::Typable;
 use crate::expr_ast::*;

@@ -6,7 +6,6 @@
 
 use std::path::PathBuf;
 
-use crate::analysis::ModuleId;
 use crate::ast::Module;
 
 ///
@@ -53,7 +52,7 @@ impl<'a> UnparsedModule<'a> {
     /// # Arguments
     ///
     /// * `path` - Path to the file
-    /// * `data` - ENTIRE content of the file 
+    /// * `data` - ENTIRE content of the file
     ///
     pub fn file(path: PathBuf, data: &str) -> UnparsedModule {
         UnparsedModule {
@@ -103,24 +102,18 @@ impl<'a> UnparsedModule<'a> {
 /// Represents a parsed SMPL module that is syntactically correct.
 ///
 /// Created by calling `smpl::parser::parse_module`.
-/// 
+///
 pub struct ParsedModule {
     pub(crate) source: ModuleSource,
-    pub(crate) module: Module,
-    pub(crate) id: ModuleId,
+    pub(crate) module: Module<(), ()>,
 }
 
 impl ParsedModule {
-    pub(crate) fn new(data: Module, source: ModuleSource) -> ParsedModule {
+    pub(crate) fn new(data: Module<(), ()>, source: ModuleSource) -> ParsedModule {
         ParsedModule {
             source: source,
             module: data,
-            id: ModuleId::new(),
         }
-    }
-
-    pub fn id(&self) -> ModuleId {
-        self.id
     }
 
     ///

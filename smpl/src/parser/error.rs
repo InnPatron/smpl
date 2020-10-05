@@ -3,7 +3,7 @@ use std::fmt;
 use failure::*;
 
 use super::tokens::{SpannedError, Token};
-use crate::ast::Expr;
+use crate::expr_ast::Expr;
 use crate::span::LocationSpan;
 
 pub type ParserResult<T> = Result<T, ParserError>;
@@ -72,7 +72,7 @@ pub enum ParserErrorKind {
     NoFnBody,
 
     #[fail(display = "Can only pipe function calls.")]
-    InvalidPiping(Expr),
+    InvalidPiping(Expr<(), ()>),
 
     #[fail(display = "'{}'", _0)]
     TokenizerError(SpannedError),

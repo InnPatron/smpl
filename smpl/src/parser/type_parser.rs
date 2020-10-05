@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use super::error::*;
-use super::new_parser;
+use super::parser;
 use super::tokens::*;
-use crate::new_ast::*;
+use crate::ast::*;
 use crate::ast_node::{Spanned, AstNode};
 use crate::typable_ast::{Typable, Typed};
 use crate::span::*;
@@ -216,7 +216,7 @@ fn module_binding_ann(
     tokens: &mut BufferedTokenizer,
 ) -> ParserResult<AstNode<TypeAnn>> {
 
-    let module_path = new_parser::module_binding(tokens)?;
+    let module_path = parser::module_binding(tokens)?;
 
     let span = module_path.span();
 
@@ -287,7 +287,7 @@ fn width_constraint(
                 parser_state!("width-constraint", "anonymous-open")
             );
             let fields = production!(
-                new_parser::struct_field_list(tokens),
+                parser::struct_field_list(tokens),
                 parser_state!("width-constraint", "anonymous-struct")
             )
                 .into_iter()

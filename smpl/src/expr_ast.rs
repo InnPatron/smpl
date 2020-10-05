@@ -3,11 +3,11 @@ use std::fmt::Debug;
 use crate::span::Span;
 use crate::ast_node::{EmptyAstNode, AstNode, Spanned};
 
-use crate::new_ast::{Ident, TypedPath, ModulePath, TypeAnn, FnParameter, TypedNode};
+use crate::ast::{Ident, TypedPath, ModulePath, TypeAnn, FnParameter, TypedNode};
 use crate::typable_ast::{Typed, Typable};
 
-use crate::analysis::abstract_type::AbstractType;
-use crate::analysis::{FieldId, VarId, FnId};
+use crate::analysis::type_structs::Type;
+use crate::analysis::{VarId, FnId};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> {
@@ -85,7 +85,6 @@ pub struct IndexAccess<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialE
 pub struct DotAccess<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> {
     pub base: Box<Expr<S, E>>,
     pub field: TypedNode<Ident>,
-    pub field_id: Option<FieldId>,
 }
 
 
@@ -171,7 +170,7 @@ pub enum UniOp {
 }
 
 impl<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> Typed for Expr<S, E> {
-    fn typ(&self) -> &AbstractType {
+    fn typ(&self) -> &Type {
         match *self {
             Expr::If(ref typed, ..) => typed.typ(),
             Expr::While(ref typed, ..) => typed.typ(),
@@ -191,7 +190,7 @@ impl<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> Typed for Expr<
         }
     }
 
-    fn set_type(&mut self, t: AbstractType) {
+    fn set_type(&mut self, t: Type) {
         match *self {
             Expr::If(ref mut typed, ..) => typed.set_type(t),
             Expr::While(ref mut typed, ..) => typed.set_type(t),
