@@ -141,22 +141,34 @@ pub struct Annotation {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Ident(pub String);
+pub enum Ident {
+    Name(String),
+    Atom(String, u64),
+    Compiler(u64),
+}
 
 impl Ident {
-    pub fn as_str(&self) -> &str {
-        self.0.as_str()
+    pub fn as_string(&self) -> String {
+        match self {
+            Ident::Name(ref s) => s.to_string(),
+            Ident::Atom(ref s, ref id) => format!("{}{}", s, id),
+            Ident::Compiler(ref id) => format!("$id{}", id),
+        }
     }
 }
 
 impl<T> From<T> for Ident where T: Into<String> {
     fn from(s: T) -> Ident {
-        Ident(s.into())
+        Ident::Name(s.into())
     }
 }
 
 impl fmt::Display for Ident {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
+        match self {
+            Ident::Name(ref s) => write!(f, "{}", s),
+            Ident::Atom(ref s, ref id) => write!(f, "{}{}", s, id),
+            Ident::Compiler(ref id) => write!(f, "$id{}", id),
+        }
     }
 }

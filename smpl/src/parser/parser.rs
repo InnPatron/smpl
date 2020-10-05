@@ -203,9 +203,9 @@ fn kv_pair(
         let (_, v) = consume_token!(tokens,
                                     Token::StringLiteral(s) => s,
                                     parser_state!("kvpair", "value"));
-        Ok((Ident(ident), Some(v)))
+        Ok((Ident::Name(ident), Some(v)))
     } else {
-        Ok((Ident(ident), None))
+        Ok((Ident::Name(ident), None))
     }
 }
 
@@ -214,7 +214,7 @@ fn module_decl(tokens: &mut BufferedTokenizer) -> ParserResult<AstNode<Ident>> {
     let (modloc, _) =
         consume_token!(tokens, Token::Mod, parser_state!("mod-decl", "mod"));
     let (_idloc, ident) = consume_token!(tokens,
-                                         Token::Identifier(i) => Ident(i),
+                                         Token::Identifier(i) => Ident::Name(i),
                                          parser_state!("mod-decl", "name"));
     let (semiloc, _) = consume_token!(
         tokens,
@@ -230,7 +230,7 @@ fn use_decl(tokens: &mut BufferedTokenizer) -> ParserResult<DeclStmt<(), ()>> {
     let (uspan, _) =
         consume_token!(tokens, Token::Use, parser_state!("use-decl", "use"));
     let (mspan, module) = consume_token!(tokens,
-                                         Token::Identifier(i) => Ident(i),
+                                         Token::Identifier(i) => Ident::Name(i),
                                          parser_state!("use-decl", "name"));
     let _semi = consume_token!(
         tokens,
@@ -269,7 +269,7 @@ fn fn_decl(
     }
 
     let (idloc, ident) = consume_token!(tokens,
-                                        Token::Identifier(i) => Ident(i),
+                                        Token::Identifier(i) => Ident::Name(i),
                                         parser_state!("fn-decl", "name"));
     let _lparen = consume_token!(
         tokens,
@@ -477,7 +477,7 @@ pub fn fn_param_list(
 
 fn fn_param(tokens: &mut BufferedTokenizer) -> ParserResult<Typable<AstNode<FnParameter>>> {
     let (idloc, ident) = consume_token!(tokens,
-                                        Token::Identifier(i) => Ident(i),
+                                        Token::Identifier(i) => Ident::Name(i),
                                         parser_state!("fn-param", "parameter name"));
     let _colon = consume_token!(
         tokens,
@@ -508,7 +508,7 @@ fn opaque_decl(
         parser_state!("opaque-decl", "opaque")
     );
     let (name_loc, struct_name) = consume_token!(tokens,
-                                               Token::Identifier(i) => Ident(i),
+                                               Token::Identifier(i) => Ident::Name(i),
                                                parser_state!("opaque-decl", "name"));
 
     let type_params = if peek_token!(
@@ -570,7 +570,7 @@ fn struct_decl(
         parser_state!("struct-decl", "struct")
     );
     let (name_loc, struct_name) = consume_token!(tokens,
-                                               Token::Identifier(i) => Ident(i),
+                                               Token::Identifier(i) => Ident::Name(i),
                                                parser_state!("struct-decl", "name"));
 
     let type_params = if peek_token!(
@@ -694,7 +694,7 @@ pub fn struct_field_list(
 
 fn struct_field(tokens: &mut BufferedTokenizer) -> ParserResult<StructField> {
     let (idloc, ident) = consume_token!(tokens,
-                                        Token::Identifier(i) => Ident(i),
+                                        Token::Identifier(i) => Ident::Name(i),
                                         parser_state!("struct-field", "name"));
     let _colon = consume_token!(
         tokens,
@@ -717,7 +717,7 @@ pub fn module_binding(
 ) -> ParserResult<AstNode<ModulePath>> {
     let mut path = Vec::new();
     let (floc, first) = consume_token!(tokens,
-                                        Token::Identifier(i) => Ident(i),
+                                        Token::Identifier(i) => Ident::Name(i),
                                         parser_state!("module-binding", "root"));
 
     let mut binding_span = floc.clone();
@@ -737,7 +737,7 @@ pub fn module_binding(
             parser_state!("module-binding", "segment coloncolon")
         );
         let (nloc, next) = consume_token!(tokens,
-                                          Token::Identifier(i) => Ident(i),
+                                          Token::Identifier(i) => Ident::Name(i),
                                           parser_state!("module-binding", "segment name"));
         path.push(AstNode::new(next, nloc.clone()));
         binding_span = LocationSpan::combine(binding_span, nloc);

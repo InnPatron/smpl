@@ -466,7 +466,7 @@ pub fn type_param_list_post_lparen(
     );
 
     let mut type_params = vec![consume_token!(tokens,
-                                              Token::Identifier(ident) => Ident(ident),
+                                              Token::Identifier(ident) => Ident::Name(ident),
                                               parser_state!("type-param-list", "type-param"))];
 
     loop {
@@ -492,7 +492,7 @@ pub fn type_param_list_post_lparen(
                 parser_state!("type-param-list", "rparen?")
             ) {
                 type_params.push(consume_token!(tokens,
-                                   Token::Identifier(ident) => Ident(ident),
+                                   Token::Identifier(ident) => Ident::Name(ident),
                                    parser_state!("type-param-list", "type-param")));
                 continue;
             }
@@ -597,7 +597,7 @@ pub fn where_clause(tokens: &mut BufferedTokenizer) -> ParserResult<WhereClause>
     loop {
         let (param_span, parameter) = consume_token!(
             tokens,
-            Token::Identifier(ident) => Ident(ident),
+            Token::Identifier(ident) => Ident::Name(ident),
             parser_state!("where-clause-constraints", "param"));
         let _colon = consume_token!(
             tokens,

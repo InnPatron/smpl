@@ -104,7 +104,7 @@ fn parse_let(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt<(), ()>> {
     );
 
     let (name_span, name) = consume_token!(tokens,
-        Token::Identifier(id) => Ident(id),
+        Token::Identifier(id) => Ident::Name(id),
         parser_state!("let-stmt", "name")
     );
 
@@ -1098,7 +1098,7 @@ fn struct_init(tokens: &mut BufferedTokenizer, init_span: Span) -> ParserResult<
 
         // TODO: Pattern parsing here
         let (field_span, field) = consume_token!(tokens,
-            Token::Identifier(ident) => Ident(ident),
+            Token::Identifier(ident) => Ident::Name(ident),
             parser_state!("struct-init", "field-ident")
         );
 
@@ -1186,7 +1186,7 @@ fn block_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
 
 fn ident_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
     let (ident_span, ident) = consume_token!(tokens,
-        Token::Identifier(ident) => Ident(ident),
+        Token::Identifier(ident) => Ident::Name(ident),
         parser_state!("identifier-leaf", "root")
     );
 
