@@ -7,7 +7,6 @@ use crate::ast::{Ident, TypedPath, ModulePath, TypeAnn, FnParameter, TypedNode};
 use crate::typable_ast::{Typed, Typable};
 
 use crate::analysis::type_structs::Type;
-use crate::analysis::FnId;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> {
@@ -93,7 +92,6 @@ pub struct AnonymousFn<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialE
     pub params: Option<Vec<AstNode<FnParameter>>>,
     pub return_type: Option<AstNode<TypeAnn>>,
     pub body: Typable<AstNode<Block<S, E>>>,
-    pub fn_id: Option<FnId>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
