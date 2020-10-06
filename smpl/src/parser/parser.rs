@@ -10,7 +10,6 @@ use crate::expr_ast::Block;
 
 pub fn module(tokens: &mut BufferedTokenizer) -> ParserResult<Module<(), ()>> {
     enum ModDec {
-        Pub,
         Struct,
         Opaque,
         Annotation,
@@ -37,13 +36,11 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParserResult<Module<(), ()>> {
 
     let mut decls = Vec::new();
     let mut anno = Vec::new();
-    let mut last_was_pub = false;
 
     while tokens.has_next() {
         match peek_token!(
             tokens,
             |tok| match tok {
-                Token::Pub => ModDec::Pub,
                 Token::Struct => ModDec::Struct,
                 Token::Pound => ModDec::Annotation,
                 Token::Fn => ModDec::Function(false),
@@ -54,30 +51,20 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParserResult<Module<(), ()>> {
             },
             parser_state!("module", "decl-kind")
         ) {
-
-            ModDec::Pub => {
-                if last_was_pub {
-                    todo!("Multiple `pub` in a row");
-                }
-                last_was_pub = true;
-                continue;
-            }
             ModDec::Opaque => {
                 decls.push(DeclStmt::Opaque(production!(
-                    opaque_decl(tokens, anno, last_was_pub),
+                    opaque_decl(tokens, anno),
                     parser_state!("module", "opaque-decl")
                 )));
                 anno = Vec::new();
-                last_was_pub = false;
             }
 
             ModDec::Struct => {
                 decls.push(DeclStmt::Struct(production!(
-                    struct_decl(tokens, anno, last_was_pub),
+                    struct_decl(tokens, anno),
                     parser_state!("module", "struct-decl")
                 )));
                 anno = Vec::new();
-                last_was_pub = false;
             }
 
             ModDec::Annotation => {
@@ -85,16 +72,14 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParserResult<Module<(), ()>> {
                     annotations(tokens),
                     parser_state!("module", "annotation")
                 );
-                last_was_pub = false;
             }
 
             ModDec::Function(is_builtin) => {
                 decls.push(production!(
-                    fn_decl(tokens, anno, is_builtin, last_was_pub),
+                    fn_decl(tokens, anno, is_builtin),
                     parser_state!("module", "fn-decl")
                 ));
                 anno = Vec::new();
-                last_was_pub = false;
             }
 
             ModDec::Use => {
@@ -103,7 +88,6 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParserResult<Module<(), ()>> {
                     parser_state!("module", "use-decl")
                 ));
                 anno = Vec::new();
-                last_was_pub = false;
             }
 
             ModDec::Err => {
@@ -267,7 +251,6 @@ fn fn_decl(
     tokens: &mut BufferedTokenizer,
     annotations: Vec<Annotation>,
     is_builtin: bool,
-    is_public: bool,
 ) -> ParserResult<DeclStmt<(), ()>> {
     let mut span = Span::dummy();
     if is_builtin {
@@ -411,10 +394,9 @@ fn fn_decl(
                 name: AstNode::new(ident, idloc),
                 params,
                 return_type,
-                annotations,
-                type_params,
-                where_clause,
-                is_public,
+                annotations: annotations,
+                type_params: type_params,
+                where_clause: where_clause,
             },
             span,
         )))
@@ -440,10 +422,9 @@ fn fn_decl(
                 params,
                 return_type,
                 body,
-                annotations,
-                type_params,
-                where_clause,
-                is_public,
+                annotations: annotations,
+                type_params: type_params,
+                where_clause: where_clause,
             },
             span,
         )))
@@ -520,7 +501,6 @@ fn fn_param(tokens: &mut BufferedTokenizer) -> ParserResult<Typable<AstNode<FnPa
 fn opaque_decl(
     tokens: &mut BufferedTokenizer,
     anns: Vec<Annotation>,
-    is_public: bool,
 ) -> ParserResult<AstNode<Opaque>> {
     let (opaque_loc, _) = consume_token!(
         tokens,
@@ -573,9 +553,8 @@ fn opaque_decl(
         Opaque {
             name: AstNode::new(struct_name, name_loc),
             annotations: anns,
-            type_params,
-            where_clause,
-            is_public
+            type_params: type_params,
+            where_clause: where_clause,
         },
         overall_span,
     ))
@@ -584,7 +563,6 @@ fn opaque_decl(
 fn struct_decl(
     tokens: &mut BufferedTokenizer,
     anns: Vec<Annotation>,
-    is_public: bool,
 ) -> ParserResult<AstNode<Struct>> {
     let (struct_loc, _) = consume_token!(
         tokens,
@@ -663,9 +641,8 @@ fn struct_decl(
             name: AstNode::new(struct_name, name_loc),
             body: body,
             annotations: anns,
-            type_params,
-            where_clause,
-            is_public,
+            type_params: type_params,
+            where_clause: where_clause,
         },
         overall_span,
     ))
