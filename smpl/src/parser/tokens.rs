@@ -48,6 +48,7 @@ pub enum Token {
     FloatLiteral(f64),
     BoolLiteral(bool),
 
+    Except,
     Export,
     Import,
     From,
@@ -135,6 +136,7 @@ impl std::fmt::Display for Token {
             FloatLiteral(fl) => write!(f, "{}", fl),
             BoolLiteral(b) => write!(f, "{}", b),
 
+            Except => write!(f, "except"),
             Export => write!(f, "export"),
             Import => write!(f, "import"),
             From => write!(f, "from"),
@@ -575,6 +577,7 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
         let (end, ident) = self.take_while(start, is_ident_continue);
 
         let token = match ident {
+            "except" => Token::Except,
             "export" => Token::Export,
             "import" => Token::Import,
             "from" => Token::From,

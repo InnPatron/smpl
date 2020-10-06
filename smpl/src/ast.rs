@@ -29,7 +29,10 @@ pub enum ExportDecl {
         from_module: Option<AstNode<Ident>>,
         items: Vec<AstNode<ExportItem>>
     },
-    ExportAll(Option<AstNode<Ident>>),
+    ExportAll  {
+        from_module: Option<AstNode<Ident>>,
+        except: Vec<AstNode<ExportItem>>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -45,7 +48,10 @@ pub enum ImportDecl {
         module: AstNode<Ident>,
         alias: Option<AstNode<Ident>>,
     },
-    ImportAll(AstNode<Ident>),
+    ImportAll {
+        module: AstNode<Ident>,
+        except: Vec<AstNode<ImportItem>>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -293,14 +293,36 @@ fn export_decl(tokens: &mut BufferedTokenizer) -> ParserResult<DeclStmt<(), ()>>
         None
     };
 
+    fn parse_except_items(tokens: &mut BufferedTokenizer) -> ParserResult<Vec<AstNode<ExportItem>>> {
+        if peek_token!(tokens,
+            |tok| match tok {
+                Token::Except => true,
+                _ => false
+            },
+            parser_state!("export-except", "except?")) {
+
+            let _except = consume_token!(tokens,
+                Token::Except,
+                parser_state!("export-except", "except"));
+
+            Ok(production!(parse_export_items(tokens),
+                parser_state!("export-except", "except-list")))
+        } else {
+            Ok(Vec::new())
+        }
+    }
+
     let export_decl = match (export_all, export_from) {
         (true, true) => {
             // Expecting:
-            //      export all from MODULE;
+            //      export all from MODULE [except { module-items }];
 
             match export_from_module {
                 Some(from_module) => {
-                    ExportDecl::ExportAll(Some(from_module))
+                    ExportDecl::ExportAll {
+                        from_module: Some(from_module),
+                        except: parse_except_items(tokens)?
+                    }
                 }
 
                 None => todo!("Error: found `export all from` (missing module name)"),
@@ -326,8 +348,11 @@ fn export_decl(tokens: &mut BufferedTokenizer) -> ParserResult<DeclStmt<(), ()>>
 
         },
 
-        (true, false) => {
-            ExportDecl::ExportAll(None)
+        // Expecting:
+        //      export all [except { module-items }]
+        (true, false) => ExportDecl::ExportAll {
+            from_module: None,
+            except: parse_except_items(tokens)?
         },
 
         (false, false) => {
@@ -439,11 +464,33 @@ fn import_decl(tokens: &mut BufferedTokenizer) -> ParserResult<DeclStmt<(), ()>>
                                          parser_state!("import-decl", "module-name"));
     let module = AstNode::new(module, mspan.clone());
 
+    fn parse_except_items(tokens: &mut BufferedTokenizer) -> ParserResult<Vec<AstNode<ImportItem>>> {
+        if peek_token!(tokens,
+            |tok| match tok {
+                Token::Except => true,
+                _ => false
+            },
+            parser_state!("import-except", "except?")) {
+
+            let _except = consume_token!(tokens,
+                Token::Except,
+                parser_state!("import-except", "except"));
+
+            Ok(production!(parse_import_items(tokens),
+                parser_state!("import-except", "except-list")))
+        } else {
+            Ok(Vec::new())
+        }
+    }
+
     let import_decl = match (import_all, import_from) {
         (true, true) => {
             // Expecting:
-            //      import all from MODULE;
-            ImportDecl::ImportAll(module)
+            //      import all from MODULE [except { module-items }];
+            ImportDecl::ImportAll {
+                module,
+                except: parse_except_items(tokens)?,
+            }
         },
 
         (false, true) => {
