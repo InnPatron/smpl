@@ -14,7 +14,8 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParserResult<Module<(), ()>> {
         Opaque,
         Annotation,
         Function(bool),
-        Use,
+        Import,
+        Export,
         Err,
     }
 
@@ -46,7 +47,8 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParserResult<Module<(), ()>> {
                 Token::Fn => ModDec::Function(false),
                 Token::Builtin => ModDec::Function(true),
                 Token::Opaque => ModDec::Opaque,
-                Token::Use => ModDec::Use,
+                Token::Import => ModDec::Import,
+                Token::Export => ModDec::Export,
                 _ => ModDec::Err,
             },
             parser_state!("module", "decl-kind")
@@ -82,10 +84,20 @@ pub fn module(tokens: &mut BufferedTokenizer) -> ParserResult<Module<(), ()>> {
                 anno = Vec::new();
             }
 
-            ModDec::Use => {
+            ModDec::Import => {
+                // TODO: annotation support?
                 decls.push(production!(
-                    use_decl(tokens),
-                    parser_state!("module", "use-decl")
+                    import_decl(tokens),
+                    parser_state!("module", "import-decl")
+                ));
+                anno = Vec::new();
+            }
+
+            ModDec::Export => {
+                // TODO: annotation support?
+                decls.push(production!(
+                    export_decl(tokens),
+                    parser_state!("module", "export-decl")
                 ));
                 anno = Vec::new();
             }
@@ -226,25 +238,359 @@ fn module_decl(tokens: &mut BufferedTokenizer) -> ParserResult<AstNode<Ident>> {
     Ok(AstNode::new(ident, span))
 }
 
-fn use_decl(tokens: &mut BufferedTokenizer) -> ParserResult<DeclStmt<(), ()>> {
+fn export_decl(tokens: &mut BufferedTokenizer) -> ParserResult<DeclStmt<(), ()>> {
     let (uspan, _) =
-        consume_token!(tokens, Token::Use, parser_state!("use-decl", "use"));
+        consume_token!(tokens, Token::Export, parser_state!("export-decl", "export"));
+
+    let export_all = if peek_token!(tokens,
+        |tok| match tok {
+            Token::All => true,
+            _ => false,
+        },
+        parser_state!("export-decl", "all?")) {
+
+        // Found:
+        //   export all
+        let _all = consume_token!(tokens,
+            Token::All,
+            parser_state!("export-decl", "all"));
+
+        true
+    } else {
+        false
+    };
+
+    let export_from = if peek_token!(tokens,
+        |tok| match tok {
+            Token::From => true,
+            _ => false
+        },
+        parser_state!("export-decl", "from?")) {
+
+        let _from = consume_token!(tokens,
+            Token::From,
+            parser_state!("export-decl", "from"));
+
+        true
+    } else {
+        false
+    };
+
+    let export_from_module = if export_from && peek_token!(tokens,
+        |tok| match tok {
+            Token::Identifier(_) => true,
+            _ => false
+        },
+        parser_state!("expect-decl", "module-name?")) {
+
+        let (mspan, module) = consume_token!(tokens,
+                                         Token::Identifier(i) => Ident::Name(i),
+                                         parser_state!("import-decl", "module-name"));
+        let module = AstNode::new(module, mspan.clone());
+
+        Some(module)
+    } else {
+        None
+    };
+
+    let export_decl = match (export_all, export_from) {
+        (true, true) => {
+            // Expecting:
+            //      export all from MODULE;
+
+            match export_from_module {
+                Some(from_module) => {
+                    ExportDecl::ExportAll(Some(from_module))
+                }
+
+                None => todo!("Error: found `export all from` (missing module name)"),
+            }
+        },
+
+        (false, true) => {
+            // Expecting:
+            //      export from MODULE { module-items };
+
+            match export_from_module {
+
+                Some(module) => {
+                    let export_items = parse_export_items(tokens)?;
+                    ExportDecl::ExportItems {
+                        from_module: Some(module),
+                        items: export_items
+                    }
+                }
+
+                None => todo!("Error: found `export from` (missing module name)"),
+            }
+
+        },
+
+        (true, false) => {
+            ExportDecl::ExportAll(None)
+        },
+
+        (false, false) => {
+            todo!("Error: found `export MODULE");
+        }
+    };
+
+    let (semi_span, _) = consume_token!(
+        tokens,
+        Token::Semi,
+        parser_state!("export-decl", "semicolon")
+    );
+
+    let span = LocationSpan::combine(uspan, semi_span);
+
+    Ok(DeclStmt::Export(AstNode::new(export_decl, span)))
+}
+
+fn parse_export_items(
+    tokens: &mut BufferedTokenizer
+) -> ParserResult<Vec<AstNode<ExportItem>>> {
+
+    let mut export_items: Vec<AstNode<ExportItem>> = Vec::new();
+
+    let _lbrace = consume_token!(tokens,
+        Token::LBrace,
+        parser_state!("export-items", "lbrace"));
+
+    while peek_token!(tokens,
+        |tok| match tok {
+            Token::RBrace => false,
+            _ => true,
+        },
+        parser_state!("export-items", "export-item")) {
+
+        let module_item_data = production!(
+            parse_module_item_data(tokens),
+            parser_state!("export-items", "export-item"));
+
+        let (module_item_data, module_item_span) = module_item_data.split();
+        let export_item = AstNode::new(ExportItem(module_item_data), module_item_span);
+        export_items.push(export_item);
+
+        if peek_token!(tokens,
+            |tok| match tok {
+                Token::Comma => true,
+                _ => false
+            },
+            parser_state!("export-items", "more-export-items?")) {
+
+            let _comma = consume_token!(tokens,
+                Token::Comma,
+                parser_state!("export-items", "more-export-items"));
+
+            continue;
+        } else {
+            break;
+        }
+    }
+
+    let _rbrace = consume_token!(tokens,
+        Token::RBrace,
+        parser_state!("export-items", "rbrace"));
+
+    Ok(export_items)
+}
+
+fn import_decl(tokens: &mut BufferedTokenizer) -> ParserResult<DeclStmt<(), ()>> {
+    let (uspan, _) =
+        consume_token!(tokens, Token::Import, parser_state!("import-decl", "import"));
+
+    let import_all = if peek_token!(tokens,
+        |tok| match tok {
+            Token::All => true,
+            _ => false,
+        },
+        parser_state!("import-decl", "all?")) {
+
+        // Found:
+        //   import all
+        let _all = consume_token!(tokens,
+            Token::All,
+            parser_state!("import-decl", "all"));
+
+        true
+    } else {
+        false
+    };
+
+    let import_from = if peek_token!(tokens,
+        |tok| match tok {
+            Token::From => true,
+            _ => false
+        },
+        parser_state!("import-decl", "from?")) {
+
+        let _from = consume_token!(tokens,
+            Token::From,
+            parser_state!("import-decl", "from"));
+
+        true
+    } else {
+        false
+    };
+
+
     let (mspan, module) = consume_token!(tokens,
                                          Token::Identifier(i) => Ident::Name(i),
-                                         parser_state!("use-decl", "name"));
+                                         parser_state!("import-decl", "module-name"));
+    let module = AstNode::new(module, mspan.clone());
+
+    let import_decl = match (import_all, import_from) {
+        (true, true) => {
+            // Expecting:
+            //      import all from MODULE;
+            ImportDecl::ImportAll(module)
+        },
+
+        (false, true) => {
+            // Expecting:
+            //      import from MODULE { module-items };
+            let import_items = parse_import_items(tokens)?;
+            ImportDecl::ImportItems {
+                module,
+                items: import_items
+            }
+        },
+
+        (true, false) => {
+            todo!("Found `import all` but no `from`");
+        }
+
+        (false, false) => {
+            // Expecting:
+            //      import MODULE [as ALIAS];
+            let module_import_alias = if peek_token!(tokens,
+                |tok| match tok {
+                    Token::As => true,
+                    _ => false,
+                },
+                parser_state!("import-decl", "module-alias?")) {
+
+                // Found module alias
+                let _as = consume_token!(tokens,
+                    Token::As,
+                    parser_state!("import-decl", "module-alias-as"));
+
+                let (alias_span, module_alias) = consume_token!(tokens,
+                    Token::Identifier(i) => Ident::Name(i),
+                    parser_state!("import-decl", "module-alias"));
+
+                Some(AstNode::new(module_alias, alias_span))
+
+            } else {
+                None
+            };
+
+            ImportDecl::ImportModule {
+                module,
+                alias: module_import_alias
+            }
+        }
+    };
+
     let _semi = consume_token!(
         tokens,
         Token::Semi,
-        parser_state!("use-decl", "semicolon")
+        parser_state!("import-decl", "semicolon")
     );
 
     let span = LocationSpan::combine(uspan, mspan.clone());
 
-    let use_decl = UseDecl(AstNode::new(module, mspan));
+    Ok(DeclStmt::Import(AstNode::new(import_decl, span)))
+}
 
-    let use_decl = DeclStmt::Use(AstNode::new(use_decl, span));
+fn parse_import_items(
+    tokens: &mut BufferedTokenizer,
+) -> ParserResult<Vec<AstNode<ImportItem>>> {
 
-    Ok(use_decl)
+    let mut import_items: Vec<AstNode<ImportItem>> = Vec::new();
+
+    let _lbrace = consume_token!(tokens,
+        Token::LBrace,
+        parser_state!("import-items", "lbrace"));
+
+    while peek_token!(tokens,
+        |tok| match tok {
+            Token::RBrace => false,
+            _ => true,
+        },
+        parser_state!("import-items", "import-item")) {
+
+        let module_item_data = production!(
+            parse_module_item_data(tokens),
+            parser_state!("import-items", "import-item"));
+
+        let (module_item_data, module_item_span) = module_item_data.split();
+        let import_item = AstNode::new(ImportItem(module_item_data), module_item_span);
+        import_items.push(import_item);
+
+        if peek_token!(tokens,
+            |tok| match tok {
+                Token::Comma => true,
+                _ => false
+            },
+            parser_state!("import-items", "more-import-items?")) {
+
+            let _comma = consume_token!(tokens,
+                Token::Comma,
+                parser_state!("import-items", "more-import-items"));
+
+            continue;
+        } else {
+            break;
+        }
+    }
+
+    let _rbrace = consume_token!(tokens,
+        Token::RBrace,
+        parser_state!("import-items", "rbrace"));
+
+    Ok(import_items)
+}
+
+fn parse_module_item_data(
+    tokens: &mut BufferedTokenizer,
+) -> ParserResult<AstNode<ModuleItemData>> {
+    let (start_span, original_name) = consume_token!(tokens,
+        Token::Identifier(i) => Ident::Name(i),
+        parser_state!("module-item-data", "original-name"));
+
+    let original_name = AstNode::new(original_name, start_span.clone());
+
+    let mut total_span = start_span;
+    let name_override = if peek_token!(tokens,
+        |tok| match tok {
+            Token::As => true,
+            _ => false,
+        },
+        parser_state!("module-item-data", "as?")) {
+
+        let _as = consume_token!(tokens,
+            Token::As,
+            parser_state!("module-item-data", "as"));
+
+        let (span, name_override) = consume_token!(tokens,
+            Token::Identifier(i) => Ident::Name(i),
+            parser_state!("module-item-data", "name-override"));
+
+        total_span = Span::combine(total_span, span.clone());
+
+        Some(AstNode::new(name_override, span))
+
+    } else {
+        None
+    };
+
+    let module_item_data = ModuleItemData {
+        original_name,
+        name_override,
+    };
+
+    Ok(AstNode::new(module_item_data, total_span))
 }
 
 fn fn_decl(
@@ -394,9 +740,9 @@ fn fn_decl(
                 name: AstNode::new(ident, idloc),
                 params,
                 return_type,
-                annotations: annotations,
-                type_params: type_params,
-                where_clause: where_clause,
+                annotations,
+                type_params,
+                where_clause,
             },
             span,
         )))
@@ -422,9 +768,9 @@ fn fn_decl(
                 params,
                 return_type,
                 body,
-                annotations: annotations,
-                type_params: type_params,
-                where_clause: where_clause,
+                annotations,
+                type_params,
+                where_clause,
             },
             span,
         )))
@@ -553,8 +899,8 @@ fn opaque_decl(
         Opaque {
             name: AstNode::new(struct_name, name_loc),
             annotations: anns,
-            type_params: type_params,
-            where_clause: where_clause,
+            type_params,
+            where_clause,
         },
         overall_span,
     ))
@@ -641,8 +987,8 @@ fn struct_decl(
             name: AstNode::new(struct_name, name_loc),
             body: body,
             annotations: anns,
-            type_params: type_params,
-            where_clause: where_clause,
+            type_params,
+            where_clause,
         },
         overall_span,
     ))

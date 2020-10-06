@@ -48,12 +48,17 @@ pub enum Token {
     FloatLiteral(f64),
     BoolLiteral(bool),
 
+    Export,
+    Import,
+    From,
+    All,
+    As,
+
     Base,
     Fn,
     Struct,
     Opaque,
     Mod,
-    Use,
     Builtin,
     Unchecked,
     Type,
@@ -130,12 +135,17 @@ impl std::fmt::Display for Token {
             FloatLiteral(fl) => write!(f, "{}", fl),
             BoolLiteral(b) => write!(f, "{}", b),
 
+            Export => write!(f, "export"),
+            Import => write!(f, "import"),
+            From => write!(f, "from"),
+            All => write!(f, "all"),
+            As => write!(f, "as"),
+
             Base => write!(f, "base"),
             Fn => write!(f, "fn"),
             Struct => write!(f, "struct"),
             Opaque => write!(f, "opaque"),
             Mod => write!(f, "mod"),
-            Use => write!(f, "use"),
             Builtin => write!(f, "builtin"),
             Unchecked => write!(f, "UNCHECKED"),
 
@@ -565,12 +575,17 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
         let (end, ident) = self.take_while(start, is_ident_continue);
 
         let token = match ident {
+            "export" => Token::Export,
+            "import" => Token::Import,
+            "from" => Token::From,
+            "all" => Token::All,
+            "as" => Token::As,
+
             "base" => Token::Base,
             "fn" => Token::Fn,
             "mod" => Token::Mod,
             "struct" => Token::Struct,
             "opaque" => Token::Opaque,
-            "use" => Token::Use,
             "if" => Token::If,
             "else" => Token::Else,
             "elif" => Token::Elif,

@@ -15,7 +15,8 @@ pub struct Module<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum DeclStmt<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> {
-    Use(AstNode<UseDecl>),
+    Import(AstNode<ImportDecl>),
+    Export(AstNode<ExportDecl>),
     Opaque(AstNode<Opaque>),
     Struct(AstNode<Struct>),
     Function(AstNode<Function<S, E>>),
@@ -23,7 +24,39 @@ pub enum DeclStmt<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct UseDecl(pub AstNode<Ident>);
+pub enum ExportDecl {
+    ExportItems {
+        from_module: Option<AstNode<Ident>>,
+        items: Vec<AstNode<ExportItem>>
+    },
+    ExportAll(Option<AstNode<Ident>>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExportItem(pub ModuleItemData);
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ImportDecl {
+    ImportItems {
+        module: AstNode<Ident>,
+        items: Vec<AstNode<ImportItem>>
+    },
+    ImportModule {
+        module: AstNode<Ident>,
+        alias: Option<AstNode<Ident>>,
+    },
+    ImportAll(AstNode<Ident>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImportItem(pub ModuleItemData);
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ModuleItemData {
+    pub original_name: AstNode<Ident>,
+    pub name_override: Option<AstNode<Ident>>,
+}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BuiltinFunction {
