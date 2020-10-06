@@ -48,6 +48,7 @@ pub enum Token {
     FloatLiteral(f64),
     BoolLiteral(bool),
 
+    Pub,
     Base,
     Fn,
     Struct,
@@ -130,6 +131,7 @@ impl std::fmt::Display for Token {
             FloatLiteral(fl) => write!(f, "{}", fl),
             BoolLiteral(b) => write!(f, "{}", b),
 
+            Pub => write!(f, "pub"),
             Base => write!(f, "base"),
             Fn => write!(f, "fn"),
             Struct => write!(f, "struct"),
@@ -565,6 +567,7 @@ impl<'src_str, 'input> Tokenizer<'src_str, 'input> {
         let (end, ident) = self.take_while(start, is_ident_continue);
 
         let token = match ident {
+            "pub" => Token::Pub,
             "base" => Token::Base,
             "fn" => Token::Fn,
             "mod" => Token::Mod,

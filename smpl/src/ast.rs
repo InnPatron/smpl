@@ -22,6 +22,18 @@ pub enum DeclStmt<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> {
     BuiltinFunction(AstNode<BuiltinFunction>),
 }
 
+impl<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> DeclStmt<S, E> {
+    fn is_public(&self) -> bool {
+        match self {
+            DeclStmt::Use(..) => false,
+            DeclStmt::Opaque(ref node) => node.node().is_public,
+            DeclStmt::Struct(ref node) => node.node().is_public,
+            DeclStmt::Function(ref node) => node.node().is_public,
+            DeclStmt::BuiltinFunction(ref node) => node.node().is_public,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct UseDecl(pub AstNode<Ident>);
 
@@ -33,6 +45,7 @@ pub struct BuiltinFunction {
     pub annotations: Vec<Annotation>,
     pub type_params: Option<TypeParams>,
     pub where_clause: Option<WhereClause>,
+    pub is_public: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -50,6 +63,7 @@ pub struct Function<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> 
     pub annotations: Vec<Annotation>,
     pub type_params: Option<TypeParams>,
     pub where_clause: Option<WhereClause>,
+    pub is_public: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -64,6 +78,7 @@ pub struct Opaque {
     pub annotations: Vec<Annotation>,
     pub type_params: Option<TypeParams>,
     pub where_clause: Option<WhereClause>,
+    pub is_public: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -73,6 +88,7 @@ pub struct Struct {
     pub annotations: Vec<Annotation>,
     pub type_params: Option<TypeParams>,
     pub where_clause: Option<WhereClause>,
+    pub is_public: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -144,7 +160,7 @@ pub struct Annotation {
 pub enum Ident {
     Name(String),
     Atom(String, u64),
-    Compiler(u64),
+    Compiler(String),
 }
 
 impl Ident {
@@ -152,7 +168,7 @@ impl Ident {
         match self {
             Ident::Name(ref s) => s.to_string(),
             Ident::Atom(ref s, ref id) => format!("{}{}", s, id),
-            Ident::Compiler(ref id) => format!("$id{}", id),
+            Ident::Compiler(ref id) => format!("${}", id),
         }
     }
 }
@@ -168,7 +184,7 @@ impl fmt::Display for Ident {
         match self {
             Ident::Name(ref s) => write!(f, "{}", s),
             Ident::Atom(ref s, ref id) => write!(f, "{}{}", s, id),
-            Ident::Compiler(ref id) => write!(f, "$id{}", id),
+            Ident::Compiler(ref id) => write!(f, "${}", id),
         }
     }
 }
