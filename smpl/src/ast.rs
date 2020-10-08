@@ -199,15 +199,19 @@ pub enum Name {
     Name(Ident),
     Atom(Ident, u64),
     Compiler(u64),
+    ModuleItem {
+        module: Ident,
+        item: Ident,
+    },
 }
 
 impl Name {
-    pub fn as_string(&self) -> String {
-        match self {
-            Name::Name(ref s) => s.to_string(),
-            Name::Atom(ref s, ref id) => format!("{}{}", s, id),
-            Name::Compiler(ref id) => format!("$id{}", id),
+    pub fn into_ident(self) -> Ident {
+        if let Name::Name(ident) = self {
+            return ident;
         }
+
+        panic!("Attempting convert a non `Name::Name(..)` into an `Ident`");
     }
 }
 
@@ -217,6 +221,10 @@ impl fmt::Display for Name {
             Name::Name(ref s) => write!(f, "{}", s),
             Name::Atom(ref s, ref id) => write!(f, "{}{}", s, id),
             Name::Compiler(ref id) => write!(f, "$id{}", id),
+            Name::ModuleItem {
+                ref module,
+                ref item
+            } => write!(f, "{}::{}", module, item),
         }
     }
 }
