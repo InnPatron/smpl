@@ -104,7 +104,7 @@ fn parse_let(tokens: &mut BufferedTokenizer) -> ParserResult<Stmt<(), ()>> {
     );
 
     let (name_span, name) = consume_token!(tokens,
-        Token::Identifier(id) => Ident::Name(id),
+        Token::Identifier(id) => Name::Name(id.into()),
         parser_state!("let-stmt", "name")
     );
 
@@ -888,394 +888,394 @@ fn parse_binexpr(tokens: &mut BufferedTokenizer, left: Expr<(), ()>,
 
                 (Expr::ModulePath(mut path, ..), Expr::Binding(right, ..)) => {
                     let right = right.into_data();
-                    path.data_mut().node_mut().0.push(right);
+                        path.data_mut().node_mut().0.push(right);
 
-                    Ok(Expr::ModulePath(path, ()))
+                        Ok(Expr::ModulePath(path, ()))
+                    }
+
+                    (_left, _right) => todo!("Unexpected left for operator \"::\""),
                 }
-
-                (_left, _right) => todo!("Unexpected left for operator \"::\""),
             }
+
+            _ => todo!(),
         }
-
-        _ => todo!(),
-    }
-}
-
-fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
-
-    let action: ExprAction = peek_token!(tokens, SPAN
-        |tok, span| match tok {
-            Token::IntLiteral(..)
-                | Token::FloatLiteral(..)
-                | Token::BoolLiteral(..)
-                | Token::StringLiteral(..) => Ok(Box::new(parse_literal) as ExprAction),
-
-            Token::Plus
-                | Token::Minus
-                | Token::Bang => Ok(Box::new(uni_expr) as ExprAction),
-
-            Token::LParen => Ok(Box::new(paren_expr) as ExprAction),
-
-            Token::LBrace => Ok(Box::new(block_expr) as ExprAction),
-
-            Token::Init => Ok(Box::new(init_expr) as ExprAction),
-
-            Token::If => Ok(Box::new(if_expr) as ExprAction),
-
-            Token::Identifier(..) => Ok(Box::new(ident_expr) as ExprAction),
-
-            _ => Err(parser_error!(ParserErrorKind::UnexpectedToken(tok.clone()), parser_state!("expr", "nud"), span)),
-        },
-        parser_state!("expr", "nud")
-    )?;
-
-    Ok(action)
-}
-
-fn if_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
-    let if_node = if_core(tokens)?;
-
-    Ok(Expr::If(Box::new(Typable::untyped(if_node)), ()))
-}
-
-fn init_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
-    let (init_span, _) = consume_token!(tokens,
-        Token::Init,
-        parser_state!("init-expr", "init")
-    );
-
-    if peek_token!(tokens,
-        |tok| match tok {
-            Token::LBracket => true,
-            _ => false,
-        },
-        parser_state!("init-expr", "init-kind?")
-    ) {
-        array_init(tokens, init_span)
-    } else {
-        struct_init(tokens, init_span)
-    }
-}
-
-// 'init [v1, v2, ... vn; X]'
-// 'init [v1, v2, ... vn]'
-fn array_init(tokens: &mut BufferedTokenizer, mut init_span: Span) -> ParserResult<Expr<(), ()>> {
-
-    enum InitListDecision {
-        Value,
-        RepetitionCount,
-        Break,
-        Err,
     }
 
-    let _lbracket = consume_token!(tokens,
-        Token::LBracket,
-        parser_state!("array-init", "lbracket")
-    );
+    fn nud_action(tokens: &BufferedTokenizer) -> ParserResult<ExprAction> {
 
-    let mut pattern = Vec::new();
-    let mut parse_repetition_count = false;
-    while peek_token!(tokens,
-        |tok| match tok {
-            Token::RBracket => false,
-            _ => true,
-        },
-        parser_state!("array-init", "rbracket?")
-    ) {
-        if peek_token!(tokens,
-            |tok| match tok {
-                Token::Semi => true,
-                _ => false,
+        let action: ExprAction = peek_token!(tokens, SPAN
+            |tok, span| match tok {
+                Token::IntLiteral(..)
+                    | Token::FloatLiteral(..)
+                    | Token::BoolLiteral(..)
+                    | Token::StringLiteral(..) => Ok(Box::new(parse_literal) as ExprAction),
+
+                Token::Plus
+                    | Token::Minus
+                    | Token::Bang => Ok(Box::new(uni_expr) as ExprAction),
+
+                Token::LParen => Ok(Box::new(paren_expr) as ExprAction),
+
+                Token::LBrace => Ok(Box::new(block_expr) as ExprAction),
+
+                Token::Init => Ok(Box::new(init_expr) as ExprAction),
+
+                Token::If => Ok(Box::new(if_expr) as ExprAction),
+
+                Token::Identifier(..) => Ok(Box::new(ident_expr) as ExprAction),
+
+                _ => Err(parser_error!(ParserErrorKind::UnexpectedToken(tok.clone()), parser_state!("expr", "nud"), span)),
             },
-            parser_state!("array-init", "trailing-comma-semi")
-        ) {
-            // Found [1, 2, ;5]
-            // NOTE: there may be NO pattern values
-            //      e.g. [;5]
-            // WF error
-            parse_repetition_count = true;
-            break;
-        }
-        let expr = production!(
-            top_level_expr(tokens, &[ExprDelim::Comma, ExprDelim::Semi]),
-            parser_state!("array-init", "pattern-val")
+            parser_state!("expr", "nud")
+        )?;
+
+        Ok(action)
+    }
+
+    fn if_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
+        let if_node = if_core(tokens)?;
+
+        Ok(Expr::If(Box::new(Typable::untyped(if_node)), ()))
+    }
+
+    fn init_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
+        let (init_span, _) = consume_token!(tokens,
+            Token::Init,
+            parser_state!("init-expr", "init")
         );
 
-        pattern.push(expr);
-
-        match peek_token!(tokens,
+        if peek_token!(tokens,
             |tok| match tok {
-                Token::Semi => InitListDecision::RepetitionCount,
-                Token::Comma => InitListDecision::Value,
-                Token::RBracket => InitListDecision::Break,
-                _ => InitListDecision::Err,
+                Token::LBracket => true,
+                _ => false,
             },
-            parser_state!("array-init", "comma-semi?")
+            parser_state!("init-expr", "init-kind?")
         ) {
-            InitListDecision::RepetitionCount => {
+            array_init(tokens, init_span)
+        } else {
+            struct_init(tokens, init_span)
+        }
+    }
+
+    // 'init [v1, v2, ... vn; X]'
+    // 'init [v1, v2, ... vn]'
+    fn array_init(tokens: &mut BufferedTokenizer, mut init_span: Span) -> ParserResult<Expr<(), ()>> {
+
+        enum InitListDecision {
+            Value,
+            RepetitionCount,
+            Break,
+            Err,
+        }
+
+        let _lbracket = consume_token!(tokens,
+            Token::LBracket,
+            parser_state!("array-init", "lbracket")
+        );
+
+        let mut pattern = Vec::new();
+        let mut parse_repetition_count = false;
+        while peek_token!(tokens,
+            |tok| match tok {
+                Token::RBracket => false,
+                _ => true,
+            },
+            parser_state!("array-init", "rbracket?")
+        ) {
+            if peek_token!(tokens,
+                |tok| match tok {
+                    Token::Semi => true,
+                    _ => false,
+                },
+                parser_state!("array-init", "trailing-comma-semi")
+            ) {
+                // Found [1, 2, ;5]
+                // NOTE: there may be NO pattern values
+                //      e.g. [;5]
+                // WF error
                 parse_repetition_count = true;
                 break;
             }
+            let expr = production!(
+                top_level_expr(tokens, &[ExprDelim::Comma, ExprDelim::Semi]),
+                parser_state!("array-init", "pattern-val")
+            );
 
-            InitListDecision::Break => break,
+            pattern.push(expr);
 
-            InitListDecision::Err => todo!(),
+            match peek_token!(tokens,
+                |tok| match tok {
+                    Token::Semi => InitListDecision::RepetitionCount,
+                    Token::Comma => InitListDecision::Value,
+                    Token::RBracket => InitListDecision::Break,
+                    _ => InitListDecision::Err,
+                },
+                parser_state!("array-init", "comma-semi?")
+            ) {
+                InitListDecision::RepetitionCount => {
+                    parse_repetition_count = true;
+                    break;
+                }
 
-            InitListDecision::Value => {
-                let _comma = consume_token!(tokens,
-                    Token::Comma,
-                    parser_state!("array-init", "comma")
-                );
-                continue;
+                InitListDecision::Break => break,
+
+                InitListDecision::Err => todo!(),
+
+                InitListDecision::Value => {
+                    let _comma = consume_token!(tokens,
+                        Token::Comma,
+                        parser_state!("array-init", "comma")
+                    );
+                    continue;
+                }
             }
         }
-    }
 
-    let repetition_count = if parse_repetition_count {
-        let _semi = consume_token!(tokens,
-                    Token::Semi,
-                    parser_state!("array-init", "pattern-repeat-semi")
-                );
+        let repetition_count = if parse_repetition_count {
+            let _semi = consume_token!(tokens,
+                        Token::Semi,
+                        parser_state!("array-init", "pattern-repeat-semi")
+                    );
 
-        let expr = production!(
-            top_level_expr(tokens, &[]),
-            parser_state!("array-init", "pattern-repeat-expr")
-        );
-
-        Some(Box::new(expr))
-
-    } else {
-        None
-    };
-
-    let (rbracket_span, _) = consume_token!(tokens,
-        Token::RBracket,
-        parser_state!("array-init", "rbracket")
-    );
-
-    init_span = Span::combine(init_span, rbracket_span);
-    let array_init_node = AstNode::new(ArrayInit {
-        pattern,
-        repetition_count
-    }, init_span);
-
-    Ok(Expr::ArrayInit(Typable::untyped(array_init_node), ()))
-}
-
-fn struct_init(tokens: &mut BufferedTokenizer, init_span: Span) -> ParserResult<Expr<(), ()>> {
-
-    let typed_path: Option<AstNode<TypedPath>> = if peek_token!(tokens,
-        |tok| match tok {
-            Token::LBrace => false,
-            _ => true,
-
-        },
-        parser_state!("struct-init", "anonymous?")) {
-
-        // Expecting a (potentially typed) module path
-        let module_path_expr = top_level_expr(tokens, &[ExprDelim::NewBlock])?;
-
-        Some(try_expr_to_path(module_path_expr)?)
-
-    } else {
-        None
-    };
-
-    let _lbrace = consume_token!(tokens,
-        Token::LBrace,
-        parser_state!("struct-init", "lbrace")
-    );
-
-    let mut field_init: Vec<(AstNode<Ident>, Box<Expr<(), ()>>)> = Vec::new();
-    while peek_token!(tokens,
-        |tok| match tok {
-            Token::RBrace => false,
-
-            _ => true,
-        },
-        parser_state!("struct-init", "field-init?")
-    ) {
-
-        // TODO: Pattern parsing here
-        let (field_span, field) = consume_token!(tokens,
-            Token::Identifier(ident) => Ident::Name(ident),
-            parser_state!("struct-init", "field-ident")
-        );
-
-        let _colon = consume_token!(tokens,
-            Token::Colon,
-            parser_state!("struct-init", "init-colon")
-        );
-
-        let init_value = top_level_expr(tokens, &[ExprDelim::Comma])?;
-
-        let field = AstNode::new(field, field_span);
-        field_init.push((field, Box::new(init_value)));
-
-        if peek_token!(tokens,
-            |tok| match tok {
-                Token::Comma => true,
-                _ => false,
-            },
-            parser_state!("stuct-init", "comma?")
-        ) {
-            // Found comma
-            let _comma = consume_token!(tokens,
-                Token::Comma,
-                parser_state!("struct-init", "comma")
+            let expr = production!(
+                top_level_expr(tokens, &[]),
+                parser_state!("array-init", "pattern-repeat-expr")
             );
-            continue;
+
+            Some(Box::new(expr))
+
         } else {
-            // No comma
-            break;
-        }
+            None
+        };
+
+        let (rbracket_span, _) = consume_token!(tokens,
+            Token::RBracket,
+            parser_state!("array-init", "rbracket")
+        );
+
+        init_span = Span::combine(init_span, rbracket_span);
+        let array_init_node = AstNode::new(ArrayInit {
+            pattern,
+            repetition_count
+        }, init_span);
+
+        Ok(Expr::ArrayInit(Typable::untyped(array_init_node), ()))
     }
 
+    fn struct_init(tokens: &mut BufferedTokenizer, init_span: Span) -> ParserResult<Expr<(), ()>> {
 
-    let (rbrace_span, _) = consume_token!(tokens,
-        Token::RBrace,
-        parser_state!("struct-init", "rbrace")
-    );
+        let typed_path: Option<AstNode<TypedPath>> = if peek_token!(tokens,
+            |tok| match tok {
+                Token::LBrace => false,
+                _ => true,
 
-    let init_span = Span::combine(init_span, rbrace_span);
-    let init_node = AstNode::new(StructInit {
-        struct_name: Typable::untyped(typed_path),
-        field_init,
-    }, init_span);
+            },
+            parser_state!("struct-init", "anonymous?")) {
 
-    Ok(Expr::StructInit(Typable::untyped(init_node), ()))
-}
+            // Expecting a (potentially typed) module path
+            let module_path_expr = top_level_expr(tokens, &[ExprDelim::NewBlock])?;
 
-fn try_expr_to_path(expr: Expr<(), ()>) -> ParserResult<AstNode<TypedPath>> {
-    match expr {
-        Expr::ModulePath(path, ..) => {
-            let path: AstNode<ModulePath> = path.into_data();
-            let path_span = path.span();
-            Ok(AstNode::new(TypedPath {
-                base: Typable::untyped(path),
-                args: vec![],
-            }, path_span))
-        },
+            Some(try_expr_to_path(module_path_expr)?)
 
-        Expr::Binding(binding, ..) => {
-            let binding: AstNode<Ident> = binding.into_data();
-            let binding_span = binding.span().clone();
+        } else {
+            None
+        };
 
-            let module_path = AstNode::new(ModulePath(vec![binding]), binding_span.clone());
+        let _lbrace = consume_token!(tokens,
+            Token::LBrace,
+            parser_state!("struct-init", "lbrace")
+        );
 
-            Ok(AstNode::new(TypedPath {
-                base: Typable::untyped(module_path),
-                args: vec![],
-            }, binding_span))
-        },
+        let mut field_init: Vec<(AstNode<Ident>, Box<Expr<(), ()>>)> = Vec::new();
+        while peek_token!(tokens,
+            |tok| match tok {
+                Token::RBrace => false,
 
-        Expr::Path(p, ..) => Ok(p.into_data()),
+                _ => true,
+            },
+            parser_state!("struct-init", "field-init?")
+        ) {
 
-        expr => todo!("Unexpected expression for type name: {:?}", expr),
-    }
-}
+            // TODO: Pattern parsing here
+            let (field_span, field) = consume_token!(tokens,
+                Token::Identifier(ident) => Ident(ident),
+                parser_state!("struct-init", "field-ident")
+            );
 
-fn block_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
-    let block = production!(
-        block(tokens),
-        parser_state!("expr", "block-expr")
-    );
+            let _colon = consume_token!(tokens,
+                Token::Colon,
+                parser_state!("struct-init", "init-colon")
+            );
 
-    Ok(Expr::Block(block, ()))
-}
+            let init_value = top_level_expr(tokens, &[ExprDelim::Comma])?;
 
-fn ident_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
-    let (ident_span, ident) = consume_token!(tokens,
-        Token::Identifier(ident) => Ident::Name(ident),
-        parser_state!("identifier-leaf", "root")
-    );
+            let field = AstNode::new(field, field_span);
+            field_init.push((field, Box::new(init_value)));
 
-    let ident_node = Typable::untyped(AstNode::new(ident, ident_span));
-
-    Ok(Expr::Binding(ident_node, ()))
-}
-
-fn paren_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
-    let _ = consume_token!(
-        tokens,
-        Token::LParen,
-        parser_state!("paren-expr", "lparen")
-    );
-
-    let inner = production!(
-        parse_expr(tokens, &[ExprDelim::Semi], 0),
-        parser_state!("paren-expr", "inner-expr")
-    );
-
-    let _ = consume_token!(
-        tokens,
-        Token::RParen,
-        parser_state!("paren-expr", "rparen")
-    );
-
-    Ok(inner)
-}
-
-fn uni_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
-    let (op_span, uniop) = tokens
-        .next()
-        .unwrap()
-        .map_err(|e| parser_error!(e.into(), parser_state!("uni-expr", "uni-op")))?
-        .to_data();
-
-    let uniop = match uniop {
-        Token::Plus => None,
-
-        Token::Minus => Some(UniOp::Negate),
-
-        Token::Bang => Some(UniOp::LogicalInvert),
-
-        _ => unreachable!(),
-    };
-
-    let base = production!(
-        parse_expr(tokens, &[ExprDelim::Semi], 0),
-        parser_state!("uni-expr", "base")
-    );
-
-    let base_span = base.span();
-
-    let uni_expr_span = Span::combine(op_span, base_span);
-
-    match uniop {
-        Some(op) => {
-            let uni_expr = UniExpr {
-                op,
-                expr: Box::new(base),
-            };
-
-            let uni_node = Typable::untyped(AstNode::new(uni_expr, uni_expr_span));
-
-            Ok(Expr::Uni(uni_node, ()))
+            if peek_token!(tokens,
+                |tok| match tok {
+                    Token::Comma => true,
+                    _ => false,
+                },
+                parser_state!("stuct-init", "comma?")
+            ) {
+                // Found comma
+                let _comma = consume_token!(tokens,
+                    Token::Comma,
+                    parser_state!("struct-init", "comma")
+                );
+                continue;
+            } else {
+                // No comma
+                break;
+            }
         }
 
 
-        None => Ok(base),
+        let (rbrace_span, _) = consume_token!(tokens,
+            Token::RBrace,
+            parser_state!("struct-init", "rbrace")
+        );
+
+        let init_span = Span::combine(init_span, rbrace_span);
+        let init_node = AstNode::new(StructInit {
+            struct_name: Typable::untyped(typed_path),
+            field_init: field_init,
+        }, init_span);
+
+        Ok(Expr::StructInit(Typable::untyped(init_node), ()))
     }
-}
 
-fn parse_literal(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
-    let (next_span, next) = tokens
-        .next()
-        .unwrap()
-        .map_err(|e| parser_error!(e.into(), parser_state!("literal")))?
-        .to_data();
+    fn try_expr_to_path(expr: Expr<(), ()>) -> ParserResult<AstNode<TypedPath>> {
+        match expr {
+            Expr::ModulePath(path, ..) => {
+                let path: AstNode<ModulePath> = path.into_data();
+                let path_span = path.span();
+                Ok(AstNode::new(TypedPath {
+                    base: Typable::untyped(path),
+                    args: vec![],
+                }, path_span))
+            },
 
-    let literal = match next {
-        Token::IntLiteral(i) => Literal::Int(i),
-        Token::FloatLiteral(f) => Literal::Float(f),
-        Token::BoolLiteral(b) => Literal::Bool(b),
-        Token::StringLiteral(s) => Literal::String(s),
+            Expr::Binding(binding, ..) => {
+                let binding: AstNode<Name> = binding.into_data();
+                let binding_span = binding.span().clone();
 
-        _ => unreachable!(),
-    };
+                let module_path = AstNode::new(ModulePath(vec![binding]), binding_span.clone());
 
-    let literal_node = Expr::Literal(Typable::untyped(AstNode::new(literal, next_span)), ());
+                Ok(AstNode::new(TypedPath {
+                    base: Typable::untyped(module_path),
+                    args: vec![],
+                }, binding_span))
+            },
 
-    Ok(literal_node)
+            Expr::Path(p, ..) => Ok(p.into_data()),
+
+            expr => todo!("Unexpected expression for type name: {:?}", expr),
+        }
+    }
+
+    fn block_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
+        let block = production!(
+            block(tokens),
+            parser_state!("expr", "block-expr")
+        );
+
+        Ok(Expr::Block(block, ()))
+    }
+
+    fn ident_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
+        let (ident_span, ident) = consume_token!(tokens,
+            Token::Identifier(ident) => Name::Name(ident.into()),
+            parser_state!("identifier-leaf", "root")
+        );
+
+        let ident_node = Typable::untyped(AstNode::new(ident, ident_span));
+
+        Ok(Expr::Binding(ident_node, ()))
+    }
+
+    fn paren_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
+        let _ = consume_token!(
+            tokens,
+            Token::LParen,
+            parser_state!("paren-expr", "lparen")
+        );
+
+        let inner = production!(
+            parse_expr(tokens, &[ExprDelim::Semi], 0),
+            parser_state!("paren-expr", "inner-expr")
+        );
+
+        let _ = consume_token!(
+            tokens,
+            Token::RParen,
+            parser_state!("paren-expr", "rparen")
+        );
+
+        Ok(inner)
+    }
+
+    fn uni_expr(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
+        let (op_span, uniop) = tokens
+            .next()
+            .unwrap()
+            .map_err(|e| parser_error!(e.into(), parser_state!("uni-expr", "uni-op")))?
+            .to_data();
+
+        let uniop = match uniop {
+            Token::Plus => None,
+
+            Token::Minus => Some(UniOp::Negate),
+
+            Token::Bang => Some(UniOp::LogicalInvert),
+
+            _ => unreachable!(),
+        };
+
+        let base = production!(
+            parse_expr(tokens, &[ExprDelim::Semi], 0),
+            parser_state!("uni-expr", "base")
+        );
+
+        let base_span = base.span();
+
+        let uni_expr_span = Span::combine(op_span, base_span);
+
+        match uniop {
+            Some(op) => {
+                let uni_expr = UniExpr {
+                    op,
+                    expr: Box::new(base),
+                };
+
+                let uni_node = Typable::untyped(AstNode::new(uni_expr, uni_expr_span));
+
+                Ok(Expr::Uni(uni_node, ()))
+            }
+
+
+            None => Ok(base),
+        }
+    }
+
+    fn parse_literal(tokens: &mut BufferedTokenizer) -> ParserResult<Expr<(), ()>> {
+        let (next_span, next) = tokens
+            .next()
+            .unwrap()
+            .map_err(|e| parser_error!(e.into(), parser_state!("literal")))?
+            .to_data();
+
+        let literal = match next {
+            Token::IntLiteral(i) => Literal::Int(i),
+            Token::FloatLiteral(f) => Literal::Float(f),
+            Token::BoolLiteral(b) => Literal::Bool(b),
+            Token::StringLiteral(s) => Literal::String(s),
+
+            _ => unreachable!(),
+        };
+
+        let literal_node = Expr::Literal(Typable::untyped(AstNode::new(literal, next_span)), ());
+
+        Ok(literal_node)
 }

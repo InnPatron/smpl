@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use crate::span::Span;
 use crate::ast_node::{EmptyAstNode, AstNode, Spanned};
 
-use crate::ast::{Ident, TypedPath, ModulePath, TypeAnn, FnParameter, TypedNode};
+use crate::ast::{Name, Ident, TypedPath, ModulePath, TypeAnn, FnParameter, TypedNode};
 use crate::typable_ast::{Typed, Typable};
 
 use crate::analysis::type_structs::Type;
@@ -50,7 +50,7 @@ pub struct Block<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq>(pub
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct LetStmt<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> {
-    pub var_name: AstNode<Ident>,
+    pub var_name: AstNode<Name>,
     pub type_ann: Option<TypedNode<TypeAnn>>,
     pub init: Expr<S, E>,
 }
@@ -62,7 +62,7 @@ pub enum Expr<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> {
     Bin(TypedNode<BinExpr<S, E>>, E),
     Uni(TypedNode<UniExpr<S, E>>, E),
     Literal(TypedNode<Literal>, E),
-    Binding(TypedNode<Ident>, E),
+    Binding(TypedNode<Name>, E),
     DotAccess(TypedNode<DotAccess<S, E>>, E),
     FnCall(TypedNode<FnCall<S, E>>, E),
     StructInit(TypedNode<StructInit<S, E>>, E),
@@ -83,7 +83,7 @@ pub struct IndexAccess<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialE
 #[derive(Clone, Debug, PartialEq)]
 pub struct DotAccess<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> {
     pub base: Box<Expr<S, E>>,
-    pub field: TypedNode<Ident>,
+    pub field: TypedNode<Name>,
 }
 
 

@@ -66,7 +66,7 @@ pub struct ModuleItemData {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BuiltinFunction {
-    pub name: AstNode<Ident>,
+    pub name: AstNode<Name>,
     pub params: BuiltinFnParams,
     pub return_type: Option<Typable<AstNode<TypeAnn>>>,
     pub annotations: Vec<Annotation>,
@@ -82,7 +82,7 @@ pub enum BuiltinFnParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> {
-    pub name: AstNode<Ident>,
+    pub name: AstNode<Name>,
     pub params: Vec<TypedNode<FnParameter>>,
     pub return_type: Option<TypedNode<TypeAnn>>,
     pub body: TypedNode<Block<S, E>>,
@@ -93,13 +93,13 @@ pub struct Function<S: Clone + Debug + PartialEq, E: Clone + Debug + PartialEq> 
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnParameter {
-    pub name: AstNode<Ident>,
+    pub name: AstNode<Name>,
     pub param_type: AstNode<TypeAnn>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Opaque {
-    pub name: AstNode<Ident>,
+    pub name: AstNode<Name>,
     pub annotations: Vec<Annotation>,
     pub type_params: Option<TypeParams>,
     pub where_clause: Option<WhereClause>,
@@ -107,7 +107,7 @@ pub struct Opaque {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Struct {
-    pub name: AstNode<Ident>,
+    pub name: AstNode<Name>,
     pub body: Vec<StructField>,
     pub annotations: Vec<Annotation>,
     pub type_params: Option<TypeParams>,
@@ -115,7 +115,7 @@ pub struct Struct {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct WhereClause(pub HashMap<AstNode<Ident>, Vec<AstNode<TypeAnn>>>);
+pub struct WhereClause(pub HashMap<AstNode<Name>, Vec<AstNode<TypeAnn>>>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructField {
@@ -140,7 +140,7 @@ pub enum TypeAnn {
 // Shouldn't matter b/c this is purely for syntactic comparison
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeParams {
-    pub params: Vec<AstNode<Ident>>,
+    pub params: Vec<AstNode<Name>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -172,7 +172,7 @@ impl TypedPath {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ModulePath(pub Vec<AstNode<Ident>>);
+pub struct ModulePath(pub Vec<AstNode<Name>>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Annotation {
@@ -180,34 +180,49 @@ pub struct Annotation {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Ident {
-    Name(String),
-    Atom(String, u64),
-    Compiler(u64),
-}
-
-impl Ident {
-    pub fn as_string(&self) -> String {
-        match self {
-            Ident::Name(ref s) => s.to_string(),
-            Ident::Atom(ref s, ref id) => format!("{}{}", s, id),
-            Ident::Compiler(ref id) => format!("$id{}", id),
-        }
-    }
-}
+pub struct Ident(pub String);
 
 impl<T> From<T> for Ident where T: Into<String> {
     fn from(s: T) -> Ident {
-        Ident::Name(s.into())
+        Ident(s.into())
     }
 }
 
 impl fmt::Display for Ident {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Name {
+    Name(Ident),
+    Atom(Ident, u64),
+    Compiler(u64),
+}
+
+impl Name {
+    pub fn as_string(&self) -> String {
         match self {
-            Ident::Name(ref s) => write!(f, "{}", s),
-            Ident::Atom(ref s, ref id) => write!(f, "{}{}", s, id),
-            Ident::Compiler(ref id) => write!(f, "$id{}", id),
+            Name::Name(ref s) => s.to_string(),
+            Name::Atom(ref s, ref id) => format!("{}{}", s, id),
+            Name::Compiler(ref id) => format!("$id{}", id),
         }
+    }
+}
+
+impl fmt::Display for Name {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Name::Name(ref s) => write!(f, "{}", s),
+            Name::Atom(ref s, ref id) => write!(f, "{}{}", s, id),
+            Name::Compiler(ref id) => write!(f, "$id{}", id),
+        }
+    }
+}
+
+impl<T> From<T> for Name where T: Into<Ident> {
+    fn from(i: T) -> Self {
+        Name::Name(i.into())
     }
 }

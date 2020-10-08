@@ -466,7 +466,7 @@ pub fn type_param_list_post_lparen(
     );
 
     let mut type_params = vec![consume_token!(tokens,
-                                              Token::Identifier(ident) => Ident::Name(ident),
+                                              Token::Identifier(ident) => Ident(ident),
                                               parser_state!("type-param-list", "type-param"))];
 
     loop {
@@ -492,7 +492,7 @@ pub fn type_param_list_post_lparen(
                 parser_state!("type-param-list", "rparen?")
             ) {
                 type_params.push(consume_token!(tokens,
-                                   Token::Identifier(ident) => Ident::Name(ident),
+                                   Token::Identifier(ident) => Ident(ident),
                                    parser_state!("type-param-list", "type-param")));
                 continue;
             }
@@ -509,7 +509,7 @@ pub fn type_param_list_post_lparen(
 
     let type_params = type_params
         .into_iter()
-        .map(|(span, ident)| AstNode::new(ident, span))
+        .map(|(span, ident)| AstNode::new(ident.into(), span))
         .collect::<Vec<_>>();
 
     Ok(TypeParams {
@@ -597,7 +597,7 @@ pub fn where_clause(tokens: &mut BufferedTokenizer) -> ParserResult<WhereClause>
     loop {
         let (param_span, parameter) = consume_token!(
             tokens,
-            Token::Identifier(ident) => Ident::Name(ident),
+            Token::Identifier(ident) => Ident(ident),
             parser_state!("where-clause-constraints", "param"));
         let _colon = consume_token!(
             tokens,
@@ -610,7 +610,7 @@ pub fn where_clause(tokens: &mut BufferedTokenizer) -> ParserResult<WhereClause>
         );
 
         parameter_constraints
-            .entry(AstNode::new(parameter, param_span))
+            .entry(AstNode::new(parameter.into(), param_span))
             .or_insert(Vec::new())
             .push(annotation);
 
