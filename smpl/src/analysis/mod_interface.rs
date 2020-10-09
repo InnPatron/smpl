@@ -57,52 +57,6 @@ pub fn module_interfaces(dep_graph: &mut DepGraph) -> InterfaceResult<ModInterfa
     Ok(mi)
 }
 
-fn module_interface<'a, 'b: 'c, 'c>(
-    dep_graph: &'a mut DepGraph,
-    mis: &'b mut ModInterfaces,
-    to_retrieve: &'b Ident) -> InterfaceResult<()> {
-
-    if let Some(my_mi) = mis.map.get(to_retrieve) {
-        return Ok(());
-    }
-
-
-    let my_mi = make_mod_interface(dep_graph, mis, to_retrieve)?;
-    mis.map.insert(to_retrieve.clone(), my_mi);
-
-    Ok(())
-}
-
-fn make_mod_interface(
-    dep_graph: &mut DepGraph,
-    mi: &mut ModInterfaces,
-    to_make: &Ident) -> InterfaceResult<ModInterface> {
-
-    let current_module = dep_graph.modules.get_mut(to_make).unwrap();
-
-    let mut local_interface = make_local_interface(to_make, current_module)?;
-    todo!();
-}
-
-fn generate_foreign_interfaces<T>(current_mi: &mut ModInterface, deps: T, dep_graph: &mut DepGraph, mis: &mut ModInterfaces) -> InterfaceResult<()>
-    where T: IntoIterator<Item=Ident> {
-
-    for dep in deps.into_iter() {
-        if mis.map.contains_key(&dep) {
-            continue;
-        }
-
-        let foreign_mi = module_interface(dep_graph, mis, &dep)?;
-        merge_foreign_interface(current_mi, mis.map.get(&dep).unwrap())?;
-    }
-
-    Ok(())
-}
-
-fn merge_foreign_interface(current_mit: &mut ModInterface, foreign: &ModInterface) -> InterfaceResult<()> {
-    todo!();
-}
-
 ///
 /// Scans local type/function declarations ONLY
 /// Replaces ALL local type/function declaration names with Name::ModuleItem
