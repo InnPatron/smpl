@@ -6,8 +6,8 @@ use crate::module::ParsedModule;
 use crate::ast::Ident;
 
 pub struct DepGraph {
-    graph: HashMap<Ident, Vec<Ident>>,
-    modules: HashMap<Ident, ParsedModule>,
+    pub graph: HashMap<Ident, Vec<Ident>>,
+    pub modules: HashMap<Ident, ParsedModule>,
 }
 
 pub type DepGraphResult<T> = Result<T, Vec<AnalysisError>>;
