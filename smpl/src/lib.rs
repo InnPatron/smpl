@@ -41,4 +41,5 @@ pub mod error;
 pub mod prelude {
     pub use crate::module::{ParsedModule, UnparsedModule};
     pub use crate::parser::parse_module;
+    pub use crate::analysis::analyze_program;
 }
