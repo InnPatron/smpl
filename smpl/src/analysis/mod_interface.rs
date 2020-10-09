@@ -303,7 +303,7 @@ fn make_local_interface(current_mod_name: &Ident, current_module: &mut ParsedMod
 fn export_state_merge(initial_exports: &mut HashMap<Ident, Name>, export_states: HashMap<Ident, ExportState>) -> InterfaceResult<()> {
 
     // Prune the final exports according to the item export states
-    let mut final_local_exports = initial_exports;
+    let final_local_exports = initial_exports;
     for (item, export_state) in export_states.into_iter() {
         match export_state {
             ExportState::Export(alias) => {
