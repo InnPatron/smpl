@@ -32,7 +32,7 @@ macro_rules! try_insert {
 }
 
 enum ExportState {
-    Export(Option<Ident>),
+    Export(Option<Name>),
     NoExport,
 }
 
@@ -136,16 +136,22 @@ fn make_local_interface(current_mod_name: &Ident, current_module: &mut ParsedMod
         }
     }
 
-
-    let initial_local_exports: HashMap<Ident, Name> = if all {
+    let mut initial_local_exports: HashMap<Ident, Name> = if all {
         top_levels
     } else {
         HashMap::new()
     };
 
+    export_state_merge(&mut initial_local_exports, local_exports_state)?;
+
+    Ok(ModInterface(initial_local_exports))
+}
+
+fn export_state_merge(initial_exports: &mut HashMap<Ident, Name>, export_states: HashMap<Ident, ExportState>) -> InterfaceResult<()> {
+
     // Prune the final exports according to the item export states
-    let mut final_local_exports = initial_local_exports;
-    for (item, export_state) in local_exports_state.into_iter() {
+    let mut final_local_exports = initial_exports;
+    for (item, export_state) in export_states.into_iter() {
         match export_state {
             ExportState::Export(alias) => {
                 let export_item = final_local_exports.get_mut(&item);
@@ -155,7 +161,7 @@ fn make_local_interface(current_mod_name: &Ident, current_module: &mut ParsedMod
                         // Export under the alias if it exists
                         // Otherwise, do nothing
                         if let Some(alias) = alias {
-                            *export_item = Name::Name(alias);
+                            *export_item = alias;
                         }
                     }
 
@@ -170,7 +176,8 @@ fn make_local_interface(current_mod_name: &Ident, current_module: &mut ParsedMod
             }
         }
     }
-    Ok(ModInterface(final_local_exports))
+
+    Ok(())
 }
 
 fn populate_excepts<'a, T>(state: &mut HashMap<Ident, ExportState>, except_list: T) -> InterfaceResult<()>
@@ -181,7 +188,7 @@ fn populate_excepts<'a, T>(state: &mut HashMap<Ident, ExportState>, except_list:
             // An exception to the "all" export
             //   Export instead with the override
             Some(ref item_override) => {
-                let override_value = ExportState::Export(Some(item_override.node().clone()));
+                let override_value = ExportState::Export(Some(item_override.node().clone().into()));
                 if let Some(item_state) = state.get_mut(item_exception.original_name.node()) {
                     *item_state = override_value;
                     continue;
@@ -217,7 +224,7 @@ fn populate_additions<'a, T>(state: &mut HashMap<Ident, ExportState>, list: T) -
             // An exception to the "all" export
             //   Export instead with the override
             Some(ref item_override) => {
-                let override_value = ExportState::Export(Some(item_override.node().clone()));
+                let override_value = ExportState::Export(Some(item_override.node().clone().into()));
                 if let Some(item_state) = state.get_mut(item_addition.original_name.node()) {
                     *item_state = override_value;
                     continue;
