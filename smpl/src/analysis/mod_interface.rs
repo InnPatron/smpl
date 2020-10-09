@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::mem;
 
 use crate::module::ParsedModule;
@@ -47,15 +47,70 @@ pub struct ModInterfaces {
 pub struct ModInterface(pub HashMap<Ident, Name>);
 
 ///
-/// Dependency graph guaranteed to have NO cycles
+/// Dependency graph guaranteed to have NO cycles. However, there may be multiple
+///   source nodes
 ///
 ///
 pub fn module_interfaces(dep_graph: &mut DepGraph) -> InterfaceResult<ModInterfaces> {
-    let mi = ModInterfaces {
+    let mut mis = ModInterfaces {
         map: HashMap::new(),
     };
 
-    Ok(mi)
+    // Generate all module interfaces from local items
+    for (mod_name, ref mut parsed_module) in dep_graph.modules.iter_mut() {
+        let mi = make_local_interface(mod_name, parsed_module)?;
+        mis.map.insert(mod_name.clone(), mi);
+    }
+
+    let dep_graph = &*dep_graph;
+    let mut visited_set: HashSet<&Ident> = HashSet::new();
+    // For every module, build its final interface by merging with its dependencies
+    //   through a DFS search
+    // This outer loop ensures that all modules are visited
+    for (mod_name, _) in dep_graph.graph.iter() {
+        build_module_interface(mod_name, dep_graph, &mut visited_set, &mut mis)?;
+    }
+
+    Ok(mis)
+}
+
+///
+/// A DP-ish algorithm.
+/// Starting from ANY module, perform a DFS traversal to merge the
+///   current module interface with its dependencies
+///
+/// Results are cached in mis
+/// Already-built modules are tracked by the visited_set
+///
+fn build_module_interface<'a, 'b, 'c>(
+    current_module: &'a Ident,
+    dep_graph: &'a DepGraph,
+    visited_set: &'b mut HashSet<&'a Ident>,
+    mis: &'c mut ModInterfaces) -> InterfaceResult<()> {
+
+    if visited_set.contains(current_module) {
+        return Ok(());
+    }
+
+    visited_set.insert(current_module);
+    for dep in dep_graph.graph.get(current_module).unwrap().iter() {
+
+        // Need to remove the current module interface from mis for borrow checker reasons
+        let mut current_mi = mis.map.remove(current_module).unwrap();
+
+        let foreign_mi = if visited_set.contains(dep) {
+            mis.map.get(dep).unwrap()
+        } else {
+            build_module_interface(dep, dep_graph, visited_set, mis)?;
+            mis.map.get(dep).unwrap()
+        };
+
+        merge_foreign_interface(dep, dep_graph.modules.get(current_module).unwrap(), &mut current_mi, foreign_mi)?;
+
+        mis.map.insert(current_module.clone(), current_mi);
+    }
+
+    Ok(())
 }
 
 ///
