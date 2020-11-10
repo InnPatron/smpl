@@ -120,7 +120,6 @@ pub struct StructField {
 
 #[derive(Clone, Debug)]
 pub enum TypeAnn {
-    ModulePath(AstNode<ModulePath>),
     Path(AstNode<TypedPath>),
     Array(Box<AstNode<TypeAnn>>, u64),
     FnType(

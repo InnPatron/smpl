@@ -158,7 +158,6 @@ pub enum Expr {
     ArrayInit(AstNode<ArrayInit>),
     IndexAccess(AstNode<IndexAccess>),
     AnonymousFn(AstNode<AnonymousFn>),
-    ModulePath(AstNode<ModulePath>),
     Path(AstNode<TypedPath>),
     Block(AstNode<Block>),
 }
@@ -180,7 +179,6 @@ impl Spanned for Expr {
             Expr::AnonymousFn(ref spanned, ..) => spanned.span(),
             Expr::Path(ref spanned, ..) => spanned.span(),
             Expr::Block(ref spanned, ..) => spanned.span(),
-            Expr::ModulePath(ref spanned, ..) => spanned.span(),
         }
     }
 }
