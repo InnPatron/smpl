@@ -1,0 +1,81 @@
+use crate::ast;
+use crate::ast_node::AstNode;
+use crate::expr_ast;
+use crate::span::Span;
+use super::error;
+use super::tokens::{self, Token};
+
+grammar;
+
+pub Module: ast::Module = {
+    MOD <l: @L> <n: IDENT> <r: @R> SEMI => {
+
+        let ident = match n {
+            Token::Ident(i) => i,
+            _ => unreachable!(),
+        };
+
+        ast::Module {
+
+            mod_name: Some(AstNode::new(ident, Span::new(l, r))),
+            decls: Vec::new(),
+        }
+    }
+};
+
+extern {
+    type Location = usize;
+    type Error = error::TokenizerError;
+
+    enum tokens::Token {
+        IDENT => tokens::Token::Ident(..),
+
+        STRING => tokens::Token::StringLiteral(..),
+        INT => tokens::Token::IntLiteral(..),
+        FLOAT => tokens::Token::FloatLiteral(..),
+        BOOL => tokens::Token::BoolLiteral(..),
+
+        FN => tokens::Token::Fn,
+        STRUCT => tokens::Token::Struct,
+        OPAQUE => tokens::Token::Opaque,
+        MOD => tokens::Token::Mod,
+        USE => tokens::Token::Use,
+        BUILTIN => tokens::Token::Builtin,
+        UNCHECKED => tokens::Token::Unchecked,
+        TYPE => tokens::Token::Type,
+        WHERE => tokens::Token::Where,
+        COMMA => tokens::Token::Comma,
+        ARROW => tokens::Token::Arrow,
+        COLON => tokens::Token::Colon,
+        COLONCOLON => tokens::Token::ColonColon,
+        SEMI => tokens::Token::Semi,
+        POUND => tokens::Token::Pound,
+        BASE => tokens::Token::Base,
+        INIT => tokens::Token::Init,
+        EXTRACT => tokens::Token::Extract,
+        CONTINUE => tokens::Token::Continue,
+        BREAK => tokens::Token::Break,
+        RETURN => tokens::Token::Return,
+        IF => tokens::Token::If,
+        ELSE => tokens::Token::Else,
+        ELIF => tokens::Token::Elif,
+        WHILE => tokens::Token::While,
+        LET => tokens::Token::Let,
+        EQEQ => tokens::Token::EqEq,
+        BANGEQ => tokens::Token::BangEq,
+        EQ => tokens::Token::Eq,
+        DOT => tokens::Token::Dot,
+        AT => tokens::Token::At,
+        AMP => tokens::Token::Amp,
+        PIPE => tokens::Token::Pipe,
+        BANG => tokens::Token::Bang,
+        AND => tokens::Token::And,
+        OR => tokens::Token::Or,
+        "(" => tokens::Token::LParen,
+        ")" => tokens::Token::RParen,
+        "[" => tokens::Token::LBracket,
+        "]" => tokens::Token::RBracket,
+        "{" => tokens::Token::LBrace,
+        "}" => tokens::Token::RBrace,
+    }
+}
