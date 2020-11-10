@@ -23,9 +23,9 @@ pub enum Decl {
 pub enum ExportDecl {
     ExportItems {
         from_module: Option<AstNode<Ident>>,
-        items: Vec<AstNode<ExportItem>>
+        items: Vec<AstNode<ExportItem>>,
     },
-    ExportAll  {
+    ExportAll {
         from_module: Option<AstNode<Ident>>,
         except: Vec<AstNode<ExportItem>>,
     },
@@ -38,7 +38,7 @@ pub struct ExportItem(pub ModuleItemData);
 pub enum ImportDecl {
     ImportItems {
         module: AstNode<Ident>,
-        items: Vec<AstNode<ImportItem>>
+        items: Vec<AstNode<ImportItem>>,
     },
     ImportModule {
         module: AstNode<Ident>,
@@ -148,11 +148,11 @@ impl TypedPath {
         }
     }
 
-    pub fn n_arity(base: AstNode<ModulePath>, args: Vec<AstNode<TypeAnn>>) -> Self {
-        TypedPath {
-            base,
-            args,
-        }
+    pub fn n_arity(
+        base: AstNode<ModulePath>,
+        args: Vec<AstNode<TypeAnn>>,
+    ) -> Self {
+        TypedPath { base, args }
     }
 }
 
@@ -167,10 +167,13 @@ pub struct Annotation {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Ident {
     Quoted(String),
-    Unquoted(String)
+    Unquoted(String),
 }
 
-impl<T> From<T> for Ident where T: Into<String> {
+impl<T> From<T> for Ident
+where
+    T: Into<String>,
+{
     fn from(s: T) -> Ident {
         Ident::Quoted(s.into())
     }
@@ -190,10 +193,7 @@ pub enum Name {
     Name(Ident),
     Atom(Ident, u64),
     Compiler(u64),
-    ModuleItem {
-        module: Ident,
-        item: Ident,
-    },
+    ModuleItem { module: Ident, item: Ident },
 }
 
 impl Name {
@@ -214,13 +214,16 @@ impl fmt::Display for Name {
             Name::Compiler(ref id) => write!(f, "$id{}", id),
             Name::ModuleItem {
                 ref module,
-                ref item
+                ref item,
             } => write!(f, "{}::{}", module, item),
         }
     }
 }
 
-impl<T> From<T> for Name where T: Into<Ident> {
+impl<T> From<T> for Name
+where
+    T: Into<Ident>,
+{
     fn from(i: T) -> Self {
         Name::Name(i.into())
     }

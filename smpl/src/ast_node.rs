@@ -9,9 +9,12 @@ pub struct AstNode<T> {
     data: T,
 }
 
-impl<T> Copy for AstNode<T> where T: Copy { }
+impl<T> Copy for AstNode<T> where T: Copy {}
 
-impl<T> Clone for AstNode<T> where T: Clone {
+impl<T> Clone for AstNode<T>
+where
+    T: Clone,
+{
     fn clone(&self) -> Self {
         AstNode {
             span: self.span.clone(),
@@ -20,19 +23,18 @@ impl<T> Clone for AstNode<T> where T: Clone {
     }
 }
 
-impl<T> std::fmt::Debug for AstNode<T> where T: std::fmt::Debug {
+impl<T> std::fmt::Debug for AstNode<T>
+where
+    T: std::fmt::Debug,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         self.data.fmt(f)
     }
 }
 
 impl<T> AstNode<T> {
-
     pub fn new(data: T, span: Span) -> Self {
-        AstNode {
-            span,
-            data,
-        }
+        AstNode { span, data }
     }
 
     pub fn data(&self) -> &T {

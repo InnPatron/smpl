@@ -1,10 +1,10 @@
 use std::iter::{Enumerate, Iterator, Peekable};
 use std::str::CharIndices;
 
-use crate::span::Location;
-use crate::ast::Ident;
-use super::tokens::{LiteralData, Token};
 use super::error::*;
+use super::tokens::{LiteralData, Token};
+use crate::ast::Ident;
+use crate::span::Location;
 
 pub type SpannedToken = (Location, Token, Location);
 
@@ -19,19 +19,15 @@ struct CharInput<'input> {
 
 impl<'input> CharInput<'input> {
     fn new(input: &'input str) -> Self {
-
         let last = if input.len() == 0 {
             0
         } else {
             input.char_indices().rev().next().unwrap().0
         };
         let mut chars = input.char_indices().enumerate().peekable();
-        let lookahead = chars.peek().map(|(char_index, (byte_index, c))| {
-            (
-                *byte_index,
-                c.clone(),
-            )
-        });
+        let lookahead = chars
+            .peek()
+            .map(|(char_index, (byte_index, c))| (*byte_index, c.clone()));
         CharInput {
             chars: chars,
             line: 1,
@@ -58,7 +54,6 @@ impl<'input> Iterator for CharInput<'input> {
             if c == '\n' {
                 self.line += 1;
                 self.column = 1;
-
             } else {
                 self.column += 1;
             }
@@ -85,7 +80,6 @@ pub struct Tokenizer<'input> {
 
 impl<'input> Tokenizer<'input> {
     pub fn new(input: &'input str) -> Self {
-
         Tokenizer {
             input: input,
             chars: CharInput::new(input),
@@ -164,7 +158,6 @@ impl<'input> Tokenizer<'input> {
         c: char,
     ) -> Result<SpannedToken, SpannedError> {
         match c {
-
             '&' => Ok((start, Token::Amp, start + 1)),
 
             '|' => {
@@ -268,7 +261,7 @@ impl<'input> Tokenizer<'input> {
                 // TODO: Add support for literal suffixes
                 let float_literal = LiteralData {
                     data: float.to_string(),
-                    suffix: None
+                    suffix: None,
                 };
                 return Ok((start, Token::FloatLiteral(float_literal), end));
             }
@@ -277,9 +270,8 @@ impl<'input> Tokenizer<'input> {
         // TODO: Add support for literal suffixes
         let int_literal = LiteralData {
             data: int.to_string(),
-            suffix: None
+            suffix: None,
         };
-
 
         Ok((start, Token::IntLiteral(int_literal), end))
     }
@@ -292,7 +284,11 @@ impl<'input> Tokenizer<'input> {
         while let Some((end, ch)) = self.chars.next() {
             match ch {
                 '`' => {
-                    return Ok((start, Token::Ident(Ident::Quoted(ident)), end));
+                    return Ok((
+                        start,
+                        Token::Ident(Ident::Quoted(ident)),
+                        end,
+                    ));
                 }
 
                 ch => ident.push(ch),
@@ -423,8 +419,5 @@ fn is_slash(c: char) -> bool {
 }
 
 fn is_op(c: char) -> bool {
-    c == '&'
-        || c == '|'
-        || c == '!'
-        || c == '='
+    c == '&' || c == '|' || c == '!' || c == '='
 }

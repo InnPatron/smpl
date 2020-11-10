@@ -15,7 +15,6 @@ pub enum Token {
     BoolLiteral(bool),
 
     // Decl tokens
-
     Fn,
     Struct,
     Opaque,

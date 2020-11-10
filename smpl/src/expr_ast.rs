@@ -1,9 +1,8 @@
-use std::fmt::Debug;
-use crate::span::Span;
-use crate::ast::{Name, Ident, TypedPath, ModulePath, TypeAnn, FnParameter};
-use crate::ast_node::{Spanned, AstNode};
+use crate::ast::{FnParameter, Ident, ModulePath, Name, TypeAnn, TypedPath};
+use crate::ast_node::{AstNode, Spanned};
 use crate::parser::LiteralData;
-
+use crate::span::Span;
+use std::fmt::Debug;
 
 #[derive(Clone, Debug)]
 pub enum Stmt {

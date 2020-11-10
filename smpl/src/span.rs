@@ -8,9 +8,6 @@ pub struct Span {
 
 impl Span {
     pub fn new(start: Location, end: Location) -> Self {
-        Span {
-            start,
-            end,
-        }
+        Span { start, end }
     }
 }
