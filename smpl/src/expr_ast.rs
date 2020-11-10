@@ -52,17 +52,10 @@ pub struct LetStmt {
 }
 
 #[derive(Clone, Debug)]
-pub struct IndexAccess {
-    pub base: Box<Expr>,
-    pub indexer: Box<Expr>,
-}
-
-#[derive(Clone, Debug)]
 pub struct DotAccess {
     pub base: Box<Expr>,
     pub field: AstNode<Name>,
 }
-
 
 #[derive(Clone, Debug)]
 pub struct AnonymousFn {
@@ -110,7 +103,7 @@ pub struct ArrayInit {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
-    String(String),
+    String(LiteralData),
     Int(String),
     Float(String),
     Bool(bool),
@@ -118,30 +111,18 @@ pub enum Literal {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum BinOp {
-    Pipe,
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Mod,
-
-    LAnd,
-    LOr,
-    Gte,
-    Lte,
-    Gt,
-    Lt,
-    Eq,
-    Neq,
-
     Assign,
     Dot,
+    Pipe,
+    And,
+    Or,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum UniOp {
-    Negate,
-    LogicalInvert,
+    Ref,
+    Deref,
+    Not,
 }
 
 #[derive(Clone, Debug)]
@@ -156,7 +137,6 @@ pub enum Expr {
     FnCall(AstNode<FnCall>),
     StructInit(AstNode<StructInit>),
     ArrayInit(AstNode<ArrayInit>),
-    IndexAccess(AstNode<IndexAccess>),
     AnonymousFn(AstNode<AnonymousFn>),
     Path(AstNode<TypedPath>),
     Block(AstNode<Block>),
@@ -172,7 +152,6 @@ impl Spanned for Expr {
             Expr::Literal(ref spanned, ..) => spanned.span(),
             Expr::Binding(ref spanned, ..) => spanned.span(),
             Expr::DotAccess(ref spanned, ..) => spanned.span(),
-            Expr::IndexAccess(ref spanned, ..) => spanned.span(),
             Expr::FnCall(ref spanned, ..) => spanned.span(),
             Expr::StructInit(ref spanned, ..) => spanned.span(),
             Expr::ArrayInit(ref spanned, ..) => spanned.span(),
