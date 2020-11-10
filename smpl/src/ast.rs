@@ -165,17 +165,23 @@ pub struct Annotation {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Ident(pub String);
+pub enum Ident {
+    Quoted(String),
+    Unquoted(String)
+}
 
 impl<T> From<T> for Ident where T: Into<String> {
     fn from(s: T) -> Ident {
-        Ident(s.into())
+        Ident::Quoted(s.into())
     }
 }
 
 impl fmt::Display for Ident {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
+        match self {
+            Ident::Quoted(ref s) => write!(f, "`{}`", s),
+            Ident::Unquoted(ref s) => write!(f, "{}", s),
+        }
     }
 }
 

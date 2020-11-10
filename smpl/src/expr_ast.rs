@@ -2,6 +2,7 @@ use std::fmt::Debug;
 use crate::span::Span;
 use crate::ast::{Name, Ident, TypedPath, ModulePath, TypeAnn, FnParameter};
 use crate::ast_node::{Spanned, AstNode};
+use crate::parser::LiteralData;
 
 
 #[derive(Clone, Debug)]
@@ -104,8 +105,8 @@ pub struct ArrayInit {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
     String(LiteralData),
-    Int(String),
-    Float(String),
+    Int(LiteralData),
+    Float(LiteralData),
     Bool(bool),
 }
 
