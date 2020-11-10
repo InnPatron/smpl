@@ -284,6 +284,27 @@ impl<'input> Tokenizer<'input> {
         Ok((start, Token::IntLiteral(int_literal), end))
     }
 
+    fn quoted_ident(
+        &mut self,
+        start: Location,
+    ) -> Result<SpannedToken, SpannedError> {
+        let mut ident = String::new();
+        while let Some((end, ch)) = self.chars.next() {
+            match ch {
+                '`' => {
+                    return Ok((start, Token::Ident(Ident::Quoted(ident)), end));
+                }
+
+                ch => ident.push(ch),
+            }
+        }
+
+        Err(SpannedError {
+            error: TokenizerError::UnteriminatedQuotedIdent,
+            location: start,
+        })
+    }
+
     fn string_literal(
         &mut self,
         start: Location,
@@ -358,6 +379,7 @@ impl<'input> Iterator for Tokenizer<'input> {
                 '#' => Some(Ok((start, Token::Pound, start + 1))),
 
                 '\"' => Some(self.string_literal(start)),
+                '`' => Some(self.quoted_ident(start)),
 
                 ch if is_ident_start(ch) => Some(Ok(self.identifier(start))),
                 ch if is_digit(ch)

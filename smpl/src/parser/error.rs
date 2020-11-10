@@ -21,4 +21,6 @@ pub enum TokenizerError {
 
     // #[fail(display = "Incomplete token: '{}'.", _0)]
     IncompleteToken(Token),
+
+    UnteriminatedQuotedIdent,
 }
