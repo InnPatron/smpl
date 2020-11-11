@@ -231,6 +231,12 @@ impl<'input> Tokenizer<'input> {
             "false" => Token::BoolLiteral(false),
             "and" => Token::And,
             "or" => Token::Or,
+            "import" => Token::Import,
+            "export" => Token::Export,
+            "from" => Token::From,
+            "as" => Token::As,
+            "all" => Token::All,
+            "except" => Token::Except,
 
             str => Token::Ident(Ident::Unquoted(str.to_string())),
         };

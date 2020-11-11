@@ -1,4 +1,4 @@
-use crate::ast;
+use crate::ast::{self, Ident};
 use crate::ast_node::AstNode;
 use crate::expr_ast;
 use crate::span::Span;
@@ -8,6 +8,15 @@ use super::tokens::{self, Token};
 grammar;
 
 pub Module: ast::Module = {
+    <mod_decl: ModDecl?> <top_levels: TopLevel*> => {
+        ast::Module {
+            mod_name: mod_decl,
+            decls: vec![],
+        }
+    }
+};
+
+ModDecl: AstNode<Ident> = {
     MOD <l: @L> <n: IDENT> <r: @R> SEMI => {
 
         let ident = match n {
@@ -15,12 +24,71 @@ pub Module: ast::Module = {
             _ => unreachable!(),
         };
 
-        ast::Module {
-
-            mod_name: Some(AstNode::new(ident, Span::new(l, r))),
-            decls: Vec::new(),
-        }
+        AstNode::new(ident, Span::new(l, r))
     }
+};
+
+TopLevel: ast::Decl = {
+    <import: Import> SEMI => ast::Decl::Import(import),
+};
+
+Import: AstNode<ast::ImportDecl> = {
+
+    // import module { List<module-item-data> } from module
+    <il: @L> IMPORT "{" <items: ModuleItemDataList> "}" FROM <ml: @L> <module: IDENT> <mr: @R> => {
+        ast_node!(ast::ImportDecl::ImportItems {
+            module: ast_node!(ident!(module), ml, mr),
+            items,
+        }, il, mr)
+    },
+
+    // import module
+    <l: @L> IMPORT <ml: @L> <module: IDENT> <mr: @R> => {
+        ast_node!(ast::ImportDecl::ImportModule {
+            module: ast_node!(ident!(module), ml, mr),
+            alias: None,
+        }, l, mr)
+    },
+
+    // TODO: combine with the other rule somehow?
+    // import module as module_alias
+    <l: @L> IMPORT <ml: @L> <module: IDENT> <mr: @R> AS <l2: @L> <alias: IDENT> <r2: @R> => {
+        ast_node!(ast::ImportDecl::ImportModule {
+            module: ast_node!(ident!(module), ml, mr),
+            alias: Some(ast_node!(ident!(alias), l2, r2)),
+        }, l, r2)
+    },
+
+    // import all from module [except { List<module-item-data> }]?
+    <l: @L> IMPORT ALL FROM <ml: @L> <module: IDENT> <mr: @R> <except: (EXCEPT "{" ModuleItemDataList "}")?> <r: @R>=> {
+        let except: Vec<AstNode<ast::ModuleItemData>> = except.map(|e| e.2)
+            .unwrap_or(Vec::new());
+        ast_node!(ast::ImportDecl::ImportAll {
+            module: ast_node!(ident!(module), ml, mr),
+            except,
+        }, l, mr)
+    },
+};
+
+ModuleItemDataList: Vec<AstNode<ast::ModuleItemData>> = {
+    // ModuleItemData , ModuleItemDataList
+    <d: ModuleItemData> COMMA <mut rest: ModuleItemDataList> => {
+        rest.insert(0, d);
+        rest
+    },
+
+    // ModuleItemData [,]?
+    <d: ModuleItemData> COMMA? => vec![d],
+};
+
+ModuleItemData: AstNode<ast::ModuleItemData> = {
+    // item [as item_alias]?
+    <l1: @L> <item: IDENT> <r1: @R> <l2: @L> <alias: IDENT?> <r2: @R> => {
+        ast_node!(ast::ModuleItemData {
+            original_name: AstNode::new(ident!(item), Span::new(l1, r1)),
+            name_override: alias.map(|i| AstNode::new(ident!(i), Span::new(l2, r2))),
+        }, l1, r2)
+    },
 };
 
 extern {
@@ -51,6 +119,14 @@ extern {
         SEMI => tokens::Token::Semi,
         POUND => tokens::Token::Pound,
         BASE => tokens::Token::Base,
+
+        IMPORT => tokens::Token::Import,
+        EXPORT => tokens::Token::Export,
+        EXCEPT => tokens::Token::Except,
+        FROM => tokens::Token::From,
+        ALL => tokens::Token::All,
+        AS => tokens::Token::As,
+
         INIT => tokens::Token::Init,
         EXTRACT => tokens::Token::Extract,
         CONTINUE => tokens::Token::Continue,

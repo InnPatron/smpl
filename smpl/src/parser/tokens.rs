@@ -35,6 +35,13 @@ pub enum Token {
 
     Base,
 
+    Import,
+    Export,
+    Except,
+    From,
+    All,
+    As,
+
     // Stmt or expressions
     Init,
 

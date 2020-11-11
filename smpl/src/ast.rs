@@ -31,8 +31,7 @@ pub enum ExportDecl {
     },
 }
 
-#[derive(Debug, Clone)]
-pub struct ExportItem(pub ModuleItemData);
+pub type ExportItem = ModuleItemData;
 
 #[derive(Debug, Clone)]
 pub enum ImportDecl {
@@ -50,8 +49,7 @@ pub enum ImportDecl {
     },
 }
 
-#[derive(Debug, Clone)]
-pub struct ImportItem(pub ModuleItemData);
+pub type ImportItem = ModuleItemData;
 
 #[derive(Debug, Clone)]
 pub struct ModuleItemData {
