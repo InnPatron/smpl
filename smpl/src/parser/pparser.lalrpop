@@ -28,9 +28,36 @@ ModDecl: AstNode<Ident> = {
     }
 };
 
+// TODO: annotation prefix to the declarations
 TopLevel: ast::Decl = {
     <import: Import> SEMI => ast::Decl::Import(import),
     <export: Export> SEMI => ast::Decl::Export(export),
+    <opaque: Opaque> SEMI => ast::Decl::Opaque(opaque),
+};
+
+// TODO: Where clause
+Opaque: AstNode<ast::Opaque> = {
+    <l: @L> OPAQUE <nl: @L> <name: IDENT><nr: @R> <type_params: TypeParams?> <r: @R>=> {
+        ast_node!(ast::Opaque {
+            name: ast_node!(ast::Name::from(ident!(name)), nl, nr),
+            annotations: Vec::new(),
+            type_params,
+            where_clause: None,
+        }, l, r)
+    }
+};
+
+TypeParams: ast::TypeParams = {
+     "[" <tps: TypeParamList> "]" => ast::TypeParams { params: tps },
+};
+
+TypeParamList: Vec<AstNode<ast::Name>> = {
+    <l: @L> <tp: IDENT> <r: @R> COMMA <mut rest: TypeParamList> => {
+        rest.insert(0, ast_node!(ident!(tp).into(), l, r));
+        rest
+    },
+
+    <l: @L> <tp: IDENT> <r: @R> COMMA? => vec![ast_node!(ident!(tp).into(), l, r)],
 };
 
 Export: AstNode<ast::ExportDecl> = {

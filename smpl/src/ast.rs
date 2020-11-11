@@ -188,7 +188,7 @@ impl fmt::Display for Ident {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Name {
-    Name(Ident),
+    Ident(Ident),
     Atom(Ident, u64),
     Compiler(u64),
     ModuleItem { module: Ident, item: Ident },
@@ -196,18 +196,18 @@ pub enum Name {
 
 impl Name {
     pub fn into_ident(self) -> Ident {
-        if let Name::Name(ident) = self {
+        if let Name::Ident(ident) = self {
             return ident;
         }
 
-        panic!("Attempting convert a non `Name::Name(..)` into an `Ident`");
+        panic!("Attempting convert a non `Name::Ident(..)` into an `Ident`");
     }
 }
 
 impl fmt::Display for Name {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Name::Name(ref s) => write!(f, "{}", s),
+            Name::Ident(ref s) => write!(f, "{}", s),
             Name::Atom(ref s, ref id) => write!(f, "{}{}", s, id),
             Name::Compiler(ref id) => write!(f, "$id{}", id),
             Name::ModuleItem {
@@ -218,11 +218,8 @@ impl fmt::Display for Name {
     }
 }
 
-impl<T> From<T> for Name
-where
-    T: Into<Ident>,
-{
-    fn from(i: T) -> Self {
-        Name::Name(i.into())
+impl From<Ident> for Name {
+    fn from(i: Ident) -> Self {
+        Name::Ident(i)
     }
 }
