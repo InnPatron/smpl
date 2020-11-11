@@ -122,12 +122,20 @@ ModuleItemDataList: Vec<AstNode<ast::ModuleItemData>> = {
 };
 
 ModuleItemData: AstNode<ast::ModuleItemData> = {
-    // item [as item_alias]?
-    <l1: @L> <item: IDENT> <r1: @R> <l2: @L> <alias: IDENT?> <r2: @R> => {
+    // item as item_alias
+    <l1: @L> <item: IDENT> <r1: @R> AS <l2: @L> <alias: IDENT?> <r2: @R> => {
         ast_node!(ast::ModuleItemData {
             original_name: AstNode::new(ident!(item), Span::new(l1, r1)),
             name_override: alias.map(|i| AstNode::new(ident!(i), Span::new(l2, r2))),
         }, l1, r2)
+    },
+
+    // item
+    <l: @L> <item: IDENT> <r: @R> => {
+        ast_node!(ast::ModuleItemData {
+            original_name: ast_node!(ident!(item), l, r),
+            name_override: None,
+        }, l, r)
     },
 };
 
