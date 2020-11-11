@@ -30,6 +30,46 @@ ModDecl: AstNode<Ident> = {
 
 TopLevel: ast::Decl = {
     <import: Import> SEMI => ast::Decl::Import(import),
+    <export: Export> SEMI => ast::Decl::Export(export),
+};
+
+Export: AstNode<ast::ExportDecl> = {
+    // export all from module [except { List<ModuleItemData> }]?
+    <l: @L> EXPORT ALL FROM <ml: @L> <module: IDENT> <mr: @R> <except: (EXCEPT "{" ModuleItemDataList "}")?> <r: @R> => {
+        let except: Vec<AstNode<ast::ModuleItemData>> = except.map(|e| e.2)
+            .unwrap_or(Vec::new());
+        ast_node!(ast::ExportDecl::ExportAll {
+            from_module: Some(ast_node!(ident!(module), ml, mr)),
+            except,
+        }, l, r)
+    },
+
+    // TODO: unify when locations can be extracted within non-top-levels
+    // export all [except { List<ModuleItemData> }]?
+    <l: @L> EXPORT ALL <except: (EXCEPT "{" ModuleItemDataList "}")?> <r: @R>=> {
+        let except: Vec<AstNode<ast::ModuleItemData>> = except.map(|e| e.2)
+            .unwrap_or(Vec::new());
+        ast_node!(ast::ExportDecl::ExportAll {
+            from_module: None,
+            except,
+        }, l, r)
+    },
+
+    // export from module { List<ModuleItemData> }
+    <l: @L> EXPORT FROM <ml: @L> <module: IDENT> <mr: @R> "{" <items: ModuleItemDataList > "}" <r: @R> => {
+        ast_node!(ast::ExportDecl::ExportItems {
+            from_module: Some(ast_node!(ident!(module), ml, mr)),
+            items,
+        }, l, r)
+    },
+
+    // export { List<ModuleItemData> }
+    <l: @L> EXPORT "{" <items: ModuleItemDataList> "{" <r: @R> => {
+        ast_node!(ast::ExportDecl::ExportItems {
+            from_module: None,
+            items,
+        }, l, r)
+    },
 };
 
 Import: AstNode<ast::ImportDecl> = {
