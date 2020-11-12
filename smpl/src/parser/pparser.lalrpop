@@ -319,7 +319,84 @@ ModuleItemData: AstNode<ast::ModuleItemData> = {
 
 // exprs / stmts
 Block: AstNode<east::Block> = {
+    <l: @L> "{" <stmts: Stmt*> "}" <r: @R> => ast_node!(east::Block(stmts), l, r),
 
+};
+
+Stmt: east::Stmt = {
+    <if_stmt: IfExpr> => east::Stmt::If(if_stmt),
+
+    <while_stmt: WhileExpr> => east::Stmt::While(while_stmt),
+
+    <let_stmt: LetStmt> => east::Stmt::Let(let_stmt),
+
+    <l: @L> RETURN <e: Expr?> SEMI <r: @R> => east::Stmt::Return(ast_node!(e, l ,r)),
+
+    <l: @L> CONTINUE SEMI <r: @R> => east::Stmt::Continue(ast_node!((), l, r)),
+
+    <l: @L> BREAK <e: Expr?> SEMI <r: @R> => east::Stmt::Break(ast_node!(e, l, r)),
+
+    <l: @L> EXTRACT <e: Expr?> SEMI <r: @R> => east::Stmt::Extract(ast_node!(e, l, r)),
+
+    <expr_stmt: Expr> SEMI => east::Stmt::ExprStmt(expr_stmt),
+};
+
+// TODO: add patterns
+LetStmt: AstNode<east::LetStmt> = {
+    <l: @L> LET <pl: @L> <name: IDENT> <pr: @R> <type_ann: (COLON TypeAnn)?> EQ <init: Expr> SEMI <r: @R> => {
+        ast_node!(east::LetStmt {
+            name: ast_node!(ident!(name).into(), pl, pr),
+            type_ann: type_ann.map(|ta| ta.1),
+            init,
+        }, l, r)
+    }
+};
+
+Expr: east::Expr = {
+    // if-expr
+    <if_expr: IfExpr> => east::Expr::If(Box::new(if_expr)),
+    <while_expr: WhileExpr> => east::Expr::While(Box::new(while_expr)),
+};
+
+WhileExpr: AstNode<east::While> = {
+    <l: @L> WHILE <main_cond: Expr> <body: Block>  <elifs: (ELIF Expr Block)*> <default_branch: (ELSE Block)?> <r: @R> => {
+
+        let branches = elifs.into_iter().map(|elif|
+            east::Branch {
+                condition: elif.1,
+                block: elif.2,
+            }).collect();
+        let default_branch = default_branch.map(|e| e.1);
+
+        ast_node!(east::While {
+            condition: main_cond,
+            body,
+            branches,
+            default_branch,
+        }, l, r)
+    }
+};
+
+IfExpr: AstNode<east::If> = {
+    <l: @L> IF <main_cond: Expr> <main_branch: Block> <elifs: (ELIF Expr Block)*> <default_branch: (ELSE Block)?> <r: @R> => {
+
+        let elifs = elifs.into_iter().map(|elif|
+            east::Branch {
+                condition: elif.1,
+                block: elif.2,
+            });
+        let main_branch = east::Branch {
+            condition: main_cond,
+            block: main_branch,
+        };
+        let default_branch = default_branch.map(|e| e.1);
+        let branches = std::iter::once(main_branch).chain(elifs).collect();
+
+        ast_node!(east::If {
+            branches,
+            default_branch,
+        }, l, r)
+    }
 };
 
 extern {

@@ -6,12 +6,6 @@ use std::fmt::Debug;
 
 #[derive(Clone, Debug)]
 pub enum Stmt {
-    ExprStmt(ExprStmt),
-    Expr(Expr),
-}
-
-#[derive(Clone, Debug)]
-pub enum ExprStmt {
     If(AstNode<If>),
     While(AstNode<While>),
     Let(AstNode<LetStmt>),
@@ -19,6 +13,7 @@ pub enum ExprStmt {
     Break(AstNode<Option<Expr>>),
     Extract(AstNode<Option<Expr>>),
     Continue(AstNode<()>),
+    ExprStmt(Expr),
 }
 
 #[derive(Clone, Debug)]
@@ -29,13 +24,13 @@ pub struct If {
 
 #[derive(Clone, Debug)]
 pub struct Branch {
-    pub conditional: Expr,
+    pub condition: Expr,
     pub block: AstNode<Block>,
 }
 
 #[derive(Clone, Debug)]
 pub struct While {
-    pub conditional: Expr,
+    pub condition: Expr,
     pub body: AstNode<Block>,
     pub branches: Vec<Branch>,
     pub default_branch: Option<AstNode<Block>>,
@@ -46,7 +41,7 @@ pub struct Block(pub Vec<Stmt>);
 
 #[derive(Clone, Debug)]
 pub struct LetStmt {
-    pub var_name: AstNode<Name>,
+    pub name: AstNode<Name>,
     pub type_ann: Option<AstNode<TypeAnn>>,
     pub init: Expr,
 }
