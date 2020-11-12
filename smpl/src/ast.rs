@@ -80,7 +80,7 @@ pub struct FnDecl {
     pub return_type: Option<AstNode<TypeAnn>>,
     pub body: AstNode<Block>,
     pub annotations: Vec<Annotation>,
-    pub type_params: Option<TypeParams>,
+    pub type_params: TypeParams,
     pub where_clause: Option<WhereClause>,
 }
 

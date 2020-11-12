@@ -1,6 +1,6 @@
 use crate::ast::{self, Ident};
 use crate::ast_node::AstNode;
-use crate::expr_ast;
+use crate::expr_ast as east;
 use crate::span::Span;
 use super::error;
 use super::tokens::{self, Token};
@@ -38,6 +38,24 @@ TopLevel: ast::Decl = {
     <struct_decl: StructDecl> => ast::Decl::Struct(struct_decl),
 
     <func: BuiltinFnDecl> SEMI => ast::Decl::BuiltinFn(func),
+
+    <func: FnDecl> => ast::Decl::Fn(func),
+};
+
+FnDecl: AstNode<ast::FnDecl> = {
+    <l: @L> FN <nl: @L> <name: IDENT> <nr: @R> <type_params: TypeParams?> <params: FnParams> <return_type: (ARROW TypeAnn)?>  <body: Block> <r: @R> => {
+        let return_type = return_type.map(|rt| rt.1);
+        let type_params = type_params.unwrap_or(ast::TypeParams { params: Vec::new() });
+        ast_node!(ast::FnDecl {
+            name: ast_node!(ident!(name).into(), nl, nr),
+            params,
+            return_type,
+            type_params,
+            body,
+            annotations: Vec::new(),
+            where_clause: None,
+        }, l, r)
+    }
 };
 
 BuiltinFnDecl: AstNode<ast::BuiltinFnDecl> = {
@@ -297,6 +315,11 @@ ModuleItemData: AstNode<ast::ModuleItemData> = {
             name_override: None,
         }, l, r)
     },
+};
+
+// exprs / stmts
+Block: AstNode<east::Block> = {
+
 };
 
 extern {
