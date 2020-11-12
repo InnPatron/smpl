@@ -12,3 +12,14 @@ macro_rules! ident {
         }
     }};
 }
+
+macro_rules! literal_data {
+    ($t: expr) => {{
+        match $t {
+            Token::StringLiteral(d) => d,
+            Token::IntLiteral(d) => d,
+            Token::FloatLiteral(d) => d,
+            _ => panic!("Not a literal token: {:?}", $t),
+        }
+    }};
+}

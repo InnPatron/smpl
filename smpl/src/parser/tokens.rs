@@ -43,6 +43,7 @@ pub enum Token {
     As,
 
     // Stmt or expressions
+    Underscore,
     Init,
 
     Extract,

@@ -237,6 +237,7 @@ impl<'input> Tokenizer<'input> {
             "as" => Token::As,
             "all" => Token::All,
             "except" => Token::Except,
+            "_" => Token::Underscore,
 
             str => Token::Ident(Ident::Unquoted(str.to_string())),
         };

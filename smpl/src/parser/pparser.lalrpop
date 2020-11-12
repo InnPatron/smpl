@@ -353,10 +353,125 @@ LetStmt: AstNode<east::LetStmt> = {
     }
 };
 
+// TODO: prase bin-expr, dot access, and anonymous functions
 Expr: east::Expr = {
+    <e: ExprLeaf> => e,
+}
+
+ExprLeaf: east::Expr = {
     // if-expr
     <if_expr: IfExpr> => east::Expr::If(Box::new(if_expr)),
+
+    // while-expr
     <while_expr: WhileExpr> => east::Expr::While(Box::new(while_expr)),
+
+    // block-expr
+    <block: Block> => east::Expr::Block(block),
+
+    // literal-expr
+    <literal: Literal> => east::Expr::Literal(literal),
+
+    // uniop-expr
+    <uni_expr: UniExpr> => east::Expr::Uni(uni_expr),
+
+    // typed-path
+    <path: TypedPath> => east::Expr::Path(path),
+
+    // fn-call
+    <fn_call: FnCall> => east::Expr::FnCall(fn_call),
+
+    <init: StructInit> => east::Expr::StructInit(init),
+
+    // underscore (only usable as immediate children of fn calls)
+    <l: @L> UNDERSCORE <r: @R> => east::Expr::Underscore(ast_node!((), l, r)),
+
+    // paren-expr
+    "(" <e: Expr> ")" => e,
+};
+
+StructInit: AstNode<east::StructInit> = {
+    <l: @L> INIT <struct_name: TypedPath?> "{" <init: StructFieldInitList?> "}" <r: @R> => {
+        let field_init = init.unwrap_or(Vec::new());
+        ast_node!(east::StructInit {
+            struct_name,
+            field_init: field_init,
+        }, l, r)
+    },
+};
+
+StructFieldInitList: Vec<(AstNode<ast::Ident>, Box<east::Expr>)> = {
+    <init: StructFieldInit> COMMA <mut rest: StructFieldInitList> => {
+        rest.insert(0, init);
+        rest
+    },
+
+    <init: StructFieldInit> COMMA => vec![init],
+};
+
+StructFieldInit: (AstNode<ast::Ident>, Box<east::Expr>) = {
+    <l: @L> <field: IDENT> <r: @R> COLON <e: Expr> => {
+        (ast_node!(ident!(field), l, r), Box::new(e))
+    }
+};
+
+
+FnCall: AstNode<east::FnCall> = {
+    <l: @L> "(" <func: Expr> ")" "("<list: ArgList?> ")" <r: @R> => {
+        let func = Box::new(func);
+        let args = list.unwrap_or(Vec::new());
+        ast_node!(east::FnCall {
+            func,
+            args,
+        }, l, r)
+    },
+
+    <l: @L> <func: TypedPath> "("<list: ArgList?> ")" <r: @R> => {
+        let func = Box::new(east::Expr::Path(func));
+        let args = list.unwrap_or(Vec::new());
+        ast_node!(east::FnCall {
+            func,
+            args,
+        }, l, r)
+    },
+};
+
+ArgList: Vec<east::Expr> = {
+    <e: Expr> COMMA <mut rest: ArgList> => {
+        rest.insert(0, e);
+        rest
+    },
+
+    <e: Expr> COMMA? => vec![e],
+}
+
+UniExpr: AstNode<east::UniExpr> = {
+    <l: @L> <op: UniOp> <expr: Expr> <r: @R> => {
+        ast_node!(east::UniExpr {
+            op,
+            expr: Box::new(expr),
+        }, l, r)
+    }
+};
+
+UniOp: east::UniOp = {
+    AMP => east::UniOp::Ref,
+    AT => east::UniOp::Deref,
+    BANG => east::UniOp::Not,
+};
+
+Literal: AstNode<east::Literal> = {
+    <l: @L> <literal: STRING> <r: @R> => ast_node!(east::Literal::String(literal_data!(literal)), l, r),
+
+    <l: @L> <literal: FLOAT> <r: @R> => ast_node!(east::Literal::Float(literal_data!(literal)), l, r),
+
+    <l: @L> <literal: INT> <r: @R> => ast_node!(east::Literal::Int(literal_data!(literal)), l, r),
+
+    <l: @L> <literal: BOOL> <r: @R> => {
+        match literal {
+            tokens::Token::BoolLiteral(literal) => ast_node!(east::Literal::Bool(literal), l, r),
+            _ => unreachable!(),
+        }
+    }
 };
 
 WhileExpr: AstNode<east::While> = {
@@ -437,6 +552,7 @@ extern {
         AS => tokens::Token::As,
 
         INIT => tokens::Token::Init,
+        UNDERSCORE => tokens::Token::Underscore,
         EXTRACT => tokens::Token::Extract,
         CONTINUE => tokens::Token::Continue,
         BREAK => tokens::Token::Break,

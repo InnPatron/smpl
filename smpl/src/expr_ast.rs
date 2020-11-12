@@ -75,7 +75,7 @@ pub struct BinExpr {
 
 #[derive(Clone, Debug)]
 pub struct FnCall {
-    pub fn_value: Box<Expr>,
+    pub func: Box<Expr>,
     pub args: Vec<Expr>,
 }
 
@@ -89,12 +89,6 @@ impl StructInit {
     pub fn is_anonymous(&self) -> bool {
         self.struct_name.is_none()
     }
-}
-
-#[derive(Clone, Debug)]
-pub struct ArrayInit {
-    pub pattern: Vec<Expr>,
-    pub repetition_count: Option<Box<Expr>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -128,14 +122,13 @@ pub enum Expr {
     Bin(AstNode<BinExpr>),
     Uni(AstNode<UniExpr>),
     Literal(AstNode<Literal>),
-    Binding(AstNode<Name>),
     DotAccess(AstNode<DotAccess>),
     FnCall(AstNode<FnCall>),
     StructInit(AstNode<StructInit>),
-    ArrayInit(AstNode<ArrayInit>),
     AnonymousFn(AstNode<AnonymousFn>),
     Path(AstNode<TypedPath>),
     Block(AstNode<Block>),
+    Underscore(AstNode<()>),
 }
 
 impl Spanned for Expr {
@@ -146,14 +139,13 @@ impl Spanned for Expr {
             Expr::Bin(ref spanned, ..) => spanned.span(),
             Expr::Uni(ref spanned, ..) => spanned.span(),
             Expr::Literal(ref spanned, ..) => spanned.span(),
-            Expr::Binding(ref spanned, ..) => spanned.span(),
             Expr::DotAccess(ref spanned, ..) => spanned.span(),
             Expr::FnCall(ref spanned, ..) => spanned.span(),
             Expr::StructInit(ref spanned, ..) => spanned.span(),
-            Expr::ArrayInit(ref spanned, ..) => spanned.span(),
             Expr::AnonymousFn(ref spanned, ..) => spanned.span(),
             Expr::Path(ref spanned, ..) => spanned.span(),
             Expr::Block(ref spanned, ..) => spanned.span(),
+            Expr::Underscore(ref spanned, ..) => spanned.span(),
         }
     }
 }
