@@ -13,6 +13,7 @@ pub enum Stmt {
     Break(AstNode<Option<Expr>>),
     Extract(AstNode<Option<Expr>>),
     Continue(AstNode<()>),
+    Block(AstNode<Block>),
     ExprStmt(Expr),
 }
 

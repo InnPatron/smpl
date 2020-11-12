@@ -320,7 +320,6 @@ ModuleItemData: AstNode<ast::ModuleItemData> = {
 // exprs / stmts
 Block: AstNode<east::Block> = {
     <l: @L> "{" <stmts: Stmt*> "}" <r: @R> => ast_node!(east::Block(stmts), l, r),
-
 };
 
 Stmt: east::Stmt = {
@@ -337,6 +336,8 @@ Stmt: east::Stmt = {
     <l: @L> BREAK <e: Expr?> SEMI <r: @R> => east::Stmt::Break(ast_node!(e, l, r)),
 
     <l: @L> EXTRACT <e: Expr?> SEMI <r: @R> => east::Stmt::Extract(ast_node!(e, l, r)),
+
+    <b: Block> => east::Stmt::Block(b),
 
     <expr_stmt: Expr> SEMI => east::Stmt::ExprStmt(expr_stmt),
 };
