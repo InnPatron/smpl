@@ -1,4 +1,4 @@
-use crate::ast::{FnParameter, Ident, ModulePath, Name, TypeAnn, TypedPath};
+use crate::ast::{FnParam, Ident, ModulePath, Name, TypeAnn, TypedPath};
 use crate::ast_node::{AstNode, Spanned};
 use crate::parser::LiteralData;
 use crate::span::Span;
@@ -59,7 +59,7 @@ pub struct DotAccess {
 
 #[derive(Clone, Debug)]
 pub struct AnonymousFn {
-    pub params: Option<Vec<AstNode<FnParameter>>>,
+    pub params: Option<Vec<AstNode<FnParam>>>,
     pub return_type: Option<AstNode<TypeAnn>>,
     pub body: AstNode<Block>,
 }

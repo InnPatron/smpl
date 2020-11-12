@@ -32,8 +32,54 @@ ModDecl: AstNode<Ident> = {
 TopLevel: ast::Decl = {
     <import: Import> SEMI => ast::Decl::Import(import),
     <export: Export> SEMI => ast::Decl::Export(export),
+
     <opaque: Opaque> SEMI => ast::Decl::Opaque(opaque),
+
     <struct_decl: StructDecl> => ast::Decl::Struct(struct_decl),
+
+    <func: BuiltinFnDecl> SEMI => ast::Decl::BuiltinFn(func),
+};
+
+BuiltinFnDecl: AstNode<ast::BuiltinFnDecl> = {
+    <l: @L> BUILTIN FN <nl: @L> <name: IDENT> <nr: @R> <type_params: TypeParams?> <params: BuiltinFnParams> <return_type: (ARROW TypeAnn)?> <r: @R> => {
+        let return_type = return_type.map(|rt| rt.1);
+        let type_params = type_params.unwrap_or(ast::TypeParams { params: Vec::new() });
+        ast_node!(ast::BuiltinFnDecl {
+            name: ast_node!(ident!(name).into(), nl, nr),
+            params,
+            return_type,
+            type_params,
+            annotations: Vec::new(),
+            where_clause: None,
+        }, l, r)
+    }
+};
+
+BuiltinFnParams: ast::BuiltinFnParams = {
+    "(" UNCHECKED ")" => ast::BuiltinFnParams::Unchecked,
+    <params: FnParams> => ast::BuiltinFnParams::Checked(params),
+};
+
+FnParams: Vec<AstNode<ast::FnParam>> = {
+    "(" <list: FnParamList?> ")" => list.unwrap_or(Vec::new()),
+};
+
+FnParamList: Vec<AstNode<ast::FnParam>> = {
+    <p: FnParam> COMMA <mut rest: FnParamList> => {
+        rest.insert(0, p);
+        rest
+    },
+
+    <p: FnParam> COMMA? => vec![p],
+};
+
+FnParam: AstNode<ast::FnParam> = {
+    <nl: @L> <p: IDENT> <nr: @R>  COLON <ann: TypeAnn>  <rr: @R> => {
+        ast_node!(ast::FnParam {
+            name: ast_node!(ident!(p).into(), nl, rr),
+            param_type: ann,
+        }, nl, rr)
+    }
 };
 
 // TODO: Where clause

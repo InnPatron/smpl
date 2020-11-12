@@ -15,8 +15,8 @@ pub enum Decl {
     Export(AstNode<ExportDecl>),
     Opaque(AstNode<Opaque>),
     Struct(AstNode<Struct>),
-    Function(AstNode<Function>),
-    BuiltinFunction(AstNode<BuiltinFunction>),
+    Fn(AstNode<FnDecl>),
+    BuiltinFn(AstNode<BuiltinFnDecl>),
 }
 
 #[derive(Debug, Clone)]
@@ -58,25 +58,25 @@ pub struct ModuleItemData {
 }
 
 #[derive(Debug, Clone)]
-pub struct BuiltinFunction {
+pub struct BuiltinFnDecl {
     pub name: AstNode<Name>,
     pub params: BuiltinFnParams,
     pub return_type: Option<AstNode<TypeAnn>>,
     pub annotations: Vec<Annotation>,
-    pub type_params: Option<TypeParams>,
+    pub type_params: TypeParams,
     pub where_clause: Option<WhereClause>,
 }
 
 #[derive(Debug, Clone)]
 pub enum BuiltinFnParams {
     Unchecked,
-    Checked(Vec<AstNode<FnParameter>>),
+    Checked(Vec<AstNode<FnParam>>),
 }
 
 #[derive(Debug, Clone)]
-pub struct Function {
+pub struct FnDecl {
     pub name: AstNode<Name>,
-    pub params: Vec<AstNode<FnParameter>>,
+    pub params: Vec<AstNode<FnParam>>,
     pub return_type: Option<AstNode<TypeAnn>>,
     pub body: AstNode<Block>,
     pub annotations: Vec<Annotation>,
@@ -85,7 +85,7 @@ pub struct Function {
 }
 
 #[derive(Debug, Clone)]
-pub struct FnParameter {
+pub struct FnParam {
     pub name: AstNode<Name>,
     pub param_type: AstNode<TypeAnn>,
 }
