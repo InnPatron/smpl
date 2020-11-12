@@ -103,7 +103,7 @@ pub struct Struct {
     pub name: AstNode<Name>,
     pub body: Vec<StructField>,
     pub annotations: Vec<Annotation>,
-    pub type_params: Option<TypeParams>,
+    pub type_params: TypeParams,
     pub where_clause: Option<WhereClause>,
 }
 
@@ -119,12 +119,13 @@ pub struct StructField {
 #[derive(Clone, Debug)]
 pub enum TypeAnn {
     Path(AstNode<TypedPath>),
-    Array(Box<AstNode<TypeAnn>>, u64),
-    FnType(
-        Option<TypeParams>,
-        Vec<AstNode<TypeAnn>>,
-        Option<Box<AstNode<TypeAnn>>>,
-    ),
+    FnType(AstNode<FnType>),
+}
+
+#[derive(Clone, Debug)]
+pub struct FnType {
+    pub params: Vec<AstNode<TypeAnn>>,
+    pub return_type: Option<Box<AstNode<TypeAnn>>>,
 }
 
 #[derive(Debug, Clone)]

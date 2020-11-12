@@ -33,7 +33,94 @@ TopLevel: ast::Decl = {
     <import: Import> SEMI => ast::Decl::Import(import),
     <export: Export> SEMI => ast::Decl::Export(export),
     <opaque: Opaque> SEMI => ast::Decl::Opaque(opaque),
+    <struct_decl: StructDecl> => ast::Decl::Struct(struct_decl),
 };
+
+// TODO: Where clause
+StructDecl: AstNode<ast::Struct> = {
+    <l: @L> STRUCT <nl: @L> <name: IDENT> <nr: @R> <type_params: TypeParams?> "{" <body: StructFieldList> "}" <r: @R> => {
+        let type_params = type_params.unwrap_or(ast::TypeParams { params: Vec::new() });
+        ast_node!(ast::Struct {
+            name: ast_node!(ident!(name).into(), nl, nr),
+            body,
+            annotations: Vec::new(),
+            type_params,
+            where_clause: None,
+        }, l, r)
+    }
+};
+
+StructFieldList: Vec<ast::StructField> = {
+    <f: StructField> COMMA <mut rest: StructFieldList> => {
+        rest.insert(0, f);
+        rest
+    },
+
+    <f: StructField> COMMA? => {
+        vec![f]
+    },
+};
+
+StructField: ast::StructField = {
+    <nl: @L> <f: IDENT> <nr: @R> COLON <ann: TypeAnn> => {
+        ast::StructField {
+            name: ast_node!(ident!(f), nl, nr),
+            field_type: ann,
+        }
+    }
+};
+
+TypeAnn: AstNode<ast::TypeAnn> = {
+    <l: @L> <tp: TypedPath> <r: @R> => ast_node!(ast::TypeAnn::Path(tp), l, r),
+    <l: @L> <ft: FnType> <r: @R> => ast_node!(ast::TypeAnn::FnType(ft), l, r),
+};
+
+FnType: AstNode<ast::FnType> = {
+    <l: @L> FN "(" <params: TypeArgsList?> ")" ARROW <return_type: TypeAnn?> <r: @R> => {
+        let params = params.unwrap_or(Vec::new());
+        let return_type = return_type.map(|rt| Box::new(rt));
+        ast_node!(ast::FnType {
+            params,
+            return_type,
+        }, l, r)
+    }
+}
+
+TypedPath: AstNode<ast::TypedPath> = {
+    <l: @L> <base: ModulePath> <args: TypeArgs?> <r: @R> => {
+        let args = args.unwrap_or(Vec::new());
+        ast_node!(ast::TypedPath {
+            base,
+            args
+        }, l, r)
+    }
+};
+
+TypeArgs: Vec<AstNode<ast::TypeAnn>> = {
+    "[" <l: TypeArgsList>  "]" => l,
+};
+
+TypeArgsList: Vec<AstNode<ast::TypeAnn>> = {
+   <t: TypeAnn> COMMA <mut rest: TypeArgsList> => {
+        rest.insert(0, t);
+        rest
+    },
+
+    <t: TypeAnn> COMMA? => vec![t],
+};
+
+ModulePath: AstNode<ast::ModulePath> = {
+    <l: @L> <i: IDENT> <r: @R> COLONCOLON <rest: ModulePath> <rr: @R> => {
+        let (mut data, _) = rest.into_data();
+        data.0.insert(0, ast_node!(ident!(i).into(), l, r));
+        ast_node!(data, l, rr)
+    },
+
+    <l: @L> <i: IDENT> <r: @R> => {
+        ast_node!(ast::ModulePath(vec![ast_node!(ident!(i).into(), l, r)]), l, r)
+    },
+};
+
 
 // TODO: Where clause
 Opaque: AstNode<ast::Opaque> = {

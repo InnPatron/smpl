@@ -41,6 +41,10 @@ impl<T> AstNode<T> {
         &self.data
     }
 
+    pub fn data_mut(&mut self) -> &mut T {
+        &mut self.data
+    }
+
     pub fn into_data(self) -> (T, Span) {
         (self.data, self.span)
     }
