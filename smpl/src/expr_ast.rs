@@ -54,10 +54,10 @@ pub struct DotAccess {
 }
 
 #[derive(Clone, Debug)]
-pub struct AnonymousFn {
-    pub params: Option<Vec<AstNode<FnParam>>>,
+pub struct Lambda {
+    pub params: Vec<AstNode<FnParam>>,
     pub return_type: Option<AstNode<TypeAnn>>,
-    pub body: AstNode<Block>,
+    pub body: Box<Expr>,
 }
 
 #[derive(Clone, Debug)]
@@ -125,7 +125,7 @@ pub enum Expr {
     DotAccess(AstNode<DotAccess>),
     FnCall(AstNode<FnCall>),
     StructInit(AstNode<StructInit>),
-    AnonymousFn(AstNode<AnonymousFn>),
+    Lambda(AstNode<Lambda>),
     Path(AstNode<TypedPath>),
     Block(AstNode<Block>),
     Underscore(AstNode<()>),
@@ -142,7 +142,7 @@ impl Spanned for Expr {
             Expr::DotAccess(ref spanned, ..) => spanned.span(),
             Expr::FnCall(ref spanned, ..) => spanned.span(),
             Expr::StructInit(ref spanned, ..) => spanned.span(),
-            Expr::AnonymousFn(ref spanned, ..) => spanned.span(),
+            Expr::Lambda(ref spanned, ..) => spanned.span(),
             Expr::Path(ref spanned, ..) => spanned.span(),
             Expr::Block(ref spanned, ..) => spanned.span(),
             Expr::Underscore(ref spanned, ..) => spanned.span(),

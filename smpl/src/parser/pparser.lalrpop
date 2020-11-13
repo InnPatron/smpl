@@ -353,7 +353,7 @@ LetStmt: AstNode<east::LetStmt> = {
     }
 };
 
-// TODO: prase bin-expr, dot access, and anonymous functions
+// TODO: parse bin-expr, dot access
 Expr: east::Expr = {
     <e: ExprLeaf> => e,
 }
@@ -380,6 +380,10 @@ ExprLeaf: east::Expr = {
     // fn-call
     <fn_call: FnCall> => east::Expr::FnCall(fn_call),
 
+    // lambda
+    <lambda: Lambda> => east::Expr::Lambda(lambda),
+
+    // struct-init
     <init: StructInit> => east::Expr::StructInit(init),
 
     // underscore (only usable as immediate children of fn calls)
@@ -387,6 +391,16 @@ ExprLeaf: east::Expr = {
 
     // paren-expr
     "(" <e: Expr> ")" => e,
+};
+
+Lambda: AstNode<east::Lambda> = {
+    <l: @L> LAM <params: FnParams> <return_type: (ARROW TypeAnn)?> COLON <body: Expr> <r: @R> => {
+        ast_node!(east::Lambda {
+            body: Box::new(body),
+            params,
+            return_type: return_type.map(|rt| rt.1),
+        }, l, r)
+    }
 };
 
 StructInit: AstNode<east::StructInit> = {
@@ -552,6 +566,7 @@ extern {
         AS => tokens::Token::As,
 
         INIT => tokens::Token::Init,
+        LAM => tokens::Token::Lam,
         UNDERSCORE => tokens::Token::Underscore,
         EXTRACT => tokens::Token::Extract,
         CONTINUE => tokens::Token::Continue,

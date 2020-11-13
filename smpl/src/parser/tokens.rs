@@ -45,6 +45,7 @@ pub enum Token {
     // Stmt or expressions
     Underscore,
     Init,
+    Lam,
 
     Extract,
     Continue,
