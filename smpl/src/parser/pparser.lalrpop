@@ -370,6 +370,17 @@ InfixExpr: east::Expr = {
 
     // TODO: parse bin-expr
 
+    UniExpr,
+};
+
+UniExpr: east::Expr = {
+    <l: @L> <op: UniOp> <expr: UniExpr> <r: @R> => {
+        east::Expr::Uni(ast_node!(east::UniExpr {
+            op,
+            expr: Box::new(expr),
+        }, l, r))
+    },
+
     AppExpr,
 };
 
@@ -377,7 +388,6 @@ AppExpr: east::Expr = {
 
     <fn_call: FnCall> => east::Expr::FnCall(fn_call),
     <dot_access: DotAccess> => east::Expr::DotAccess(dot_access),
-
 
     ExprLeaf,
 };
@@ -391,8 +401,6 @@ ExprLeaf: east::Expr = {
     <path: TypedPath> => east::Expr::Path(path),
 
     <init: StructInit> => east::Expr::StructInit(init),
-
-    <uni_expr: UniExpr> => east::Expr::Uni(uni_expr),
 
     // underscore (only usable as immediate children of fn calls)
     <l: @L> UNDERSCORE <r: @R> => east::Expr::Underscore(ast_node!((), l, r)),
@@ -463,15 +471,6 @@ ArgList: Vec<east::Expr> = {
 
     <e: Expr> COMMA? => vec![e],
 }
-
-UniExpr: AstNode<east::UniExpr> = {
-    <l: @L> <op: UniOp> <expr: ExprLeaf> <r: @R> => {
-        ast_node!(east::UniExpr {
-            op,
-            expr: Box::new(expr),
-        }, l, r)
-    }
-};
 
 UniOp: east::UniOp = {
     AMP => east::UniOp::Ref,
