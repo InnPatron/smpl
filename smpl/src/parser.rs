@@ -25,6 +25,23 @@ mod tests {
 
         let lexer = Tokenizer::new(input);
         let parser = ModuleParser::new();
+        // TODO: structural test
+        parser.parse(lexer).unwrap();
+    }
+
+    #[test]
+    fn uni_dot_fn_calls() {
+        let input = "
+            mod dot_fn_calls;
+
+            fn foo() {
+                !!!a.b.c().d.e.f();
+            }
+        ";
+
+        let lexer = Tokenizer::new(input);
+        let parser = ModuleParser::new();
+        // TODO: structural test
         parser.parse(lexer).unwrap();
     }
 }
