@@ -140,9 +140,9 @@ TypeAnn: AstNode<ast::TypeAnn> = {
 };
 
 FnType: AstNode<ast::FnType> = {
-    <l: @L> FN "(" <params: TypeArgsList?> ")" ARROW <return_type: TypeAnn?> <r: @R> => {
+    <l: @L> FN "(" <params: TypeArgsList?> ")" ARROW <return_type: TypeAnn> <r: @R> => {
         let params = params.unwrap_or(Vec::new());
-        let return_type = return_type.map(|rt| Box::new(rt));
+        let return_type = Some(Box::new(return_type));
         ast_node!(ast::FnType {
             params,
             return_type,
@@ -337,9 +337,9 @@ Stmt: east::Stmt = {
 
     <l: @L> EXTRACT <e: Expr?> SEMI <r: @R> => east::Stmt::Extract(ast_node!(e, l, r)),
 
-    <b: Block> => east::Stmt::Block(b),
-
     <expr_stmt: Expr> SEMI => east::Stmt::ExprStmt(expr_stmt),
+
+    <b: Block> => east::Stmt::Block(b),
 };
 
 // TODO: add patterns
@@ -353,44 +353,53 @@ LetStmt: AstNode<east::LetStmt> = {
     }
 };
 
-// TODO: parse bin-expr, dot access
 Expr: east::Expr = {
-    <e: ExprLeaf> => e,
-}
 
-ExprLeaf: east::Expr = {
-    // if-expr
+    <b: Block> => east::Expr::Block(b),
+
     <if_expr: IfExpr> => east::Expr::If(Box::new(if_expr)),
 
-    // while-expr
     <while_expr: WhileExpr> => east::Expr::While(Box::new(while_expr)),
 
-    // block-expr
-    <block: Block> => east::Expr::Block(block),
+    InfixExpr,
+}
 
-    // literal-expr
-    <literal: Literal> => east::Expr::Literal(literal),
+InfixExpr: east::Expr = {
 
-    // uniop-expr
-    <uni_expr: UniExpr> => east::Expr::Uni(uni_expr),
-
-    // typed-path
-    <path: TypedPath> => east::Expr::Path(path),
-
-    // fn-call
-    <fn_call: FnCall> => east::Expr::FnCall(fn_call),
-
-    // lambda
     <lambda: Lambda> => east::Expr::Lambda(lambda),
 
-    // struct-init
+    // TODO: parse bin-expr
+
+    AppExpr,
+}
+
+AppExpr: east::Expr = {
+
+    <fn_call: FnCall> => east::Expr::FnCall(fn_call),
+
+    <uni_expr: UniExpr> => east::Expr::Uni(uni_expr),
+
+    ExprLeaf
+};
+
+ExprLeaf: east::Expr = {
+
+    <literal: Literal> => east::Expr::Literal(literal),
+
+    <path: TypedPath> => east::Expr::Path(path),
+
     <init: StructInit> => east::Expr::StructInit(init),
+
+    <dot_access: DotAccess> => east::Expr::DotAccess(dot_access),
 
     // underscore (only usable as immediate children of fn calls)
     <l: @L> UNDERSCORE <r: @R> => east::Expr::Underscore(ast_node!((), l, r)),
 
-    // paren-expr
     "(" <e: Expr> ")" => e,
+};
+
+DotAccess: AstNode<east::DotAccess> = {
+    <root: ExprLeaf> DOT <rest: IDENT> => todo!(),
 };
 
 Lambda: AstNode<east::Lambda> = {
@@ -428,19 +437,9 @@ StructFieldInit: (AstNode<ast::Ident>, Box<east::Expr>) = {
     }
 };
 
-
 FnCall: AstNode<east::FnCall> = {
-    <l: @L> "(" <func: Expr> ")" "("<list: ArgList?> ")" <r: @R> => {
+    <l: @L> <func: ExprLeaf> "("<list: ArgList?> ")" <r: @R> => {
         let func = Box::new(func);
-        let args = list.unwrap_or(Vec::new());
-        ast_node!(east::FnCall {
-            func,
-            args,
-        }, l, r)
-    },
-
-    <l: @L> <func: TypedPath> "("<list: ArgList?> ")" <r: @R> => {
-        let func = Box::new(east::Expr::Path(func));
         let args = list.unwrap_or(Vec::new());
         ast_node!(east::FnCall {
             func,
@@ -459,7 +458,7 @@ ArgList: Vec<east::Expr> = {
 }
 
 UniExpr: AstNode<east::UniExpr> = {
-    <l: @L> <op: UniOp> <expr: Expr> <r: @R> => {
+    <l: @L> <op: UniOp> <expr: AppExpr> <r: @R> => {
         ast_node!(east::UniExpr {
             op,
             expr: Box::new(expr),
