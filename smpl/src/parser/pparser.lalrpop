@@ -399,7 +399,12 @@ ExprLeaf: east::Expr = {
 };
 
 DotAccess: AstNode<east::DotAccess> = {
-    <root: ExprLeaf> DOT <rest: IDENT> => todo!(),
+    <l: @L>< root: ExprLeaf> DOT <fl: @L> <field: IDENT> <r: @R> => {
+        ast_node!(east::DotAccess {
+            base: Box::new(root),
+            field: ast_node!(ident!(field).into(), fl, r),
+        }, l, r)
+    }
 };
 
 Lambda: AstNode<east::Lambda> = {
