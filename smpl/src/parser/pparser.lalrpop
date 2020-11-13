@@ -530,7 +530,7 @@ IfExpr: AstNode<east::If> = {
 
 extern {
     type Location = usize;
-    type Error = error::TokenizerError;
+    type Error = error::SpannedError;
 
     enum tokens::Token {
         IDENT => tokens::Token::Ident(..),
