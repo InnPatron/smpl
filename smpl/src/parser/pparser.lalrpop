@@ -362,7 +362,7 @@ Expr: east::Expr = {
     <while_expr: WhileExpr> => east::Expr::While(Box::new(while_expr)),
 
     InfixExpr,
-}
+};
 
 InfixExpr: east::Expr = {
 
@@ -371,16 +371,18 @@ InfixExpr: east::Expr = {
     // TODO: parse bin-expr
 
     AppExpr,
-}
+};
 
 AppExpr: east::Expr = {
 
     <fn_call: FnCall> => east::Expr::FnCall(fn_call),
+    <dot_access: DotAccess> => east::Expr::DotAccess(dot_access),
 
-    <uni_expr: UniExpr> => east::Expr::Uni(uni_expr),
 
-    ExprLeaf
+    ExprLeaf,
 };
+
+
 
 ExprLeaf: east::Expr = {
 
@@ -390,7 +392,7 @@ ExprLeaf: east::Expr = {
 
     <init: StructInit> => east::Expr::StructInit(init),
 
-    <dot_access: DotAccess> => east::Expr::DotAccess(dot_access),
+    <uni_expr: UniExpr> => east::Expr::Uni(uni_expr),
 
     // underscore (only usable as immediate children of fn calls)
     <l: @L> UNDERSCORE <r: @R> => east::Expr::Underscore(ast_node!((), l, r)),
@@ -399,7 +401,7 @@ ExprLeaf: east::Expr = {
 };
 
 DotAccess: AstNode<east::DotAccess> = {
-    <l: @L>< root: ExprLeaf> DOT <fl: @L> <field: IDENT> <r: @R> => {
+    <l: @L>< root: AppExpr> DOT <fl: @L> <field: IDENT> <r: @R> => {
         ast_node!(east::DotAccess {
             base: Box::new(root),
             field: ast_node!(ident!(field).into(), fl, r),
@@ -443,7 +445,7 @@ StructFieldInit: (AstNode<ast::Ident>, Box<east::Expr>) = {
 };
 
 FnCall: AstNode<east::FnCall> = {
-    <l: @L> <func: ExprLeaf> "("<list: ArgList?> ")" <r: @R> => {
+    <l: @L> <func: AppExpr> "("<list: ArgList?> ")" <r: @R> => {
         let func = Box::new(func);
         let args = list.unwrap_or(Vec::new());
         ast_node!(east::FnCall {
@@ -463,7 +465,7 @@ ArgList: Vec<east::Expr> = {
 }
 
 UniExpr: AstNode<east::UniExpr> = {
-    <l: @L> <op: UniOp> <expr: AppExpr> <r: @R> => {
+    <l: @L> <op: UniOp> <expr: ExprLeaf> <r: @R> => {
         ast_node!(east::UniExpr {
             op,
             expr: Box::new(expr),
