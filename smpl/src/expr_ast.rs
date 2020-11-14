@@ -38,7 +38,10 @@ pub struct While {
 }
 
 #[derive(Clone, Debug)]
-pub struct Block(pub Vec<Stmt>);
+pub struct Block {
+    pub stmts: Vec<Stmt>,
+    pub return_expr: Option<Box<Expr>>,
+}
 
 #[derive(Clone, Debug)]
 pub struct LetStmt {

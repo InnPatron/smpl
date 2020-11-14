@@ -319,13 +319,41 @@ ModuleItemData: AstNode<ast::ModuleItemData> = {
 
 // exprs / stmts
 Block: AstNode<east::Block> = {
-    <l: @L> "{" <stmts: Stmt*> "}" <r: @R> => ast_node!(east::Block(stmts), l, r),
+    <l: @L> "{" <block: BlockList?> "}" <r: @R> => {
+        let block = block.unwrap_or(east::Block {
+            stmts: vec![],
+            return_expr: None,
+        });
+        ast_node!(block, l, r)
+    },
+};
+
+BlockEnd: east::Block = {
+    <stmt: SafeStmt> => east::Block { stmts: vec![stmt], return_expr: None },
+    <expr: Expr> => east::Block { stmts: vec![], return_expr: Some(Box::new(expr)) },
+};
+
+BlockList: east::Block = {
+    <stmt: Stmt> <mut block: BlockList> => {
+        block.stmts.insert(0, stmt);
+        block
+    },
+
+    BlockEnd,
 };
 
 Stmt: east::Stmt = {
     <if_stmt: IfExpr> => east::Stmt::If(if_stmt),
 
     <while_stmt: WhileExpr> => east::Stmt::While(while_stmt),
+
+    <b: Block> => east::Stmt::Block(b),
+
+    SafeStmt,
+};
+
+// Rule hack to get block return expressions to work
+SafeStmt: east::Stmt = {
 
     <let_stmt: LetStmt> => east::Stmt::Let(let_stmt),
 
@@ -339,7 +367,6 @@ Stmt: east::Stmt = {
 
     <expr_stmt: Expr> SEMI => east::Stmt::ExprStmt(expr_stmt),
 
-    <b: Block> => east::Stmt::Block(b),
 };
 
 // TODO: add patterns
