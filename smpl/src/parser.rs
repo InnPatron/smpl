@@ -44,4 +44,20 @@ mod tests {
         // TODO: structural test
         parser.parse(lexer).unwrap();
     }
+
+    #[test]
+    fn block_expr_return_1() {
+        let input = "
+            mod dot_fn_calls;
+
+            fn foo() {
+                1
+            }
+        ";
+
+        let lexer = Tokenizer::new(input);
+        let parser = ModuleParser::new();
+        // TODO: structural test
+        parser.parse(lexer).unwrap();
+    }
 }
