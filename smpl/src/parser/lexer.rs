@@ -199,6 +199,8 @@ impl<'input> Tokenizer<'input> {
                 }
             }
 
+            '@' => Ok((start, Token::At, start + 1)),
+
             ch => unreachable!("Missing handler for {}", ch),
         }
     }
