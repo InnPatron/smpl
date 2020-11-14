@@ -68,9 +68,9 @@ pub struct UniExpr {
 
 #[derive(Clone, Debug)]
 pub struct BinExpr {
-    pub op: BinOp,
-    pub lhs: Box<Expr>,
-    pub rhs: Box<Expr>,
+    pub op: AstNode<BinOp>,
+    pub left: Box<Expr>,
+    pub right: Box<Expr>,
 }
 
 #[derive(Clone, Debug)]
@@ -102,7 +102,6 @@ pub enum Literal {
 #[derive(Clone, Debug, PartialEq)]
 pub enum BinOp {
     Assign,
-    Dot,
     Pipe,
     And,
     Or,

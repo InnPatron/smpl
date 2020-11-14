@@ -354,6 +354,30 @@ LetStmt: AstNode<east::LetStmt> = {
 };
 
 Expr: east::Expr = {
+    <l: @L> <left: PipeExpr> <opl: @L> EQ <opr: @R> <right: Expr> <r: @R>=> {
+        east::Expr::Bin(ast_node!(east::BinExpr {
+            op: ast_node!(east::BinOp::Pipe, opl, opr),
+            left: Box::new(left),
+            right: Box::new(right),
+        }, l, r))
+    },
+
+    PipeExpr,
+};
+
+PipeExpr = {
+    <l: @L> <left: PipeExpr> <opl: @L> ARROW <opr: @R> <right: PipableExpr> <r: @R> => {
+        east::Expr::Bin(ast_node!(east::BinExpr {
+            op: ast_node!(east::BinOp::Pipe, opl, opr),
+            left: Box::new(left),
+            right: Box::new(right),
+        }, l, r))
+    },
+
+    PipableExpr,
+};
+
+PipableExpr: east::Expr = {
 
     <b: Block> => east::Expr::Block(b),
 
@@ -366,14 +390,24 @@ Expr: east::Expr = {
 
 InfixExpr: east::Expr = {
 
-    <lambda: Lambda> => east::Expr::Lambda(lambda),
-
-    // TODO: parse bin-expr
+     <l: @L> <left: InfixExpr> <op: InfixOp> <right: UniExpr> <r: @R> => {
+        east::Expr::Bin(ast_node!(east::BinExpr {
+            op,
+            left: Box::new(left),
+            right: Box::new(right),
+        }, l, r))
+    },
 
     UniExpr,
 };
 
+InfixOp: AstNode<east::BinOp> = {
+    <l: @L> AND <r: @R> => ast_node!(east::BinOp::And, l, r),
+    <l: @L> OR <r: @R> => ast_node!(east::BinOp::Or, l, r),
+};
+
 UniExpr: east::Expr = {
+
     <l: @L> <op: UniOp> <expr: UniExpr> <r: @R> => {
         east::Expr::Uni(ast_node!(east::UniExpr {
             op,
@@ -392,9 +426,9 @@ AppExpr: east::Expr = {
     ExprLeaf,
 };
 
-
-
 ExprLeaf: east::Expr = {
+
+    <lambda: Lambda> => east::Expr::Lambda(lambda),
 
     <literal: Literal> => east::Expr::Literal(literal),
 
@@ -418,9 +452,9 @@ DotAccess: AstNode<east::DotAccess> = {
 };
 
 Lambda: AstNode<east::Lambda> = {
-    <l: @L> LAM <params: FnParams> <return_type: (ARROW TypeAnn)?> COLON <body: Expr> <r: @R> => {
+    <l: @L> LAM <params: FnParams> <return_type: (ARROW TypeAnn)?> COLON <body: Block> <r: @R> => {
         ast_node!(east::Lambda {
-            body: Box::new(body),
+            body: Box::new(east::Expr::Block(body)),
             params,
             return_type: return_type.map(|rt| rt.1),
         }, l, r)
