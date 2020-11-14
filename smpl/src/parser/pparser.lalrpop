@@ -39,7 +39,7 @@ pub Module: ast::Module = {
     <mod_decl: ModDecl?> <top_levels: TopLevel*> => {
         ast::Module {
             mod_decl,
-            decls: vec![],
+            decls: top_levels,
         }
     }
 };
@@ -52,8 +52,8 @@ ModDecl: AstNode<ast::ModDecl> = {
 
         ast_node!(ast::ModDecl {
             mod_name: ast_node!(ident!(n), nl, nr),
-            mod_params: vec![],
-            declared_sigs: vec![],
+            mod_params,
+            declared_sigs,
         }, l, r)
     },
 };

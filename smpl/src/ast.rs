@@ -34,7 +34,7 @@ pub struct Module {
 #[derive(Debug, Clone)]
 pub struct ModDecl {
     pub mod_name: AstNode<Ident>,
-    pub mod_params: Vec<ModParam>,
+    pub mod_params: Vec<AstNode<ModParam>>,
     pub declared_sigs: Vec<AstNode<Name>>,
 }
 
