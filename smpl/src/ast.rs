@@ -11,7 +11,19 @@ pub enum CodeUnit {
 
 // TODO: ModuleInterface
 #[derive(Debug, Clone)]
-pub struct ModSig {}
+pub struct ModSig {
+    pub name: AstNode<Ident>,
+    pub members: Vec<AstNode<SigMember>>,
+}
+
+#[derive(Debug, Clone)]
+pub enum SigMember {
+    Type(AstNode<Ident>),
+    Value {
+        name: AstNode<Ident>,
+        ann: AstNode<TypeAnn>,
+    },
+}
 
 #[derive(Debug, Clone)]
 pub struct Module {

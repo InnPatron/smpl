@@ -9,6 +9,30 @@ grammar;
 
 pub CodeUnit: ast::CodeUnit = {
     <m: Module> => ast::CodeUnit::Module(m),
+    <ms: ModSig> => ast::CodeUnit::ModSig(ms),
+};
+
+pub ModSig: ast::ModSig = {
+    <l: @L> SIG <nl: @L>  <n: IDENT> <nr: @R> SEMI <members: ModSigMember*> <r: @R> => {
+        ast::ModSig {
+            name: ast_node!(ident!(n).into(), nl, nr),
+            members,
+        }
+    },
+};
+
+
+ModSigMember: AstNode<ast::SigMember> = {
+    <l: @L> TYPE <nl: @L> <n: IDENT> <nr: @R> SEMI <r: @R> => {
+        ast_node!(ast::SigMember::Type(ast_node!(ident!(n).into(), nl, nr)), l, r)
+    },
+
+    <l: @L> MVAL <nl: @L> <n: IDENT> <nr: @R> COLON <ann: TypeAnn> SEMI <r: @R> => {
+        ast_node!(ast::SigMember::Value {
+            name: ast_node!(ident!(n), nl, nr),
+            ann,
+        }, l, r)
+    },
 };
 
 pub Module: ast::Module = {
