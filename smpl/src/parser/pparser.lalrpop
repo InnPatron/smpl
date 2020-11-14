@@ -515,7 +515,7 @@ LetStmt: AstNode<east::LetStmt> = {
 Expr: east::Expr = {
     <l: @L> <left: PipeExpr> <opl: @L> EQ <opr: @R> <right: Expr> <r: @R>=> {
         east::Expr::Bin(ast_node!(east::BinExpr {
-            op: ast_node!(east::BinOp::Pipe, opl, opr),
+            op: ast_node!(east::BinOp::Assign, opl, opr),
             left: Box::new(left),
             right: Box::new(right),
         }, l, r))
