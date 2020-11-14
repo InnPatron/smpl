@@ -111,6 +111,8 @@ TopLevel: ast::Decl = {
 
     <opaque: Opaque> SEMI => ast::Decl::Opaque(opaque),
 
+    <enum_decl: EnumDecl> => ast::Decl::Enum(enum_decl),
+
     <struct_decl: StructDecl> => ast::Decl::Struct(struct_decl),
 
     <func: BuiltinFnDecl> SEMI => ast::Decl::BuiltinFn(func),
@@ -118,6 +120,49 @@ TopLevel: ast::Decl = {
     <func: FnDecl> => ast::Decl::Fn(func),
 
     <ty: TypeDecl> => ast::Decl::Type(ty),
+};
+
+Ident: AstNode<ast::Ident> = {
+    <nl: @L> <n: IDENT> <nr: @R> => ast_node!(ident!(n), nl, nr),
+}
+
+EnumDecl: AstNode<ast::EnumDecl> = {
+    <l: @L> ENUM  <name: Ident> "{" <variants: EnumVariantList?> "}" <r: @R> => {
+        let variants = variants.unwrap_or(vec![]);
+        ast_node!(ast::EnumDecl {
+            name,
+            variants,
+        }, l, r)
+    }
+};
+
+EnumVariantList: Vec<AstNode<ast::EnumVariant>> = {
+    <v: EnumVariant> COMMA <mut rest: EnumVariantList> => {
+        rest.insert(0, v);
+        rest
+    },
+
+    <v: EnumVariant> => vec![v],
+};
+
+EnumVariant: AstNode<ast::EnumVariant> = {
+    // TODO: annotations
+    <l: @L> <n: IDENT> <r: @R> => {
+        ast_node!(ast::EnumVariant::Unit {
+            name: ast_node!(ident!(n), l, r),
+            annotations: vec![],
+        }, l, r)
+    },
+
+    // TODO: annotations
+    <l: @L> <n: IDENT> "{"<body: StructFieldList?> "}" <r: @R> => {
+        let body = body.unwrap_or(vec![]);
+        ast_node!(ast::EnumVariant::Struct {
+            name: ast_node!(ident!(n), l, r),
+            body,
+            annotations: vec![],
+        }, l, r)
+    },
 };
 
 TypeDecl: AstNode<ast::TypeDecl> = {
@@ -728,6 +773,7 @@ extern {
         MVAL => tokens::Token::MVal,
 
         FN => tokens::Token::Fn,
+        ENUM => tokens::Token::Enum,
         STRUCT => tokens::Token::Struct,
         OPAQUE => tokens::Token::Opaque,
         USE => tokens::Token::Use,

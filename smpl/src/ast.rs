@@ -50,9 +50,29 @@ pub enum Decl {
     Export(AstNode<ExportDecl>),
     Opaque(AstNode<Opaque>),
     Struct(AstNode<Struct>),
+    Enum(AstNode<EnumDecl>),
     Fn(AstNode<FnDecl>),
     BuiltinFn(AstNode<BuiltinFnDecl>),
     Type(AstNode<TypeDecl>),
+}
+
+#[derive(Debug, Clone)]
+pub struct EnumDecl {
+    pub name: AstNode<Ident>,
+    pub variants: Vec<AstNode<EnumVariant>>,
+}
+
+#[derive(Debug, Clone)]
+pub enum EnumVariant {
+    Struct {
+        name: AstNode<Ident>,
+        body: Vec<StructField>,
+        annotations: Vec<Annotation>,
+    },
+    Unit {
+        name: AstNode<Ident>,
+        annotations: Vec<Annotation>,
+    },
 }
 
 #[derive(Debug, Clone)]

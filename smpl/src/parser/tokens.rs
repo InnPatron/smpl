@@ -18,6 +18,7 @@ pub enum Token {
     Mod,
     Sig,
     Fn,
+    Enum,
     Struct,
     Opaque,
     Use,

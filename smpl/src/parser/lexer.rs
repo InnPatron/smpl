@@ -210,6 +210,7 @@ impl<'input> Tokenizer<'input> {
 
         let token = match ident {
             "base" => Token::Base,
+            "enum" => Token::Enum,
             "fn" => Token::Fn,
             "mod" => Token::Mod,
             "struct" => Token::Struct,
