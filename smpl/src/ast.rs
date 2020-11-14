@@ -40,6 +40,13 @@ pub enum Decl {
     Struct(AstNode<Struct>),
     Fn(AstNode<FnDecl>),
     BuiltinFn(AstNode<BuiltinFnDecl>),
+    Type(AstNode<TypeDecl>),
+}
+
+#[derive(Debug, Clone)]
+pub struct TypeDecl {
+    pub name: AstNode<Name>,
+    pub ann: AstNode<TypeAnn>,
 }
 
 #[derive(Debug, Clone)]

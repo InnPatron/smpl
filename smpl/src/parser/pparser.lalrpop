@@ -92,6 +92,17 @@ TopLevel: ast::Decl = {
     <func: BuiltinFnDecl> SEMI => ast::Decl::BuiltinFn(func),
 
     <func: FnDecl> => ast::Decl::Fn(func),
+
+    <ty: TypeDecl> => ast::Decl::Type(ty),
+};
+
+TypeDecl: AstNode<ast::TypeDecl> = {
+    <l: @L> TYPE <nl: @L> <name: IDENT> <nr: @R> EQ <ann: TypeAnn> <r: @R> => {
+        ast_node!(ast::TypeDecl {
+            name: ast_node!(ident!(name).into(), nl, nr),
+            ann,
+        }, l, r)
+    }
 };
 
 FnDecl: AstNode<ast::FnDecl> = {
