@@ -241,6 +241,9 @@ impl<'input> Tokenizer<'input> {
             "except" => Token::Except,
             "lam" => Token::Lam,
             "_" => Token::Underscore,
+            "sig" => Token::Sig,
+            "mval" => Token::MVal,
+            "impl" => Token::Impl,
 
             str => Token::Ident(Ident::Unquoted(str.to_string())),
         };
@@ -383,6 +386,8 @@ impl<'input> Iterator for Tokenizer<'input> {
                 '}' => Some(Ok((start, Token::RBrace, start + 1))),
 
                 '#' => Some(Ok((start, Token::Pound, start + 1))),
+
+                '+' => Some(Ok((start, Token::Plus, start + 1))),
 
                 '\"' => Some(self.string_literal(start)),
                 '`' => Some(self.quoted_ident(start)),

@@ -4,9 +4,32 @@ use crate::ast_node::AstNode;
 use crate::expr_ast::Block;
 
 #[derive(Debug, Clone)]
+pub enum CodeUnit {
+    Module(Module),
+    ModSig(ModSig),
+}
+
+// TODO: ModuleInterface
+#[derive(Debug, Clone)]
+pub struct ModSig {}
+
+#[derive(Debug, Clone)]
 pub struct Module {
-    pub mod_name: Option<AstNode<Ident>>,
+    pub mod_decl: Option<AstNode<ModDecl>>,
     pub decls: Vec<Decl>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ModDecl {
+    pub mod_name: AstNode<Ident>,
+    pub mod_params: Vec<ModParam>,
+    pub declared_sigs: Vec<AstNode<Name>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ModParam {
+    pub name: AstNode<Name>,
+    pub sigs: Vec<AstNode<Name>>,
 }
 
 #[derive(Debug, Clone)]

@@ -7,25 +7,77 @@ use super::tokens::{self, Token};
 
 grammar;
 
+pub CodeUnit: ast::CodeUnit = {
+    <m: Module> => ast::CodeUnit::Module(m),
+};
+
 pub Module: ast::Module = {
     <mod_decl: ModDecl?> <top_levels: TopLevel*> => {
         ast::Module {
-            mod_name: mod_decl,
+            mod_decl,
             decls: vec![],
         }
     }
 };
 
-ModDecl: AstNode<Ident> = {
-    MOD <l: @L> <n: IDENT> <r: @R> SEMI => {
+ModDecl: AstNode<ast::ModDecl> = {
+    <l: @L> MOD <nl: @L> <n: IDENT> <nr: @R> <mod_params: ModParams?> <sig_decl: ModSigBlock?> SEMI <r: @R> => {
 
-        let ident = match n {
-            Token::Ident(i) => i,
-            _ => unreachable!(),
-        };
+        let mod_params = mod_params.unwrap_or(vec![]);
+        let declared_sigs = sig_decl.unwrap_or(vec![]);
 
-        AstNode::new(ident, Span::new(l, r))
+        ast_node!(ast::ModDecl {
+            mod_name: ast_node!(ident!(n), nl, nr),
+            mod_params: vec![],
+            declared_sigs: vec![],
+        }, l, r)
+    },
+};
+
+ModSigBlock: Vec<AstNode<ast::Name>> = {
+    IMPL "{" "}" => vec![],
+    IMPL "{" <list: DeclaredSigList> "}" => list,
+};
+
+DeclaredSigList: Vec<AstNode<ast::Name>> = {
+    <l: @L> <sig: IDENT> <r: @R> COMMA <mut rest: DeclaredSigList> => {
+        rest.insert(0, ast_node!(ident!(sig).into(), l, r));
+        rest
+    },
+
+    <l: @L> <sig: IDENT> <r: @R> => vec![ast_node!(ident!(sig).into(), l, r)],
+};
+
+ModParams: Vec<AstNode<ast::ModParam>> = {
+    "(" ")" => vec![],
+    "(" <list: ModParamList> ")" => list,
+};
+
+ModParamList: Vec<AstNode<ast::ModParam>> = {
+    <first: ModParam> COMMA <mut rest: ModParamList> => {
+        rest.insert(0, first);
+        rest
+    },
+
+    <mp: ModParam> => vec![mp],
+};
+
+ModParam: AstNode<ast::ModParam> = {
+    <l: @L> <name: IDENT> <nr: @R> COLON <sigs: ModSigList> <r: @R> => {
+        ast_node!(ast::ModParam {
+            name: ast_node!(ident!(name).into(), l, nr),
+            sigs,
+        }, l, r)
     }
+};
+
+ModSigList: Vec<AstNode<ast::Name>> = {
+    <l: @L> <first: IDENT> <r: @R> PLUS <mut rest: ModSigList> => {
+        rest.insert(0, ast_node!(ident!(first).into(), l, r));
+        rest
+    },
+
+    <l: @L> <sig: IDENT> <r: @R> => vec![ast_node!(ident!(sig).into(), l, r)],
 };
 
 // TODO: annotation prefix to the declarations
@@ -635,14 +687,17 @@ extern {
         FLOAT => tokens::Token::FloatLiteral(..),
         BOOL => tokens::Token::BoolLiteral(..),
 
+        SIG => tokens::Token::Sig,
+        MOD => tokens::Token::Mod,
+        TYPE => tokens::Token::Type,
+        MVAL => tokens::Token::MVal,
+
         FN => tokens::Token::Fn,
         STRUCT => tokens::Token::Struct,
         OPAQUE => tokens::Token::Opaque,
-        MOD => tokens::Token::Mod,
         USE => tokens::Token::Use,
         BUILTIN => tokens::Token::Builtin,
         UNCHECKED => tokens::Token::Unchecked,
-        TYPE => tokens::Token::Type,
         WHERE => tokens::Token::Where,
         COMMA => tokens::Token::Comma,
         ARROW => tokens::Token::Arrow,
@@ -681,6 +736,8 @@ extern {
         BANG => tokens::Token::Bang,
         AND => tokens::Token::And,
         OR => tokens::Token::Or,
+        PLUS => tokens::Token::Plus,
+        IMPL => tokens::Token::Impl,
         "(" => tokens::Token::LParen,
         ")" => tokens::Token::RParen,
         "[" => tokens::Token::LBracket,

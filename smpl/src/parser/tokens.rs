@@ -15,14 +15,16 @@ pub enum Token {
     BoolLiteral(bool),
 
     // Decl tokens
+    Mod,
+    Sig,
     Fn,
     Struct,
     Opaque,
-    Mod,
     Use,
     Builtin,
     Unchecked,
     Type,
+    MVal,
     Where,
 
     Comma,
@@ -70,6 +72,9 @@ pub enum Token {
     Bang,
     And,
     Or,
+
+    Plus,
+    Impl,
 
     // Pairs
     LParen,
