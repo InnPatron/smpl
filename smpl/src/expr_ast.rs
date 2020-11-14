@@ -55,9 +55,15 @@ pub struct DotAccess {
 
 #[derive(Clone, Debug)]
 pub struct Lambda {
-    pub params: Vec<AstNode<FnParam>>,
+    pub params: Vec<AstNode<LambdaParam>>,
     pub return_type: Option<AstNode<TypeAnn>>,
     pub body: Box<Expr>,
+}
+
+#[derive(Clone, Debug)]
+pub struct LambdaParam {
+    pub name: AstNode<Name>,
+    pub ann: Option<AstNode<TypeAnn>>,
 }
 
 #[derive(Clone, Debug)]

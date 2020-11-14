@@ -95,7 +95,7 @@ FnParam: AstNode<ast::FnParam> = {
     <nl: @L> <p: IDENT> <nr: @R>  COLON <ann: TypeAnn>  <rr: @R> => {
         ast_node!(ast::FnParam {
             name: ast_node!(ident!(p).into(), nl, rr),
-            param_type: ann,
+            ann,
         }, nl, rr)
     }
 };
@@ -452,13 +452,41 @@ DotAccess: AstNode<east::DotAccess> = {
 };
 
 Lambda: AstNode<east::Lambda> = {
-    <l: @L> LAM <params: FnParams> <return_type: (ARROW TypeAnn)?> COLON <body: Block> <r: @R> => {
+    <l: @L> LAM <params: LambdaParams> <return_type: (ARROW TypeAnn)?> COLON <body: Block> <r: @R> => {
         ast_node!(east::Lambda {
             body: Box::new(east::Expr::Block(body)),
             params,
             return_type: return_type.map(|rt| rt.1),
         }, l, r)
     }
+};
+
+LambdaParams: Vec<AstNode<east::LambdaParam>> = {
+    "(" <list: LambdaParamList?> ")" => list.unwrap_or(Vec::new()),
+};
+
+LambdaParamList: Vec<AstNode<east::LambdaParam>> = {
+    <p: LambdaParam> COMMA <mut rest: LambdaParamList> => {
+        rest.insert(0, p);
+        rest
+    },
+
+    <p: LambdaParam> COMMA? => vec![p],
+};
+
+LambdaParam: AstNode<east::LambdaParam> = {
+    <l: @L> <p: IDENT> <r: @R> => ast_node!(east::LambdaParam {
+        name: ast_node!(ident!(p).into(), l, r),
+        ann: None,
+    }, l , r),
+
+    <fp: FnParam> => {
+        let (data, span) = fp.into_data();
+        AstNode::new(east::LambdaParam {
+            name: data.name,
+            ann: Some(data.ann),
+        }, span)
+    },
 };
 
 StructInit: AstNode<east::StructInit> = {

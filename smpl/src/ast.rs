@@ -87,7 +87,7 @@ pub struct FnDecl {
 #[derive(Debug, Clone)]
 pub struct FnParam {
     pub name: AstNode<Name>,
-    pub param_type: AstNode<TypeAnn>,
+    pub ann: AstNode<TypeAnn>,
 }
 
 #[derive(Debug, Clone)]
