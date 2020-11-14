@@ -1,4 +1,4 @@
-use crate::ast::{self, Ident};
+use crate::ast;
 use crate::ast_node::AstNode;
 use crate::expr_ast as east;
 use crate::span::Span;

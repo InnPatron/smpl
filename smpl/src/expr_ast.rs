@@ -1,4 +1,4 @@
-use crate::ast::{FnParam, Ident, Name, TypeAnn, TypedPath};
+use crate::ast::{Ident, Name, TypeAnn, TypedPath};
 use crate::ast_node::{AstNode, Spanned};
 use crate::parser::LiteralData;
 use crate::span::Span;
