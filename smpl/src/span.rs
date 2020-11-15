@@ -1,3 +1,5 @@
+use std::fmt;
+
 pub type Location = usize;
 
 #[derive(Copy, Clone, Debug)]
@@ -13,5 +15,11 @@ impl Span {
 
     pub fn dummy() -> Self {
         Span { start: 0, end: 0 }
+    }
+}
+
+impl<'a> fmt::Display for Span {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[{}]:[{}]", self.start, self.end)
     }
 }
