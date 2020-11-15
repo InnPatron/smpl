@@ -318,8 +318,8 @@ pub fn walk_extract_stmt<V: Visitor + ?Sized>(
 }
 
 pub fn walk_continue_stmt<V: Visitor + ?Sized>(
-    v: &mut V,
-    node_continue: &AstNode<ContinueStmt>,
+    _v: &mut V,
+    _node_continue: &AstNode<ContinueStmt>,
 ) -> VisitorResult<V::E> {
     Ok(())
 }
