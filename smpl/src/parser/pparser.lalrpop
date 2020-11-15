@@ -345,11 +345,11 @@ TypeParamList: Vec<AstNode<ast::Name>> = {
 
 Export: AstNode<ast::ExportDecl> = {
     // export all from module [except { List<ModuleItemData> }]?
-    <l: @L> EXPORT ALL FROM <ml: @L> <module: IDENT> <mr: @R> <except: (EXCEPT "{" ModuleItemDataList "}")?> <r: @R> => {
+    <l: @L> EXPORT ALL FROM <module: ModulePath> <except: (EXCEPT "{" ModuleItemDataList "}")?> <r: @R> => {
         let except: Vec<AstNode<ast::ModuleItemData>> = except.map(|e| e.2)
             .unwrap_or(Vec::new());
         ast_node!(ast::ExportDecl::ExportAll {
-            from_module: Some(ast_node!(ident!(module), ml, mr)),
+            from_module: Some(module),
             except,
         }, l, r)
     },
@@ -366,9 +366,9 @@ Export: AstNode<ast::ExportDecl> = {
     },
 
     // export from module { List<ModuleItemData> }
-    <l: @L> EXPORT FROM <ml: @L> <module: IDENT> <mr: @R> "{" <items: ModuleItemDataList > "}" <r: @R> => {
+    <l: @L> EXPORT FROM <module: ModulePath> "{" <items: ModuleItemDataList > "}" <r: @R> => {
         ast_node!(ast::ExportDecl::ExportItems {
-            from_module: Some(ast_node!(ident!(module), ml, mr)),
+            from_module: Some(module),
             items,
         }, l, r)
     },
@@ -385,38 +385,38 @@ Export: AstNode<ast::ExportDecl> = {
 Import: AstNode<ast::ImportDecl> = {
 
     // import module { List<module-item-data> } from module
-    <il: @L> IMPORT "{" <items: ModuleItemDataList> "}" FROM <ml: @L> <module: IDENT> <mr: @R> => {
+    <il: @L> IMPORT "{" <items: ModuleItemDataList> "}" FROM <module: ModulePath> <r: @R> => {
         ast_node!(ast::ImportDecl::ImportItems {
-            module: ast_node!(ident!(module), ml, mr),
+            module,
             items,
-        }, il, mr)
+        }, il, r)
     },
 
     // import module
-    <l: @L> IMPORT <ml: @L> <module: IDENT> <mr: @R> => {
+    <l: @L> IMPORT <module: ModulePath> <r: @R> => {
         ast_node!(ast::ImportDecl::ImportModule {
-            module: ast_node!(ident!(module), ml, mr),
+            module,
             alias: None,
-        }, l, mr)
+        }, l, r)
     },
 
     // TODO: combine with the other rule somehow?
     // import module as module_alias
-    <l: @L> IMPORT <ml: @L> <module: IDENT> <mr: @R> AS <l2: @L> <alias: IDENT> <r2: @R> => {
+    <l: @L> IMPORT <module: ModulePath> AS <l2: @L> <alias: IDENT> <r2: @R> => {
         ast_node!(ast::ImportDecl::ImportModule {
-            module: ast_node!(ident!(module), ml, mr),
+            module,
             alias: Some(ast_node!(ident!(alias), l2, r2)),
         }, l, r2)
     },
 
     // import all from module [except { List<module-item-data> }]?
-    <l: @L> IMPORT ALL FROM <ml: @L> <module: IDENT> <mr: @R> <except: (EXCEPT "{" ModuleItemDataList "}")?> <r: @R>=> {
+    <l: @L> IMPORT ALL FROM <module: ModulePath> <except: (EXCEPT "{" ModuleItemDataList "}")?> <r: @R>=> {
         let except: Vec<AstNode<ast::ModuleItemData>> = except.map(|e| e.2)
             .unwrap_or(Vec::new());
         ast_node!(ast::ImportDecl::ImportAll {
-            module: ast_node!(ident!(module), ml, mr),
+            module,
             except,
-        }, l, mr)
+        }, l, r)
     },
 };
 

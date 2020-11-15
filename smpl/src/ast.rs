@@ -84,11 +84,11 @@ pub struct TypeDecl {
 #[derive(Debug, Clone)]
 pub enum ExportDecl {
     ExportItems {
-        from_module: Option<AstNode<Ident>>,
+        from_module: Option<AstNode<ModulePath>>,
         items: Vec<AstNode<ExportItem>>,
     },
     ExportAll {
-        from_module: Option<AstNode<Ident>>,
+        from_module: Option<AstNode<ModulePath>>,
         except: Vec<AstNode<ExportItem>>,
     },
 }
@@ -98,15 +98,15 @@ pub type ExportItem = ModuleItemData;
 #[derive(Debug, Clone)]
 pub enum ImportDecl {
     ImportItems {
-        module: AstNode<Ident>,
+        module: AstNode<ModulePath>,
         items: Vec<AstNode<ImportItem>>,
     },
     ImportModule {
-        module: AstNode<Ident>,
+        module: AstNode<ModulePath>,
         alias: Option<AstNode<Ident>>,
     },
     ImportAll {
-        module: AstNode<Ident>,
+        module: AstNode<ModulePath>,
         except: Vec<AstNode<ImportItem>>,
     },
 }
