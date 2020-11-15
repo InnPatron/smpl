@@ -13,12 +13,17 @@ macro_rules! log_error {
     ($($arg:tt)+) => (error!(target: "module_wf", $($arg)+ ))
 }
 
+macro_rules! log_debug {
+    ($($arg:tt)+) => (debug!(target: "module_wf", $($arg)+ ))
+}
+
 pub type WfResult<T> = Result<T, WfError>;
 
 ///
 /// Syntactic well-formedness check on the AST
 ///     1) A module declares a name
 ///     2) '_' in expression positions are the immediate children of function calls
+///         TODO: also allow in certain operator forms?
 ///     3) 'while' and 'if' expressions have a default branch
 ///     4) Checks that literals have registered formats
 ///
@@ -41,10 +46,10 @@ pub fn module_wf_check(source: &Source, module: &Module) -> WfResult<()> {
 }
 
 mod module_wf {
-    use log::{error, trace};
+    use log::{debug, error, trace};
 
     use crate::ast::*;
-    use crate::ast_node::AstNode;
+    use crate::ast_node::{AstNode, Spanned};
     use crate::ast_visitor::*;
     use crate::expr_ast::*;
     use crate::span::Span;
@@ -53,24 +58,51 @@ mod module_wf {
     use super::{Source, WfError, WfResult};
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    pub(super) enum FnCallTracker {
+    pub(super) enum ExprTracker {
         FnCall,
         Other,
     }
 
     pub(super) struct ModuleWfVisitor<'a> {
         pub(super) source: &'a Source,
-        pub(super) tracker_stack: Vec<FnCallTracker>,
+        pub(super) tracker_stack: Vec<ExprTracker>,
     }
 
     impl<'a> Visitor for ModuleWfVisitor<'a> {
         type E = WfError;
 
-        fn visit_underscore_expr(&mut self, _: &AstNode<()>) -> WfResult<()> {
-            match self.tracker_stack.last() {
-                Some(ref last) => todo!(),
+        fn visit_expr(&mut self, e: &Expr) -> WfResult<()> {
+            match e {
+                Expr::FnCall(..) => {
+                    self.tracker_stack.push(ExprTracker::FnCall)
+                }
 
-                None => todo!(),
+                _ => self.tracker_stack.push(ExprTracker::Other),
+            }
+
+            let result = walk_expr(self, e);
+
+            self.tracker_stack.pop();
+
+            result
+        }
+
+        fn visit_underscore_expr(&mut self, u: &AstNode<()>) -> WfResult<()> {
+            match self.tracker_stack.last() {
+                Some(ref last) => match last {
+                    ExprTracker::FnCall => Ok(()),
+
+                    ExprTracker::Other => {
+                        log_error!("WF: underscore expr in bad position (non-empty tracker stack)");
+                        log_debug!("{:?}", self.tracker_stack);
+                        Err(wf_error!(WfErrorKind::BadUnderscore, u.span()))
+                    }
+                },
+
+                None => {
+                    log_error!("WF: underscore expr in bad position (empty tracker stack)");
+                    Err(wf_error!(WfErrorKind::BadUnderscore, u.span()))
+                }
             }
         }
     }
