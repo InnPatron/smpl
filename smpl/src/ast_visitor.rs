@@ -161,6 +161,18 @@ pub trait Visitor {
     ) -> VisitorResult<Self::E> {
         Ok(())
     }
+
+    fn visit_branch(&mut self, b: &Branch) -> VisitorResult<Self::E> {
+        walk_expr(self, &b.condition)?;
+        walk_block_expr(self, &b.block)
+    }
+
+    fn visit_default_branch(
+        &mut self,
+        b: &AstNode<Block>,
+    ) -> VisitorResult<Self::E> {
+        walk_block_expr(self, b)
+    }
 }
 
 pub fn walk_module_for_expr<V: Visitor>(
@@ -204,8 +216,11 @@ pub fn walk_if_stmt<V: Visitor + ?Sized>(
     let if_stmt = node_if.data();
 
     for branch in if_stmt.branches.iter() {
-        v.visit_expr(&branch.condition)?;
-        walk_block_stmt(v, &branch.block)?;
+        v.visit_branch(branch)?;
+    }
+
+    if let Some(ref default_branch) = if_stmt.default_branch {
+        v.visit_default_branch(default_branch)?;
     }
 
     Ok(())
@@ -217,12 +232,12 @@ pub fn walk_while_stmt<V: Visitor + ?Sized>(
 ) -> VisitorResult<V::E> {
     let while_stmt = node_while.data();
 
-    v.visit_expr(&while_stmt.condition)?;
-    walk_block_stmt(v, &while_stmt.body)?;
-
     for branch in while_stmt.branches.iter() {
-        v.visit_expr(&branch.condition)?;
-        walk_block_stmt(v, &branch.block)?;
+        v.visit_branch(branch)?;
+    }
+
+    if let Some(ref default_branch) = while_stmt.default_branch {
+        v.visit_default_branch(default_branch)?;
     }
 
     Ok(())
@@ -387,14 +402,13 @@ pub fn walk_if_expr<V: Visitor + ?Sized>(
     let if_span = node_if_expr.span();
 
     for branch in if_expr.branches.iter() {
-        v.visit_expr(&branch.condition)?;
-        walk_block_stmt(v, &branch.block)?;
+        v.visit_branch(branch)?;
     }
 
     match if_expr.default_branch {
         Some(ref block) => {
             log_trace!("If expr at '{}' has a default branch", if_span);
-            walk_block_stmt(v, block)
+            v.visit_default_branch(block)
         }
 
         None => {
@@ -414,18 +428,14 @@ pub fn walk_while_expr<V: Visitor + ?Sized>(
     let while_expr = node_while_expr.data();
     let while_span = node_while_expr.span();
 
-    v.visit_expr(&while_expr.condition)?;
-    walk_block_stmt(v, &while_expr.body)?;
-
     for branch in while_expr.branches.iter() {
-        v.visit_expr(&branch.condition)?;
-        walk_block_stmt(v, &branch.block)?;
+        v.visit_branch(branch)?;
     }
 
     match while_expr.default_branch {
         Some(ref block) => {
             log_trace!("While expr at '{}' has a default branch", while_span);
-            walk_block_stmt(v, block)
+            v.visit_default_branch(block)
         }
 
         None => {
