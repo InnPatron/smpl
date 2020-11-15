@@ -116,7 +116,7 @@ pub mod expr_visitor {
             &mut self,
             node_fn_call: &AstNode<FnCall>,
         ) -> VisitorResult<Self::E> {
-            walk_fn_call(self, node_fn_call)
+            walk_fn_call_expr(self, node_fn_call)
         }
 
         fn visit_struct_init_expr(
@@ -155,7 +155,7 @@ pub mod expr_visitor {
         }
     }
 
-    pub fn walk_module<V: ExprVisitor>(
+    pub fn walk_module_for_expr<V: ExprVisitor>(
         v: &mut V,
         m: &Module,
     ) -> VisitorResult<V::E> {
@@ -446,7 +446,7 @@ pub mod expr_visitor {
         walk_expr(v, &dot_access.base)
     }
 
-    pub fn walk_fn_call<V: ExprVisitor + ?Sized>(
+    pub fn walk_fn_call_expr<V: ExprVisitor + ?Sized>(
         v: &mut V,
         node_fn_call: &AstNode<FnCall>,
     ) -> VisitorResult<V::E> {
