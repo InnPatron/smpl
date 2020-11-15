@@ -715,18 +715,21 @@ Literal: AstNode<east::Literal> = {
 };
 
 WhileExpr: AstNode<east::While> = {
-    <l: @L> WHILE <main_cond: Expr> <body: Block>  <elifs: (ELIF Expr Block)*> <default_branch: (ELSE Block)?> <r: @R> => {
+    <l: @L> WHILE <main_cond: Expr> <main_body: Block>  <elifs: (ELIF Expr Block)*> <default_branch: (ELSE Block)?> <r: @R> => {
 
-        let branches = elifs.into_iter().map(|elif|
+        let elifs = elifs.into_iter().map(|elif|
             east::Branch {
                 condition: elif.1,
                 block: elif.2,
-            }).collect();
+            });
+        let main_branch = east::Branch {
+            condition: main_cond,
+            block: main_body,
+        };
         let default_branch = default_branch.map(|e| e.1);
+        let branches = std::iter::once(main_branch).chain(elifs).collect();
 
         ast_node!(east::While {
-            condition: main_cond,
-            body,
             branches,
             default_branch,
         }, l, r)

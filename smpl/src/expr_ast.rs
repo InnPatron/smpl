@@ -49,8 +49,6 @@ pub struct Branch {
 
 #[derive(Clone, Debug)]
 pub struct While {
-    pub condition: Expr,
-    pub body: AstNode<Block>,
     pub branches: Vec<Branch>,
     pub default_branch: Option<AstNode<Block>>,
 }
