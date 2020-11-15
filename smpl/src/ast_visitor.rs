@@ -13,6 +13,10 @@ type VisitorResult<E> = Result<(), E>;
 pub trait Visitor {
     type E;
 
+    fn visit_stmt(&mut self, s: &Stmt) -> VisitorResult<Self::E> {
+        walk_stmt(self, s)
+    }
+
     fn visit_if_stmt(&mut self, n: &AstNode<If>) -> VisitorResult<Self::E> {
         walk_if_stmt(self, n)
     }
@@ -68,6 +72,10 @@ pub trait Visitor {
 
     fn visit_expr_stmt(&mut self, n: &Expr) -> VisitorResult<Self::E> {
         walk_expr_stmt(self, n)
+    }
+
+    fn visit_expr(&mut self, e: &Expr) -> VisitorResult<Self::E> {
+        walk_expr(self, e)
     }
 
     fn visit_if_expr(
@@ -183,7 +191,7 @@ pub fn walk_block_stmt<V: Visitor + ?Sized>(
     b: &AstNode<Block>,
 ) -> VisitorResult<V::E> {
     for s in b.data().stmts.iter() {
-        walk_stmt(v, s)?;
+        v.visit_stmt(s)?;
     }
 
     Ok(())
@@ -196,7 +204,7 @@ pub fn walk_if_stmt<V: Visitor + ?Sized>(
     let if_stmt = node_if.data();
 
     for branch in if_stmt.branches.iter() {
-        walk_expr(v, &branch.condition)?;
+        v.visit_expr(&branch.condition)?;
         walk_block_stmt(v, &branch.block)?;
     }
 
@@ -209,11 +217,11 @@ pub fn walk_while_stmt<V: Visitor + ?Sized>(
 ) -> VisitorResult<V::E> {
     let while_stmt = node_while.data();
 
-    walk_expr(v, &while_stmt.condition)?;
+    v.visit_expr(&while_stmt.condition)?;
     walk_block_stmt(v, &while_stmt.body)?;
 
     for branch in while_stmt.branches.iter() {
-        walk_expr(v, &branch.condition)?;
+        v.visit_expr(&branch.condition)?;
         walk_block_stmt(v, &branch.block)?;
     }
 
@@ -225,7 +233,7 @@ pub fn walk_let_stmt<V: Visitor + ?Sized>(
     node_let: &AstNode<LetStmt>,
 ) -> VisitorResult<V::E> {
     let let_stmt = node_let.data();
-    walk_expr(v, &let_stmt.init)
+    v.visit_expr(&let_stmt.init)
 }
 
 pub fn walk_return_stmt<V: Visitor + ?Sized>(
@@ -238,7 +246,7 @@ pub fn walk_return_stmt<V: Visitor + ?Sized>(
     match return_stmt.expr {
         Some(ref e) => {
             log_trace!("Return stmt at '{}' has an expr", return_span);
-            walk_expr(v, e)
+            v.visit_expr(e)
         }
 
         None => {
@@ -261,7 +269,7 @@ pub fn walk_break_stmt<V: Visitor + ?Sized>(
     match break_stmt.expr {
         Some(ref e) => {
             log_trace!("Break stmt at '{}' has an expr", break_span);
-            walk_expr(v, e)
+            v.visit_expr(e)
         }
 
         None => {
@@ -281,7 +289,7 @@ pub fn walk_extract_stmt<V: Visitor + ?Sized>(
     match extract_stmt.expr {
         Some(ref e) => {
             log_trace!("Extract stmt at '{}' has an expr", extract_span);
-            walk_expr(v, e)
+            v.visit_expr(e)
         }
 
         None => {
@@ -306,7 +314,7 @@ pub fn walk_expr_stmt<V: Visitor + ?Sized>(
     expr: &Expr,
 ) -> VisitorResult<V::E> {
     log_trace!("Visiting expr-stmt at '{}'", expr.span());
-    walk_expr(v, expr)
+    v.visit_expr(expr)
 }
 
 pub fn walk_stmt<V: Visitor + ?Sized>(
@@ -379,7 +387,7 @@ pub fn walk_if_expr<V: Visitor + ?Sized>(
     let if_span = node_if_expr.span();
 
     for branch in if_expr.branches.iter() {
-        walk_expr(v, &branch.condition)?;
+        v.visit_expr(&branch.condition)?;
         walk_block_stmt(v, &branch.block)?;
     }
 
@@ -406,11 +414,11 @@ pub fn walk_while_expr<V: Visitor + ?Sized>(
     let while_expr = node_while_expr.data();
     let while_span = node_while_expr.span();
 
-    walk_expr(v, &while_expr.condition)?;
+    v.visit_expr(&while_expr.condition)?;
     walk_block_stmt(v, &while_expr.body)?;
 
     for branch in while_expr.branches.iter() {
-        walk_expr(v, &branch.condition)?;
+        v.visit_expr(&branch.condition)?;
         walk_block_stmt(v, &branch.block)?;
     }
 
@@ -442,14 +450,14 @@ pub fn walk_bin_expr<V: Visitor + ?Sized>(
         bin_expr.op.data(),
         bin_span
     );
-    walk_expr(v, &bin_expr.left)?;
+    v.visit_expr(&bin_expr.left)?;
 
     log_trace!(
         "Visiting right of bin expr (op: '{}') at '{}'",
         bin_expr.op.data(),
         bin_span
     );
-    walk_expr(v, &bin_expr.right)
+    v.visit_expr(&bin_expr.right)
 }
 
 pub fn walk_uni_expr<V: Visitor + ?Sized>(
@@ -457,7 +465,7 @@ pub fn walk_uni_expr<V: Visitor + ?Sized>(
     node_uni_expr: &AstNode<UniExpr>,
 ) -> VisitorResult<V::E> {
     let uni_expr = node_uni_expr.data();
-    walk_expr(v, &uni_expr.expr)
+    v.visit_expr(&uni_expr.expr)
 }
 
 pub fn walk_dot_access_expr<V: Visitor + ?Sized>(
@@ -465,7 +473,7 @@ pub fn walk_dot_access_expr<V: Visitor + ?Sized>(
     node_dot_access: &AstNode<DotAccess>,
 ) -> VisitorResult<V::E> {
     let dot_access = node_dot_access.data();
-    walk_expr(v, &dot_access.base)
+    v.visit_expr(&dot_access.base)
 }
 
 pub fn walk_fn_call_expr<V: Visitor + ?Sized>(
@@ -478,7 +486,7 @@ pub fn walk_fn_call_expr<V: Visitor + ?Sized>(
     log_trace!("Visiting fn call at '{}'", fn_call_span);
 
     log_trace!("Visiting fn call function at '{}'", fn_call_span);
-    walk_expr(v, &fn_call.func)?;
+    v.visit_expr(&fn_call.func)?;
 
     for (i, arg) in fn_call.args.iter().enumerate() {
         log_trace!(
@@ -486,7 +494,7 @@ pub fn walk_fn_call_expr<V: Visitor + ?Sized>(
             i,
             fn_call_span
         );
-        walk_expr(v, arg)?;
+        v.visit_expr(arg)?;
     }
 
     Ok(())
@@ -509,7 +517,7 @@ pub fn walk_struct_init_expr<V: Visitor + ?Sized>(
             struct_init_span
         );
 
-        walk_expr(v, init_expr)?;
+        v.visit_expr(init_expr)?;
     }
 
     Ok(())
@@ -523,7 +531,7 @@ pub fn walk_lam_expr<V: Visitor + ?Sized>(
     let lam_span = node_lam.span();
 
     log_trace!("Visiting lambda expr at '{}'", lam_span);
-    walk_expr(v, &lam.body)
+    v.visit_expr(&lam.body)
 }
 
 pub fn walk_block_expr<V: Visitor + ?Sized>(
@@ -536,13 +544,13 @@ pub fn walk_block_expr<V: Visitor + ?Sized>(
     log_trace!("Visiting block expr at '{}'", block_span);
 
     for s in block.stmts.iter() {
-        walk_stmt(v, s)?;
+        v.visit_stmt(s)?;
     }
 
     match block.return_expr {
         Some(ref return_expr) => {
             log_trace!("Block at '{}' has a trailing expr", block_span);
-            walk_expr(v, return_expr)
+            v.visit_expr(return_expr)
         }
 
         None => {
