@@ -2,7 +2,7 @@ use crate::ast::{Ident, Name, TypeAnn, TypedPath};
 use crate::ast_node::{AstNode, Spanned};
 use crate::parser::LiteralData;
 use crate::span::Span;
-use std::fmt::Debug;
+use std::fmt::{self, Debug};
 
 #[derive(Clone, Debug)]
 pub enum Stmt {
@@ -172,6 +172,27 @@ impl Spanned for Expr {
             Expr::Path(ref spanned, ..) => spanned.span(),
             Expr::Block(ref spanned, ..) => spanned.span(),
             Expr::Underscore(ref spanned, ..) => spanned.span(),
+        }
+    }
+}
+
+impl fmt::Display for BinOp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            BinOp::Assign => write!(f, "="),
+            BinOp::Pipe => write!(f, "|>"),
+            BinOp::And => write!(f, "and"),
+            BinOp::Or => write!(f, "or"),
+        }
+    }
+}
+
+impl fmt::Display for UniOp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            UniOp::Ref => write!(f, "&"),
+            UniOp::Deref => write!(f, "@"),
+            UniOp::Not => write!(f, "!"),
         }
     }
 }
