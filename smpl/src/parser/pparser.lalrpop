@@ -489,13 +489,13 @@ SafeStmt: east::Stmt = {
 
     <let_stmt: LetStmt> => east::Stmt::Let(let_stmt),
 
-    <l: @L> RETURN <e: Expr?> SEMI <r: @R> => east::Stmt::Return(ast_node!(e, l ,r)),
+    <l: @L> RETURN <e: Expr?> SEMI <r: @R> => east::Stmt::Return(ast_node!(east::ReturnStmt { expr: e }, l ,r)),
 
-    <l: @L> CONTINUE SEMI <r: @R> => east::Stmt::Continue(ast_node!((), l, r)),
+    <l: @L> CONTINUE SEMI <r: @R> => east::Stmt::Continue(ast_node!(east::ContinueStmt, l, r)),
 
-    <l: @L> BREAK <e: Expr?> SEMI <r: @R> => east::Stmt::Break(ast_node!(e, l, r)),
+    <l: @L> BREAK <e: Expr?> SEMI <r: @R> => east::Stmt::Break(ast_node!(east::BreakStmt { expr: e }, l, r)),
 
-    <l: @L> EXTRACT <e: Expr?> SEMI <r: @R> => east::Stmt::Extract(ast_node!(e, l, r)),
+    <l: @L> EXTRACT <e: Expr?> SEMI <r: @R> => east::Stmt::Extract(ast_node!(east::ExtractStmt { expr: e }, l, r)),
 
     <expr_stmt: Expr> SEMI => east::Stmt::ExprStmt(expr_stmt),
 

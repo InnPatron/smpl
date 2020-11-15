@@ -9,12 +9,30 @@ pub enum Stmt {
     If(AstNode<If>),
     While(AstNode<While>),
     Let(AstNode<LetStmt>),
-    Return(AstNode<Option<Expr>>),
-    Break(AstNode<Option<Expr>>),
-    Extract(AstNode<Option<Expr>>),
-    Continue(AstNode<()>),
+    Return(AstNode<ReturnStmt>),
+    Break(AstNode<BreakStmt>),
+    Extract(AstNode<ExtractStmt>),
+    Continue(AstNode<ContinueStmt>),
     Block(AstNode<Block>),
     ExprStmt(Expr),
+}
+
+#[derive(Clone, Debug)]
+pub struct ContinueStmt;
+
+#[derive(Clone, Debug)]
+pub struct ExtractStmt {
+    pub expr: Option<Expr>,
+}
+
+#[derive(Clone, Debug)]
+pub struct BreakStmt {
+    pub expr: Option<Expr>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ReturnStmt {
+    pub expr: Option<Expr>,
 }
 
 #[derive(Clone, Debug)]
