@@ -199,8 +199,15 @@ impl fmt::Display for UniOp {
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiteralData<T> {
     pub data: String,
-    pub suffix: Option<String>,
+    pub suffix: LiteralSuffix,
     pub phantom: PhantomData<T>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum LiteralSuffix {
+    Float(Option<String>),
+    Int(Option<String>),
+    String(Option<String>),
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -5,6 +5,11 @@ use crate::span::Span;
 use crate::Source;
 
 use super::error::{WfError, WfErrorKind};
+use super::StaticModData;
+
+macro_rules! log_info {
+    ($($arg:tt)+) => (info!(target: "module_wf", $($arg)+ ))
+}
 
 macro_rules! log_trace {
     ($($arg:tt)+) => (trace!(target: "module_wf", $($arg)+ ))
@@ -26,25 +31,26 @@ pub type WfResult<T> = Result<T, WfError>;
 ///     2) '_' in expression positions are the immediate children of function calls
 ///         TODO: also allow in certain operator forms?
 ///     3) 'while' and 'if' expressions have a default branch
-///     4) Checks that literals have registered formats
+///     4) Checks that literals have registered type
+///         NOTE: does NOT check if that type exists or results in a well-typed program
 ///
-pub fn module_wf_check(source: &Source, module: &Module) -> WfResult<()> {
+pub fn module_wf_check(sdm: &StaticModData, module: &Module) -> WfResult<()> {
     use crate::ast_visitor;
 
-    log_trace!("Module declaration check for '{}'", source);
-    module_decl_check(source, module)?;
-    log_trace!("Found a module declaration for '{}'", source);
+    log_trace!("Module declaration check for '{}'", sdm.source);
+    module_decl_check(&sdm.source, module)?;
+    log_trace!("Found a module declaration for '{}'", sdm.source);
 
-    log_trace!("Expr WF check for '{}'", source);
+    log_trace!("Expr WF check for '{}'", sdm.source);
     {
         let mut visitor = self::module_wf::ModuleWfVisitor {
-            source,
+            sdm,
             tracker_stack: vec![],
         };
 
         ast_visitor::walk_module_for_expr(&mut visitor, module)?;
     }
-    log_trace!("All exprs well-formed in '{}'", source);
+    log_trace!("All exprs well-formed in '{}'", sdm.source);
 
     todo!();
 }
@@ -62,14 +68,13 @@ fn module_decl_check(source: &Source, module: &Module) -> WfResult<()> {
 }
 
 mod module_wf {
-    use log::{debug, error, trace};
+    use log::{debug, error, info, trace};
 
     use crate::ast_node::{AstNode, Spanned};
     use crate::ast_visitor::*;
     use crate::expr_ast::*;
 
-    use super::super::error::WfErrorKind;
-    use super::{Source, WfError, WfResult};
+    use super::{StaticModData, WfError, WfErrorKind, WfResult};
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub(super) enum ExprTracker {
@@ -78,12 +83,52 @@ mod module_wf {
     }
 
     pub(super) struct ModuleWfVisitor<'a> {
-        pub(super) source: &'a Source,
+        pub(super) sdm: &'a StaticModData<'a>,
         pub(super) tracker_stack: Vec<ExprTracker>,
     }
 
     impl<'a> Visitor for ModuleWfVisitor<'a> {
         type E = WfError;
+
+        fn visit_lit_expr(
+            &mut self,
+            node_lit: &AstNode<Literal>,
+        ) -> WfResult<()> {
+            let lit = node_lit.data();
+            let lit_span = node_lit.span();
+
+            let typed_path = match lit {
+                Literal::String(ref literal_data) => {
+                    self.sdm.lit_sfx_map.get_typed_path(&literal_data.suffix)
+                }
+
+                Literal::Int(ref literal_data) => {
+                    self.sdm.lit_sfx_map.get_typed_path(&literal_data.suffix)
+                }
+
+                Literal::Float(ref literal_data) => {
+                    self.sdm.lit_sfx_map.get_typed_path(&literal_data.suffix)
+                }
+
+                Literal::Bool(ref literal_data) => return Ok(()),
+            };
+
+            if typed_path.is_some() {
+                log_info!(
+                    "Literal at '{}' from '{}' had a mapped type",
+                    lit_span,
+                    &self.sdm.source
+                );
+                Ok(())
+            } else {
+                log_error!(
+                    "Literal at '{}' from '{}' does not have a mapped type",
+                    lit_span,
+                    &self.sdm.source
+                );
+                wf_error!(WfErrorKind::UnknownLiteralKind, lit_span)
+            }
+        }
 
         fn visit_if_expr(
             &mut self,

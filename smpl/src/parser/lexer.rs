@@ -5,7 +5,7 @@ use std::str::CharIndices;
 use super::error::*;
 use super::tokens::Token;
 use crate::ast::Ident;
-use crate::expr_ast::LiteralData;
+use crate::expr_ast::{LiteralData, LiteralSuffix};
 use crate::span::Location;
 
 pub type SpannedToken = (Location, Token, Location);
@@ -277,7 +277,7 @@ impl<'input> Tokenizer<'input> {
                 // TODO: Add support for literal suffixes
                 let float_literal = LiteralData {
                     data: float.to_string(),
-                    suffix: None,
+                    suffix: LiteralSuffix::Float(None),
                     phantom: PhantomData,
                 };
                 return Ok((start, Token::FloatLiteral(float_literal), end));
@@ -287,7 +287,7 @@ impl<'input> Tokenizer<'input> {
         // TODO: Add support for literal suffixes
         let int_literal = LiteralData {
             data: int.to_string(),
-            suffix: None,
+            suffix: LiteralSuffix::Int(None),
             phantom: PhantomData,
         };
 
@@ -330,7 +330,7 @@ impl<'input> Tokenizer<'input> {
                     // TODO: Add support for literal suffixes
                     let literal = LiteralData {
                         data: literal,
-                        suffix: None,
+                        suffix: LiteralSuffix::String(None),
                         phantom: PhantomData,
                     };
                     return Ok((start, Token::StringLiteral(literal), end));

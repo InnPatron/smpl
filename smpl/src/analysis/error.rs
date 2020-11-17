@@ -12,4 +12,5 @@ pub enum WfErrorKind {
     IfExprNotTotal,
     BadUnderscore,
     MissingModuleDecl,
+    UnknownLiteralKind,
 }
