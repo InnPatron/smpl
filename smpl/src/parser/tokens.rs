@@ -1,10 +1,5 @@
 use crate::ast::Ident;
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct LiteralData {
-    pub data: String,
-    pub suffix: Option<String>,
-}
+use crate::expr_ast::LiteralData;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {

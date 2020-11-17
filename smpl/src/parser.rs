@@ -6,7 +6,6 @@ mod tokens;
 lalrpop_mod!(pub pparser, "/parser/pparser.rs");
 
 pub use self::pparser::ModuleParser;
-pub use self::tokens::LiteralData;
 
 #[cfg(test)]
 mod tests {

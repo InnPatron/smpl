@@ -1,6 +1,5 @@
 use crate::ast::{Ident, Name, TypeAnn, TypedPath};
 use crate::ast_node::{AstNode, Spanned};
-use crate::parser::LiteralData;
 use crate::span::Span;
 use std::fmt::{self, Debug};
 
@@ -193,4 +192,10 @@ impl fmt::Display for UniOp {
             UniOp::Not => write!(f, "!"),
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiteralData {
+    pub data: String,
+    pub suffix: Option<String>,
 }

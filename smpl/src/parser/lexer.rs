@@ -2,8 +2,9 @@ use std::iter::{Enumerate, Iterator, Peekable};
 use std::str::CharIndices;
 
 use super::error::*;
-use super::tokens::{LiteralData, Token};
+use super::tokens::Token;
 use crate::ast::Ident;
+use crate::expr_ast::LiteralData;
 use crate::span::Location;
 
 pub type SpannedToken = (Location, Token, Location);
