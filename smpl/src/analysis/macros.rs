@@ -1,8 +1,8 @@
 macro_rules! wf_error {
     ($kind: expr, $span: expr) => {
-        WfError {
+        Err(WfError {
             error: $kind,
             span: $span,
-        }
+        })
     };
 }

@@ -1,9 +1,10 @@
 use log::{error, trace};
 
 use crate::ast::Module;
+use crate::span::Span;
 use crate::Source;
 
-use super::error::WfError;
+use super::error::{WfError, WfErrorKind};
 
 macro_rules! log_trace {
     ($($arg:tt)+) => (trace!(target: "module_wf", $($arg)+ ))
@@ -28,31 +29,44 @@ pub type WfResult<T> = Result<T, WfError>;
 ///     4) Checks that literals have registered formats
 ///
 pub fn module_wf_check(source: &Source, module: &Module) -> WfResult<()> {
-    use crate::span::Span;
+    use crate::ast_visitor;
 
-    use super::error::WfErrorKind;
+    log_trace!("Module declaration check for '{}'", source);
+    module_decl_check(source, module)?;
+    log_trace!("Found a module declaration for '{}'", source);
 
-    log_trace!("Module WF check for {}", source);
+    log_trace!("Expr WF check for '{}'", source);
+    {
+        let mut visitor = self::module_wf::ModuleWfVisitor {
+            source,
+            tracker_stack: vec![],
+        };
 
+        ast_visitor::walk_module_for_expr(&mut visitor, module)?;
+    }
+    log_trace!("All exprs well-formed in '{}'", source);
+
+    todo!();
+}
+
+fn module_decl_check(source: &Source, module: &Module) -> WfResult<()> {
     if module.mod_decl.is_none() {
         log_error!(
             "Module from source '{}' does not have a module declaration",
             source
         );
-        return Err(wf_error!(WfErrorKind::MissingModuleDecl, Span::dummy()));
+        return wf_error!(WfErrorKind::MissingModuleDecl, Span::dummy());
     }
 
-    todo!();
+    Ok(())
 }
 
 mod module_wf {
     use log::{debug, error, trace};
 
-    use crate::ast::*;
     use crate::ast_node::{AstNode, Spanned};
     use crate::ast_visitor::*;
     use crate::expr_ast::*;
-    use crate::span::Span;
 
     use super::super::error::WfErrorKind;
     use super::{Source, WfError, WfResult};
@@ -70,6 +84,42 @@ mod module_wf {
 
     impl<'a> Visitor for ModuleWfVisitor<'a> {
         type E = WfError;
+
+        fn visit_if_expr(
+            &mut self,
+            node_if_expr: &AstNode<If>,
+        ) -> WfResult<()> {
+            let if_expr = node_if_expr.data();
+            let if_span = node_if_expr.span();
+
+            if if_expr.default_branch.is_none() {
+                log_error!(
+                    "if-expr at {} does not have a default branch",
+                    if_span
+                );
+                return wf_error!(WfErrorKind::IfExprNotTotal, if_span);
+            }
+
+            walk_if_expr(self, node_if_expr)
+        }
+
+        fn visit_while_expr(
+            &mut self,
+            node_while_expr: &AstNode<While>,
+        ) -> WfResult<()> {
+            let while_expr = node_while_expr.data();
+            let while_span = node_while_expr.span();
+
+            while while_expr.default_branch.is_none() {
+                log_error!(
+                    "while-expr at {} does not have a default branch",
+                    while_span
+                );
+                return wf_error!(WfErrorKind::WhileExprNotTotal, while_span);
+            }
+
+            walk_while_expr(self, node_while_expr)
+        }
 
         fn visit_expr(&mut self, e: &Expr) -> WfResult<()> {
             match e {
@@ -95,13 +145,13 @@ mod module_wf {
                     ExprTracker::Other => {
                         log_error!("WF: underscore expr in bad position (non-empty tracker stack)");
                         log_debug!("{:?}", self.tracker_stack);
-                        Err(wf_error!(WfErrorKind::BadUnderscore, u.span()))
+                        wf_error!(WfErrorKind::BadUnderscore, u.span())
                     }
                 },
 
                 None => {
                     log_error!("WF: underscore expr in bad position (empty tracker stack)");
-                    Err(wf_error!(WfErrorKind::BadUnderscore, u.span()))
+                    wf_error!(WfErrorKind::BadUnderscore, u.span())
                 }
             }
         }
