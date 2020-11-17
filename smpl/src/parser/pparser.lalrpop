@@ -700,11 +700,11 @@ UniOp: east::UniOp = {
 };
 
 Literal: AstNode<east::Literal> = {
-    <l: @L> <literal: STRING> <r: @R> => ast_node!(east::Literal::String(literal_data!(literal)), l, r),
+    <l: @L> <literal: STRING> <r: @R> => ast_node!(east::Literal::String(literal_data!(literal => string)), l, r),
 
-    <l: @L> <literal: FLOAT> <r: @R> => ast_node!(east::Literal::Float(literal_data!(literal)), l, r),
+    <l: @L> <literal: FLOAT> <r: @R> => ast_node!(east::Literal::Float(literal_data!(literal => float)), l, r),
 
-    <l: @L> <literal: INT> <r: @R> => ast_node!(east::Literal::Int(literal_data!(literal)), l, r),
+    <l: @L> <literal: INT> <r: @R> => ast_node!(east::Literal::Int(literal_data!(literal => int)), l, r),
 
     <l: @L> <literal: BOOL> <r: @R> => {
         match literal {

@@ -1,4 +1,5 @@
 use std::iter::{Enumerate, Iterator, Peekable};
+use std::marker::PhantomData;
 use std::str::CharIndices;
 
 use super::error::*;
@@ -277,6 +278,7 @@ impl<'input> Tokenizer<'input> {
                 let float_literal = LiteralData {
                     data: float.to_string(),
                     suffix: None,
+                    phantom: PhantomData,
                 };
                 return Ok((start, Token::FloatLiteral(float_literal), end));
             }
@@ -286,6 +288,7 @@ impl<'input> Tokenizer<'input> {
         let int_literal = LiteralData {
             data: int.to_string(),
             suffix: None,
+            phantom: PhantomData,
         };
 
         Ok((start, Token::IntLiteral(int_literal), end))
@@ -328,6 +331,7 @@ impl<'input> Tokenizer<'input> {
                     let literal = LiteralData {
                         data: literal,
                         suffix: None,
+                        phantom: PhantomData,
                     };
                     return Ok((start, Token::StringLiteral(literal), end));
                 }

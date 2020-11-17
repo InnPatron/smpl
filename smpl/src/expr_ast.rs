@@ -1,7 +1,9 @@
+use std::fmt::{self, Debug};
+use std::marker::PhantomData;
+
 use crate::ast::{Ident, Name, TypeAnn, TypedPath};
 use crate::ast_node::{AstNode, Spanned};
 use crate::span::Span;
-use std::fmt::{self, Debug};
 
 #[derive(Clone, Debug)]
 pub enum Stmt {
@@ -117,9 +119,9 @@ impl StructInit {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
-    String(LiteralData),
-    Int(LiteralData),
-    Float(LiteralData),
+    String(LiteralData<PhantomLitString>),
+    Int(LiteralData<PhantomLitInt>),
+    Float(LiteralData<PhantomLitFloat>),
     Bool(bool),
 }
 
@@ -195,7 +197,15 @@ impl fmt::Display for UniOp {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct LiteralData {
+pub struct LiteralData<T> {
     pub data: String,
     pub suffix: Option<String>,
+    pub phantom: PhantomData<T>,
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PhantomLitString;
+#[derive(Clone, Debug, PartialEq)]
+pub struct PhantomLitFloat;
+#[derive(Clone, Debug, PartialEq)]
+pub struct PhantomLitInt;

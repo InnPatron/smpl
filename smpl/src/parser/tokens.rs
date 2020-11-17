@@ -1,12 +1,14 @@
 use crate::ast::Ident;
-use crate::expr_ast::LiteralData;
+use crate::expr_ast::{
+    LiteralData, PhantomLitFloat, PhantomLitInt, PhantomLitString,
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Ident(Ident),
-    StringLiteral(LiteralData),
-    IntLiteral(LiteralData),
-    FloatLiteral(LiteralData),
+    StringLiteral(LiteralData<PhantomLitString>),
+    IntLiteral(LiteralData<PhantomLitInt>),
+    FloatLiteral(LiteralData<PhantomLitFloat>),
     BoolLiteral(bool),
 
     // Decl tokens
