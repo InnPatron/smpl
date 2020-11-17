@@ -52,7 +52,7 @@ pub fn module_wf_check(sdm: &StaticModData, module: &Module) -> WfResult<()> {
     }
     log_trace!("All exprs well-formed in '{}'", sdm.source);
 
-    todo!();
+    Ok(())
 }
 
 fn module_decl_check(source: &Source, module: &Module) -> WfResult<()> {
