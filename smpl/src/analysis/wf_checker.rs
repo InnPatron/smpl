@@ -68,7 +68,7 @@ fn module_decl_check(source: &Source, module: &Module) -> WfResult<()> {
 }
 
 mod module_wf {
-    use log::{debug, error, info, trace};
+    use log::{debug, error, info};
 
     use crate::ast_node::{AstNode, Spanned};
     use crate::ast_visitor::*;
@@ -110,7 +110,7 @@ mod module_wf {
                     self.sdm.lit_sfx_map.get_typed_path(&literal_data.suffix)
                 }
 
-                Literal::Bool(ref literal_data) => return Ok(()),
+                Literal::Bool(_) => return Ok(()),
             };
 
             if typed_path.is_some() {
