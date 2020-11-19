@@ -59,6 +59,8 @@ pub enum Decl {
 #[derive(Debug, Clone)]
 pub struct EnumDecl {
     pub name: AstNode<Ident>,
+    pub type_params: TypeParams,
+    pub annotations: Vec<Annotation>,
     pub variants: Vec<AstNode<EnumVariant>>,
 }
 

@@ -127,11 +127,14 @@ Ident: AstNode<ast::Ident> = {
 }
 
 EnumDecl: AstNode<ast::EnumDecl> = {
-    <l: @L> ENUM  <name: Ident> "{" <variants: EnumVariantList?> "}" <r: @R> => {
+    <l: @L> ENUM  <name: Ident> <type_params: TypeParams?> "{" <variants: EnumVariantList?> "}" <r: @R> => {
+        let type_params = type_params.unwrap_or(ast::TypeParams { params: Vec::new() });
         let variants = variants.unwrap_or(vec![]);
         ast_node!(ast::EnumDecl {
             name,
             variants,
+            type_params,
+            annotations: Vec::new(),
         }, l, r)
     }
 };
