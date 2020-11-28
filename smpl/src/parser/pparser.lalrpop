@@ -426,12 +426,12 @@ Import: AstNode<ast::ImportDecl> = {
 };
 
 ModuleInst: AstNode<ast::ModuleInst> = {
-    <l: @L> <p: ModulePath> <r: @R> => ast_node!(ast::ModuleInst::Path(p), l, r),
+    <l: @L> <m: Ident> <r: @R> => ast_node!(ast::ModuleInst { module: m, args: vec![] }, l, r),
 
-    <l: @L> <path: ModulePath> "(" <args: ModuleInstList?> ")" <r: @R> => {
+    <l: @L> <m: Ident> "(" <args: ModuleInstList?> ")" <r: @R> => {
         let args = args.unwrap_or(vec![]);
-        ast_node!(ast::ModuleInst::ArgPath {
-            path,
+        ast_node!(ast::ModuleInst {
+            module: m,
             args,
         }, l, r)
     },

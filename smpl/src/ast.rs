@@ -61,9 +61,45 @@ pub enum LocalDecl {
     Type(AstNode<TypeDecl>),
 }
 
+impl LocalDecl {
+    pub fn name(&self) -> &AstNode<Name> {
+        match self {
+            LocalDecl::Opaque(ref n) => &n.data().name,
+            LocalDecl::Struct(ref n) => &n.data().name,
+            LocalDecl::Enum(ref n) => &n.data().name,
+            LocalDecl::Fn(ref n) => &n.data().name,
+            LocalDecl::BuiltinFn(ref n) => &n.data().name,
+            LocalDecl::Type(ref n) => &n.data().name,
+        }
+    }
+
+    pub fn set_mod(&mut self, module: Ident) {
+        match self {
+            LocalDecl::Opaque(ref mut n) => {
+                n.data_mut().name.data_mut().to_module_item(module)
+            }
+            LocalDecl::Struct(ref mut n) => {
+                n.data_mut().name.data_mut().to_module_item(module)
+            }
+            LocalDecl::Enum(ref mut n) => {
+                n.data_mut().name.data_mut().to_module_item(module)
+            }
+            LocalDecl::Fn(ref mut n) => {
+                n.data_mut().name.data_mut().to_module_item(module)
+            }
+            LocalDecl::BuiltinFn(ref mut n) => {
+                n.data_mut().name.data_mut().to_module_item(module)
+            }
+            LocalDecl::Type(ref mut n) => {
+                n.data_mut().name.data_mut().to_module_item(module)
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct EnumDecl {
-    pub name: AstNode<Ident>,
+    pub name: AstNode<Name>,
     pub type_params: TypeParams,
     pub annotations: Vec<Annotation>,
     pub variants: Vec<AstNode<EnumVariant>>,
@@ -72,12 +108,12 @@ pub struct EnumDecl {
 #[derive(Debug, Clone)]
 pub enum EnumVariant {
     Struct {
-        name: AstNode<Ident>,
+        name: AstNode<Name>,
         body: Vec<StructField>,
         annotations: Vec<Annotation>,
     },
     Unit {
-        name: AstNode<Ident>,
+        name: AstNode<Name>,
         annotations: Vec<Annotation>,
     },
 }
@@ -89,12 +125,9 @@ pub struct TypeDecl {
 }
 
 #[derive(Debug, Clone)]
-pub enum ModuleInst {
-    Path(AstNode<ModulePath>),
-    ArgPath {
-        path: AstNode<ModulePath>,
-        args: Vec<AstNode<ModuleInst>>,
-    },
+pub struct ModuleInst {
+    pub module: AstNode<Ident>,
+    pub args: Vec<AstNode<ModuleInst>>,
 }
 
 #[derive(Debug, Clone)]
@@ -280,6 +313,23 @@ impl Name {
         }
 
         panic!("Attempting convert a non `Name::Ident(..)` into an `Ident`");
+    }
+
+    pub fn to_module_item(&mut self, module: Ident) {
+        let mut tmp = Name::ModuleItem {
+            module,
+            item: "".into(),
+        };
+
+        std::mem::swap(self, &mut tmp);
+
+        match self {
+            Name::ModuleItem { ref mut item, .. } => {
+                *item = tmp.into_ident();
+            }
+
+            _ => unreachable!(),
+        }
     }
 }
 
