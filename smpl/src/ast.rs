@@ -48,6 +48,11 @@ pub struct ModParam {
 pub enum Decl {
     Import(AstNode<ImportDecl>),
     Export(AstNode<ExportDecl>),
+    Local(LocalDecl),
+}
+
+#[derive(Debug, Clone)]
+pub enum LocalDecl {
     Opaque(AstNode<Opaque>),
     Struct(AstNode<Struct>),
     Enum(AstNode<EnumDecl>),
@@ -126,8 +131,8 @@ pub type ImportItem = ModuleItemData;
 
 #[derive(Debug, Clone)]
 pub struct ModuleItemData {
-    pub original_name: AstNode<Ident>,
-    pub name_override: Option<AstNode<Ident>>,
+    pub original_name: AstNode<Name>,
+    pub name_override: Option<AstNode<Name>>,
 }
 
 #[derive(Debug, Clone)]
