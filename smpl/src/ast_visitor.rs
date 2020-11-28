@@ -181,7 +181,7 @@ pub fn walk_module_for_expr<V: Visitor>(
 ) -> VisitorResult<V::E> {
     for decl in m.decls.iter() {
         match decl {
-            Decl::Fn(ref node_fn_decl) => {
+            Decl::Local(LocalDecl::Fn(ref node_fn_decl)) => {
                 let fn_decl = node_fn_decl.data();
                 log_trace!(
                     "Visitor visiting function: {}",
