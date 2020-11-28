@@ -2,18 +2,38 @@
 mod macros;
 
 mod error;
+mod mod_interface;
 mod wf_checker;
 
 use std::collections::HashMap;
 
-use crate::ast::TypedPath;
+use crate::ast::{ModSig, Module, TypedPath};
 use crate::expr_ast::LiteralSuffix;
 use crate::Source;
+
+pub fn analyze(p: UnanalyzedProgram) -> Result<(), ()> {
+    for (source, module) in p.modules.iter() {
+        let static_mod_data = StaticModData {
+            source,
+            lit_sfx_map: &p.lit_sfx_map,
+        };
+
+        wf_checker::module_wf_check(&static_mod_data, module).unwrap();
+    }
+    todo!();
+}
+
+#[derive(Debug)]
+pub struct UnanalyzedProgram {
+    pub modules: Vec<(Source, Module)>,
+    pub sigs: Vec<(Source, ModSig)>,
+    pub lit_sfx_map: LiteralSuffixMap,
+}
 
 // TODO: Literal suffix mapper module or program-wide?
 #[derive(Debug, Clone)]
 pub struct StaticModData<'a> {
-    pub source: Source,
+    pub source: &'a Source,
     pub lit_sfx_map: &'a LiteralSuffixMap,
 }
 
