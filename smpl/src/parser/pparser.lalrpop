@@ -109,17 +109,17 @@ TopLevel: ast::Decl = {
     <import: Import> SEMI => ast::Decl::Import(import),
     <export: Export> SEMI => ast::Decl::Export(export),
 
-    <opaque: Opaque> SEMI => ast::Decl::Opaque(opaque),
+    <opaque: Opaque> SEMI => ast::Decl::Local(ast::LocalDecl::Opaque(opaque)),
 
-    <enum_decl: EnumDecl> => ast::Decl::Enum(enum_decl),
+    <enum_decl: EnumDecl> => ast::Decl::Local(ast::LocalDecl::Enum(enum_decl)),
 
-    <struct_decl: StructDecl> => ast::Decl::Struct(struct_decl),
+    <struct_decl: StructDecl> => ast::Decl::Local(ast::LocalDecl::Struct(struct_decl)),
 
-    <func: BuiltinFnDecl> SEMI => ast::Decl::BuiltinFn(func),
+    <func: BuiltinFnDecl> SEMI => ast::Decl::Local(ast::LocalDecl::BuiltinFn(func)),
 
-    <func: FnDecl> => ast::Decl::Fn(func),
+    <func: FnDecl> => ast::Decl::Local(ast::LocalDecl::Fn(func)),
 
-    <ty: TypeDecl> => ast::Decl::Type(ty),
+    <ty: TypeDecl> => ast::Decl::Local(ast::LocalDecl::Type(ty)),
 };
 
 Ident: AstNode<ast::Ident> = {
@@ -459,15 +459,15 @@ ModuleItemData: AstNode<ast::ModuleItemData> = {
     // item as item_alias
     <l1: @L> <item: IDENT> <r1: @R> AS <l2: @L> <alias: IDENT?> <r2: @R> => {
         ast_node!(ast::ModuleItemData {
-            original_name: AstNode::new(ident!(item), Span::new(l1, r1)),
-            name_override: alias.map(|i| AstNode::new(ident!(i), Span::new(l2, r2))),
+            original_name: AstNode::new(ident!(item).into(), Span::new(l1, r1)),
+            name_override: alias.map(|i| AstNode::new(ident!(i).into(), Span::new(l2, r2))),
         }, l1, r2)
     },
 
     // item
     <l: @L> <item: IDENT> <r: @R> => {
         ast_node!(ast::ModuleItemData {
-            original_name: ast_node!(ident!(item), l, r),
+            original_name: ast_node!(ident!(item).into(), l, r),
             name_override: None,
         }, l, r)
     },
