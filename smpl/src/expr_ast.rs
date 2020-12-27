@@ -1,7 +1,7 @@
 use std::fmt::{self, Debug};
 use std::marker::PhantomData;
 
-use crate::ast::{Ident, Name, TypeAnn, TypedPath};
+use crate::ast::{Ident, ImportDecl, Name, TypeAnn, TypedPath};
 use crate::ast_node::{AstNode, Spanned};
 use crate::span::Span;
 
@@ -56,6 +56,7 @@ pub struct While {
 
 #[derive(Clone, Debug)]
 pub struct Block {
+    pub imports: Vec<AstNode<ImportDecl>>,
     pub stmts: Vec<Stmt>,
     pub return_expr: Option<Box<Expr>>,
 }

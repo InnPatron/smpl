@@ -477,27 +477,30 @@ ModuleItemData: AstNode<ast::ModuleItemData> = {
 
 // exprs / stmts
 Block: AstNode<east::Block> = {
-    <l: @L> "{" <block: BlockList?> "}" <r: @R> => {
-        let block = block.unwrap_or(east::Block {
-            stmts: vec![],
-            return_expr: None,
-        });
+    <l: @L> "{" <imports: (Import SEMI)*> <block: BlockList?> "}" <r: @R> => {
+        let (stmts, return_expr) = block.unwrap_or((vec![], None));
+        let block = east::Block {
+            imports: imports.into_iter().map(|(import, _semi)| import).collect(),
+            stmts,
+            return_expr,
+        };
+
         ast_node!(block, l, r)
     },
 };
 
-BlockEnd: east::Block = {
-    <stmt: SafeStmt> => east::Block { stmts: vec![stmt], return_expr: None },
-    <expr: Expr> => east::Block { stmts: vec![], return_expr: Some(Box::new(expr)) },
-};
-
-BlockList: east::Block = {
+BlockList: (Vec<east::Stmt>, Option<Box<east::Expr>>) = {
     <stmt: Stmt> <mut block: BlockList> => {
-        block.stmts.insert(0, stmt);
+        block.0.insert(0, stmt);
         block
     },
 
     BlockEnd,
+};
+
+BlockEnd: (Vec<east::Stmt>, Option<Box<east::Expr>>) = {
+    <stmt: SafeStmt> => (vec![stmt], None),
+    <expr: Expr> => (vec![], Some(Box::new(expr))),
 };
 
 Stmt: east::Stmt = {
