@@ -31,6 +31,12 @@ pub struct Module {
     pub decls: Vec<Decl>,
 }
 
+impl Module {
+    pub fn name(&self) -> Option<&Ident> {
+        self.mod_decl.as_ref().map(|d| d.data().mod_name.data())
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ModDecl {
     pub mod_name: AstNode<Ident>,
@@ -128,6 +134,18 @@ pub struct TypeDecl {
 pub struct ModuleInst {
     pub module: AstNode<Ident>,
     pub args: Vec<AstNode<ModuleInst>>,
+}
+
+impl ModuleInst {
+    pub fn get_deps<'a>(&'a self) -> impl Iterator<Item = &'a Ident> {
+        std::iter::once(self.module.data()).chain(self.args.iter().fold(
+            Box::new(std::iter::empty()) as Box<dyn Iterator<Item = &Ident>>,
+            |acc, arg| {
+                Box::new(arg.data().get_deps().chain(acc))
+                    as Box<dyn Iterator<Item = &Ident>>
+            },
+        ))
+    }
 }
 
 #[derive(Debug, Clone)]
