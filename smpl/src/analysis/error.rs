@@ -1,6 +1,9 @@
 use crate::span::Span;
 
 #[derive(Debug, Clone)]
+pub struct AnalysisError {}
+
+#[derive(Debug, Clone)]
 pub struct WfError {
     pub span: Span,
     pub error: WfErrorKind,
