@@ -1,6 +1,7 @@
 #[macro_use]
 mod macros;
 
+mod dep_resolve;
 mod error;
 mod mod_interface;
 mod wf_checker;
