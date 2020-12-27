@@ -13,6 +13,62 @@ type VisitorResult<E> = Result<(), E>;
 pub trait Visitor {
     type E;
 
+    fn visit_type_decl(
+        &mut self,
+        type_decl: &AstNode<TypeDecl>,
+    ) -> VisitorResult<Self::E> {
+        Ok(())
+    }
+
+    fn visit_enum_decl(
+        &mut self,
+        struct_decl: &AstNode<EnumDecl>,
+    ) -> VisitorResult<Self::E> {
+        Ok(())
+    }
+
+    fn visit_opaque_decl(
+        &mut self,
+        opaque_decl: &AstNode<Opaque>,
+    ) -> VisitorResult<Self::E> {
+        Ok(())
+    }
+
+    fn visit_struct_decl(
+        &mut self,
+        struct_decl: &AstNode<Struct>,
+    ) -> VisitorResult<Self::E> {
+        Ok(())
+    }
+
+    fn visit_builtin_fn_decl(
+        &mut self,
+        fn_decl: &AstNode<BuiltinFnDecl>,
+    ) -> VisitorResult<Self::E> {
+        Ok(())
+    }
+
+    fn visit_fn_decl(
+        &mut self,
+        fn_decl: &AstNode<FnDecl>,
+    ) -> VisitorResult<Self::E> {
+        walk_block_stmt(self, &fn_decl.data().body)
+    }
+
+    fn visit_export(
+        &mut self,
+        e: &AstNode<ExportDecl>,
+    ) -> VisitorResult<Self::E> {
+        Ok(())
+    }
+
+    fn visit_import(
+        &mut self,
+        i: &AstNode<ImportDecl>,
+    ) -> VisitorResult<Self::E> {
+        Ok(())
+    }
+
     fn visit_stmt(&mut self, s: &Stmt) -> VisitorResult<Self::E> {
         walk_stmt(self, s)
     }
@@ -175,6 +231,41 @@ pub trait Visitor {
     }
 }
 
+pub fn walk_module<V: Visitor>(v: &mut V, m: &Module) -> VisitorResult<V::E> {
+    for decl in m.decls.iter() {
+        match decl {
+            Decl::Local(LocalDecl::Fn(ref node_local)) => {
+                v.visit_fn_decl(node_local)?
+            }
+
+            Decl::Local(LocalDecl::BuiltinFn(ref node_local)) => {
+                v.visit_builtin_fn_decl(node_local)?
+            }
+
+            Decl::Local(LocalDecl::Opaque(ref node_local)) => {
+                v.visit_opaque_decl(node_local)?
+            }
+
+            Decl::Local(LocalDecl::Struct(ref node_local)) => {
+                v.visit_struct_decl(node_local)?
+            }
+
+            Decl::Local(LocalDecl::Enum(ref node_local)) => {
+                v.visit_enum_decl(node_local)?
+            }
+
+            Decl::Local(LocalDecl::Type(ref node_local)) => {
+                v.visit_type_decl(node_local)?
+            }
+
+            Decl::Import(ref decl) => v.visit_import(decl)?,
+            Decl::Export(ref decl) => v.visit_export(decl)?,
+        }
+    }
+
+    Ok(())
+}
+
 pub fn walk_module_for_expr<V: Visitor>(
     v: &mut V,
     m: &Module,
@@ -202,6 +293,10 @@ pub fn walk_block_stmt<V: Visitor + ?Sized>(
     v: &mut V,
     b: &AstNode<Block>,
 ) -> VisitorResult<V::E> {
+    for i in b.data().imports.iter() {
+        v.visit_import(i)?;
+    }
+
     for s in b.data().stmts.iter() {
         v.visit_stmt(s)?;
     }
