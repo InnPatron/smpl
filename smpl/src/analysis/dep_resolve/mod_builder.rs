@@ -23,16 +23,16 @@ pub struct ModBuilder {
 
 #[derive(Debug)]
 pub struct ModData {
-    path: ModulePath,
-    params: Vec<AstNode<ModParam>>,
-    declared_sigs: Vec<AstNode<Name>>,
+    pub path: ModulePath,
+    pub params: Vec<AstNode<ModParam>>,
+    pub declared_sigs: Vec<AstNode<Name>>,
 
     // Unapplied module dependencies (i.e. `self::module_param` keys are still in the maps)
-    import_module: HashMap<ModInstKey, Vec<Option<AstNode<Ident>>>>,
-    import_all: HashMap<ModInstKey, Vec<AstNode<ImportItem>>>,
-    import_items: HashMap<ModInstKey, Vec<AstNode<ImportItem>>>,
-    export_all: HashMap<ModInstKey, Vec<AstNode<ExportItem>>>,
-    export_items: HashMap<ModInstKey, Vec<AstNode<ExportItem>>>,
+    pub import_module: HashMap<ModInstKey, Vec<Option<AstNode<Ident>>>>,
+    pub import_all: HashMap<ModInstKey, Vec<AstNode<ImportItem>>>,
+    pub import_items: HashMap<ModInstKey, Vec<AstNode<ImportItem>>>,
+    pub export_all: HashMap<ModInstKey, Vec<AstNode<ExportItem>>>,
+    pub export_items: HashMap<ModInstKey, Vec<AstNode<ExportItem>>>,
 }
 
 impl ModBuilder {
@@ -144,17 +144,17 @@ fn ast_mod_inst_to_key(mi: &ast::ModuleInst) -> ModInstKey {
 /// A module instance
 /// Uniquely ID's by the functor path and its ModInst arguments
 pub struct ModInst {
-    data: Rc<ModData>,
-    ast: Rc<Module>,
-    args: Vec<ModInstKey>,
+    pub data: Rc<ModData>,
+    pub ast: Rc<Module>,
+    pub args: Vec<ModInstKey>,
 
     // Applied module dependencies (i.e. `self::module_param` keys have been replaced with their
     //  corresponding arguments)
-    import_module: HashMap<ModInstKey, Vec<Option<AstNode<Ident>>>>,
-    import_all: HashMap<ModInstKey, Vec<AstNode<ImportItem>>>,
-    import_items: HashMap<ModInstKey, Vec<AstNode<ImportItem>>>,
-    export_all: HashMap<ModInstKey, Vec<AstNode<ExportItem>>>,
-    export_items: HashMap<ModInstKey, Vec<AstNode<ExportItem>>>,
+    pub import_module: HashMap<ModInstKey, Vec<Option<AstNode<Ident>>>>,
+    pub import_all: HashMap<ModInstKey, Vec<AstNode<ImportItem>>>,
+    pub import_items: HashMap<ModInstKey, Vec<AstNode<ImportItem>>>,
+    pub export_all: HashMap<ModInstKey, Vec<AstNode<ExportItem>>>,
+    pub export_items: HashMap<ModInstKey, Vec<AstNode<ExportItem>>>,
 }
 
 impl Visitor for ModData {
