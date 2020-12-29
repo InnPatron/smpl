@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use std::fmt::{self, Debug};
 
 use crate::ast_node::AstNode;
-use crate::expr_ast::Block;
+use crate::expr_ast::{Block, Expr};
+use crate::span::Span;
 
 #[derive(Debug, Clone)]
 pub enum CodeUnit {
@@ -32,8 +34,8 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn name(&self) -> Option<&Ident> {
-        self.mod_decl.as_ref().map(|d| d.data().mod_name.data())
+    pub fn name(&self) -> Option<&AstNode<Ident>> {
+        self.mod_decl.as_ref().map(|d| &d.data().mod_name)
     }
 }
 
@@ -47,7 +49,13 @@ pub struct ModDecl {
 #[derive(Debug, Clone)]
 pub struct ModParam {
     pub name: AstNode<Name>,
-    pub sigs: Vec<AstNode<Name>>,
+    pub sigs: Vec<AstNode<SigConstraint>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SigConstraint {
+    pub name: AstNode<Name>,
+    pub constraints: HashMap<Name, Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -55,6 +63,7 @@ pub enum Decl {
     Import(AstNode<ImportDecl>),
     Export(AstNode<ExportDecl>),
     Local(LocalDecl),
+    Mod,
 }
 
 #[derive(Debug, Clone)]
@@ -132,20 +141,8 @@ pub struct TypeDecl {
 
 #[derive(Debug, Clone)]
 pub struct ModuleInst {
-    pub module: AstNode<Ident>,
+    pub module: AstNode<ModulePath>,
     pub args: Vec<AstNode<ModuleInst>>,
-}
-
-impl ModuleInst {
-    pub fn get_deps<'a>(&'a self) -> impl Iterator<Item = &'a Ident> {
-        std::iter::once(self.module.data()).chain(self.args.iter().fold(
-            Box::new(std::iter::empty()) as Box<dyn Iterator<Item = &Ident>>,
-            |acc, arg| {
-                Box::new(arg.data().get_deps().chain(acc))
-                    as Box<dyn Iterator<Item = &Ident>>
-            },
-        ))
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -284,18 +281,67 @@ impl TypedPath {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ModulePath(pub Vec<AstNode<Name>>);
+
+impl ModulePath {
+    pub fn mod_param_path<N: Into<Name>>(n: N, span: Span) -> Self {
+        ModulePath(vec![
+            AstNode::new(
+                Ident::Unquoted("self".to_string()).into(),
+                span.clone(),
+            ),
+            AstNode::new(n.into(), span),
+        ])
+    }
+}
+
+impl fmt::Display for ModulePath {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut iter = self.0.iter();
+        let base = iter.next().expect("Module path length == 0");
+        write!(f, "{}", base.data())?;
+
+        for node in iter {
+            write!(f, "::{}", node.data())?;
+        }
+
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Annotation {
     pub keys: Vec<(Ident, Option<String>)>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Eq)]
 pub enum Ident {
     Quoted(String),
     Unquoted(String),
+}
+
+// Implemented such that Quoted("a") == Unquoted("a")
+impl PartialEq for Ident {
+    fn eq(&self, other: &Self) -> bool {
+        let (l, r) = match (self, other) {
+            (Self::Quoted(ref l), Self::Quoted(ref r)) => (l, r),
+            (Self::Quoted(ref l), Self::Unquoted(ref r)) => (l, r),
+            (Self::Unquoted(ref l), Self::Quoted(ref r)) => (l, r),
+            (Self::Unquoted(ref l), Self::Unquoted(ref r)) => (l, r),
+        };
+
+        l == r
+    }
+}
+
+impl std::hash::Hash for Ident {
+    fn hash<H: std::hash::Hasher>(&self, h: &mut H) {
+        match self {
+            Self::Quoted(ref s) => s.hash(h),
+            Self::Unquoted(ref s) => s.hash(h),
+        }
+    }
 }
 
 impl<T> From<T> for Ident
@@ -368,5 +414,12 @@ impl fmt::Display for Name {
 impl From<Ident> for Name {
     fn from(i: Ident) -> Self {
         Name::Ident(i)
+    }
+}
+
+impl From<AstNode<Ident>> for AstNode<Name> {
+    fn from(i: AstNode<Ident>) -> Self {
+        let (data, span) = i.into_data();
+        AstNode::new(data.into(), span)
     }
 }

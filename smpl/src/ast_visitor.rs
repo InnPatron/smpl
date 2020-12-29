@@ -8,7 +8,7 @@ macro_rules! log_trace {
         ($($arg:tt)+) => (trace!(target: "visitor", $($arg)+ ))
 }
 
-type VisitorResult<E> = Result<(), E>;
+pub type VisitorResult<E> = Result<(), E>;
 
 pub trait Visitor {
     type E;
@@ -257,6 +257,8 @@ pub fn walk_module<V: Visitor>(v: &mut V, m: &Module) -> VisitorResult<V::E> {
             Decl::Local(LocalDecl::Type(ref node_local)) => {
                 v.visit_type_decl(node_local)?
             }
+
+            Decl::Mod => todo!("Dec::Mod"),
 
             Decl::Import(ref decl) => v.visit_import(decl)?,
             Decl::Export(ref decl) => v.visit_export(decl)?,

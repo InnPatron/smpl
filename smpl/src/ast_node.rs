@@ -11,6 +11,8 @@ pub struct AstNode<T> {
 
 impl<T> Copy for AstNode<T> where T: Copy {}
 
+impl<T> Eq for AstNode<T> where T: Eq {}
+
 impl<T> Clone for AstNode<T>
 where
     T: Clone,
@@ -20,6 +22,24 @@ where
             span: self.span.clone(),
             data: self.data.clone(),
         }
+    }
+}
+
+impl<T> PartialEq for AstNode<T>
+where
+    T: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.data == other.data
+    }
+}
+
+impl<T> std::hash::Hash for AstNode<T>
+where
+    T: std::hash::Hash,
+{
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.data.hash(state)
     }
 }
 

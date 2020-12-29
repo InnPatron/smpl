@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::ast;
 use crate::ast_node::AstNode;
 use crate::expr_ast as east;
@@ -95,13 +97,20 @@ ModParam: AstNode<ast::ModParam> = {
     }
 };
 
-ModSigList: Vec<AstNode<ast::Name>> = {
-    <l: @L> <first: IDENT> <r: @R> PLUS <mut rest: ModSigList> => {
-        rest.insert(0, ast_node!(ident!(first).into(), l, r));
+ModSigList: Vec<AstNode<ast::SigConstraint>> = {
+    <l: @L> <first: SigConstraint> <r: @R> PLUS <mut rest: ModSigList> => {
+        rest.insert(0, ast_node!(first, l, r));
         rest
     },
 
-    <l: @L> <sig: IDENT> <r: @R> => vec![ast_node!(ident!(sig).into(), l, r)],
+    <l: @L> <sig: SigConstraint> <r: @R> => vec![ast_node!(sig, l, r)],
+};
+
+SigConstraint: ast::SigConstraint = {
+    <id: Ident> => ast::SigConstraint {
+        name: id.into(),
+        constraints: HashMap::new(),
+    },
 };
 
 // TODO: annotation prefix to the declarations
@@ -426,9 +435,9 @@ Import: AstNode<ast::ImportDecl> = {
 };
 
 ModuleInst: AstNode<ast::ModuleInst> = {
-    <l: @L> <m: Ident> <r: @R> => ast_node!(ast::ModuleInst { module: m, args: vec![] }, l, r),
+    <l: @L> <m: ModulePath> <r: @R> => ast_node!(ast::ModuleInst { module: m, args: vec![] }, l, r),
 
-    <l: @L> <m: Ident> "(" <args: ModuleInstList?> ")" <r: @R> => {
+    <l: @L> <m: ModulePath> "(" <args: ModuleInstList?> ")" <r: @R> => {
         let args = args.unwrap_or(vec![]);
         ast_node!(ast::ModuleInst {
             module: m,
