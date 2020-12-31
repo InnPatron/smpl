@@ -3,6 +3,7 @@ extern crate lalrpop_util;
 
 mod analysis;
 mod ast;
+mod ast_mut_visitor;
 mod ast_node;
 mod ast_visitor;
 mod expr_ast;
