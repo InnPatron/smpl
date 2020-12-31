@@ -13,46 +13,83 @@ pub type VisitorResult<E> = Result<(), E>;
 pub trait Visitor {
     type E;
 
-    fn visit_type_decl(
+    fn visit_type_ann(
         &mut self,
-        type_decl: &AstNode<TypeDecl>,
+        type_decl: &AstNode<TypeAnn>,
     ) -> VisitorResult<Self::E> {
         Ok(())
     }
 
-    fn visit_enum_decl(
+    fn visit_type_param(
         &mut self,
-        struct_decl: &AstNode<EnumDecl>,
+        type_param: &AstNode<Name>,
     ) -> VisitorResult<Self::E> {
         Ok(())
+    }
+
+    fn visit_type_decl(
+        &mut self,
+        type_decl: &AstNode<TypeDecl>,
+    ) -> VisitorResult<Self::E> {
+        walk_type_decl(self, type_decl)
+    }
+
+    fn visit_struct_field(
+        &mut self,
+        f: &StructField,
+        enum_variant: bool,
+    ) -> VisitorResult<Self::E> {
+        walk_struct_field(self, f)
+    }
+
+    fn visit_enum_variant(
+        &mut self,
+        enum_variant: &AstNode<EnumVariant>,
+    ) -> VisitorResult<Self::E> {
+        walk_enum_variant(self, enum_variant)
+    }
+
+    fn visit_enum_decl(
+        &mut self,
+        enum_decl: &AstNode<EnumDecl>,
+    ) -> VisitorResult<Self::E> {
+        walk_enum_decl(self, enum_decl)
     }
 
     fn visit_opaque_decl(
         &mut self,
         opaque_decl: &AstNode<Opaque>,
     ) -> VisitorResult<Self::E> {
-        Ok(())
+        walk_opaque_decl(self, opaque_decl)
     }
 
     fn visit_struct_decl(
         &mut self,
         struct_decl: &AstNode<Struct>,
     ) -> VisitorResult<Self::E> {
-        Ok(())
+        walk_struct_decl(self, struct_decl)
+    }
+
+    fn visit_fn_param(
+        &mut self,
+        param: &AstNode<FnParam>,
+        builtin: bool,
+    ) -> VisitorResult<Self::E> {
+        walk_fn_param(self, param)
     }
 
     fn visit_builtin_fn_decl(
         &mut self,
         fn_decl: &AstNode<BuiltinFnDecl>,
     ) -> VisitorResult<Self::E> {
-        Ok(())
+        walk_builtin_fn_decl(self, fn_decl)
     }
 
     fn visit_fn_decl(
         &mut self,
         fn_decl: &AstNode<FnDecl>,
     ) -> VisitorResult<Self::E> {
-        walk_block_stmt(self, &fn_decl.data().body)
+        walk_fn_decl(self, fn_decl)
     }
 
     fn visit_export(
@@ -668,4 +705,135 @@ pub fn walk_block_expr<V: Visitor + ?Sized>(
             Ok(())
         }
     }
+}
+
+fn walk_type_decl<V: Visitor + ?Sized>(
+    v: &mut V,
+    node_type_decl: &AstNode<TypeDecl>,
+) -> VisitorResult<V::E> {
+    v.visit_type_ann(&node_type_decl.data().ann)
+}
+
+fn walk_enum_decl<V: Visitor + ?Sized>(
+    v: &mut V,
+    node_enum_decl: &AstNode<EnumDecl>,
+) -> VisitorResult<V::E> {
+    let enum_decl = node_enum_decl.data();
+
+    for tp in enum_decl.type_params.params.iter() {
+        v.visit_type_param(tp)?;
+    }
+
+    for variant in enum_decl.variants.iter() {
+        v.visit_enum_variant(variant)?;
+    }
+
+    Ok(())
+}
+
+fn walk_enum_variant<V: Visitor + ?Sized>(
+    v: &mut V,
+    node_enum_variant: &AstNode<EnumVariant>,
+) -> VisitorResult<V::E> {
+    match node_enum_variant.data() {
+        EnumVariant::Struct { ref body, .. } => {
+            for f in body.iter() {
+                v.visit_struct_field(f, true)?;
+            }
+
+            Ok(())
+        }
+
+        EnumVariant::Unit { .. } => Ok(()),
+    }
+}
+
+fn walk_struct_field<V: Visitor + ?Sized>(
+    v: &mut V,
+    node_struct_field: &StructField,
+) -> VisitorResult<V::E> {
+    v.visit_type_ann(&node_struct_field.field_type)
+}
+
+fn walk_opaque_decl<V: Visitor + ?Sized>(
+    v: &mut V,
+    node_opaque_decl: &AstNode<Opaque>,
+) -> VisitorResult<V::E> {
+    for tp in node_opaque_decl.data().type_params.params.iter() {
+        v.visit_type_param(tp)?;
+    }
+
+    Ok(())
+}
+
+fn walk_struct_decl<V: Visitor + ?Sized>(
+    v: &mut V,
+    node_struct_decl: &AstNode<Struct>,
+) -> VisitorResult<V::E> {
+    let struct_decl = node_struct_decl.data();
+
+    for f in struct_decl.body.iter() {
+        v.visit_struct_field(f, false)?;
+    }
+
+    for tp in struct_decl.type_params.params.iter() {
+        v.visit_type_param(tp)?;
+    }
+
+    Ok(())
+}
+
+fn walk_builtin_fn_decl<V: Visitor + ?Sized>(
+    v: &mut V,
+    node_fn_decl: &AstNode<BuiltinFnDecl>,
+) -> VisitorResult<V::E> {
+    let fn_decl = node_fn_decl.data();
+
+    if let BuiltinFnParams::Checked(ref params) = fn_decl.params {
+        for p in params {
+            v.visit_fn_param(p, true)?;
+        }
+    }
+
+    let _ = fn_decl
+        .return_type
+        .as_ref()
+        .map(|ann| v.visit_type_ann(ann))
+        .transpose()?;
+
+    for tp in fn_decl.type_params.params.iter() {
+        v.visit_type_param(tp)?;
+    }
+
+    Ok(())
+}
+
+fn walk_fn_param<V: Visitor + ?Sized>(
+    v: &mut V,
+    node_fn_param: &AstNode<FnParam>,
+) -> VisitorResult<V::E> {
+    v.visit_type_ann(&node_fn_param.data().ann)
+}
+
+fn walk_fn_decl<V: Visitor + ?Sized>(
+    v: &mut V,
+    node_fn_decl: &AstNode<FnDecl>,
+) -> VisitorResult<V::E> {
+    let fn_decl = node_fn_decl.data();
+
+    for p in fn_decl.params.iter() {
+        v.visit_fn_param(p, false)?;
+    }
+
+    let _ = fn_decl
+        .return_type
+        .as_ref()
+        .map(|ann| v.visit_type_ann(ann))
+        .transpose()?;
+
+    for tp in fn_decl.type_params.params.iter() {
+        v.visit_type_param(tp)?;
+    }
+
+    v.visit_block_stmt(&fn_decl.body)
 }
