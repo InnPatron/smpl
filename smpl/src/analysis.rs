@@ -7,6 +7,8 @@ mod error;
 mod wf_checker;
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 use crate::ast::{ModSig, Module, TypedPath};
 use crate::expr_ast::LiteralSuffix;
@@ -22,6 +24,23 @@ pub fn analyze(p: UnanalyzedProgram) -> Result<(), ()> {
         wf_checker::module_wf_check(&static_mod_data, module).unwrap();
     }
     todo!();
+}
+
+#[derive(Debug)]
+pub struct GlobalData {
+    atom_counter: Arc<AtomicU64>,
+}
+
+impl GlobalData {
+    pub fn new() -> Self {
+        GlobalData {
+            atom_counter: Arc::new(AtomicU64::new(0)),
+        }
+    }
+
+    pub fn inc_atom_counter(&self) -> u64 {
+        self.atom_counter.fetch_add(1, Ordering::Relaxed)
+    }
 }
 
 #[derive(Debug)]
