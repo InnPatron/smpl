@@ -16,6 +16,7 @@ pub enum CodeUnit {
 pub struct ModSig {
     pub name: AstNode<Ident>,
     pub members: Vec<AstNode<SigMember>>,
+    pub imports: Vec<AstNode<ImportDecl>>,
 }
 
 #[derive(Debug, Clone)]
@@ -220,7 +221,7 @@ pub struct FnParam {
 pub struct Opaque {
     pub name: AstNode<Name>,
     pub annotations: Vec<Annotation>,
-    pub type_params: Option<TypeParams>,
+    pub type_params: TypeParams,
     pub where_clause: Option<WhereClause>,
 }
 
@@ -293,6 +294,10 @@ impl ModulePath {
             ),
             AstNode::new(n.into(), span),
         ])
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
     }
 }
 

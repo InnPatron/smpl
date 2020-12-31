@@ -15,10 +15,12 @@ pub CodeUnit: ast::CodeUnit = {
 };
 
 pub ModSig: ast::ModSig = {
-    <l: @L> SIG <nl: @L>  <n: IDENT> <nr: @R> SEMI <members: ModSigMember*> <r: @R> => {
+    <l: @L> SIG <nl: @L>  <n: IDENT> <nr: @R> SEMI <imports: (Import SEMI)*> <members: ModSigMember*> <r: @R> => {
+        let imports = imports.into_iter().map(|(i, _)| i).collect();
         ast::ModSig {
             name: ast_node!(ident!(n).into(), nl, nr),
             members,
+            imports,
         }
     },
 };
@@ -335,6 +337,7 @@ ModulePath: AstNode<ast::ModulePath> = {
 // TODO: Where clause
 Opaque: AstNode<ast::Opaque> = {
     <l: @L> OPAQUE <nl: @L> <name: IDENT><nr: @R> <type_params: TypeParams?> <r: @R>=> {
+        let type_params = type_params.unwrap_or(ast::TypeParams { params: Vec::new() });
         ast_node!(ast::Opaque {
             name: ast_node!(ast::Name::from(ident!(name)), nl, nr),
             annotations: Vec::new(),
