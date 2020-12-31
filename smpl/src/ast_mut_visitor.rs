@@ -92,18 +92,25 @@ pub trait Visitor {
         walk_fn_decl(self, fn_decl)
     }
 
+    fn visit_module_inst(
+        &mut self,
+        inst: &mut AstNode<ModuleInst>,
+    ) -> VisitorResult<Self::E> {
+        Ok(())
+    }
+
     fn visit_export(
         &mut self,
         e: &mut AstNode<ExportDecl>,
     ) -> VisitorResult<Self::E> {
-        Ok(())
+        walk_export_decl(self, e)
     }
 
     fn visit_import(
         &mut self,
         i: &mut AstNode<ImportDecl>,
     ) -> VisitorResult<Self::E> {
-        Ok(())
+        walk_import_decl(self, i)
     }
 
     fn visit_stmt(&mut self, s: &mut Stmt) -> VisitorResult<Self::E> {
@@ -848,4 +855,50 @@ fn walk_fn_decl<V: Visitor + ?Sized>(
     }
 
     v.visit_block_stmt(&mut fn_decl.body)
+}
+
+fn walk_export_decl<V: Visitor + ?Sized>(
+    v: &mut V,
+    node_export_decl: &mut AstNode<ExportDecl>,
+) -> VisitorResult<V::E> {
+    match node_export_decl.data_mut() {
+        ExportDecl::ExportItems {
+            ref mut from_module,
+            ref mut items,
+        } => from_module
+            .as_mut()
+            .map(|inst| v.visit_module_inst(inst))
+            .transpose()
+            .map(|_| ()),
+
+        ExportDecl::ExportAll {
+            ref mut from_module,
+            ref mut except,
+        } => from_module
+            .as_mut()
+            .map(|inst| v.visit_module_inst(inst))
+            .transpose()
+            .map(|_| ()),
+    }
+}
+
+fn walk_import_decl<V: Visitor + ?Sized>(
+    v: &mut V,
+    node_import_decl: &mut AstNode<ImportDecl>,
+) -> VisitorResult<V::E> {
+    match node_import_decl.data_mut() {
+        ImportDecl::ImportModule { ref mut module, .. } => {
+            v.visit_module_inst(module)
+        }
+
+        ImportDecl::ImportItems {
+            ref mut module,
+            ref mut items,
+        } => v.visit_module_inst(module),
+
+        ImportDecl::ImportAll {
+            ref mut module,
+            ref mut except,
+        } => v.visit_module_inst(module),
+    }
 }
