@@ -17,7 +17,7 @@ pub trait Visitor {
         &mut self,
         type_decl: &AstNode<TypeAnn>,
     ) -> VisitorResult<Self::E> {
-        Ok(())
+        walk_type_ann(self, type_decl)
     }
 
     fn visit_type_param(
@@ -227,6 +227,14 @@ pub trait Visitor {
         walk_fn_call_expr(self, node_fn_call)
     }
 
+    fn visit_typed_path(
+        &mut self,
+        node_typed_path: &AstNode<TypedPath>,
+        subexpr: bool,
+    ) -> VisitorResult<Self::E> {
+        Ok(())
+    }
+
     fn visit_struct_init_expr(
         &mut self,
         node_struct_init: &AstNode<StructInit>,
@@ -243,9 +251,9 @@ pub trait Visitor {
 
     fn visit_path_expr(
         &mut self,
-        _: &AstNode<TypedPath>,
+        node_typed_path: &AstNode<TypedPath>,
     ) -> VisitorResult<Self::E> {
-        Ok(())
+        walk_path_expr(self, node_typed_path)
     }
 
     fn visit_block_expr(
@@ -888,5 +896,35 @@ fn walk_import_decl<V: Visitor + ?Sized>(
             ref module,
             ref except,
         } => v.visit_module_inst(module),
+    }
+}
+
+fn walk_path_expr<V: Visitor + ?Sized>(
+    v: &mut V,
+    node_typed_path: &AstNode<TypedPath>,
+) -> VisitorResult<V::E> {
+    v.visit_typed_path(node_typed_path, true)
+}
+
+fn walk_type_ann<V: Visitor + ?Sized>(
+    v: &mut V,
+    node_type_ann: &AstNode<TypeAnn>,
+) -> VisitorResult<V::E> {
+    match node_type_ann.data() {
+        TypeAnn::Path(ref node_tp) => v.visit_typed_path(node_tp, false),
+
+        TypeAnn::FnType(ref node_fn_type) => {
+            let fn_type = node_fn_type.data();
+            for p in fn_type.params.iter() {
+                v.visit_type_ann(p)?;
+            }
+
+            fn_type
+                .return_type
+                .as_ref()
+                .map(|t| v.visit_type_ann(t))
+                .transpose()
+                .map(|_| ())
+        }
     }
 }
