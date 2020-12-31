@@ -1,6 +1,6 @@
 use log::trace;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::ast::{Module, ModuleInst, ModulePath, Name, TypedPath};
 use crate::ast_mut_visitor::{self as amv, VisitorResult};
@@ -22,14 +22,14 @@ impl AlphaConverter {
     /// Modifies the module AST by alpha-converting module parameters and their usage to use
     ///   a unique name `Name::Atom`
     ///
-    /// Returns a map from the parameter's old `Name::Ident` to `Name::Atom`
+    /// Returns the set of `Name::Atom` produced by alpha conversion
     ///
     /// Assumes that all local items are unique
     ///   i.e. that `self::param_name` does not clash with any other local items
     pub fn convert(
         global_data: &GlobalData,
         module: &mut Module,
-    ) -> DepResult<HashMap<Name, Name>> {
+    ) -> DepResult<HashSet<Name>> {
         let params = module
             .mod_decl
             .as_ref()
@@ -45,7 +45,14 @@ impl AlphaConverter {
             amv::walk_module(&mut converter, module)?;
         }
 
-        Ok(converter.params)
+        let mut set = HashSet::new();
+        for v in converter.params.values() {
+            if set.insert(v.clone()) {
+                panic!("Duplicate atoms: {:?}", v);
+            }
+        }
+
+        Ok(set)
     }
 
     fn new<I: Iterator<Item = Name>>(
