@@ -232,7 +232,7 @@ pub trait Visitor {
         node_typed_path: &mut AstNode<TypedPath>,
         subexpr: bool,
     ) -> VisitorResult<Self::E> {
-        Ok(())
+        walk_typed_path(self, node_typed_path)
     }
 
     fn visit_struct_init_expr(
@@ -945,4 +945,16 @@ fn walk_type_ann<V: Visitor + ?Sized>(
                 .map(|_| ())
         }
     }
+}
+
+pub fn walk_typed_path<V: Visitor + ?Sized>(
+    v: &mut V,
+    node_type_ann: &mut AstNode<TypedPath>,
+) -> VisitorResult<V::E> {
+    let type_ann = node_type_ann.data_mut();
+    for arg in type_ann.args.iter_mut() {
+        v.visit_type_ann(arg)?;
+    }
+
+    Ok(())
 }
